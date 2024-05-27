@@ -9,11 +9,12 @@ import (
 	"os"
 
 	"gioui.org/app"
-	"gioui.org/io/event"
 	"gioui.org/op"
 	"gioui.org/unit"
 
 	"github.com/AlexNa-Holdings/web3pro/ui"
+	main_page "github.com/AlexNa-Holdings/web3pro/ui/pages/main"
+	settings "github.com/AlexNa-Holdings/web3pro/ui/pages/settings"
 )
 
 func main() {
@@ -35,32 +36,21 @@ func main() {
 }
 
 func loop(w *app.Window) error {
-	events := make(chan event.Event)
-	acks := make(chan struct{})
-
-	go func() {
-		for {
-			ev := w.Event()
-			events <- ev
-			<-acks
-			if _, ok := ev.(app.DestroyEvent); ok {
-				return
-			}
-		}
-	}()
-
+	th := ui.UI.Theme.BasicTheme
 	var ops op.Ops
-	for e := range events {
-		switch e := e.(type) {
+
+	router := ui.NewRouter()
+	router.Register(0, main_page.New(&router))
+	router.Register(1, settings.New(&router))
+
+	for {
+		switch e := w.Event().(type) {
 		case app.DestroyEvent:
-			acks <- struct{}{}
 			return e.Err
 		case app.FrameEvent:
 			gtx := app.NewContext(&ops, e)
-			ui.MainPage(gtx)
+			router.Layout(gtx, th)
 			e.Frame(gtx.Ops)
 		}
-		acks <- struct{}{}
 	}
-	return nil
 }
