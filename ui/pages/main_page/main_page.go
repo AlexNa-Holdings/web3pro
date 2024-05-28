@@ -1,9 +1,8 @@
-package settings
+package main_page
 
 import (
 	"gioui.org/example/component/icon"
 	"gioui.org/layout"
-	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"gioui.org/x/component"
 	"github.com/AlexNa-Holdings/web3pro/ui"
@@ -17,7 +16,7 @@ type (
 // Page holds the state for a page demonstrating the features of
 // the AppBar component.
 type Page struct {
-	widget.List
+	Command component.TextField // shell command input
 	*ui.Router
 }
 
@@ -44,15 +43,7 @@ func (p *Page) NavItem() component.NavItem {
 }
 
 func (p *Page) Layout(gtx C, th *material.Theme) D {
-	p.List.Axis = layout.Vertical
-	return material.List(th, &p.List).Layout(gtx, 1, func(gtx C, _ int) D {
-		return layout.Flex{
-			Alignment: layout.Middle,
-			Axis:      layout.Vertical,
-		}.Layout(gtx,
-			layout.Rigid(func(gtx C) D {
-				return ui.DefaultInset.Layout(gtx, material.H5(th, `Pro screen`).Layout)
-			}),
-		)
-	})
+	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
+		p.Command_Layout(gtx),
+	)
 }

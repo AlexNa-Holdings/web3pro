@@ -41,9 +41,10 @@ func initTheams() {
 	DarkTheme.BasicTheme.Palette = material.Palette{
 		Fg:         color.NRGBA{R: 0xCF, G: 0xCF, B: 0xD4, A: 0xFF},
 		Bg:         color.NRGBA{R: 0x17, G: 0x17, B: 0x1c, A: 0xFF},
-		ContrastBg: color.NRGBA{R: 0x3f, G: 0x51, B: 0xb5, A: 0xff},
+		ContrastBg: color.NRGBA{R: 0x3f, G: 0x51, B: 0xb5, A: 0xFF},
 		ContrastFg: color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff},
 	}
+
 	DarkTheme.BasicTheme.Shaper = sharper
 	DarkTheme.BasicTheme.Face = "monospace"
 	DarkTheme.BorderColor = color.NRGBA{R: 0xFF, G: 0xF0, B: 0xF0, A: 0xF0}

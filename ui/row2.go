@@ -2,12 +2,6 @@ package ui
 
 import (
 	"gioui.org/layout"
-	"gioui.org/unit"
-)
-
-type (
-	C = layout.Context
-	D = layout.Dimensions
 )
 
 // Row2 lays out two widgets in a horizontal row, with the left
@@ -21,8 +15,6 @@ type Row2 struct {
 	// required, and will default to a uniform 8DP inset if not set.
 	layout.Inset
 }
-
-var DefaultInset = layout.UniformInset(unit.Dp(8))
 
 // Layout the DetailRow with the provided widgets.
 func (d Row2) Layout(gtx C, primary, detail layout.Widget) D {

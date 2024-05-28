@@ -13,8 +13,8 @@ import (
 	"gioui.org/unit"
 
 	"github.com/AlexNa-Holdings/web3pro/ui"
-	main_page "github.com/AlexNa-Holdings/web3pro/ui/pages/main"
-	settings "github.com/AlexNa-Holdings/web3pro/ui/pages/settings"
+	"github.com/AlexNa-Holdings/web3pro/ui/pages/main_page"
+	"github.com/AlexNa-Holdings/web3pro/ui/pages/settings"
 )
 
 func main() {

@@ -58,20 +58,20 @@ func (p *Page) Layout(gtx C, th *material.Theme) D {
 			layout.Rigid(func(gtx C) D {
 				return ui.DefaultInset.Layout(gtx, material.H5(th, `User interface`).Layout)
 			}),
-			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-				return ui.Row2{}.Layout(gtx, material.Body1(th, "Use non-modal drawer").Layout,
-					func(gtx C) D {
-						if p.nonModalDrawer.Update(gtx) {
-							p.Router.NonModalDrawer = p.nonModalDrawer.Value
-							if p.nonModalDrawer.Value {
-								p.Router.NavAnim.Appear(gtx.Now)
-							} else {
-								p.Router.NavAnim.Disappear(gtx.Now)
-							}
-						}
-						return material.Switch(th, &p.nonModalDrawer, "Use Non-Modal Navigation Drawer").Layout(gtx)
-					})
-			}),
+			// layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			// 	return ui.Row2{}.Layout(gtx, material.Body1(th, "Use non-modal drawer").Layout,
+			// 		func(gtx C) D {
+			// 			if p.nonModalDrawer.Update(gtx) {
+			// 				p.Router.NonModalDrawer = p.nonModalDrawer.Value
+			// 				if p.nonModalDrawer.Value {
+			// 					p.Router.NavAnim.Appear(gtx.Now)
+			// 				} else {
+			// 					p.Router.NavAnim.Disappear(gtx.Now)
+			// 				}
+			// 			}
+			// 			return material.Switch(th, &p.nonModalDrawer, "Use Non-Modal Navigation Drawer").Layout(gtx)
+			// 		})
+			// }),
 			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 
 				if p.themeEnum.Update(gtx) {
