@@ -76,7 +76,6 @@ func (p *Page) Layout(gtx C, th *material.Theme) D {
 
 				if p.themeEnum.Update(gtx) {
 					ui.SetTheme(p.themeEnum.Value)
-					// ui.Router.
 				}
 
 				return ui.Row2{}.Layout(gtx, material.Body1(th, "Theme").Layout,
