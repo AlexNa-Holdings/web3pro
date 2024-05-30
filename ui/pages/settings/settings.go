@@ -1,8 +1,6 @@
 package settings
 
 import (
-	"git.sr.ht/~schnwalter/gio-mw/widget/button"
-
 	"gioui.org/example/component/icon"
 	"gioui.org/layout"
 	"gioui.org/widget"
@@ -28,13 +26,8 @@ type Page struct {
 // New constructs a Page with the provided router.
 func New(router *ui.Router) *Page {
 	return &Page{
-		Router:        router,
-		themeEnum:     widget.Enum{Value: ui.GetThemeName()},
-		lightBaseline: &widget.Clickable{},
-		darkBaseline:  &widget.Clickable{},
-		darkGreen:     &widget.Clickable{},
-		lightGreen:    &widget.Clickable{},
-		angular:       &widget.Clickable{},
+		Router:    router,
+		themeEnum: widget.Enum{Value: ui.GetThemeName()},
 	}
 }
 
@@ -87,16 +80,24 @@ func (p *Page) Layout(gtx C, th *material.Theme) D {
 
 				return ui.Row2{}.Layout(gtx, material.Body1(th, "Theme").Layout,
 					func(gtx C) D {
-						return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
-							layout.Rigid(button.Text("Light Baseline", p.lightBaseline).Layout),
-							layout.Rigid(ui.Spacer(ui.SpacingSmall)),
-							layout.Rigid(button.Text("Light Green", p.lightGreen).Layout),
-							layout.Rigid(ui.Spacer(ui.SpacingSmall)),
-							layout.Rigid(button.Text("Dark Baseline", p.darkBaseline).Layout),
-							layout.Rigid(ui.Spacer(ui.SpacingSmall)),
-							layout.Rigid(button.Text("Dark Green (medium contrast)", p.darkGreen).Layout),
-							layout.Rigid(ui.Spacer(ui.SpacingSmall)),
-							layout.Rigid(button.Text("Angular", p.angular).Layout),
+						return layout.Flex{Axis: layout.Horizontal}.Layout(
+							gtx,
+							layout.Rigid(func(gtx C) D {
+								return material.RadioButton(
+									th,
+									&p.themeEnum,
+									"dark",
+									"Dark",
+								).Layout(gtx)
+							}),
+							layout.Rigid(func(gtx C) D {
+								return material.RadioButton(
+									th,
+									&p.themeEnum,
+									"light",
+									"Light",
+								).Layout(gtx)
+							}),
 						)
 					})
 			}),
