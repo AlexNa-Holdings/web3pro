@@ -24,7 +24,7 @@ func main() {
 		w := new(app.Window)
 		w.Option(app.Size(unit.Dp(800), unit.Dp(640)))
 		w.Option(app.Title("Web3 Pro"))
-		w.Option(app.Decorated(true))
+		w.Option(app.Decorated(false))
 		w.Option(app.CustomRenderer(true))
 
 		if err := loop(w); err != nil {
@@ -39,7 +39,7 @@ func loop(w *app.Window) error {
 	th := ui.UI.Theme.BasicTheme
 	var ops op.Ops
 
-	router := ui.NewRouter()
+	router := ui.NewRouter(w)
 	router.Register(0, main_page.New(&router))
 	router.Register(1, settings.New(&router))
 

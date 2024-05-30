@@ -19,8 +19,8 @@ type (
 type Page struct {
 	widget.List
 	*ui.Router
-	nonModalDrawer widget.Bool
-	themeEnum      widget.Enum
+	// nonModalDrawer widget.Bool
+	themeEnum widget.Enum
 }
 
 // New constructs a Page with the provided router.
