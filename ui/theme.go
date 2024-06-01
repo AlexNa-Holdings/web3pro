@@ -5,15 +5,22 @@ import "github.com/AlexNa-Holdings/web3pro/gocui"
 type Theme struct {
 	BgColor, FgColor, FrameColor          gocui.Attribute
 	SelBgColor, SelFgColor, SelFrameColor gocui.Attribute
+
+	ActionBgColor, ActionFgColor, ActionSelBgColor, ActionSelFgColor gocui.Attribute
 }
 
 var DarkTheme = Theme{
-	BgColor:       gocui.ColorBlack,
-	FgColor:       gocui.ColorWhite,
+	BgColor:       gocui.GetColor("#090300"),
+	FgColor:       gocui.GetColor("#A5A2A2"),
 	FrameColor:    gocui.ColorWhite,
-	SelBgColor:    gocui.ColorCyan,
+	SelBgColor:    gocui.GetColor("#090300"),
 	SelFgColor:    gocui.ColorBlack,
 	SelFrameColor: gocui.ColorCyan,
+
+	ActionBgColor:    gocui.GetColor("#ffff00"),
+	ActionFgColor:    gocui.GetColor("#0000cc"),
+	ActionSelBgColor: gocui.ColorCyan,
+	ActionSelFgColor: gocui.ColorBlack,
 }
 
 var LightTheme = Theme{
@@ -41,4 +48,9 @@ func SetTheme(g *gocui.Gui, theme string) {
 	g.SelBgColor = t.SelBgColor
 	g.SelFgColor = t.SelFgColor
 	g.SelFrameColor = t.SelFrameColor
+
+	g.ActionBgColor = t.ActionBgColor
+	g.ActionFgColor = t.ActionFgColor
+	g.ActionSelBgColor = t.ActionSelBgColor
+	g.ActionSelFgColor = t.ActionSelFgColor
 }

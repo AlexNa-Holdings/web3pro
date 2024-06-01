@@ -87,6 +87,9 @@ type Gui struct {
 	// foreground colors of the frame of the current view.
 	SelBgColor, SelFgColor, SelFrameColor Attribute
 
+	// Action buttons colors
+	ActionBgColor, ActionFgColor, ActionSelBgColor, ActionSelFgColor Attribute
+
 	// If Highlight is true, Sel{Bg,Fg}Colors will be used to draw the
 	// frame of the current view.
 	Highlight bool
@@ -844,7 +847,13 @@ func (g *Gui) drawTitle(v *View, fgColor, bgColor Attribute) error {
 	//Suffix
 	x++
 	if x >= 0 && x < g.maxX {
-		if err := g.SetRune(x, v.y0, '\ue0b0', fgColor, bgColor); err != nil {
+
+		bg := bgColor
+		if v.Subtitle != "" {
+			bg = v.SubTitleBgColor
+		}
+
+		if err := g.SetRune(x, v.y0, '\ue0b0', fgColor, bg); err != nil {
 			return err
 		}
 	}
@@ -854,20 +863,32 @@ func (g *Gui) drawTitle(v *View, fgColor, bgColor Attribute) error {
 
 // drawSubtitle draws the subtitle of the view.
 func (g *Gui) drawSubtitle(v *View, fgColor, bgColor Attribute) error {
+
 	if v.y0 < 0 || v.y0 >= g.maxY {
 		return nil
 	}
 
-	start := v.x1 - 5 - len(v.Subtitle)
+	start := v.x0 + len(v.Title) + 6
 	if start < v.x0 {
 		return nil
 	}
-	for i, ch := range v.Subtitle {
+
+	text := " " + v.Subtitle + " "
+
+	for i, ch := range text {
 		x := start + i
 		if x >= v.x1 {
 			break
 		}
-		if err := g.SetRune(x, v.y0, ch, fgColor, bgColor); err != nil {
+		if err := g.SetRune(x, v.y0, ch, v.SubTitleColor, v.SubTitleBgColor); err != nil {
+			return err
+		}
+	}
+
+	//Suffix
+	x := v.x0 + len(v.Title) + 6 + len(text)
+	if x >= 0 && x < g.maxX {
+		if err := g.SetRune(x, v.y0, '\ue0b0', v.SubTitleBgColor, bgColor); err != nil {
 			return err
 		}
 	}
