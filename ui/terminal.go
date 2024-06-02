@@ -83,11 +83,10 @@ func terminalEditor(v *gocui.View, key gocui.Key, ch rune, mod gocui.Modifier) {
 			Terminal.History = Terminal.History[1:]
 		}
 
-		if len(v.Buffer()) > 0 && 
-		(	len(Terminal.History) == 0  ||
-			(len(Terminal.History) > 0  && Terminal.History[len(Terminal.History)-1] != v.Buffer() 
-			))
-			{
+		if len(v.Buffer()) > 0 &&
+			(len(Terminal.History) == 0 ||
+				(len(Terminal.History) > 0 &&
+					Terminal.History[len(Terminal.History)-1] != v.Buffer())) {
 			Terminal.History = append(Terminal.History, v.Buffer())
 		}
 

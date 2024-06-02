@@ -11,15 +11,21 @@ func NewThemeCommand() *Command {
 	return &Command{
 		Command:      "theme",
 		ShortCommand: "",
-		Help:         "change/show the UI theme",
-		Usage:        "theme <theme>",
-		Process:      CommandProcessFunc(processTheme),
+		Usage: `
+Usage: theme [COMMAND]
+
+This command allows you to change or show the UI theme.
+
+COMMANDS:
+		demo [THEME] - show theme colors (default: current theme)
+		`,
+		Process: CommandProcessFunc(processTheme),
 	}
 }
 
 func processTheme(cmd *Command, input string) {
 	//parse command subcommand parameters
-	tokens := strings.Split(input, " ")
+	tokens := strings.Fields(input)
 	if len(tokens) < 2 {
 		fmt.Fprintln(ui.Terminal.Screen, cmd.Usage)
 		return
@@ -35,7 +41,7 @@ func processTheme(cmd *Command, input string) {
 			ui.Printf(theme.Name + "\n")
 		}
 	case "demo":
-		if len(tokens) < 3 || tokens[2] == "" {
+		if len(tokens) < 3 {
 			demoTheme(ui.CurrentTheme.Name)
 		} else {
 			demoTheme(tokens[2])

@@ -11,7 +11,6 @@ type CommandProcessFunc func(*Command, string)
 type Command struct {
 	Command      string
 	ShortCommand string
-	Help         string
 	Usage        string
 	Process      CommandProcessFunc
 }
