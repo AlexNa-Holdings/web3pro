@@ -8,9 +8,16 @@ import (
 	"errors"
 	"log"
 
+	"github.com/AlexNa-Holdings/web3pro/command"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/ui"
 )
+
+const WEB3_PRO = `
+/ \  /|/  __//  _ \\__  \  /  __\/  __\/  _ \
+| |  |||  \  | | //  /  |  |  \/||  \/|| / \|
+| |/\|||  /_ | |_\\ _\  |  |  __/|    /| \_/|
+\_/  \|\____\\____//____/  \_/   \_/\_\\____/`
 
 func main() {
 	g, err := gocui.NewGui(gocui.OutputTrue, true)
@@ -53,10 +60,11 @@ func layout(g *gocui.Gui) error {
 	}
 
 	ui.Terminal.SetView(g, 0, FirstRowHeight, maxX-1, maxY-2)
+	ui.Terminal.ProcessCommandFunc = command.Process
 
 	ui.Bottom.SetView(g)
 
-	g.SetCurrentView("terminal")
+	g.SetCurrentView("terminal.input")
 	g.Cursor = true
 
 	return nil

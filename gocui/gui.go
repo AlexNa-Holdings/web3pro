@@ -90,6 +90,9 @@ type Gui struct {
 	// Action buttons colors
 	ActionBgColor, ActionFgColor, ActionSelBgColor, ActionSelFgColor Attribute
 
+	// Error message color (AN)
+	ErrorFgColor Attribute
+
 	// If Highlight is true, Sel{Bg,Fg}Colors will be used to draw the
 	// frame of the current view.
 	Highlight bool
