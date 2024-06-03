@@ -35,20 +35,39 @@ func Process(input string) {
 }
 
 func AutoComplete(input string) (string, *[]ui.ACOption, string) {
+	options := []ui.ACOption{}
+
 	tokens := strings.Fields(input)
 	if len(tokens) == 0 {
-		return "", &[]ui.ACOption{}, ""
+		return "", &options, ""
 	}
 
 	command := tokens[0]
 
+	is_command := false
 	for _, cmd := range Commands {
 		if cmd.Command == command || cmd.ShortCommand == command {
-			if cmd.AutoCompleteFunc != nil {
-				return cmd.AutoCompleteFunc(input)
+			is_command = true
+			break
+		}
+	}
+
+	if len(tokens) == 1 && !is_command {
+		for _, cmd := range Commands {
+			if strings.Contains(cmd.Command, command) || strings.Contains(cmd.ShortCommand, command) {
+				options = append(options, ui.ACOption{Name: cmd.Command, Result: cmd.Command + " "})
+			}
+		}
+		return "command", &options, command
+	} else {
+		for _, cmd := range Commands {
+			if cmd.Command == command || cmd.ShortCommand == command {
+				if cmd.AutoCompleteFunc != nil {
+					return cmd.AutoCompleteFunc(input)
+				}
 			}
 		}
 	}
 
-	return command, &[]ui.ACOption{}, ""
+	return command, &options, ""
 }

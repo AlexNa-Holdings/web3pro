@@ -8,6 +8,8 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/ui"
 )
 
+var theme_subcommands = []string{"list", "demo"}
+
 func NewThemeCommand() *Command {
 	return &Command{
 		Command:      "theme",
@@ -34,13 +36,23 @@ func CommandThemeAutoComplete(input string) (string, *[]ui.ACOption, string) {
 
 		options := []ui.ACOption{}
 
-		for _, sc := range []string{"list", "demo"} {
-			if input == "" || strings.Contains(sc, input) {
-				options = append(options, ui.ACOption{Name: sc, Result: "theme " + sc})
+		is_subcommand := false
+		for _, sc := range theme_subcommands {
+			if sc == input {
+				is_subcommand = true
+				break
 			}
 		}
 
-		return "command", &options, input
+		if !is_subcommand {
+			for _, sc := range []string{"list", "demo"} {
+				if input == "" || strings.Contains(sc, input) {
+					options = append(options, ui.ACOption{Name: sc, Result: "theme " + sc})
+				}
+			}
+		}
+
+		return "action", &options, input
 	}
 
 	return input, &[]ui.ACOption{}, ""

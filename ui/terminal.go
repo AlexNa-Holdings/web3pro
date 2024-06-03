@@ -233,9 +233,16 @@ func terminalEditor(v *gocui.View, key gocui.Key, ch rune, mod gocui.Modifier) {
 		if Terminal.AutoCompleteOn {
 			_, cy := Terminal.AutoComplete.Cursor()
 			Terminal.Input.Clear()
-			fmt.Fprint(Terminal.Input, (*Terminal.ACOptions)[cy].Result)
-			Terminal.Input.SetCursor(len((*Terminal.ACOptions)[cy].Result), 0)
-			Terminal.HideAutocomplete()
+			result := (*Terminal.ACOptions)[cy].Result
+			fmt.Fprint(Terminal.Input, result)
+			Terminal.Input.SetCursor(len(result), 0)
+
+			// try autocomplete again
+			if Terminal.AutoCompleteFunc != nil {
+				t, o, h := Terminal.AutoCompleteFunc(result)
+				Terminal.ShowAutocomplete(t, o, h)
+
+			}
 		}
 	default:
 		gocui.DefaultEditor.Edit(v, key, ch, mod)
