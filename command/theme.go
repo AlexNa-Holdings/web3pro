@@ -64,10 +64,7 @@ func processTheme(cmd *Command, input string) {
 			ui.Printf(theme.Name + "\n")
 		}
 
-		ui.Terminal.ShowAutocomplete("debug", &[]ui.ACOption{ //DEBUG
-			{Name: "dark", Result: "dark"},
-			{Name: "light", Result: "light"},
-		}, "gh")
+		ui.Printf("\n")
 	case "demo":
 		if len(tokens) < 3 {
 			demoTheme(ui.CurrentTheme.Name)

@@ -32,9 +32,10 @@ type ACOption struct {
 }
 
 var Terminal *TerminalPane = &TerminalPane{
-	CommandPrefix: "web3",
-	History:       []string{},
-	ACOptions:     &[]ACOption{},
+	CommandPrefix:  "web3",
+	History:        []string{},
+	ACOptions:      &[]ACOption{},
+	AutoCompleteOn: false,
 }
 
 func (p *TerminalPane) SetView(g *gocui.Gui, x0, y0, x1, y1 int) {
@@ -105,6 +106,13 @@ func (t *TerminalPane) ShowAutocomplete(title string, options *[]ACOption, highl
 	}
 }
 
+func (p *TerminalPane) HideAutocomplete() {
+	if p.AutoCompleteOn {
+		p.Gui.DeleteView("terminal.autocomplete")
+		p.AutoCompleteOn = false
+	}
+}
+
 func (t *TerminalPane) layoutAutocomplete(title string, options *[]ACOption, highlite string) {
 	var err error
 
@@ -165,13 +173,6 @@ func (t *TerminalPane) layoutAutocomplete(title string, options *[]ACOption, hig
 		if len(*options) > frame_height-2 {
 			t.AutoComplete.SetOrigin(0, len(*options)-frame_height+2)
 		}
-	}
-}
-
-func (p *TerminalPane) HideAutocomplete() {
-	if p.AutoCompleteOn {
-		p.Gui.DeleteView("terminal.autocomplete")
-		p.AutoCompleteOn = false
 	}
 }
 
