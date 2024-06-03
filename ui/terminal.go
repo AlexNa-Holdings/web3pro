@@ -3,6 +3,7 @@ package ui
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 )
@@ -13,19 +14,31 @@ type TerminalPane struct {
 	Screen             *gocui.View
 	Input              *gocui.View
 	Prefix             *gocui.View
+	AutoComplete       *gocui.View
+	AutoCompleteOn     bool
+	ACOptions          *[]ACOption
 	CommandPrefix      string
 	FormattedPrefix    string
 	ProcessCommandFunc func(string)
 	History            []string
+	*gocui.Gui
+}
+
+type ACOption struct {
+	Name   string
+	Result string
 }
 
 var Terminal *TerminalPane = &TerminalPane{
 	CommandPrefix: "web3",
 	History:       []string{},
+	ACOptions:     &[]ACOption{},
 }
 
 func (p *TerminalPane) SetView(g *gocui.Gui, x0, y0, x1, y1 int) {
 	var err error
+
+	p.Gui = g
 
 	if p.View, err = g.SetView("terminal", x0, y0, x1, y1, 0); err != nil {
 		if !errors.Is(err, gocui.ErrUnknownView) {
@@ -72,32 +85,166 @@ func (p *TerminalPane) SetView(g *gocui.Gui, x0, y0, x1, y1 int) {
 			fmt.Fprint(p.Prefix, p.FormattedPrefix)
 			g.SetViewOnTop("terminal.prefix")
 		}
+
+		if p.AutoCompleteOn {
+			p.ShowAutocomplete(p.ACOptions, "")
+		}
+	}
+}
+
+func (t *TerminalPane) ShowAutocomplete(list *[]ACOption, highlite string) {
+	var err error
+
+	t.ACOptions = list
+
+	if len(*list) == 0 {
+		t.HideAutocomplete()
+		return
+	}
+
+	longest_option := 0
+	for _, option := range *list {
+		if len(option.Name) > longest_option {
+			longest_option = len(option.Name)
+		}
+	}
+
+	//calculate the frame size
+	cursor_x, _ := t.Input.Cursor()
+	ix0, _, ix1, _ := t.Input.Dimensions()
+	_, sy0, sx1, sy1 := t.Screen.Dimensions()
+
+	frame_width := max(longest_option+2, 16) // make the title visible
+
+	x := ix0 + cursor_x
+	if x+frame_width > sx1 {
+		x = ix1 - frame_width
+	}
+	if x < 0 {
+		x = 0
+	}
+
+	frame_height := len(*list) + 2
+	if frame_height > sy1-sy0 {
+		frame_height = sy1 - sy0
+	}
+
+	if t.AutoComplete, err = t.Gui.SetView("terminal.autocomplete", x, sy1-frame_height, x+frame_width, sy1-1, 0); err != nil {
+		if !errors.Is(err, gocui.ErrUnknownView) {
+			panic(err)
+		}
+		t.AutoComplete.Frame = true
+		t.AutoComplete.FrameColor = t.Input.FgColor
+		t.AutoComplete.Editable = false
+		t.AutoComplete.Highlight = true
+		t.AutoComplete.Title = "\ueaa1 \uea9a TAB"
+
+		for _, option := range *list {
+			text := option.Name
+			p := strings.Index(option.Name, highlite)
+			if p >= 0 {
+				text = option.Name[:p] +
+					F(t.EmFgColor) +
+					option.Name[p:p+len(highlite)] +
+					F(t.Screen.FgColor) +
+					option.Name[p+len(highlite):]
+			}
+			fmt.Fprintln(t.AutoComplete, text)
+		}
+
+		t.AutoComplete.SetCursor(0, len(*list)-1)
+		if len(*list) > frame_height-2 {
+			t.AutoComplete.SetOrigin(0, len(*list)-frame_height+2)
+		}
+
+		t.AutoCompleteOn = true
+	}
+
+}
+
+func (p *TerminalPane) HideAutocomplete() {
+	if p.AutoCompleteOn {
+		p.Gui.DeleteView("terminal.autocomplete")
+		p.AutoCompleteOn = false
 	}
 }
 
 func terminalEditor(v *gocui.View, key gocui.Key, ch rune, mod gocui.Modifier) {
 	switch key {
 	case gocui.KeyEnter:
-		fmt.Fprintln(Terminal.Screen, Terminal.FormattedPrefix+v.Buffer())
+
+		Terminal.HideAutocomplete()
+
+		i := strings.TrimSpace(v.Buffer())
+
+		fmt.Fprintln(Terminal.Screen, Terminal.FormattedPrefix+i)
 		if len(Terminal.History) > 100 {
 			Terminal.History = Terminal.History[1:]
 		}
 
-		if len(v.Buffer()) > 0 &&
-			(len(Terminal.History) == 0 ||
+		if len(i) > 0 {
+			if len(Terminal.History) == 0 ||
 				(len(Terminal.History) > 0 &&
-					Terminal.History[len(Terminal.History)-1] != v.Buffer())) {
-			Terminal.History = append(Terminal.History, v.Buffer())
+					Terminal.History[len(Terminal.History)-1] != i) {
+				Terminal.History = append(Terminal.History, i)
+			}
+			Terminal.ProcessCommandFunc(v.Buffer())
+		}
+		Terminal.Input.Clear()
+
+		Printf("Hisotry len: %d\n", len(Terminal.History)) //DEBUG
+
+	case gocui.KeyArrowUp:
+		if Terminal.AutoCompleteOn {
+			ox, oy := Terminal.AutoComplete.Origin()
+			cx, cy := Terminal.AutoComplete.Cursor()
+			if cy > 0 {
+				Terminal.AutoComplete.SetCursor(cx, cy-1)
+				if cy-1 < oy {
+					Terminal.AutoComplete.SetOrigin(ox, oy-1)
+				}
+			}
+		} else {
+			if strings.TrimSpace(Terminal.Input.Buffer()) == "" {
+				if len(Terminal.History) > 0 {
+					showHistory()
+				}
+			}
 		}
 
-		Terminal.ProcessCommandFunc(v.Buffer())
-		Terminal.Input.Clear()
-	case gocui.KeyArrowUp:
 	case gocui.KeyArrowDown:
-
+		if Terminal.AutoCompleteOn {
+			ox, oy := Terminal.AutoComplete.Origin()
+			cx, cy := Terminal.AutoComplete.Cursor()
+			_, ay0, _, ay1 := Terminal.AutoComplete.Dimensions()
+			if cy < len(*Terminal.ACOptions)-1 {
+				Terminal.AutoComplete.SetCursor(cx, cy+1)
+				if cy+1-oy > ay1-ay0-3 {
+					Terminal.AutoComplete.SetOrigin(ox, cy-(ay1-ay0-3))
+				}
+			}
+		}
+	case gocui.KeyTab:
+		if Terminal.AutoCompleteOn {
+			_, cy := Terminal.AutoComplete.Cursor()
+			Terminal.Input.Clear()
+			fmt.Fprint(Terminal.Input, (*Terminal.ACOptions)[cy].Result)
+			Terminal.Input.SetCursor(len((*Terminal.ACOptions)[cy].Result), 0)
+			Terminal.HideAutocomplete()
+		}
 	default:
 		gocui.DefaultEditor.Edit(v, key, ch, mod)
 	}
+}
+
+func showHistory() {
+	options := []ACOption{}
+	for _, h := range Terminal.History {
+		options = append(options, ACOption{Name: h, Result: h})
+	}
+
+	Terminal.ShowAutocomplete(&options, "")
+	Terminal.AutoComplete.SetCursor(0, len(options)-1)
 }
 
 func PrintErrorf(format string, a ...interface{}) {

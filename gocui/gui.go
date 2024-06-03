@@ -93,6 +93,9 @@ type Gui struct {
 	// Error message color (AN)
 	ErrorFgColor Attribute
 
+	// Emphasis color (AN)
+	EmFgColor Attribute
+
 	// If Highlight is true, Sel{Bg,Fg}Colors will be used to draw the
 	// frame of the current view.
 	Highlight bool
@@ -835,8 +838,8 @@ func (g *Gui) drawTitle(v *View, fgColor, bgColor Attribute) error {
 
 	text := " " + v.Title + " "
 
-	for i, ch := range text {
-		x = v.x0 + i + 2 + 1
+	x = v.x0 + 2 + 1
+	for _, ch := range text {
 		if x < 0 {
 			continue
 		} else if x > v.x1-2 || x >= g.maxX {
@@ -845,10 +848,10 @@ func (g *Gui) drawTitle(v *View, fgColor, bgColor Attribute) error {
 		if err := g.SetRune(x, v.y0, ch, bgColor, fgColor); err != nil {
 			return err
 		}
+		x++
 	}
 
 	//Suffix
-	x++
 	if x >= 0 && x < g.maxX {
 
 		bg := bgColor

@@ -11,6 +11,7 @@ type Theme struct {
 	ActionBgColor, ActionFgColor, ActionSelBgColor, ActionSelFgColor gocui.Attribute
 
 	ErrorFgColor gocui.Attribute
+	EmFgColor    gocui.Attribute
 }
 
 var CurrentTheme *Theme
@@ -31,6 +32,7 @@ var DarkTheme = Theme{
 	ActionSelFgColor: gocui.ColorBlack,
 
 	ErrorFgColor: gocui.GetColor("#ff0000"),
+	EmFgColor:    gocui.ColorCyan,
 }
 
 var LightTheme = Theme{
@@ -49,6 +51,7 @@ var LightTheme = Theme{
 	ActionSelFgColor: gocui.ColorBlack,
 
 	ErrorFgColor: gocui.GetColor("#ff0000"),
+	EmFgColor:    gocui.ColorCyan,
 }
 
 var Themes = map[string]Theme{
@@ -74,6 +77,7 @@ func SetTheme(g *gocui.Gui, theme string) {
 	g.ActionSelFgColor = t.ActionSelFgColor
 
 	g.ErrorFgColor = t.ErrorFgColor
+	g.EmFgColor = t.EmFgColor
 
 	CurrentTheme = &t
 }

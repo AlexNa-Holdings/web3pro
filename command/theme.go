@@ -40,6 +40,11 @@ func processTheme(cmd *Command, input string) {
 		for _, theme := range ui.Themes {
 			ui.Printf(theme.Name + "\n")
 		}
+
+		ui.Terminal.ShowAutocomplete(&[]ui.ACOption{ //DEBUG
+			{Name: "dark", Result: "dark"},
+			{Name: "light", Result: "light"},
+		}, "gh")
 	case "demo":
 		if len(tokens) < 3 {
 			demoTheme(ui.CurrentTheme.Name)
@@ -75,7 +80,8 @@ func demoTheme(theme string) {
 	ui.Printf(ui.FB(t.SelFgColor, t.SelBgColor) + DL("SelFgColor / SelBgColor") + "\n")
 	ui.Printf(ui.FB(t.ActionFgColor, t.ActionBgColor) + DL("ActionFgColor / ActionBgColor") + "\n")
 	ui.Printf(ui.FB(t.ActionSelFgColor, t.ActionSelBgColor) + DL("ActionSelFgColor / ActionSelBgColor") + "\n")
-	ui.Printf(ui.FB(t.ErrorFgColor, t.BgColor) + DL("ErrorFgColor / BgColor") + "\n")
+	ui.Printf(ui.FB(t.ErrorFgColor, t.BgColor) + DL("ErrorFgColor") + "\n")
+	ui.Printf(ui.FB(t.EmFgColor, t.BgColor) + DL("EmFgColor") + "\n")
 	ui.Printf(ui.FB(t.FrameColor, t.BgColor) + DL("FrameColor / BgColor") + "\n\n")
 
 	ui.ResetColors()
