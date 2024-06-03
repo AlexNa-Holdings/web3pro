@@ -139,7 +139,7 @@ type View struct {
 
 	//A.N.
 
-	SubTitleColor   Attribute
+	SubTitleFgColor Attribute
 	SubTitleBgColor Attribute
 
 	// gui contains the view it's gui
@@ -185,9 +185,15 @@ func (g *Gui) newView(name string, x0, y0, x1, y1 int, mode OutputMode) *View {
 		gui:     g,
 	}
 
-	v.FgColor, v.BgColor = ColorDefault, ColorDefault
-	v.SelFgColor, v.SelBgColor = ColorDefault, ColorDefault
-	v.TitleColor, v.FrameColor = ColorDefault, ColorDefault
+	// v.FgColor, v.BgColor = ColorDefault, ColorDefault
+	// v.SelFgColor, v.SelBgColor = ColorDefault, ColorDefault
+	// v.TitleColor, v.FrameColor = ColorDefault, ColorDefault
+
+	// we do not use default colors
+	v.FgColor, v.BgColor = g.FgColor, g.BgColor
+	v.SelFgColor, v.SelBgColor = g.SelFgColor, g.SelBgColor
+	v.TitleColor, v.FrameColor = g.BgColor, g.FrameColor
+
 	return v
 }
 

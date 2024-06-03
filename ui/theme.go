@@ -12,6 +12,8 @@ type Theme struct {
 
 	ErrorFgColor gocui.Attribute
 	EmFgColor    gocui.Attribute
+
+	HelpFgColor, HelpBgColor gocui.Attribute
 }
 
 var CurrentTheme *Theme
@@ -33,6 +35,9 @@ var DarkTheme = Theme{
 
 	ErrorFgColor: gocui.GetColor("#ff0000"),
 	EmFgColor:    gocui.ColorCyan,
+
+	HelpFgColor: gocui.GetColor("#f1f1f1"),
+	HelpBgColor: gocui.GetColor("#013220"),
 }
 
 var LightTheme = Theme{
@@ -52,6 +57,9 @@ var LightTheme = Theme{
 
 	ErrorFgColor: gocui.GetColor("#ff0000"),
 	EmFgColor:    gocui.ColorCyan,
+
+	HelpFgColor: gocui.GetColor("#f1f1f1"),
+	HelpBgColor: gocui.GetColor("#013220"),
 }
 
 var Themes = map[string]Theme{
@@ -78,6 +86,9 @@ func SetTheme(g *gocui.Gui, theme string) {
 
 	g.ErrorFgColor = t.ErrorFgColor
 	g.EmFgColor = t.EmFgColor
+
+	g.SubTitleFgColor = t.EmFgColor
+	g.SubTitleBgColor = t.EmFgColor
 
 	CurrentTheme = &t
 }

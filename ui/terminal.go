@@ -16,10 +16,12 @@ type TerminalPane struct {
 	Prefix             *gocui.View
 	AutoComplete       *gocui.View
 	AutoCompleteOn     bool
-	ACOptions          *[]ACOption
+	ACOptions          *[]ACOption // autocomplete options
+	ACTitle            string      //autocomplete title
 	CommandPrefix      string
 	FormattedPrefix    string
 	ProcessCommandFunc func(string)
+	AutoCompleteFunc   func(string) (string, *[]ACOption, string)
 	History            []string
 	*gocui.Gui
 }
@@ -87,23 +89,27 @@ func (p *TerminalPane) SetView(g *gocui.Gui, x0, y0, x1, y1 int) {
 		}
 
 		if p.AutoCompleteOn {
-			p.ShowAutocomplete(p.ACOptions, "")
+			p.layoutAutocomplete(p.ACTitle, p.ACOptions, "")
 		}
 	}
 }
 
-func (t *TerminalPane) ShowAutocomplete(list *[]ACOption, highlite string) {
+func (t *TerminalPane) ShowAutocomplete(title string, options *[]ACOption, highlite string) {
+	t.HideAutocomplete()
+
+	if len(*options) > 0 {
+
+		t.ACOptions = options
+		t.ACTitle = title
+		t.AutoCompleteOn = true
+	}
+}
+
+func (t *TerminalPane) layoutAutocomplete(title string, options *[]ACOption, highlite string) {
 	var err error
 
-	t.ACOptions = list
-
-	if len(*list) == 0 {
-		t.HideAutocomplete()
-		return
-	}
-
 	longest_option := 0
-	for _, option := range *list {
+	for _, option := range *options {
 		if len(option.Name) > longest_option {
 			longest_option = len(option.Name)
 		}
@@ -114,7 +120,7 @@ func (t *TerminalPane) ShowAutocomplete(list *[]ACOption, highlite string) {
 	ix0, _, ix1, _ := t.Input.Dimensions()
 	_, sy0, sx1, sy1 := t.Screen.Dimensions()
 
-	frame_width := max(longest_option+2, 16) // make the title visible
+	frame_width := max(longest_option+2, len(title)+16) // make the title visible
 
 	x := ix0 + cursor_x
 	if x+frame_width > sx1 {
@@ -124,7 +130,7 @@ func (t *TerminalPane) ShowAutocomplete(list *[]ACOption, highlite string) {
 		x = 0
 	}
 
-	frame_height := len(*list) + 2
+	frame_height := len(*options) + 2
 	if frame_height > sy1-sy0 {
 		frame_height = sy1 - sy0
 	}
@@ -135,11 +141,14 @@ func (t *TerminalPane) ShowAutocomplete(list *[]ACOption, highlite string) {
 		}
 		t.AutoComplete.Frame = true
 		t.AutoComplete.FrameColor = t.Input.FgColor
+		t.AutoComplete.SubTitleBgColor = CurrentTheme.HelpBgColor
+		t.AutoComplete.SubTitleFgColor = CurrentTheme.HelpFgColor
 		t.AutoComplete.Editable = false
 		t.AutoComplete.Highlight = true
-		t.AutoComplete.Title = "\ueaa1 \uea9a TAB"
+		t.AutoComplete.Title = title
+		t.AutoComplete.Subtitle = "\ueaa1\uea9aTAB"
 
-		for _, option := range *list {
+		for _, option := range *options {
 			text := option.Name
 			p := strings.Index(option.Name, highlite)
 			if p >= 0 {
@@ -152,14 +161,11 @@ func (t *TerminalPane) ShowAutocomplete(list *[]ACOption, highlite string) {
 			fmt.Fprintln(t.AutoComplete, text)
 		}
 
-		t.AutoComplete.SetCursor(0, len(*list)-1)
-		if len(*list) > frame_height-2 {
-			t.AutoComplete.SetOrigin(0, len(*list)-frame_height+2)
+		t.AutoComplete.SetCursor(0, len(*options)-1)
+		if len(*options) > frame_height-2 {
+			t.AutoComplete.SetOrigin(0, len(*options)-frame_height+2)
 		}
-
-		t.AutoCompleteOn = true
 	}
-
 }
 
 func (p *TerminalPane) HideAutocomplete() {
@@ -191,8 +197,6 @@ func terminalEditor(v *gocui.View, key gocui.Key, ch rune, mod gocui.Modifier) {
 			Terminal.ProcessCommandFunc(v.Buffer())
 		}
 		Terminal.Input.Clear()
-
-		Printf("Hisotry len: %d\n", len(Terminal.History)) //DEBUG
 
 	case gocui.KeyArrowUp:
 		if Terminal.AutoCompleteOn {
@@ -234,6 +238,11 @@ func terminalEditor(v *gocui.View, key gocui.Key, ch rune, mod gocui.Modifier) {
 		}
 	default:
 		gocui.DefaultEditor.Edit(v, key, ch, mod)
+		if Terminal.AutoCompleteFunc != nil {
+			t, o, h := Terminal.AutoCompleteFunc(v.Buffer())
+			Terminal.ShowAutocomplete(t, o, h)
+
+		}
 	}
 }
 
@@ -243,7 +252,7 @@ func showHistory() {
 		options = append(options, ACOption{Name: h, Result: h})
 	}
 
-	Terminal.ShowAutocomplete(&options, "")
+	Terminal.ShowAutocomplete("History", &options, "")
 	Terminal.AutoComplete.SetCursor(0, len(options)-1)
 }
 

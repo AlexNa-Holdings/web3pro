@@ -117,6 +117,10 @@ type Gui struct {
 	// SupportOverlaps is true when we allow for view edges to overlap with other
 	// view edges
 	SupportOverlaps bool
+
+	// TitleFgColor and TitleBgColor allow to configure the background and (AN)
+	SubTitleFgColor Attribute
+	SubTitleBgColor Attribute
 }
 
 // NewGui returns a new Gui object with a given output mode.
@@ -874,25 +878,24 @@ func (g *Gui) drawSubtitle(v *View, fgColor, bgColor Attribute) error {
 		return nil
 	}
 
-	start := v.x0 + len(v.Title) + 6
-	if start < v.x0 {
+	x := v.x0 + len(v.Title) + 6
+	if x < v.x0 {
 		return nil
 	}
 
 	text := " " + v.Subtitle + " "
 
-	for i, ch := range text {
-		x := start + i
+	for _, ch := range text {
 		if x >= v.x1 {
 			break
 		}
-		if err := g.SetRune(x, v.y0, ch, v.SubTitleColor, v.SubTitleBgColor); err != nil {
+		if err := g.SetRune(x, v.y0, ch, v.SubTitleFgColor, v.SubTitleBgColor); err != nil {
 			return err
 		}
+		x++
 	}
 
 	//Suffix
-	x := v.x0 + len(v.Title) + 6 + len(text)
 	if x >= 0 && x < g.maxX {
 		if err := g.SetRune(x, v.y0, '\ue0b0', v.SubTitleBgColor, bgColor); err != nil {
 			return err

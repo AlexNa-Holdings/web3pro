@@ -61,6 +61,7 @@ func layout(g *gocui.Gui) error {
 
 	ui.Terminal.SetView(g, 0, FirstRowHeight, maxX-1, maxY-2)
 	ui.Terminal.ProcessCommandFunc = command.Process
+	ui.Terminal.AutoCompleteFunc = command.AutoComplete
 
 	ui.Bottom.SetView(g)
 
