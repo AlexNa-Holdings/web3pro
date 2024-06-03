@@ -22,6 +22,7 @@ This command allows you to change or show the UI theme.
 COMMANDS:
 		demo [THEME] - show theme colors (default: current theme)
 		`,
+		Help:             `UI themes management`,
 		Process:          Theme_Process,
 		AutoCompleteFunc: Theme_AutoComplete,
 	}

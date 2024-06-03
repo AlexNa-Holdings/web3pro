@@ -13,6 +13,7 @@ type Command struct {
 	Command          string
 	ShortCommand     string
 	Usage            string
+	Help             string
 	Process          CommandProcessFunc
 	AutoCompleteFunc AutoCompleteFunc
 }

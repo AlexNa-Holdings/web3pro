@@ -21,6 +21,7 @@ EXAMPLES:
 		help theme
 		
 		`,
+		Help:             `Show help information for a specific command`,
 		Process:          Help_Process,
 		AutoCompleteFunc: Help_AutoComplete,
 	}
@@ -61,7 +62,16 @@ func Help_Process(cmd *Command, input string) {
 	//parse command subcommand parameters
 	tokens := strings.Fields(input)
 	if len(tokens) < 2 {
-		fmt.Fprintln(ui.Terminal.Screen, cmd.Usage)
+		ui.Printf("\nAvailable commands:\n\n")
+		for _, sc := range Commands {
+			short := ""
+			if sc.ShortCommand != "" {
+				short = "(" + sc.ShortCommand + ")"
+			}
+			ui.Printf("%-12s - %s\n", sc.Command+short, sc.Help)
+		}
+
+		ui.Printf("\n")
 		return
 	}
 	command := tokens[1]

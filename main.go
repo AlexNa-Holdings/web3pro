@@ -6,25 +6,28 @@ package main
 
 import (
 	"errors"
-	"log"
 
 	"github.com/AlexNa-Holdings/web3pro/command"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/ui"
+	"github.com/rs/zerolog/log"
 )
 
 const WEB3_PRO = `
-/ \  /|/  __//  _ \\__  \  /  __\/  __\/  _ \
-| |  |||  \  | | //  /  |  |  \/||  \/|| / \|
-| |/\|||  /_ | |_\\ _\  |  |  __/|    /| \_/|
-\_/  \|\____\\____//____/  \_/   \_/\_\\____/`
+___       __    ______ ________ ________              
+__ |     / /_______  /___|__  / ___  __ \____________ 
+__ | /| / /_  _ \_  __ \__/_ <  __  /_/ /_  ___/  __ \
+__ |/ |/ / /  __/  /_/ /___/ /  _  ____/_  /   / /_/ /
+____/|__/  \___//_.___//____/   /_/     /_/    \____/ `
 
 func main() {
+	InitConfig()
+
 	command.Init()
 
 	g, err := gocui.NewGui(gocui.OutputTrue, true)
 	if err != nil {
-		log.Panicln(err)
+		log.Fatal().Msgf("error creating gocui: %v", err)
 	}
 	defer g.Close()
 
@@ -36,11 +39,28 @@ func main() {
 	g.SetManagerFunc(layout)
 
 	if err := g.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, quit); err != nil {
-		log.Panicln(err)
+		log.Fatal().Msgf("error setting keybinding: %v", err)
 	}
 
+	ui.Is_ready_wg.Add(1)
+	go func() {
+		ui.Is_ready_wg.Wait()
+		ui.Printf(ui.F(ui.CurrentTheme.EmFgColor) + WEB3_PRO + ui.F(ui.Terminal.Screen.FgColor) + "\n\n")
+		ui.Printf("by X:@AlexNa Telegram:@TheAlexNa\n")
+
+		ui.Printf("Version: %s\n", ui.F(ui.CurrentTheme.EmFgColor)+VERSION+ui.F(ui.Terminal.Screen.FgColor))
+
+		ui.Printf("Data folder: %s\n", ui.F(ui.CurrentTheme.EmFgColor)+DataFolder+ui.F(ui.Terminal.Screen.FgColor))
+		ui.Printf("Log file: %s\n", ui.F(ui.CurrentTheme.EmFgColor)+LogPath+ui.F(ui.Terminal.Screen.FgColor))
+
+		log.Trace().Msg("Started")
+
+		ui.Printf("\nType 'help' for help\n\n")
+
+	}()
+
 	if err := g.MainLoop(); err != nil && !errors.Is(err, gocui.ErrQuit) {
-		log.Panicln(err)
+		log.Fatal().Msgf("error running gocui: %v", err)
 	}
 }
 
@@ -69,6 +89,11 @@ func layout(g *gocui.Gui) error {
 
 	g.SetCurrentView("terminal.input")
 	g.Cursor = true
+
+	if !ui.Is_ready {
+		ui.Is_ready_wg.Done()
+		ui.Is_ready = true
+	}
 
 	return nil
 }
