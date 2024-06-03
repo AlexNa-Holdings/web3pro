@@ -22,23 +22,23 @@ This command allows you to change or show the UI theme.
 COMMANDS:
 		demo [THEME] - show theme colors (default: current theme)
 		`,
-		Process:          CommandProcessFunc(processTheme),
-		AutoCompleteFunc: CommandThemeAutoComplete,
+		Process:          Theme_Process,
+		AutoCompleteFunc: Theme_AutoComplete,
 	}
 }
 
-func CommandThemeAutoComplete(input string) (string, *[]ui.ACOption, string) {
-	re_subcommand := regexp.MustCompile(`^theme\s+(\w*)$`)
+func Theme_AutoComplete(input string) (string, *[]ui.ACOption, string) {
+	params, first_word := Params(input)
+	re_subcommand := regexp.MustCompile(`^(\w*)$`)
 
-	if re_subcommand.MatchString(input) {
-		m := re_subcommand.FindStringSubmatch(input)
-		input := m[1]
+	if m := re_subcommand.FindStringSubmatch(params); m != nil {
+		si := m[1]
 
 		options := []ui.ACOption{}
 
 		is_subcommand := false
 		for _, sc := range theme_subcommands {
-			if sc == input {
+			if sc == si {
 				is_subcommand = true
 				break
 			}
@@ -46,8 +46,8 @@ func CommandThemeAutoComplete(input string) (string, *[]ui.ACOption, string) {
 
 		if !is_subcommand {
 			for _, sc := range []string{"list", "demo"} {
-				if input == "" || strings.Contains(sc, input) {
-					options = append(options, ui.ACOption{Name: sc, Result: "theme " + sc})
+				if input == "" || strings.Contains(sc, si) {
+					options = append(options, ui.ACOption{Name: sc, Result: first_word + " " + sc})
 				}
 			}
 		}
@@ -58,7 +58,7 @@ func CommandThemeAutoComplete(input string) (string, *[]ui.ACOption, string) {
 	return input, &[]ui.ACOption{}, ""
 }
 
-func processTheme(cmd *Command, input string) {
+func Theme_Process(cmd *Command, input string) {
 	//parse command subcommand parameters
 	tokens := strings.Fields(input)
 	if len(tokens) < 2 {

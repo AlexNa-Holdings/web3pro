@@ -18,6 +18,7 @@ type TerminalPane struct {
 	AutoCompleteOn     bool
 	ACOptions          *[]ACOption // autocomplete options
 	ACTitle            string      //autocomplete title
+	ACHighlite         string      //autocomplete highlite
 	CommandPrefix      string
 	FormattedPrefix    string
 	ProcessCommandFunc func(string)
@@ -90,7 +91,7 @@ func (p *TerminalPane) SetView(g *gocui.Gui, x0, y0, x1, y1 int) {
 		}
 
 		if p.AutoCompleteOn {
-			p.layoutAutocomplete(p.ACTitle, p.ACOptions, "")
+			p.layoutAutocomplete(p.ACTitle, p.ACOptions, p.ACHighlite)
 		}
 	}
 }
@@ -102,6 +103,7 @@ func (t *TerminalPane) ShowAutocomplete(title string, options *[]ACOption, highl
 
 		t.ACOptions = options
 		t.ACTitle = title
+		t.ACHighlite = highlite
 		t.AutoCompleteOn = true
 	}
 }
@@ -124,13 +126,14 @@ func (t *TerminalPane) layoutAutocomplete(title string, options *[]ACOption, hig
 	}
 
 	//calculate the frame size
-	cursor_x, _ := t.Input.Cursor()
+	input := t.Input.Buffer()
 	ix0, _, ix1, _ := t.Input.Dimensions()
+	io0, _ := t.Input.Origin()
 	_, sy0, sx1, sy1 := t.Screen.Dimensions()
 
 	frame_width := max(longest_option+2, len(title)+16) // make the title visible
 
-	x := ix0 + cursor_x
+	x := ix0 + len(input) - io0
 	if x+frame_width > sx1 {
 		x = ix1 - frame_width
 	}
@@ -154,7 +157,11 @@ func (t *TerminalPane) layoutAutocomplete(title string, options *[]ACOption, hig
 		t.AutoComplete.Editable = false
 		t.AutoComplete.Highlight = true
 		t.AutoComplete.Title = title
-		t.AutoComplete.Subtitle = "\ueaa1\uea9aTAB"
+		if len(*options) > 1 {
+			t.AutoComplete.Subtitle = "\uf431\uf433\uf432"
+		} else {
+			t.AutoComplete.Subtitle = "\uf432"
+		}
 
 		for _, option := range *options {
 			text := option.Name
@@ -230,6 +237,7 @@ func terminalEditor(v *gocui.View, key gocui.Key, ch rune, mod gocui.Modifier) {
 			}
 		}
 	case gocui.KeyTab:
+	case gocui.KeyArrowRight:
 		if Terminal.AutoCompleteOn {
 			_, cy := Terminal.AutoComplete.Cursor()
 			Terminal.Input.Clear()

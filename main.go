@@ -20,6 +20,8 @@ const WEB3_PRO = `
 \_/  \|\____\\____//____/  \_/   \_/\_\\____/`
 
 func main() {
+	command.Init()
+
 	g, err := gocui.NewGui(gocui.OutputTrue, true)
 	if err != nil {
 		log.Panicln(err)

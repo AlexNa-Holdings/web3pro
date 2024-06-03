@@ -17,8 +17,13 @@ type Command struct {
 	AutoCompleteFunc AutoCompleteFunc
 }
 
-var Commands = []*Command{
-	NewThemeCommand(),
+var Commands []*Command
+
+func Init() {
+	Commands = []*Command{
+		NewThemeCommand(),
+		NewHelpCommand(),
+	}
 }
 
 func Process(input string) {
@@ -31,7 +36,7 @@ func Process(input string) {
 		}
 	}
 
-	ui.PrintErrorf("Unknown command: %s\n", command)
+	ui.PrintErrorf("\nUnknown command: %s\n\n", command)
 }
 
 func AutoComplete(input string) (string, *[]ui.ACOption, string) {
@@ -46,7 +51,7 @@ func AutoComplete(input string) (string, *[]ui.ACOption, string) {
 
 	is_command := false
 	for _, cmd := range Commands {
-		if cmd.Command == command || cmd.ShortCommand == command {
+		if cmd.Command == command || (cmd.ShortCommand != "" && cmd.ShortCommand == command) {
 			is_command = true
 			break
 		}
@@ -59,15 +64,21 @@ func AutoComplete(input string) (string, *[]ui.ACOption, string) {
 			}
 		}
 		return "command", &options, command
-	} else {
-		for _, cmd := range Commands {
-			if cmd.Command == command || cmd.ShortCommand == command {
-				if cmd.AutoCompleteFunc != nil {
-					return cmd.AutoCompleteFunc(input)
-				}
+	}
+
+	for _, cmd := range Commands {
+		if cmd.Command == command || cmd.ShortCommand == command {
+			if cmd.AutoCompleteFunc != nil {
+				return cmd.AutoCompleteFunc(input)
 			}
 		}
 	}
 
 	return command, &options, ""
+}
+
+// removes the first word from the input string
+func Params(s string) (string, string) {
+	first_word := strings.Split(s, " ")[0]
+	return strings.TrimSpace(strings.Replace(s, first_word, "", 1)), first_word
 }
