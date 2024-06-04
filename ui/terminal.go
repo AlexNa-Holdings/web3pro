@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/AlexNa-Holdings/web3pro/gocui"
+	"github.com/rs/zerolog/log"
 )
 
 type TerminalPane struct {
@@ -53,7 +54,7 @@ func (p *TerminalPane) SetView(g *gocui.Gui, x0, y0, x1, y1 int) {
 			panic(err)
 		}
 		p.Screen.Autoscroll = true
-		p.Screen.Wrap = true
+		p.Screen.Wrap = false
 		p.Screen.Frame = false
 	}
 
@@ -237,16 +238,19 @@ func terminalEditor(v *gocui.View, key gocui.Key, ch rune, mod gocui.Modifier) {
 	case gocui.KeyArrowRight:
 		if Terminal.AutoCompleteOn {
 			_, cy := Terminal.AutoComplete.Cursor()
-			Terminal.Input.Clear()
-			result := (*Terminal.ACOptions)[cy].Result
-			fmt.Fprint(Terminal.Input, result)
-			Terminal.Input.SetCursor(len(result), 0)
 
-			// try autocomplete again
-			if Terminal.AutoCompleteFunc != nil {
-				t, o, h := Terminal.AutoCompleteFunc(result)
-				Terminal.ShowAutocomplete(t, o, h)
+			if cy >= 0 && cy < len(*Terminal.ACOptions) {
+				Terminal.Input.Clear()
+				result := (*Terminal.ACOptions)[cy].Result
+				fmt.Fprint(Terminal.Input, result)
+				Terminal.Input.SetCursor(len(result), 0)
 
+				// try autocomplete again
+				if Terminal.AutoCompleteFunc != nil {
+					t, o, h := Terminal.AutoCompleteFunc(result)
+					Terminal.ShowAutocomplete(t, o, h)
+
+				}
 			}
 		}
 	default:
@@ -259,6 +263,30 @@ func terminalEditor(v *gocui.View, key gocui.Key, ch rune, mod gocui.Modifier) {
 	}
 }
 
+func OnAutocompleteMouseDown(g *gocui.Gui, v *gocui.View) error {
+
+	log.Debug().Msg("OnAutocompleteMouseDown")
+
+	_, cy := Terminal.AutoComplete.Cursor()
+
+	if cy >= 0 && cy < len(*Terminal.ACOptions) {
+		Terminal.Input.Clear()
+		result := (*Terminal.ACOptions)[cy].Result
+		fmt.Fprint(Terminal.Input, result)
+		Terminal.Input.SetCursor(len(result), 0)
+
+		// try autocomplete again
+		if Terminal.AutoCompleteFunc != nil {
+			t, o, h := Terminal.AutoCompleteFunc(result)
+			Terminal.ShowAutocomplete(t, o, h)
+
+		}
+	}
+
+	return nil
+
+}
+
 func showHistory() {
 	options := []ACOption{}
 	for _, h := range Terminal.History {
@@ -266,7 +294,6 @@ func showHistory() {
 	}
 
 	Terminal.ShowAutocomplete("History", &options, "")
-	Terminal.AutoComplete.SetCursor(0, len(options)-1)
 }
 
 func PrintErrorf(format string, a ...interface{}) {

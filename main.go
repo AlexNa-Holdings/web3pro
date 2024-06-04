@@ -21,27 +21,11 @@ __ |/ |/ / /  __/  /_/ /___/ /_  ____/_  /   / /_/ /
 ____/|__/  \___//_.___//____/ /_/     /_/    \____/ `
 
 func main() {
-	var err error
 	InitConfig()
 
 	command.Init()
-
-	ui.Gui, err = gocui.NewGui(gocui.OutputTrue, true)
-	if err != nil {
-		log.Fatal().Msgf("error creating gocui: %v", err)
-	}
+	ui.Init()
 	defer ui.Gui.Close()
-
-	ui.Gui.Mouse = true
-	ui.Gui.Cursor = true
-	ui.Gui.Highlight = true
-	ui.Gui.SetManagerFunc(ui.Layout)
-
-	if err := ui.Gui.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, quit); err != nil {
-		log.Fatal().Msgf("error setting keybinding: %v", err)
-	}
-
-	ui.SetTheme("dark") // temoprary
 
 	ui.Is_ready_wg.Add(1)
 	go func() {
@@ -49,8 +33,6 @@ func main() {
 
 		ui.Terminal.AutoCompleteFunc = command.AutoComplete
 		ui.Terminal.ProcessCommandFunc = command.Process
-
-		log.Trace().Msg("Started")
 
 		ui.Printf("\n" + ui.F(ui.CurrentTheme.EmFgColor) + WEB3_PRO + ui.F(ui.Terminal.Screen.FgColor) + "\n\n")
 		ui.Printf("by X:@AlexNa Telegram:@TheAlexNa\n")
@@ -67,8 +49,4 @@ func main() {
 	if err := ui.Gui.MainLoop(); err != nil && !errors.Is(err, gocui.ErrQuit) {
 		log.Fatal().Msgf("error running gocui: %v", err)
 	}
-}
-
-func quit(g *gocui.Gui, v *gocui.View) error {
-	return gocui.ErrQuit
 }

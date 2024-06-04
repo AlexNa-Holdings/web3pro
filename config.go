@@ -32,7 +32,7 @@ func InitConfig() {
 	// Get the data folder
 	DataFolder, err = GetDataFolder()
 	if err != nil {
-		log.Fatal().Msgf("error getting data folder: %v", err)
+		fmt.Printf("error getting data folder: %v", err)
 		os.Exit(1)
 	}
 
@@ -45,6 +45,9 @@ func InitConfig() {
 		log.Fatal().Msgf("error opening log file: %v", err)
 	}
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: logFile})
+
+	log.Trace().Msg("Started")
+
 }
 
 func GetDataFolder() (string, error) {
