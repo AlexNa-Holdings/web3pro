@@ -1,6 +1,9 @@
 package ui
 
-import "github.com/AlexNa-Holdings/web3pro/gocui"
+import (
+	"github.com/AlexNa-Holdings/web3pro/gocui"
+	"github.com/rs/zerolog/log"
+)
 
 type Theme struct {
 	Name string
@@ -67,28 +70,30 @@ var Themes = map[string]Theme{
 	LightTheme.Name: LightTheme,
 }
 
-func SetTheme(g *gocui.Gui, theme string) {
+func SetTheme(theme string) {
 	t, ok := Themes[theme]
 	if !ok {
+		log.Error().Msgf("Unknown theme: %s", theme)
 		t = DarkTheme
 	}
-	g.BgColor = t.BgColor
-	g.FgColor = t.FgColor
-	g.FrameColor = t.FrameColor
-	g.SelBgColor = t.SelBgColor
-	g.SelFgColor = t.SelFgColor
-	g.SelFrameColor = t.SelFrameColor
+	Gui.BgColor = t.BgColor
+	Gui.FgColor = t.FgColor
+	Gui.FrameColor = t.FrameColor
+	Gui.SelBgColor = t.SelBgColor
+	Gui.SelFgColor = t.SelFgColor
+	Gui.SelFrameColor = t.SelFrameColor
 
-	g.ActionBgColor = t.ActionBgColor
-	g.ActionFgColor = t.ActionFgColor
-	g.ActionSelBgColor = t.ActionSelBgColor
-	g.ActionSelFgColor = t.ActionSelFgColor
+	Gui.ActionBgColor = t.ActionBgColor
+	Gui.ActionFgColor = t.ActionFgColor
+	Gui.ActionSelBgColor = t.ActionSelBgColor
+	Gui.ActionSelFgColor = t.ActionSelFgColor
 
-	g.ErrorFgColor = t.ErrorFgColor
-	g.EmFgColor = t.EmFgColor
+	Gui.ErrorFgColor = t.ErrorFgColor
+	Gui.EmFgColor = t.EmFgColor
 
-	g.SubTitleFgColor = t.EmFgColor
-	g.SubTitleBgColor = t.EmFgColor
+	Gui.SubTitleFgColor = t.EmFgColor
+	Gui.SubTitleBgColor = t.EmFgColor
 
 	CurrentTheme = &t
+
 }

@@ -138,7 +138,6 @@ type View struct {
 	KeybindOnEdit bool
 
 	//A.N.
-
 	SubTitleFgColor Attribute
 	SubTitleBgColor Attribute
 
@@ -189,10 +188,13 @@ func (g *Gui) newView(name string, x0, y0, x1, y1 int, mode OutputMode) *View {
 	// v.SelFgColor, v.SelBgColor = ColorDefault, ColorDefault
 	// v.TitleColor, v.FrameColor = ColorDefault, ColorDefault
 
-	// we do not use default colors
-	v.FgColor, v.BgColor = g.FgColor, g.BgColor
-	v.SelFgColor, v.SelBgColor = g.SelFgColor, g.SelBgColor
-	v.TitleColor, v.FrameColor = g.BgColor, g.FrameColor
+	v.FgColor = v.gui.FgColor
+	v.BgColor = v.gui.BgColor
+	v.SelFgColor = v.gui.SelFgColor
+	v.SelBgColor = v.gui.SelBgColor
+	v.FrameColor = v.gui.FrameColor
+	v.SubTitleFgColor = v.gui.SubTitleFgColor
+	v.SubTitleBgColor = v.gui.SubTitleBgColor
 
 	return v
 }

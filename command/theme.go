@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/AlexNa-Holdings/web3pro/ui"
+	"github.com/rs/zerolog/log"
 )
 
 var theme_subcommands = []string{"list", "demo"}
@@ -29,13 +30,12 @@ COMMANDS:
 }
 
 func Theme_AutoComplete(input string) (string, *[]ui.ACOption, string) {
+	options := []ui.ACOption{}
 	params, first_word := Params(input)
-	re_subcommand := regexp.MustCompile(`^(\w*)$`)
 
+	re_subcommand := regexp.MustCompile(`^(\w*)$`)
 	if m := re_subcommand.FindStringSubmatch(params); m != nil {
 		si := m[1]
-
-		options := []ui.ACOption{}
 
 		is_subcommand := false
 		for _, sc := range theme_subcommands {
@@ -46,9 +46,9 @@ func Theme_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 		}
 
 		if !is_subcommand {
-			for _, sc := range []string{"list", "demo"} {
+			for _, sc := range []string{"demo", "list", "set"} {
 				if input == "" || strings.Contains(sc, si) {
-					options = append(options, ui.ACOption{Name: sc, Result: first_word + " " + sc})
+					options = append(options, ui.ACOption{Name: sc, Result: first_word + " " + sc + " "})
 				}
 			}
 		}
@@ -56,7 +56,30 @@ func Theme_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 		return "action", &options, input
 	}
 
-	return input, &[]ui.ACOption{}, ""
+	re_demo := regexp.MustCompile(`^demo\s+(\w*)$`)
+	if m := re_demo.FindStringSubmatch(params); m != nil {
+		t := m[1]
+		for _, theme := range ui.Themes {
+			if t == "" || strings.Contains(theme.Name, t) {
+				options = append(options, ui.ACOption{Name: theme.Name, Result: first_word + " demo " + theme.Name})
+			}
+		}
+		return "theme", &options, input
+	}
+
+	re_set := regexp.MustCompile(`^set\s+(\w*)$`)
+	if m := re_set.FindStringSubmatch(params); m != nil {
+		t := m[1]
+
+		for _, theme := range ui.Themes {
+			if t == "" || strings.Contains(theme.Name, t) {
+				options = append(options, ui.ACOption{Name: theme.Name, Result: first_word + " set " + theme.Name})
+			}
+		}
+		return "theme", &options, input
+	}
+
+	return input, &options, ""
 }
 
 func Theme_Process(cmd *Command, input string) {
@@ -83,6 +106,13 @@ func Theme_Process(cmd *Command, input string) {
 			demoTheme(ui.CurrentTheme.Name)
 		} else {
 			demoTheme(tokens[2])
+		}
+	case "set":
+		if len(tokens) < 3 {
+		} else {
+			ui.SetTheme(tokens[2])
+			ui.Gui.SetManagerFunc(ui.Layout)
+			log.Trace().Msgf("Theme set to: %s", tokens[2])
 		}
 	default:
 		ui.PrintErrorf("Unknown subcommand: %s\n", subcommand)

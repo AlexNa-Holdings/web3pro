@@ -27,8 +27,8 @@ func (p *ConfirmPane) SetView(g *gocui.Gui, x0, y0, x1, y1 int) {
 		}
 		p.View.Title = "Confirm"
 		p.View.Autoscroll = true
-		p.SubTitleFgColor = g.ActionFgColor
-		p.SubTitleBgColor = g.ActionBgColor
+		p.View.SubTitleFgColor = Gui.ActionFgColor
+		p.View.SubTitleBgColor = Gui.ActionBgColor
 		fmt.Fprintln(p.View, "Nothing to confirm")
 
 		p.Subtitle = "Confirmations (1)"

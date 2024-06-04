@@ -81,5 +81,5 @@ func AutoComplete(input string) (string, *[]ui.ACOption, string) {
 // removes the first word from the input string
 func Params(s string) (string, string) {
 	first_word := strings.Split(s, " ")[0]
-	return strings.TrimSpace(strings.Replace(s, first_word, "", 1)), first_word
+	return strings.TrimLeft(strings.Replace(s, first_word, "", 1), " \t"), first_word
 }

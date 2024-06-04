@@ -24,7 +24,6 @@ type TerminalPane struct {
 	ProcessCommandFunc func(string)
 	AutoCompleteFunc   func(string) (string, *[]ACOption, string)
 	History            []string
-	*gocui.Gui
 }
 
 type ACOption struct {
@@ -41,8 +40,6 @@ var Terminal *TerminalPane = &TerminalPane{
 
 func (p *TerminalPane) SetView(g *gocui.Gui, x0, y0, x1, y1 int) {
 	var err error
-
-	p.Gui = g
 
 	if p.View, err = g.SetView("terminal", x0, y0, x1, y1, 0); err != nil {
 		if !errors.Is(err, gocui.ErrUnknownView) {
@@ -80,9 +77,9 @@ func (p *TerminalPane) SetView(g *gocui.Gui, x0, y0, x1, y1 int) {
 			}
 			p.Prefix.Frame = false
 
-			p.FormattedPrefix = FB(g.ActionFgColor, g.ActionBgColor) +
+			p.FormattedPrefix = FB(Gui.ActionFgColor, Gui.ActionBgColor) +
 				p.CommandPrefix +
-				FB(g.ActionBgColor, p.Prefix.BgColor) +
+				FB(Gui.ActionBgColor, p.Prefix.BgColor) +
 				"\ue0b0" +
 				FB(p.Prefix.FgColor, p.Prefix.BgColor)
 
@@ -110,7 +107,7 @@ func (t *TerminalPane) ShowAutocomplete(title string, options *[]ACOption, highl
 
 func (p *TerminalPane) HideAutocomplete() {
 	if p.AutoCompleteOn {
-		p.Gui.DeleteView("terminal.autocomplete")
+		Gui.DeleteView("terminal.autocomplete")
 		p.AutoCompleteOn = false
 	}
 }
@@ -146,7 +143,7 @@ func (t *TerminalPane) layoutAutocomplete(title string, options *[]ACOption, hig
 		frame_height = sy1 - sy0
 	}
 
-	if t.AutoComplete, err = t.Gui.SetView("terminal.autocomplete", x, sy1-frame_height, x+frame_width, sy1-1, 0); err != nil {
+	if t.AutoComplete, err = Gui.SetView("terminal.autocomplete", x, sy1-frame_height, x+frame_width, sy1-1, 0); err != nil {
 		if !errors.Is(err, gocui.ErrUnknownView) {
 			panic(err)
 		}
@@ -168,9 +165,9 @@ func (t *TerminalPane) layoutAutocomplete(title string, options *[]ACOption, hig
 			p := strings.Index(option.Name, highlite)
 			if p >= 0 {
 				text = option.Name[:p] +
-					F(t.EmFgColor) +
+					F(Gui.EmFgColor) +
 					option.Name[p:p+len(highlite)] +
-					F(t.Screen.FgColor) +
+					F(Gui.FgColor) +
 					option.Name[p+len(highlite):]
 			}
 			fmt.Fprintln(t.AutoComplete, text)
