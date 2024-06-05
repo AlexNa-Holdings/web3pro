@@ -234,7 +234,7 @@ func (v *View) setRune(x, y int, ch rune, fgColor, bgColor Attribute) error {
 	} else if hs := v.findHotspot(x+v.ox, y+v.oy); hs != nil {
 		hsx := x + v.ox - hs.x
 
-		if y == v.cy-v.oy && hsx >= 0 && hsx < hs.l {
+		if y == v.cy-v.oy && hsx >= 0 && hsx < hs.l && v.cx+v.ox >= hs.x && v.cx+v.ox < hs.x+hs.l {
 			fgColor = hs.cells_highligted[hsx].fgColor
 			bgColor = hs.cells_highligted[hsx].bgColor
 			ch = hs.cells_highligted[hsx].chr

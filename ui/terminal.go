@@ -55,6 +55,8 @@ func (p *TerminalPane) SetView(g *gocui.Gui, x0, y0, x1, y1 int) {
 		p.Screen.Autoscroll = true
 		p.Screen.Wrap = false
 		p.Screen.Frame = false
+		p.Screen.Highlight = false
+		p.Screen.Editable = false
 	}
 
 	prefix_len := len(p.CommandPrefix) + 1

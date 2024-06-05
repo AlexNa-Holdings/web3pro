@@ -43,8 +43,13 @@ func main() {
 		ui.Terminal.Screen.AddLink(DataFolder, "copy "+DataFolder, "Copy data folder path to clipboard")
 		ui.Printf("\n")
 
-		ui.Printf("Log file: %s\n", ui.F(ui.CurrentTheme.EmFgColor)+LogPath+ui.F(ui.Terminal.Screen.FgColor))
-		ui.Printf("Config file: %s\n", ui.F(ui.CurrentTheme.EmFgColor)+ConfPath+ui.F(ui.Terminal.Screen.FgColor))
+		ui.Printf("Log file: ")
+		ui.Terminal.Screen.AddLink(LogPath, "copy "+LogPath, "Copy log file path to clipboard")
+		ui.Printf("\n")
+
+		ui.Printf("Config file: ")
+		ui.Terminal.Screen.AddLink(ConfPath, "copy "+ConfPath, "Copy config file path to clipboard")
+		ui.Printf("\n")
 
 		ui.Printf("\nType 'help' for help\n\n")
 

@@ -2,6 +2,7 @@ package gocui
 
 import (
 	"errors"
+	"fmt"
 	"sort"
 )
 
@@ -30,17 +31,20 @@ func (v *View) AddHotspot(x, y int, value string, tip string, cells []cell, cell
 		return errors.New("cells and cells_highligted must have the same length")
 	}
 
-	//insert into hotspots sorted by x and y
-	h := hotspot{x, y, len(cells), value, tip, cells, cells_highligted}
-	var p int
-	var hs hotspot
-	for p, hs = range v.hotspots {
-		if hs.y > y || (hs.y == y && hs.x > x) {
-			break
+	// Find the index where the new hotspot should be inserted
+	index := sort.Search(len(v.hotspots), func(i int) bool {
+		if v.hotspots[i].y == y {
+			return v.hotspots[i].x >= x
 		}
-	}
+		return v.hotspots[i].y >= y
+	})
 
-	v.hotspots = append(v.hotspots[:p], append([]hotspot{h}, v.hotspots[p:]...)...)
+	h := hotspot{x, y, len(cells), value, tip, cells, cells_highligted}
+
+	// Insert the new hotspot at the found index
+	v.hotspots = append(v.hotspots, h)             // Increase the size by one
+	copy(v.hotspots[index+1:], v.hotspots[index:]) // Shift elements to the right
+	v.hotspots[index] = h                          // Insert the new element
 
 	return nil
 }
@@ -69,6 +73,8 @@ func (v *View) findHotspot(x, y int) *hotspot {
 func (v *View) AddLink(text, value, tip string) error {
 	cells := AddCells(nil, v.gui.EmFgColor, v.BgColor, text)
 	cells_highligted := AddCells(nil, v.SelFgColor, v.SelBgColor, text)
-	v.writeCells(v.wx, v.wy, cells)
-	return v.AddHotspot(v.wx, v.wy, value, tip, cells, cells_highligted)
+	err := v.AddHotspot(v.wx, v.wy, value, tip, cells, cells_highligted)
+	fmt.Fprint(v, text)
+	return err
+
 }
