@@ -627,7 +627,7 @@ func (g *Gui) flush() error {
 				return err
 			}
 			if v.Title != "" {
-				if err := g.drawTitle(v, frameColor, bgColor); err != nil {
+				if err := g.drawTitle(v, fgColor, bgColor); err != nil {
 					return err
 				}
 			}
@@ -806,26 +806,6 @@ func (g *Gui) drawFrameCorners(v *View, fgColor, bgColor Attribute) error {
 	return nil
 }
 
-// // drawTitle draws the title of the view.
-// func (g *Gui) drawTitle(v *View, fgColor, bgColor Attribute) error {
-// 	if v.y0 < 0 || v.y0 >= g.maxY {
-// 		return nil
-// 	}
-
-// 	for i, ch := range v.Title {
-// 		x := v.x0 + i + 2
-// 		if x < 0 {
-// 			continue
-// 		} else if x > v.x1-2 || x >= g.maxX {
-// 			break
-// 		}
-// 		if err := g.SetRune(x, v.y0, ch, fgColor, bgColor); err != nil {
-// 			return err
-// 		}
-// 	}
-// 	return nil
-// }
-
 // AN:  drawTitle draws the title of the view.
 func (g *Gui) drawTitle(v *View, fgColor, bgColor Attribute) error {
 	if v.y0 < 0 || v.y0 >= g.maxY {
@@ -872,7 +852,7 @@ func (g *Gui) drawTitle(v *View, fgColor, bgColor Attribute) error {
 }
 
 // drawSubtitle draws the subtitle of the view.
-func (g *Gui) drawSubtitle(v *View, fgColor, bgColor Attribute) error {
+func (g *Gui) drawSubtitle(v *View, _ /*fgColor*/, bgColor Attribute) error {
 
 	if v.y0 < 0 || v.y0 >= g.maxY {
 		return nil

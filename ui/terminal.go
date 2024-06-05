@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/AlexNa-Holdings/web3pro/gocui"
-	"github.com/rs/zerolog/log"
 )
 
 type TerminalPane struct {
@@ -264,9 +263,6 @@ func terminalEditor(v *gocui.View, key gocui.Key, ch rune, mod gocui.Modifier) {
 }
 
 func OnAutocompleteMouseDown(g *gocui.Gui, v *gocui.View) error {
-
-	log.Debug().Msg("OnAutocompleteMouseDown")
-
 	_, cy := Terminal.AutoComplete.Cursor()
 
 	if cy >= 0 && cy < len(*Terminal.ACOptions) {

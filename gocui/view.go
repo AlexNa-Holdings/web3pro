@@ -33,12 +33,13 @@ var (
 // position.
 type View struct {
 	name           string
-	x0, y0, x1, y1 int      // left top right bottom
-	ox, oy         int      // view offsets
-	cx, cy         int      // cursor position
-	rx, ry         int      // Read() offsets
-	wx, wy         int      // Write() offsets
-	lines          [][]cell // All the data
+	x0, y0, x1, y1 int       // left top right bottom
+	ox, oy         int       // view offsets
+	cx, cy         int       // cursor position
+	rx, ry         int       // Read() offsets
+	wx, wy         int       // Write() offsets
+	lines          [][]cell  // All the data
+	hotspots       []hotspot // AN - hotspots sorted by positions
 	outMode        OutputMode
 
 	// readBuffer is used for storing unread bytes
@@ -67,6 +68,10 @@ type View struct {
 	// SelBgColor and SelFgColor are used to configure the background and
 	// foreground colors of the selected line, when it is highlighted.
 	SelBgColor, SelFgColor Attribute
+
+	//A.N.
+	SubTitleFgColor Attribute
+	SubTitleBgColor Attribute
 
 	// If Editable is true, keystrokes will be added to the view's internal
 	// buffer at the cursor position.
@@ -136,10 +141,6 @@ type View struct {
 	// KeybindOnEdit should be set to true when you want to execute keybindings even when the view is editable
 	// (this is usually not the case)
 	KeybindOnEdit bool
-
-	//A.N.
-	SubTitleFgColor Attribute
-	SubTitleBgColor Attribute
 
 	// gui contains the view it's gui
 	gui *Gui
@@ -230,6 +231,18 @@ func (v *View) setRune(x, y int, ch rune, fgColor, bgColor Attribute) error {
 	} else if v.Highlight && y == v.cy-v.oy {
 		fgColor = v.SelFgColor | AttrBold
 		bgColor = v.SelBgColor | AttrBold
+	} else if hs := v.findHotspot(x+v.ox, y+v.oy); hs != nil {
+		hsx := x + v.ox - hs.x
+
+		if y == v.cy-v.oy && hsx >= 0 && hsx < hs.l {
+			fgColor = hs.cells_highligted[hsx].fgColor
+			bgColor = hs.cells_highligted[hsx].bgColor
+			ch = hs.cells_highligted[hsx].chr
+		} else {
+			fgColor = hs.cells[hsx].fgColor
+			bgColor = hs.cells[hsx].bgColor
+			ch = hs.cells[hsx].chr
+		}
 	}
 
 	// Don't display NUL characters
@@ -649,6 +662,7 @@ func (v *View) Clear() {
 	v.tainted = true
 	v.ei.reset()
 	v.lines = [][]cell{}
+	v.hotspots = []hotspot{}
 	v.SetCursor(0, 0)
 	v.SetOrigin(0, 0)
 	v.clearRunes()

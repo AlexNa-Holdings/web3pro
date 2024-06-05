@@ -24,6 +24,7 @@ func Init() {
 	Commands = []*Command{
 		NewThemeCommand(),
 		NewHelpCommand(),
+		NewClearCommand(),
 	}
 }
 

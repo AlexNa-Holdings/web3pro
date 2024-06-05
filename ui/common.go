@@ -30,9 +30,6 @@ func Init() {
 }
 
 func SetKeybindings() error {
-
-	log.Debug().Msg("SetKeybindings")
-
 	if err := Gui.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, quit); err != nil {
 		log.Fatal().Msgf("error setting keybinding: %v", err)
 	}
@@ -44,7 +41,6 @@ func SetKeybindings() error {
 }
 
 func quit(g *gocui.Gui, v *gocui.View) error {
-	log.Debug().Msg("quit")
 	return gocui.ErrQuit
 }
 

@@ -39,8 +39,12 @@ func main() {
 
 		ui.Printf("Version: %s\n", ui.F(ui.CurrentTheme.EmFgColor)+VERSION+ui.F(ui.Terminal.Screen.FgColor))
 
-		ui.Printf("Data folder: %s\n", ui.F(ui.CurrentTheme.EmFgColor)+DataFolder+ui.F(ui.Terminal.Screen.FgColor))
+		ui.Printf("Data folder: ")
+		ui.Terminal.Screen.AddLink(DataFolder, "copy "+DataFolder, "Copy data folder path to clipboard")
+		ui.Printf("\n")
+
 		ui.Printf("Log file: %s\n", ui.F(ui.CurrentTheme.EmFgColor)+LogPath+ui.F(ui.Terminal.Screen.FgColor))
+		ui.Printf("Config file: %s\n", ui.F(ui.CurrentTheme.EmFgColor)+ConfPath+ui.F(ui.Terminal.Screen.FgColor))
 
 		ui.Printf("\nType 'help' for help\n\n")
 
@@ -49,4 +53,6 @@ func main() {
 	if err := ui.Gui.MainLoop(); err != nil && !errors.Is(err, gocui.ErrQuit) {
 		log.Fatal().Msgf("error running gocui: %v", err)
 	}
+
+	SaveConfig()
 }
