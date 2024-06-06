@@ -39,8 +39,12 @@ type View struct {
 	rx, ry         int       // Read() offsets
 	wx, wy         int       // Write() offsets
 	lines          [][]cell  // All the data
-	hotspots       []hotspot // AN - hotspots sorted by positions
+	hotspots       []Hotspot // AN - hotspots sorted by positions
 	outMode        OutputMode
+
+	activeHotspot  *Hotspot                   // AN - the currently active hotspot
+	OnOverHotspot  func(v *View, hs *Hotspot) // AN - function to be called when the mouse is over a hotspot
+	OnClickHotspot func(v *View, hs *Hotspot) // AN - function to be called when the mouse is clicked on a hotspot
 
 	// readBuffer is used for storing unread bytes
 	readBuffer []byte
@@ -232,16 +236,16 @@ func (v *View) setRune(x, y int, ch rune, fgColor, bgColor Attribute) error {
 		fgColor = v.SelFgColor | AttrBold
 		bgColor = v.SelBgColor | AttrBold
 	} else if hs := v.findHotspot(x+v.ox, y+v.oy); hs != nil {
-		hsx := x + v.ox - hs.x
+		hsx := x + v.ox - hs.X
 
-		if y == v.cy-v.oy && hsx >= 0 && hsx < hs.l && v.cx+v.ox >= hs.x && v.cx+v.ox < hs.x+hs.l {
-			fgColor = hs.cells_highligted[hsx].fgColor
-			bgColor = hs.cells_highligted[hsx].bgColor
-			ch = hs.cells_highligted[hsx].chr
+		if y == v.cy-v.oy && hsx >= 0 && hsx < hs.L && v.cx+v.ox >= hs.X && v.cx+v.ox < hs.X+hs.L {
+			fgColor = hs.CellsHighligted[hsx].fgColor
+			bgColor = hs.CellsHighligted[hsx].bgColor
+			ch = hs.CellsHighligted[hsx].chr
 		} else {
-			fgColor = hs.cells[hsx].fgColor
-			bgColor = hs.cells[hsx].bgColor
-			ch = hs.cells[hsx].chr
+			fgColor = hs.Cells[hsx].fgColor
+			bgColor = hs.Cells[hsx].bgColor
+			ch = hs.Cells[hsx].chr
 		}
 	}
 
@@ -280,6 +284,23 @@ func (v *View) SetCursorUnrestricted(x, y int) error {
 //	y >= 0
 //	x >= 0
 func (v *View) SetCursor(x, y int) error {
+
+	if hs := v.findHotspot(x+v.ox, y+v.oy); hs != nil {
+		if v.activeHotspot != hs {
+			v.activeHotspot = hs
+			if v.OnOverHotspot != nil {
+				v.OnOverHotspot(v, hs)
+			}
+		}
+	} else {
+		if v.activeHotspot != nil {
+			v.activeHotspot = nil
+			if v.OnOverHotspot != nil {
+				v.OnOverHotspot(v, nil)
+			}
+		}
+	}
+
 	if len(v.lines) == 0 {
 		y = 0
 	} else if y >= len(v.lines) && y != 0 {
@@ -662,7 +683,8 @@ func (v *View) Clear() {
 	v.tainted = true
 	v.ei.reset()
 	v.lines = [][]cell{}
-	v.hotspots = []hotspot{}
+	v.hotspots = []Hotspot{}
+	v.activeHotspot = nil
 	v.SetCursor(0, 0)
 	v.SetOrigin(0, 0)
 	v.clearRunes()

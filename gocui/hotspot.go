@@ -6,13 +6,13 @@ import (
 	"sort"
 )
 
-type hotspot struct {
-	x, y             int
-	l                int
-	value            string
-	tip              string
-	cells            []cell
-	cells_highligted []cell
+type Hotspot struct {
+	X, Y            int
+	L               int
+	Value           string
+	Tip             string
+	Cells           []cell
+	CellsHighligted []cell
 }
 
 func AddCells(cells []cell, fg, bg Attribute, text string) []cell {
@@ -33,13 +33,13 @@ func (v *View) AddHotspot(x, y int, value string, tip string, cells []cell, cell
 
 	// Find the index where the new hotspot should be inserted
 	index := sort.Search(len(v.hotspots), func(i int) bool {
-		if v.hotspots[i].y == y {
-			return v.hotspots[i].x >= x
+		if v.hotspots[i].Y == y {
+			return v.hotspots[i].X >= x
 		}
-		return v.hotspots[i].y >= y
+		return v.hotspots[i].Y >= y
 	})
 
-	h := hotspot{x, y, len(cells), value, tip, cells, cells_highligted}
+	h := Hotspot{x, y, len(cells), value, tip, cells, cells_highligted}
 
 	// Insert the new hotspot at the found index
 	v.hotspots = append(v.hotspots, h)             // Increase the size by one
@@ -49,7 +49,7 @@ func (v *View) AddHotspot(x, y int, value string, tip string, cells []cell, cell
 	return nil
 }
 
-func (v *View) findHotspot(x, y int) *hotspot {
+func (v *View) findHotspot(x, y int) *Hotspot {
 
 	if v.hotspots == nil {
 		return nil
@@ -57,12 +57,12 @@ func (v *View) findHotspot(x, y int) *hotspot {
 
 	// Use binary search to find the first hotspot on line N
 	i := sort.Search(len(v.hotspots), func(i int) bool {
-		return v.hotspots[i].y >= y
+		return v.hotspots[i].Y >= y
 	})
 
-	for ; i < len(v.hotspots) && v.hotspots[i].y == y; i++ {
+	for ; i < len(v.hotspots) && v.hotspots[i].Y == y; i++ {
 		h := v.hotspots[i]
-		if x >= h.x && x < h.x+h.l {
+		if x >= h.X && x < h.X+h.L {
 			return &h
 		}
 	}

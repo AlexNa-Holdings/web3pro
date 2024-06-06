@@ -949,6 +949,13 @@ func (g *Gui) onKey(ev *gocuiEvent) error {
 		if err := v.SetCursor(mx-v.x0-1+v.ox, my-v.y0-1+v.oy); err != nil {
 			return err
 		}
+
+		if v.activeHotspot != nil && ev.Key == MouseLeft {
+			if v.OnClickHotspot != nil {
+				v.OnClickHotspot(v, v.activeHotspot)
+			}
+		}
+
 		if _, err := g.execKeybindings(v, ev); err != nil {
 			return err
 		}

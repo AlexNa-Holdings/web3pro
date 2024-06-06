@@ -1,11 +1,13 @@
 package ui
 
 import (
+	"strings"
 	"sync"
 
 	"github.com/rs/zerolog/log"
 
 	"github.com/AlexNa-Holdings/web3pro/gocui"
+	"github.com/atotto/clipboard"
 )
 
 var Gui *gocui.Gui
@@ -64,6 +66,7 @@ func Layout(g *gocui.Gui) error {
 	Terminal.SetView(g, 0, FirstRowHeight, maxX-1, maxY-2)
 
 	Bottom.SetView(g)
+	Notification.SetView(g)
 
 	g.SetCurrentView("terminal.input")
 	g.Cursor = true
@@ -74,4 +77,22 @@ func Layout(g *gocui.Gui) error {
 	}
 
 	return nil
+}
+
+func ProcessClickHotspot(hs *gocui.Hotspot) {
+	ss := strings.Split(hs.Value, " ")
+
+	if len(ss) < 2 {
+		return
+	}
+
+	command := ss[0]
+	param := ss[1]
+
+	switch command {
+	case "copy":
+		clipboard.WriteAll(param)
+		Notification.Show("Copied: " + param)
+		log.Debug().Msgf("Copied: %s", param)
+	}
 }

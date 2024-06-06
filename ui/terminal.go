@@ -57,6 +57,17 @@ func (p *TerminalPane) SetView(g *gocui.Gui, x0, y0, x1, y1 int) {
 		p.Screen.Frame = false
 		p.Screen.Highlight = false
 		p.Screen.Editable = false
+		p.Screen.OnOverHotspot = func(v *gocui.View, hs *gocui.Hotspot) {
+			if hs != nil {
+				Bottom.Printf(hs.Tip)
+			} else {
+				Bottom.Printf("")
+			}
+		}
+
+		p.Screen.OnClickHotspot = func(_ *gocui.View, hs *gocui.Hotspot) {
+			ProcessClickHotspot(hs)
+		}
 	}
 
 	prefix_len := len(p.CommandPrefix) + 1
