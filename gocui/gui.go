@@ -640,6 +640,11 @@ func (g *Gui) flush() error {
 		if err := g.draw(v); err != nil {
 			return err
 		}
+		if v.ScrollBar {
+			if err := g.drawScrollBar(v, v.FgColor, v.BgColor); err != nil {
+				return err
+			}
+		}
 	}
 	screen.Show()
 	return nil
@@ -884,6 +889,45 @@ func (g *Gui) drawSubtitle(v *View, _ /*fgColor*/, bgColor Attribute) error {
 	return nil
 }
 
+func (g *Gui) drawScrollBar(v *View, fgColor, bgColor Attribute) error {
+
+	height := v.y1 - v.y0
+	n_lines := len(v.lines)
+
+	if n_lines <= height {
+		return nil
+	}
+
+	const MIN_SB_HEIGHT = 1
+
+	if height < MIN_SB_HEIGHT+1 { // Not enough space to draw scrollbar
+		return nil
+	}
+
+	bar_height := height * height / n_lines
+	if bar_height < MIN_SB_HEIGHT {
+		bar_height = MIN_SB_HEIGHT
+	}
+
+	bar_distance := height - bar_height
+	bar_position := v.oy * bar_distance / (n_lines - height)
+
+	for y := v.y0 + 1; y < v.y1; y++ {
+
+		ch := '░'
+		if y >= v.y0+bar_position && y < v.y0+bar_position+bar_height {
+			ch = '█'
+		}
+
+		if err := g.SetRune(v.x1-1, y, ch, fgColor, bgColor); err != nil {
+			return err
+		}
+
+	}
+
+	return nil
+}
+
 // draw manages the cursor and calls the draw function of a view.
 func (g *Gui) draw(v *View) error {
 	completed := func(hideCursor bool) error {
@@ -948,6 +992,14 @@ func (g *Gui) onKey(ev *gocuiEvent) error {
 		}
 		if err := v.SetCursor(mx-v.x0-1+v.ox, my-v.y0-1+v.oy); err != nil {
 			return err
+		}
+
+		if v.ScrollBar {
+			if ev.Key == MouseWheelUp {
+				v.ScrollUp(3)
+			} else if ev.Key == MouseWheelDown {
+				v.ScrollDown(3)
+			}
 		}
 
 		if v.activeHotspot != nil && ev.Key == MouseLeft {

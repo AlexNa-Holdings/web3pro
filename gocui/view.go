@@ -65,6 +65,9 @@ type View struct {
 	// Visible specifies whether the view is visible.
 	Visible bool
 
+	// AN Scrool Bar support
+	ScrollBar bool
+
 	// BgColor and FgColor allow to configure the background and foreground
 	// colors of the View.
 	BgColor, FgColor Attribute
@@ -972,4 +975,42 @@ func linesToString(lines [][]cell) string {
 	}
 
 	return strings.Join(str, "\n")
+}
+
+func (v *View) ScrollUp(n int) {
+	if v.ScrollBar {
+		v.oy -= n
+		if v.oy < 0 {
+			v.oy = 0
+		}
+		v.SetOrigin(v.ox, v.oy)
+	}
+}
+
+func (v *View) ScrollDown(n int) {
+	if v.ScrollBar {
+		height := v.y1 - v.y0 - 1
+		lines := len(v.lines)
+
+		if lines > height {
+			v.oy += n
+			if lines-v.oy < height {
+				v.oy = lines - height
+			}
+		}
+	}
+}
+
+func (v *View) ScrollTop() {
+	v.oy = 0
+	v.SetOrigin(v.ox, v.oy)
+}
+
+func (v *View) ScrollBottom() {
+	height := v.y1 - v.y0 - 1
+	lines := len(v.lines)
+
+	if lines > height {
+		v.oy = lines - height
+	}
 }

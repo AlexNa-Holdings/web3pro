@@ -93,6 +93,5 @@ func ProcessClickHotspot(hs *gocui.Hotspot) {
 	case "copy":
 		clipboard.WriteAll(param)
 		Notification.Show("Copied: " + param)
-		log.Debug().Msgf("Copied: %s", param)
 	}
 }

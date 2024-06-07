@@ -52,11 +52,12 @@ func (p *TerminalPane) SetView(g *gocui.Gui, x0, y0, x1, y1 int) {
 		if !errors.Is(err, gocui.ErrUnknownView) {
 			panic(err)
 		}
-		p.Screen.Autoscroll = true
+		p.Screen.Autoscroll = false
 		p.Screen.Wrap = false
 		p.Screen.Frame = false
 		p.Screen.Highlight = false
 		p.Screen.Editable = false
+		p.Screen.ScrollBar = true
 		p.Screen.OnOverHotspot = func(v *gocui.View, hs *gocui.Hotspot) {
 			if hs != nil {
 				Bottom.Printf(hs.Tip)
@@ -214,6 +215,7 @@ func terminalEditor(v *gocui.View, key gocui.Key, ch rune, mod gocui.Modifier) {
 			}
 			Terminal.ProcessCommandFunc(v.Buffer())
 		}
+		Terminal.Screen.ScrollBottom()
 		Terminal.Input.Clear()
 
 	case gocui.KeyArrowUp:
