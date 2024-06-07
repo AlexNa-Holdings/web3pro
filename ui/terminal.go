@@ -32,7 +32,7 @@ type ACOption struct {
 }
 
 var Terminal *TerminalPane = &TerminalPane{
-	CommandPrefix:  "web3",
+	CommandPrefix:  "w3p",
 	History:        []string{},
 	ACOptions:      &[]ACOption{},
 	AutoCompleteOn: false,

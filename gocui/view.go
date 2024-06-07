@@ -68,6 +68,12 @@ type View struct {
 	// AN Scrool Bar support
 	ScrollBar bool
 
+	ScrollBarStatus struct {
+		shown    bool
+		height   int
+		position int
+	}
+
 	// BgColor and FgColor allow to configure the background and foreground
 	// colors of the View.
 	BgColor, FgColor Attribute
@@ -79,6 +85,7 @@ type View struct {
 	//A.N.
 	SubTitleFgColor Attribute
 	SubTitleBgColor Attribute
+	EmFgColor       Attribute
 
 	// If Editable is true, keystrokes will be added to the view's internal
 	// buffer at the cursor position.
@@ -201,6 +208,7 @@ func (g *Gui) newView(name string, x0, y0, x1, y1 int, mode OutputMode) *View {
 	v.SelFgColor = v.gui.SelFgColor
 	v.SelBgColor = v.gui.SelBgColor
 	v.FrameColor = v.gui.FrameColor
+	v.EmFgColor = v.gui.EmFgColor
 	v.SubTitleFgColor = v.gui.SubTitleFgColor
 	v.SubTitleBgColor = v.gui.SubTitleBgColor
 
@@ -1013,4 +1021,13 @@ func (v *View) ScrollBottom() {
 	if lines > height {
 		v.oy = lines - height
 	}
+}
+
+func (v *View) MouseOverScrollbar() bool {
+
+	return v.ScrollBar &&
+		v.ScrollBarStatus.shown &&
+		v.gui.mouseX == v.x1-1 &&
+		v.gui.mouseY >= v.y0+v.ScrollBarStatus.position &&
+		v.gui.mouseY < v.y0+v.ScrollBarStatus.position+v.ScrollBarStatus.height
 }

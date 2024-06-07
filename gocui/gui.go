@@ -121,6 +121,12 @@ type Gui struct {
 	// TitleFgColor and TitleBgColor allow to configure the background and (AN)
 	SubTitleFgColor Attribute
 	SubTitleBgColor Attribute
+
+	dragging struct {
+		view               *View
+		on                 bool
+		start_oy, start_my int
+	}
 }
 
 // NewGui returns a new Gui object with a given output mode.
@@ -895,35 +901,45 @@ func (g *Gui) drawScrollBar(v *View, fgColor, bgColor Attribute) error {
 	n_lines := len(v.lines)
 
 	if n_lines <= height {
+		v.ScrollBarStatus.shown = false
 		return nil
 	}
 
 	const MIN_SB_HEIGHT = 1
 
 	if height < MIN_SB_HEIGHT+1 { // Not enough space to draw scrollbar
+		v.ScrollBarStatus.shown = false
 		return nil
 	}
 
-	bar_height := height * height / n_lines
-	if bar_height < MIN_SB_HEIGHT {
-		bar_height = MIN_SB_HEIGHT
+	v.ScrollBarStatus.height = height * height / n_lines
+	if v.ScrollBarStatus.height < MIN_SB_HEIGHT {
+		v.ScrollBarStatus.height = MIN_SB_HEIGHT
 	}
 
-	bar_distance := height - bar_height
-	bar_position := v.oy * bar_distance / (n_lines - height)
+	bar_distance := height - v.ScrollBarStatus.height
+	v.ScrollBarStatus.position = v.oy * bar_distance / (n_lines - height)
+
+	fg := fgColor
+
+	if v.MouseOverScrollbar() {
+		fg = v.EmFgColor
+	}
 
 	for y := v.y0 + 1; y < v.y1; y++ {
-
-		ch := '░'
-		if y >= v.y0+bar_position && y < v.y0+bar_position+bar_height {
-			ch = '█'
+		if y >= v.y0+v.ScrollBarStatus.position &&
+			y < v.y0+v.ScrollBarStatus.position+v.ScrollBarStatus.height {
+			if err := g.SetRune(v.x1-1, y, '█', fg, bgColor); err != nil {
+				return err
+			}
+		} else {
+			if err := g.SetRune(v.x1-1, y, '░', fgColor, bgColor); err != nil {
+				return err
+			}
 		}
-
-		if err := g.SetRune(v.x1-1, y, ch, fgColor, bgColor); err != nil {
-			return err
-		}
-
 	}
+
+	v.ScrollBarStatus.shown = true
 
 	return nil
 }
@@ -986,10 +1002,41 @@ func (g *Gui) onKey(ev *gocuiEvent) error {
 		mx, my := ev.MouseX, ev.MouseY
 		g.mouseX = mx
 		g.mouseY = my
+
+		if g.dragging.on {
+			dv := g.dragging.view
+
+			oy := g.dragging.start_oy + (my-g.dragging.start_my)*(len(dv.lines)-(dv.y1-dv.y0))/(dv.y1-dv.y0-dv.ScrollBarStatus.height)
+
+			if oy < 0 {
+				oy = 0
+			}
+
+			if oy > len(dv.lines)-(dv.y1-dv.y0) {
+				oy = len(dv.lines) - (dv.y1 - dv.y0)
+			}
+
+			dv.SetOrigin(dv.ox, oy)
+
+			if ev.Key == MouseRelease {
+				g.dragging.on = false
+			}
+			return nil
+		}
+
 		v, err := g.ViewByPosition(mx, my)
 		if err != nil {
 			break
 		}
+
+		if v.MouseOverScrollbar() && ev.Key == MouseLeft {
+			g.dragging.on = true
+			g.dragging.view = v
+			g.dragging.start_my = my
+			g.dragging.start_oy = v.oy
+			return nil
+		}
+
 		if err := v.SetCursor(mx-v.x0-1+v.ox, my-v.y0-1+v.oy); err != nil {
 			return err
 		}
