@@ -69,7 +69,6 @@ func Layout(g *gocui.Gui) error {
 	Bottom.SetView(g)
 	Notification.SetView(g)
 
-	g.SetCurrentView("terminal.input")
 	g.Cursor = true
 
 	if !Is_ready {

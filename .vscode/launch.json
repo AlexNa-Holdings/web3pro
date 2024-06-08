@@ -8,7 +8,8 @@
             "mode": "auto",
             "program": "${workspaceFolder}",
             "env": {},
-            "args": []
+            "args": [],
+            "console": "integratedTerminal"
         }
     ]
 }

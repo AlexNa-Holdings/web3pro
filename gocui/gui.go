@@ -322,10 +322,19 @@ func (g *Gui) ViewPosition(name string) (x0, y0, x1, y1 int, err error) {
 	return 0, 0, 0, 0, ErrUnknownView
 }
 
+// Delete all views
+func (g *Gui) DeleteAllViews() {
+	g.views = nil
+	g.currentView = nil
+}
+
 // DeleteView deletes a view by name.
 func (g *Gui) DeleteView(name string) error {
 	for i, v := range g.views {
 		if v.name == name {
+			if g.currentView == v {
+				g.currentView = nil
+			}
 			g.views = append(g.views[:i], g.views[i+1:]...)
 			return nil
 		}
@@ -616,9 +625,10 @@ func (g *Gui) flush() error {
 		}
 		if v.Frame {
 			var fgColor, bgColor, frameColor Attribute
+
 			if g.Highlight && v == g.currentView {
-				fgColor = g.SelFgColor
-				bgColor = g.SelBgColor
+				fgColor = v.SelFgColor
+				bgColor = v.SelBgColor
 				frameColor = g.SelFrameColor
 			} else {
 				bgColor = g.BgColor
@@ -634,23 +644,18 @@ func (g *Gui) flush() error {
 				}
 			}
 
+			bgColor = bgColor // AN
+
 			stBgColor := v.SubTitleBgColor
 
-			if v.gui.popup != nil && v.gui.popup.View != v {
-				frameColor = frameColor.Dim()
-				fgColor = fgColor.Dim()
-				bgColor = bgColor.Dim()
-				stBgColor = stBgColor.Dim()
-			}
-
-			if err := g.drawFrameEdges(v, frameColor, bgColor); err != nil {
+			if err := g.drawFrameEdges(v, frameColor, v.BgColor); err != nil {
 				return err
 			}
-			if err := g.drawFrameCorners(v, frameColor, bgColor); err != nil {
+			if err := g.drawFrameCorners(v, frameColor, v.BgColor); err != nil {
 				return err
 			}
 			if v.Title != "" {
-				if err := g.drawTitle(v, fgColor, bgColor, stBgColor); err != nil {
+				if err := g.drawTitle(v, fgColor, v.BgColor, stBgColor); err != nil {
 					return err
 				}
 			}
@@ -658,11 +663,6 @@ func (g *Gui) flush() error {
 
 				fgColor = v.SubTitleFgColor
 				bgColor = v.SubTitleBgColor
-
-				if v.gui.popup != nil && v.gui.popup.View != v {
-					fgColor = fgColor.Dim()
-					bgColor = bgColor.Dim()
-				}
 
 				if err := g.drawSubtitle(v, fgColor, bgColor); err != nil {
 					return err
@@ -673,16 +673,7 @@ func (g *Gui) flush() error {
 			return err
 		}
 		if v.ScrollBar {
-
-			fgColor := v.FgColor
-			bgColor := v.BgColor
-
-			if v.gui.popup != nil && v.gui.popup.View != v {
-				fgColor = fgColor.Dim()
-				bgColor = bgColor.Dim()
-			}
-
-			if err := g.drawScrollBar(v, fgColor, bgColor); err != nil {
+			if err := g.drawScrollBar(v, v.FgColor, v.BgColor); err != nil {
 				return err
 			}
 		}

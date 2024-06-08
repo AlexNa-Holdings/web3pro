@@ -111,15 +111,7 @@ func Theme_Process(cmd *Command, input string) {
 		if len(tokens) < 3 {
 		} else {
 			ui.SetTheme(tokens[2])
-			ui.Gui.DeleteView("status")
-			ui.Gui.DeleteView("confirm")
-			ui.Gui.DeleteView("bottom")
-			ui.Gui.DeleteView("terminal")
-			ui.Gui.DeleteView("notification")
-			ui.Gui.DeleteView("terminal.screen")
-			ui.Gui.DeleteView("terminal.input")
-			ui.Gui.DeleteView("terminal.autocomplete")
-			ui.Gui.DeleteView("terminal.prefix")
+			ui.Gui.DeleteAllViews()
 			log.Trace().Msgf("Theme set to: %s", tokens[2])
 		}
 	default:

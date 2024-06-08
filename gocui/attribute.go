@@ -105,12 +105,6 @@ func GetColor(color string) Attribute {
 	return Attribute(tcell.GetColor(color))
 }
 
-// Dim the color
-func (a Attribute) Dim() Attribute {
-	r, g, b := a.RGB()
-	return NewRGBColor(r/3, g/3, b/3)
-}
-
 // Get256Color creates Attribute which stores ANSI color (0-255)
 func Get256Color(color int32) Attribute {
 	return Attribute(color) | AttrIsValidColor

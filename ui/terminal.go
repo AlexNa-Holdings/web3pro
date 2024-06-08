@@ -83,6 +83,7 @@ func (p *TerminalPane) SetView(g *gocui.Gui, x0, y0, x1, y1 int) {
 			p.Input.Editable = true
 			p.Input.Highlight = false
 			p.Input.Editor = gocui.EditorFunc(terminalEditor)
+			g.SetCurrentView("terminal.input")
 		}
 
 		if p.Prefix, err = g.SetView("terminal.prefix", x0, y1-2, prefix_len+1, y1, 0); err != nil {
@@ -259,6 +260,7 @@ func terminalEditor(v *gocui.View, key gocui.Key, ch rune, mod gocui.Modifier) {
 			if cy >= 0 && cy < len(*Terminal.ACOptions) {
 				Terminal.Input.Clear()
 				result := (*Terminal.ACOptions)[cy].Result
+
 				fmt.Fprint(Terminal.Input, result)
 				Terminal.Input.SetCursor(len(result), 0)
 
