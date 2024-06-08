@@ -248,8 +248,7 @@ func terminalEditor(v *gocui.View, key gocui.Key, ch rune, mod gocui.Modifier) {
 				}
 			}
 		}
-	case gocui.KeyTab:
-	case gocui.KeyArrowRight:
+	case gocui.KeyTab, gocui.KeyArrowRight:
 		if Terminal.AutoCompleteOn {
 			_, cy := Terminal.AutoComplete.Cursor()
 

@@ -1,4 +1,4 @@
-package main
+package cmn
 
 import (
 	"fmt"
@@ -57,6 +57,12 @@ func InitConfig() {
 	err = RestoreConfig(ConfPath)
 	if err != nil {
 		log.Error().Msgf("error restoring config: %v", err)
+	}
+
+	//create wallets folder if needed
+	err = os.MkdirAll(filepath.Join(DataFolder, "wallets"), os.ModePerm)
+	if err != nil {
+		log.Error().Msgf("error creating wallet folder: %v", err)
 	}
 
 	log.Trace().Msg("Started")

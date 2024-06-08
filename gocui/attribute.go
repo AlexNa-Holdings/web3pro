@@ -31,7 +31,8 @@ const (
 )
 
 // Color attributes. These colors are compatible with tcell.Color type and can be expanded like:
-//  g.FgColor := gocui.Attribute(tcell.ColorLime)
+//
+//	g.FgColor := gocui.Attribute(tcell.ColorLime)
 const (
 	ColorBlack Attribute = AttrIsValidColor + iota
 	ColorRed
@@ -102,6 +103,12 @@ func (a Attribute) RGB() (int32, int32, int32) {
 // be supplied as a string in the format "#ffffff".
 func GetColor(color string) Attribute {
 	return Attribute(tcell.GetColor(color))
+}
+
+// Dim the color
+func (a Attribute) Dim() Attribute {
+	r, g, b := a.RGB()
+	return NewRGBColor(r/3, g/3, b/3)
 }
 
 // Get256Color creates Attribute which stores ANSI color (0-255)

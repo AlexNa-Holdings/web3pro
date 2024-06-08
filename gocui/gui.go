@@ -127,6 +127,8 @@ type Gui struct {
 		on                 bool
 		start_oy, start_my int
 	}
+
+	popup *Popup
 }
 
 // NewGui returns a new Gui object with a given output mode.
@@ -601,6 +603,12 @@ func (g *Gui) flush() error {
 		if err := m.Layout(g); err != nil {
 			return err
 		}
+
+		if g.popup != nil {
+			if err := g.popup.Layout(g); err != nil {
+				return err
+			}
+		}
 	}
 	for _, v := range g.views {
 		if !v.Visible || v.y1 < v.y0 {
@@ -626,6 +634,15 @@ func (g *Gui) flush() error {
 				}
 			}
 
+			stBgColor := v.SubTitleBgColor
+
+			if v.gui.popup != nil && v.gui.popup.View != v {
+				frameColor = frameColor.Dim()
+				fgColor = fgColor.Dim()
+				bgColor = bgColor.Dim()
+				stBgColor = stBgColor.Dim()
+			}
+
 			if err := g.drawFrameEdges(v, frameColor, bgColor); err != nil {
 				return err
 			}
@@ -633,11 +650,20 @@ func (g *Gui) flush() error {
 				return err
 			}
 			if v.Title != "" {
-				if err := g.drawTitle(v, fgColor, bgColor); err != nil {
+				if err := g.drawTitle(v, fgColor, bgColor, stBgColor); err != nil {
 					return err
 				}
 			}
 			if v.Subtitle != "" {
+
+				fgColor = v.SubTitleFgColor
+				bgColor = v.SubTitleBgColor
+
+				if v.gui.popup != nil && v.gui.popup.View != v {
+					fgColor = fgColor.Dim()
+					bgColor = bgColor.Dim()
+				}
+
 				if err := g.drawSubtitle(v, fgColor, bgColor); err != nil {
 					return err
 				}
@@ -647,7 +673,16 @@ func (g *Gui) flush() error {
 			return err
 		}
 		if v.ScrollBar {
-			if err := g.drawScrollBar(v, v.FgColor, v.BgColor); err != nil {
+
+			fgColor := v.FgColor
+			bgColor := v.BgColor
+
+			if v.gui.popup != nil && v.gui.popup.View != v {
+				fgColor = fgColor.Dim()
+				bgColor = bgColor.Dim()
+			}
+
+			if err := g.drawScrollBar(v, fgColor, bgColor); err != nil {
 				return err
 			}
 		}
@@ -818,7 +853,7 @@ func (g *Gui) drawFrameCorners(v *View, fgColor, bgColor Attribute) error {
 }
 
 // AN:  drawTitle draws the title of the view.
-func (g *Gui) drawTitle(v *View, fgColor, bgColor Attribute) error {
+func (g *Gui) drawTitle(v *View, fgColor, bgColor, stBgColor Attribute) error {
 	if v.y0 < 0 || v.y0 >= g.maxY {
 		return nil
 	}
@@ -851,7 +886,7 @@ func (g *Gui) drawTitle(v *View, fgColor, bgColor Attribute) error {
 
 		bg := bgColor
 		if v.Subtitle != "" {
-			bg = v.SubTitleBgColor
+			bg = stBgColor
 		}
 
 		if err := g.SetRune(x, v.y0, '\ue0b0', fgColor, bg); err != nil {
@@ -863,7 +898,7 @@ func (g *Gui) drawTitle(v *View, fgColor, bgColor Attribute) error {
 }
 
 // drawSubtitle draws the subtitle of the view.
-func (g *Gui) drawSubtitle(v *View, _ /*fgColor*/, bgColor Attribute) error {
+func (g *Gui) drawSubtitle(v *View, fgColor Attribute, bgColor Attribute) error {
 
 	if v.y0 < 0 || v.y0 >= g.maxY {
 		return nil
@@ -880,7 +915,7 @@ func (g *Gui) drawSubtitle(v *View, _ /*fgColor*/, bgColor Attribute) error {
 		if x >= v.x1 {
 			break
 		}
-		if err := g.SetRune(x, v.y0, ch, v.SubTitleFgColor, v.SubTitleBgColor); err != nil {
+		if err := g.SetRune(x, v.y0, ch, fgColor, bgColor); err != nil {
 			return err
 		}
 		x++
@@ -888,7 +923,7 @@ func (g *Gui) drawSubtitle(v *View, _ /*fgColor*/, bgColor Attribute) error {
 
 	//Suffix
 	if x >= 0 && x < g.maxX {
-		if err := g.SetRune(x, v.y0, '\ue0b0', v.SubTitleBgColor, bgColor); err != nil {
+		if err := g.SetRune(x, v.y0, '\ue0b0', bgColor, v.BgColor); err != nil {
 			return err
 		}
 	}

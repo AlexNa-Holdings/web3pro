@@ -7,6 +7,7 @@ package main
 import (
 	"errors"
 
+	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/command"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/ui"
@@ -21,7 +22,7 @@ __ |/ |/ / /  __/  /_/ /___/ /_  ____/_  /   / /_/ /
 ____/|__/  \___//_.___//____/ /_/     /_/    \____/ `
 
 func main() {
-	InitConfig()
+	cmn.InitConfig()
 
 	command.Init()
 	ui.Init()
@@ -37,18 +38,18 @@ func main() {
 		ui.Printf("\n" + ui.F(ui.CurrentTheme.EmFgColor) + WEB3_PRO + ui.F(ui.Terminal.Screen.FgColor) + "\n\n")
 		ui.Printf("by X:@AlexNa Telegram:@TheAlexNa\n")
 
-		ui.Printf("Version: %s\n", ui.F(ui.CurrentTheme.EmFgColor)+VERSION+ui.F(ui.Terminal.Screen.FgColor))
+		ui.Printf("Version: %s\n", ui.F(ui.CurrentTheme.EmFgColor)+cmn.VERSION+ui.F(ui.Terminal.Screen.FgColor))
 
 		ui.Printf("Data folder: ")
-		ui.Terminal.Screen.AddLink(DataFolder, "copy "+DataFolder, "Copy data folder path to clipboard")
+		ui.Terminal.Screen.AddLink(cmn.DataFolder, "copy "+cmn.DataFolder, "Copy data folder path to clipboard")
 		ui.Printf("\n")
 
 		ui.Printf("Log file: ")
-		ui.Terminal.Screen.AddLink(LogPath, "copy "+LogPath, "Copy log file path to clipboard")
+		ui.Terminal.Screen.AddLink(cmn.LogPath, "copy "+cmn.LogPath, "Copy log file path to clipboard")
 		ui.Printf("\n")
 
 		ui.Printf("Config file: ")
-		ui.Terminal.Screen.AddLink(ConfPath, "copy "+ConfPath, "Copy config file path to clipboard")
+		ui.Terminal.Screen.AddLink(cmn.ConfPath, "copy "+cmn.ConfPath, "Copy config file path to clipboard")
 		ui.Printf("\n")
 
 		ui.Printf("\nType 'help' for help\n\n")
@@ -59,5 +60,5 @@ func main() {
 		log.Fatal().Msgf("error running gocui: %v", err)
 	}
 
-	SaveConfig()
+	cmn.SaveConfig()
 }

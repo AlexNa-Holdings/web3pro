@@ -260,6 +260,11 @@ func (v *View) setRune(x, y int, ch rune, fgColor, bgColor Attribute) error {
 		}
 	}
 
+	if v.gui.popup != nil && v.gui.popup.View != v {
+		fgColor = fgColor.Dim()
+		bgColor = bgColor.Dim()
+	}
+
 	// Don't display NUL characters
 	if ch == 0 {
 		ch = ' '

@@ -91,7 +91,7 @@ func SetTheme(theme string) {
 	Gui.ErrorFgColor = t.ErrorFgColor
 	Gui.EmFgColor = t.EmFgColor
 
-	Gui.SubTitleFgColor = t.EmFgColor
+	Gui.SubTitleFgColor = t.BgColor
 	Gui.SubTitleBgColor = t.EmFgColor
 
 	CurrentTheme = &t

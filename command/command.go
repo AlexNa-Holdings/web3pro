@@ -22,8 +22,9 @@ var Commands []*Command
 
 func Init() {
 	Commands = []*Command{
-		NewThemeCommand(),
 		NewHelpCommand(),
+		NewWalletCommand(),
+		NewThemeCommand(),
 		NewClearCommand(),
 	}
 }
