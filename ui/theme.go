@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/rs/zerolog/log"
 )
@@ -46,15 +47,15 @@ var DarkTheme = Theme{
 var LightTheme = Theme{
 	Name: "light",
 
-	BgColor:       gocui.ColorWhite,
+	BgColor:       gocui.GetColor("#f1f1f1"),
 	FgColor:       gocui.ColorBlack,
 	FrameColor:    gocui.ColorBlack,
 	SelBgColor:    gocui.ColorCyan,
 	SelFgColor:    gocui.ColorBlack,
 	SelFrameColor: gocui.ColorCyan,
 
-	ActionBgColor:    gocui.GetColor("#ffff00"),
-	ActionFgColor:    gocui.GetColor("#0000cc"),
+	ActionBgColor:    gocui.ColorCyan,
+	ActionFgColor:    gocui.GetColor("#ffff00"),
 	ActionSelBgColor: gocui.ColorCyan,
 	ActionSelFgColor: gocui.ColorBlack,
 
@@ -95,5 +96,10 @@ func SetTheme(theme string) {
 	Gui.SubTitleBgColor = t.EmFgColor
 
 	CurrentTheme = &t
+
+	cmn.Config.Theme = theme
+	cmn.ConfigChanged = true
+
+	log.Info().Msgf("Theme set to: %s", theme)
 
 }

@@ -91,13 +91,9 @@ func (p *TerminalPane) SetView(g *gocui.Gui, x0, y0, x1, y1 int) {
 			}
 			p.Prefix.Frame = false
 
-			p.FormattedPrefix = FB(Gui.ActionFgColor, Gui.ActionBgColor) +
-				p.CommandPrefix +
-				FB(Gui.ActionBgColor, p.Prefix.BgColor) +
-				"\ue0b0" +
-				FB(p.Prefix.FgColor, p.Prefix.BgColor)
+			p.FormattedPrefix = p.formatPrefix(p.Screen.FgColor, p.Screen.BgColor)
 
-			fmt.Fprint(p.Prefix, p.FormattedPrefix)
+			fmt.Fprint(p.Prefix, p.formatPrefix(p.Prefix.FgColor, p.Prefix.BgColor))
 			g.SetViewOnTop("terminal.prefix")
 		}
 
@@ -105,6 +101,14 @@ func (p *TerminalPane) SetView(g *gocui.Gui, x0, y0, x1, y1 int) {
 			p.layoutAutocomplete(p.ACTitle, p.ACOptions, p.ACHighlite)
 		}
 	}
+}
+
+func (t *TerminalPane) formatPrefix(fgColor, bgColor gocui.Attribute) string {
+	return FB(Gui.ActionFgColor, Gui.ActionBgColor) +
+		t.CommandPrefix +
+		FB(Gui.ActionBgColor, bgColor) +
+		"\ue0b0" +
+		FB(fgColor, bgColor)
 }
 
 func (t *TerminalPane) ShowAutocomplete(title string, options *[]ACOption, highlite string) {

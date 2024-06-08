@@ -6,6 +6,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 
+	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/atotto/clipboard"
 )
@@ -26,9 +27,9 @@ func Init() {
 	Gui.Mouse = true
 	Gui.Cursor = true
 	Gui.Highlight = true
+	SetTheme(cmn.Config.Theme)
 	Gui.SetManagerFunc(Layout)
 	SetKeybindings()
-	SetTheme("dark") // temoprary
 }
 
 func SetKeybindings() error {
@@ -43,6 +44,7 @@ func SetKeybindings() error {
 }
 
 func quit(g *gocui.Gui, v *gocui.View) error {
+	log.Info().Msg("Quitting")
 	return gocui.ErrQuit
 }
 
@@ -64,7 +66,6 @@ func Layout(g *gocui.Gui) error {
 	}
 
 	Terminal.SetView(g, 0, FirstRowHeight, maxX-1, maxY-2)
-
 	Bottom.SetView(g)
 	Notification.SetView(g)
 

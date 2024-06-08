@@ -25,11 +25,13 @@ var ConfigChanged = false
 type SConfig struct {
 	WalletName string `yaml:"wallet_name"` // last wallet used
 	Verbosity  string `yaml:"verbosity"`   // log verbosity
+	Theme      string `yaml:"theme"`       // UI theme
 }
 
 var Config *SConfig = &SConfig{
 	WalletName: "default",
 	Verbosity:  "trace",
+	Theme:      "dark",
 }
 
 func InitConfig() {
@@ -58,6 +60,8 @@ func InitConfig() {
 	if err != nil {
 		log.Error().Msgf("error restoring config: %v", err)
 	}
+
+	log.Debug().Msgf("theme: %v", Config.Theme)
 
 	//create wallets folder if needed
 	err = os.MkdirAll(filepath.Join(DataFolder, "wallets"), os.ModePerm)
@@ -89,10 +93,12 @@ func SaveConfig() error {
 }
 
 func RestoreConfig(path string) error {
-	data, err := os.ReadFile("config.yaml")
+	data, err := os.ReadFile(DataFolder + "/config.yaml")
 	if err != nil {
 		if err != os.ErrNotExist {
 			// it is ok. Let's use default config
+			log.Warn().Msgf("no config file found: %v", err)
+			return nil
 		} else {
 			return err
 		}
