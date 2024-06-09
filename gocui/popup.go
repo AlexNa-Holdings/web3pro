@@ -9,12 +9,14 @@ import (
 
 type Popup struct {
 	*View
+	Name            string
 	Width, Height   int
 	Title, Subtitle string
 	Template        string
 	GlgLayout       func(g *Gui) error
 	OnOverHotspot   func(v *View, hs *Hotspot)
 	OnClickHotspot  func(v *View, hs *Hotspot)
+	OnOpen          func(v *View)
 }
 
 func (g *Gui) ShowPopup(p *Popup) {
@@ -23,6 +25,10 @@ func (g *Gui) ShowPopup(p *Popup) {
 
 func (p *Popup) Layout(g *Gui) error {
 	maxX, maxY := g.Size()
+
+	if p.Name == "" {
+		p.Name = "popup"
+	}
 
 	// Center the popup
 	if p.Height == 0 {
@@ -42,7 +48,7 @@ func (p *Popup) Layout(g *Gui) error {
 		p.Width += 2
 	}
 
-	if v, err := g.SetView("popup", maxX/2-p.Width/2, maxY/2-p.Height/2, maxX/2+p.Width/2, maxY/2+p.Height/2, 0); err != nil {
+	if v, err := g.SetView(p.Name, maxX/2-p.Width/2, maxY/2-p.Height/2, maxX/2+p.Width/2, maxY/2+p.Height/2, 0); err != nil {
 		if !errors.Is(err, ErrUnknownView) {
 			return err
 		}
@@ -63,7 +69,7 @@ func (p *Popup) Layout(g *Gui) error {
 		}
 
 		g.popup.View = v
-		g.SetCurrentView("popup")
+		g.SetCurrentView(v.name)
 		switch {
 		case p.Template != "":
 			err = p.ParseTemplate()
@@ -75,6 +81,19 @@ func (p *Popup) Layout(g *Gui) error {
 		if err != nil {
 			return err
 		}
+
+		if p.OnOpen != nil {
+			p.OnOpen(v)
+		}
+
+		// if there is an input field, set the focus to it
+		for _, f := range v.gui.views {
+			if strings.HasPrefix(f.name, v.name+".") {
+				v.gui.SetCurrentView(f.name)
+				break
+			}
+		}
+
 	}
 
 	return nil
@@ -129,4 +148,23 @@ func (p *Popup) calcLineWidth(line string) int {
 		l = l - len(tag) + GetTagLength(tagName, tagParams)
 	}
 	return l
+}
+
+func (p *Popup) GetInput(id string) string {
+	f, err := p.View.gui.View(p.View.name + "." + id)
+	if err != nil {
+		return ""
+	}
+
+	return f.Buffer()
+}
+
+func (p *Popup) SetInput(id, value string) {
+	f, err := p.View.gui.View(p.View.name + "." + id)
+	if err != nil {
+		return
+	}
+
+	f.Clear()
+	fmt.Fprint(f, value)
 }

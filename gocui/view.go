@@ -298,6 +298,11 @@ func (v *View) SetCursorUnrestricted(x, y int) error {
 //	y >= 0
 //	x >= 0
 func (v *View) SetCursor(x, y int) error {
+	if v.gui.popup != nil && v.gui.popup.View != nil { // ignore outside events
+		if strings.HasPrefix(v.name, v.gui.popup.View.name+".") {
+			return nil
+		}
+	}
 
 	if hs := v.findHotspot(x+v.ox, y+v.oy); hs != nil {
 		if v.activeHotspot != hs {
@@ -1028,6 +1033,12 @@ func (v *View) ScrollBottom() {
 
 func (v *View) MouseOverScrollbar() bool {
 
+	if v.gui.popup != nil && v.gui.popup.View != nil { // ignore outside events
+		if !strings.HasPrefix(v.name, v.gui.popup.View.name+".") {
+			return false
+		}
+	}
+
 	return v.ScrollBar &&
 		v.ScrollBarStatus.shown &&
 		v.gui.mouseX == v.x1-1 &&
@@ -1163,16 +1174,17 @@ func (v *View) AddInput(tagParams map[string]string) error {
 		return errors.New("input tag must have a size attribute")
 	}
 
-	if v, err := v.gui.SetView(name, v.x0+v.wx, v.y0+v.wy, v.x0+v.wx+size, v.y0+v.wy+1, 0); err != nil {
+	if v, err := v.gui.SetView(name, v.x0+v.wx, v.y0+v.wy, v.x0+v.wx+size, v.y0+v.wy+2, 0); err != nil {
 		if !errors.Is(err, ErrUnknownView) {
 			return err
 		}
 		v.Frame = false
-		v.BgColor = NewRGBColor(05, 05, 05)
 
 		if tagParams["masked"] == "true" {
 			v.Mask = '*'
 		}
+
+		fmt.Fprint(v, tagParams["value"])
 
 		v.Editable = true
 		v.Wrap = false
