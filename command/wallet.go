@@ -101,20 +101,18 @@ func Wallet_Process(c *Command, input string) {
 		ui.Printf("Wallet '%s' opened\n", wallet_name)
 	case "create":
 
-		if len(tokens) < 3 {
-			ui.PrintErrorf("Please specify wallet name")
-			return
-		}
+		// if len(tokens) < 3 {
+		// 	ui.PrintErrorf("Please specify wallet name")
+		// 	return
+		// }
 
-		wallet_name := tokens[2]
+		// // check if file exists
+		// if _, err := os.Stat(cmn.DataFolder + "/wallets/" + wallet_name + ".wallet"); err == nil {
+		// 	ui.PrintErrorf("Wallet file already exists")
+		// 	return
+		// }
 
-		// check if file exists
-		if _, err := os.Stat(cmn.DataFolder + "/wallets/" + wallet_name + ".wallet"); err == nil {
-			ui.PrintErrorf("Wallet file already exists")
-			return
-		}
-
-		ui.Gui.ShowPopup(ui.NewDlgWaletCreate())
+		ui.Gui.ShowPopup(ui.DlgWaletCreate())
 
 	}
 }

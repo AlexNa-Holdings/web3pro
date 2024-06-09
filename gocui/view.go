@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"unicode/utf8"
@@ -1034,35 +1035,44 @@ func (v *View) MouseOverScrollbar() bool {
 		v.gui.mouseY < v.y0+v.ScrollBarStatus.position+v.ScrollBarStatus.height
 }
 
-func (v *View) AddTag(text string) error {
-	tagRe := regexp.MustCompile(`<(\w+)((?:\s+\w+(?::(?:\w+|"[^"]*"))?\s*)*)>`) // <tag key:value key:value>
+func ParseTag(tag string) (string, map[string]string) {
+	// Regular expression to match the whole tag, capturing the tag name and parameters
+	tagRe := regexp.MustCompile(`<(\w+)((?:\s+\w+(?::(?:\w+|"[^"]*"))?\s*)*)>`)
 
 	tagName := ""
 	tagParams := make(map[string]string)
 
-	tagMatch := tagRe.FindStringSubmatch(text)
+	tagMatch := tagRe.FindStringSubmatch(tag)
 	if len(tagMatch) > 0 {
 		tagName = tagMatch[1]
 		params := tagMatch[2]
 		if params != "" {
-			params = strings.TrimSpace(params)
-			paramList := strings.Split(params, " ")
-			for _, param := range paramList {
-				keyValue := strings.SplitN(param, ":", 2)
-				if len(keyValue) == 2 {
-					value := keyValue[1]
-					if strings.HasPrefix(value, `"`) && strings.HasSuffix(value, `"`) {
+			// Regular expression to match individual parameters
+			paramRe := regexp.MustCompile(`(\w+)(?::(".*?"|\S+))?`)
+			paramMatches := paramRe.FindAllStringSubmatch(params, -1)
+
+			for _, paramMatch := range paramMatches {
+				paramName := paramMatch[1]
+				paramValue := "true" // Default value for flag-like parameters
+
+				if len(paramMatch) > 2 && paramMatch[2] != "" {
+					paramValue = paramMatch[2]
+					if strings.HasPrefix(paramValue, `"`) && strings.HasSuffix(paramValue, `"`) {
 						// Remove quotes from the value
-						value = value[1 : len(value)-1]
+						paramValue = paramValue[1 : len(paramValue)-1]
 					}
-					tagParams[keyValue[0]] = value
-				} else {
-					tagParams[keyValue[0]] = "true"
 				}
+
+				tagParams[paramName] = paramValue
 			}
 		}
 	}
 
+	return tagName, tagParams
+}
+
+func (v *View) AddTag(text string) error {
+	tagName, tagParams := ParseTag(text)
 	if err := v.AddTagEx(tagName, tagParams); err != nil {
 		return err
 	}
@@ -1076,8 +1086,25 @@ func (v *View) AddTagEx(tagName string, tagParams map[string]string) error {
 		v.AddLink(tagParams["text"], "link "+tagParams["href"], tagParams["tip"])
 	case "b": // button
 		v.AddButton(tagParams["text"], "button "+tagParams["id"], tagParams["tip"])
+	case "i": // input
+		v.AddInput(tagParams)
 	}
 	return nil
+}
+
+func GetTagLength(tagName string, tagParams map[string]string) int {
+	switch tagName {
+	case "l": // link
+		return len(tagParams["text"])
+	case "b": // button
+		return len(tagParams["text"]) + 2
+	case "c": // center
+		return 0
+	case "i": // input
+		size, _ := strconv.Atoi(tagParams["size"])
+		return size
+	}
+	return 0
 }
 
 func AddCells(cells []cell, fg, bg Attribute, text string) []cell {
@@ -1103,8 +1130,56 @@ func (v *View) AddButton(text, value, tip string) error {
 	cells = AddCells(cells, v.BgColor, v.gui.EmFgColor, text)
 	cells = AddCells(cells, v.gui.EmFgColor, v.BgColor, "\ue0b4")
 
-	cells_highligted := AddCells(nil, v.SelFgColor, v.SelBgColor, text)
+	cells_highligted := AddCells(nil, v.SelFgColor, v.SelBgColor, "\ue0b6")
+	cells_highligted = AddCells(cells_highligted, v.SelBgColor, v.SelFgColor, text)
+	cells_highligted = AddCells(cells_highligted, v.SelFgColor, v.SelBgColor, "\ue0b4")
+
+	if value != "" {
+		value = "button " + text
+	}
+
+	if tip == "" {
+		tip = text
+	}
+
 	err := v.AddHotspot(v.wx, v.wy, value, tip, cells, cells_highligted)
-	fmt.Fprint(v, text)
+
+	v.writeMutex.Lock()
+	defer v.writeMutex.Unlock()
+	v.writeCells(v.wx, v.wy, cells)
+	v.wx += len(cells)
+
 	return err
+}
+
+func (v *View) AddInput(tagParams map[string]string) error {
+	name := v.name + "-" + tagParams["id"]
+	if _, err := v.gui.View(name); err == nil {
+		return errors.New("input with id " + name + " already exists")
+	}
+
+	size, _ := strconv.Atoi(tagParams["size"])
+	if size == 0 {
+		return errors.New("input tag must have a size attribute")
+	}
+
+	if v, err := v.gui.SetView(name, v.x0+v.wx, v.y0+v.wy, v.x0+v.wx+size, v.y0+v.wy+1, 0); err != nil {
+		if !errors.Is(err, ErrUnknownView) {
+			return err
+		}
+		v.Frame = false
+		v.BgColor = NewRGBColor(05, 05, 05)
+
+		if tagParams["masked"] == "true" {
+			v.Mask = '*'
+		}
+
+		v.Editable = true
+		v.Wrap = false
+	}
+
+	// write placeholder
+	fmt.Fprint(v, strings.Repeat(" ", size))
+
+	return nil
 }
