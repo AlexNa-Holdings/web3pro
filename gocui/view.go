@@ -7,7 +7,9 @@ package gocui
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
+	"regexp"
 	"strings"
 	"sync"
 	"unicode/utf8"
@@ -1030,4 +1032,79 @@ func (v *View) MouseOverScrollbar() bool {
 		v.gui.mouseX == v.x1-1 &&
 		v.gui.mouseY >= v.y0+v.ScrollBarStatus.position &&
 		v.gui.mouseY < v.y0+v.ScrollBarStatus.position+v.ScrollBarStatus.height
+}
+
+func (v *View) AddTag(text string) error {
+	tagRe := regexp.MustCompile(`<(\w+)((?:\s+\w+(?::(?:\w+|"[^"]*"))?\s*)*)>`) // <tag key:value key:value>
+
+	tagName := ""
+	tagParams := make(map[string]string)
+
+	tagMatch := tagRe.FindStringSubmatch(text)
+	if len(tagMatch) > 0 {
+		tagName = tagMatch[1]
+		params := tagMatch[2]
+		if params != "" {
+			params = strings.TrimSpace(params)
+			paramList := strings.Split(params, " ")
+			for _, param := range paramList {
+				keyValue := strings.SplitN(param, ":", 2)
+				if len(keyValue) == 2 {
+					value := keyValue[1]
+					if strings.HasPrefix(value, `"`) && strings.HasSuffix(value, `"`) {
+						// Remove quotes from the value
+						value = value[1 : len(value)-1]
+					}
+					tagParams[keyValue[0]] = value
+				} else {
+					tagParams[keyValue[0]] = "true"
+				}
+			}
+		}
+	}
+
+	if err := v.AddTagEx(tagName, tagParams); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (v *View) AddTagEx(tagName string, tagParams map[string]string) error {
+	switch tagName {
+	case "l": // link
+		v.AddLink(tagParams["text"], "link "+tagParams["href"], tagParams["tip"])
+	case "b": // button
+		v.AddButton(tagParams["text"], "button "+tagParams["id"], tagParams["tip"])
+	}
+	return nil
+}
+
+func AddCells(cells []cell, fg, bg Attribute, text string) []cell {
+	if cells == nil {
+		cells = []cell{}
+	}
+	for _, r := range text {
+		cells = append(cells, cell{r, bg, fg})
+	}
+	return cells
+}
+
+func (v *View) AddLink(text, value, tip string) error {
+	cells := AddCells(nil, v.gui.EmFgColor, v.BgColor, text)
+	cells_highligted := AddCells(nil, v.SelFgColor, v.SelBgColor, text)
+	err := v.AddHotspot(v.wx, v.wy, value, tip, cells, cells_highligted)
+	fmt.Fprint(v, text)
+	return err
+}
+
+func (v *View) AddButton(text, value, tip string) error {
+	cells := AddCells(nil, v.gui.EmFgColor, v.BgColor, "\ue0b6")
+	cells = AddCells(cells, v.BgColor, v.gui.EmFgColor, text)
+	cells = AddCells(cells, v.gui.EmFgColor, v.BgColor, "\ue0b4")
+
+	cells_highligted := AddCells(nil, v.SelFgColor, v.SelBgColor, text)
+	err := v.AddHotspot(v.wx, v.wy, value, tip, cells, cells_highligted)
+	fmt.Fprint(v, text)
+	return err
 }

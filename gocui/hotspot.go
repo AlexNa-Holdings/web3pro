@@ -2,7 +2,6 @@ package gocui
 
 import (
 	"errors"
-	"fmt"
 	"sort"
 )
 
@@ -13,16 +12,6 @@ type Hotspot struct {
 	Tip             string
 	Cells           []cell
 	CellsHighligted []cell
-}
-
-func AddCells(cells []cell, fg, bg Attribute, text string) []cell {
-	if cells == nil {
-		cells = []cell{}
-	}
-	for _, r := range text {
-		cells = append(cells, cell{r, bg, fg})
-	}
-	return cells
 }
 
 func (v *View) AddHotspot(x, y int, value string, tip string, cells []cell, cells_highligted []cell) error {
@@ -68,13 +57,4 @@ func (v *View) findHotspot(x, y int) *Hotspot {
 	}
 
 	return nil
-}
-
-func (v *View) AddLink(text, value, tip string) error {
-	cells := AddCells(nil, v.gui.EmFgColor, v.BgColor, text)
-	cells_highligted := AddCells(nil, v.SelFgColor, v.SelBgColor, text)
-	err := v.AddHotspot(v.wx, v.wy, value, tip, cells, cells_highligted)
-	fmt.Fprint(v, text)
-	return err
-
 }
