@@ -30,10 +30,10 @@ func DlgWaletCreate() *gocui.Popup {
 			}
 		},
 		Template: `
-      Name: <i id:name size:24 value:"tak tak tak">
+      Name: <i id:name size:24 value:"">
   Password: <i id:pass masked:true size:24>
   (Retype): <i id:retype masked:true size:24>
 
-<c><b text:Ok tip:"ha ha ha">  <b text:Cancel>`,
+<c><b text:Ok tip:"create wallet">  <b text:Cancel>`,
 	}
 }

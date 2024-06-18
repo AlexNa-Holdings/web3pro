@@ -1225,7 +1225,7 @@ func (v *View) AddInput(tagParams map[string]string) error {
 		x0:   v.wx,
 		y0:   v.wy,
 		x1:   v.wx + size,
-		y1:   v.wy + 1,
+		y1:   v.wy + 2,
 	}
 
 	if v, err := v.gui.SetView(name, v.x0+v.wx, v.y0+v.wy, v.x0+v.wx+size, v.y0+v.wy+2, 0); err != nil {

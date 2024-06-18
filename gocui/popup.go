@@ -45,6 +45,9 @@ func (g *Gui) HidePopup() {
 }
 
 func (p *Popup) Layout(g *Gui) error {
+	var v *View
+	var err error
+
 	maxX, maxY := g.Size()
 
 	if p.Name == "" {
@@ -69,7 +72,7 @@ func (p *Popup) Layout(g *Gui) error {
 		p.Width += 2
 	}
 
-	if v, err := g.SetView(p.Name, maxX/2-p.Width/2, maxY/2-p.Height/2, maxX/2+p.Width/2, maxY/2+p.Height/2, 0); err != nil {
+	if v, err = g.SetView(p.Name, maxX/2-p.Width/2, maxY/2-p.Height/2, maxX/2+p.Width/2, maxY/2+p.Height/2, 0); err != nil {
 		if !errors.Is(err, ErrUnknownView) {
 			return err
 		}
@@ -109,7 +112,17 @@ func (p *Popup) Layout(g *Gui) error {
 		}
 
 		v.SetFocus(0)
+	}
 
+	for _, c := range p.Controls {
+		if c.Type == PUC_INPUT {
+			c.View.x0 = v.x0 + c.x0
+			c.View.x1 = v.x0 + c.x1
+			c.View.y0 = v.y0 + c.y0
+			c.View.y1 = v.y0 + c.y1
+			c.View.tainted = true
+			g.SetViewOnTop(c.View.name)
+		}
 	}
 
 	return nil
