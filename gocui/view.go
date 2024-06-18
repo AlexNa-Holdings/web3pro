@@ -228,6 +228,7 @@ func (g *Gui) newView(name string, x0, y0, x1, y1 int, mode OutputMode) *View {
 	v.SelFgColor = v.gui.SelFgColor
 	v.SelBgColor = v.gui.SelBgColor
 	v.FrameColor = v.gui.FrameColor
+	v.TitleColor = v.gui.FrameColor
 	v.EmFgColor = v.gui.EmFgColor
 	v.SubTitleFgColor = v.gui.SubTitleFgColor
 	v.SubTitleBgColor = v.gui.SubTitleBgColor

@@ -27,7 +27,7 @@ var DarkTheme = Theme{
 
 	BgColor:       gocui.GetColor("#090300"),
 	FgColor:       gocui.GetColor("#A5A2A2"),
-	FrameColor:    gocui.GetColor("#f0f0f0"),
+	FrameColor:    gocui.GetColor("#777777"),
 	SelBgColor:    gocui.GetColor("#090300"),
 	SelFgColor:    gocui.GetColor("#f1f1f1"),
 	SelFrameColor: gocui.ColorCyan,
