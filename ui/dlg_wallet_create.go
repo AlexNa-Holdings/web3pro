@@ -1,6 +1,8 @@
 package ui
 
-import "github.com/AlexNa-Holdings/web3pro/gocui"
+import (
+	"github.com/AlexNa-Holdings/web3pro/gocui"
+)
 
 func DlgWaletCreate() *gocui.Popup {
 	return &gocui.Popup{
@@ -11,6 +13,20 @@ func DlgWaletCreate() *gocui.Popup {
 				Bottom.Printf(hs.Tip)
 			} else {
 				Bottom.Printf("")
+			}
+		},
+		OnClose: func(v *gocui.View) {
+			Gui.SetCurrentView("terminal.input")
+		},
+		OnClickHotspot: func(v *gocui.View, hs *gocui.Hotspot) {
+
+			if hs != nil {
+				switch hs.Value {
+				case "button Ok":
+				// Create wallet
+				case "button Cancel":
+					Gui.HidePopup()
+				}
 			}
 		},
 		Template: `

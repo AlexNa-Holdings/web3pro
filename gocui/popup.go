@@ -7,6 +7,8 @@ import (
 	"strings"
 )
 
+type PUCType int // PopupControlType
+
 type Popup struct {
 	*View
 	Name            string
@@ -16,11 +18,30 @@ type Popup struct {
 	GlgLayout       func(g *Gui) error
 	OnOverHotspot   func(v *View, hs *Hotspot)
 	OnClickHotspot  func(v *View, hs *Hotspot)
+	OnClose         func(v *View)
 	OnOpen          func(v *View)
 }
 
 func (g *Gui) ShowPopup(p *Popup) {
 	g.popup = p
+}
+
+func (g *Gui) HidePopup() {
+	if g.popup != nil {
+
+		if g.popup.OnClose != nil {
+			g.popup.OnClose(g.popup.View)
+		}
+
+		for _, c := range g.popup.View.Controls {
+			if c.Type == PUC_INPUT {
+				g.DeleteView(c.View.name)
+			}
+		}
+
+		g.DeleteView(g.popup.Name)
+		g.popup = nil
+	}
 }
 
 func (p *Popup) Layout(g *Gui) error {
@@ -57,6 +78,7 @@ func (p *Popup) Layout(g *Gui) error {
 		v.Frame = true
 		v.Title = p.Title
 		v.Subtitle = p.Subtitle
+		v.Editable = false
 		v.OnOverHotspot = func(v *View, hs *Hotspot) {
 			if g.popup.OnOverHotspot != nil {
 				g.popup.OnOverHotspot(v, hs)
@@ -86,13 +108,7 @@ func (p *Popup) Layout(g *Gui) error {
 			p.OnOpen(v)
 		}
 
-		// if there is an input field, set the focus to it
-		for _, f := range v.gui.views {
-			if strings.HasPrefix(f.name, v.name+".") {
-				v.gui.SetCurrentView(f.name)
-				break
-			}
-		}
+		v.SetFocus(0)
 
 	}
 

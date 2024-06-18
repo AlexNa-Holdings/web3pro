@@ -14,10 +14,10 @@ type Hotspot struct {
 	CellsHighligted []cell
 }
 
-func (v *View) AddHotspot(x, y int, value string, tip string, cells []cell, cells_highligted []cell) error {
+func (v *View) AddHotspot(x, y int, value string, tip string, cells []cell, cells_highligted []cell) (*Hotspot, error) {
 
 	if len(cells) != len(cells_highligted) {
-		return errors.New("cells and cells_highligted must have the same length")
+		return nil, errors.New("cells and cells_highligted must have the same length")
 	}
 
 	// Find the index where the new hotspot should be inserted
@@ -31,11 +31,11 @@ func (v *View) AddHotspot(x, y int, value string, tip string, cells []cell, cell
 	h := Hotspot{x, y, len(cells), value, tip, cells, cells_highligted}
 
 	// Insert the new hotspot at the found index
-	v.hotspots = append(v.hotspots, h)             // Increase the size by one
+	v.hotspots = append(v.hotspots, &h)            // Increase the size by one
 	copy(v.hotspots[index+1:], v.hotspots[index:]) // Shift elements to the right
-	v.hotspots[index] = h                          // Insert the new element
+	v.hotspots[index] = &h                         // Insert the new element
 
-	return nil
+	return &h, nil
 }
 
 func (v *View) findHotspot(x, y int) *Hotspot {
@@ -52,7 +52,7 @@ func (v *View) findHotspot(x, y int) *Hotspot {
 	for ; i < len(v.hotspots) && v.hotspots[i].Y == y; i++ {
 		h := v.hotspots[i]
 		if x >= h.X && x < h.X+h.L {
-			return &h
+			return h
 		}
 	}
 

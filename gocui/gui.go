@@ -1022,8 +1022,14 @@ func (g *Gui) onKey(ev *gocuiEvent) error {
 		if matched {
 			break
 		}
-		if g.currentView != nil && g.currentView.Editable && g.currentView.Editor != nil {
-			g.currentView.Editor.Edit(g.currentView, Key(ev.Key), ev.Ch, Modifier(ev.Mod))
+		if g.currentView != nil {
+			if g.currentView.Editable && g.currentView.Editor != nil {
+				g.currentView.Editor.Edit(g.currentView, Key(ev.Key), ev.Ch, Modifier(ev.Mod))
+			}
+		} else {
+			if g.popup != nil && g.popup.View != nil && len(g.popup.View.Controls) > 0 {
+				PopupNavigation(g.popup.View, Key(ev.Key), ev.Ch, Modifier(ev.Mod))
+			}
 		}
 	case eventMouse:
 		mx, my := ev.MouseX, ev.MouseY
@@ -1089,6 +1095,14 @@ func (g *Gui) onKey(ev *gocuiEvent) error {
 				if _, err := g.execKeybindings(v, ev); err != nil {
 					return err
 				}
+			}
+		} else {
+			if err := v.SetCursor(mx-v.x0-1+v.ox, my-v.y0-1+v.oy); err != nil {
+				return err
+			}
+
+			if _, err := g.execKeybindings(v, ev); err != nil {
+				return err
 			}
 		}
 	}

@@ -61,8 +61,6 @@ func InitConfig() {
 		log.Error().Msgf("error restoring config: %v", err)
 	}
 
-	log.Debug().Msgf("theme: %v", Config.Theme)
-
 	//create wallets folder if needed
 	err = os.MkdirAll(filepath.Join(DataFolder, "wallets"), os.ModePerm)
 	if err != nil {

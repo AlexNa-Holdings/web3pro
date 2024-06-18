@@ -32,18 +32,34 @@ var (
 	ErrInvalidPoint = errors.New("invalid point")
 )
 
+const (
+	PUC_LINK = iota
+	PUC_BUTTON
+	PUC_INPUT
+)
+
+type PopoupControl struct {
+	Type           PUCType
+	x0, y0, x1, y1 int
+	*View
+	*Hotspot
+}
+
 // A View is a window. It maintains its own internal buffer and cursor
 // position.
 type View struct {
 	name           string
-	x0, y0, x1, y1 int       // left top right bottom
-	ox, oy         int       // view offsets
-	cx, cy         int       // cursor position
-	rx, ry         int       // Read() offsets
-	wx, wy         int       // Write() offsets
-	lines          [][]cell  // All the data
-	hotspots       []Hotspot // AN - hotspots sorted by positions
-	outMode        OutputMode
+	x0, y0, x1, y1 int             // left top right bottom
+	ox, oy         int             // view offsets
+	cx, cy         int             // cursor position
+	rx, ry         int             // Read() offsets
+	wx, wy         int             // Write() offsets
+	lines          [][]cell        // All the data
+	hotspots       []*Hotspot      // AN - hotspots sorted by positions
+	Controls       []PopoupControl // AN - controls
+	ControlInFocus int             // AN - the control in focus
+
+	outMode OutputMode
 
 	activeHotspot  *Hotspot                   // AN - the currently active hotspot
 	OnOverHotspot  func(v *View, hs *Hotspot) // AN - function to be called when the mouse is over a hotspot
@@ -188,18 +204,19 @@ func (l lineType) String() string {
 // newView returns a new View object.
 func (g *Gui) newView(name string, x0, y0, x1, y1 int, mode OutputMode) *View {
 	v := &View{
-		name:    name,
-		x0:      x0,
-		y0:      y0,
-		x1:      x1,
-		y1:      y1,
-		Visible: true,
-		Frame:   true,
-		Editor:  DefaultEditor,
-		tainted: true,
-		outMode: mode,
-		ei:      newEscapeInterpreter(mode),
-		gui:     g,
+		name:           name,
+		x0:             x0,
+		y0:             y0,
+		x1:             x1,
+		y1:             y1,
+		Visible:        true,
+		Frame:          true,
+		Editor:         DefaultEditor,
+		tainted:        true,
+		outMode:        mode,
+		ei:             newEscapeInterpreter(mode),
+		gui:            g,
+		ControlInFocus: -1,
 	}
 
 	// v.FgColor, v.BgColor = ColorDefault, ColorDefault
@@ -252,7 +269,11 @@ func (v *View) setRune(x, y int, ch rune, fgColor, bgColor Attribute) error {
 	} else if hs := v.findHotspot(x+v.ox, y+v.oy); hs != nil {
 		hsx := x + v.ox - hs.X
 
-		if y == v.cy-v.oy && hsx >= 0 && hsx < hs.L && v.cx+v.ox >= hs.X && v.cx+v.ox < hs.X+hs.L {
+		if (v.ControlInFocus != -1 && v.Controls[v.ControlInFocus].Hotspot == hs) ||
+			(y == v.cy-v.oy &&
+				hsx >= 0 && hsx < hs.L &&
+				v.cx+v.ox >= hs.X &&
+				v.cx+v.ox < hs.X+hs.L) {
 			fgColor = hs.CellsHighligted[hsx].fgColor
 			bgColor = hs.CellsHighligted[hsx].bgColor
 			ch = hs.CellsHighligted[hsx].chr
@@ -303,7 +324,6 @@ func (v *View) SetCursor(x, y int) error {
 			return nil
 		}
 	}
-
 	if hs := v.findHotspot(x+v.ox, y+v.oy); hs != nil {
 		if v.activeHotspot != hs {
 			v.activeHotspot = hs
@@ -702,7 +722,7 @@ func (v *View) Clear() {
 	v.tainted = true
 	v.ei.reset()
 	v.lines = [][]cell{}
-	v.hotspots = []Hotspot{}
+	v.hotspots = []*Hotspot{}
 	v.activeHotspot = nil
 	v.SetCursor(0, 0)
 	v.SetOrigin(0, 0)
@@ -1131,8 +1151,23 @@ func AddCells(cells []cell, fg, bg Attribute, text string) []cell {
 func (v *View) AddLink(text, value, tip string) error {
 	cells := AddCells(nil, v.gui.EmFgColor, v.BgColor, text)
 	cells_highligted := AddCells(nil, v.SelFgColor, v.SelBgColor, text)
-	err := v.AddHotspot(v.wx, v.wy, value, tip, cells, cells_highligted)
-	fmt.Fprint(v, text)
+
+	c := PopoupControl{
+		Type: PUC_LINK,
+		x0:   v.wx,
+		y0:   v.wy,
+		x1:   v.wx + len(cells),
+		y1:   v.wy + 1,
+	}
+
+	hs, err := v.AddHotspot(v.wx, v.wy, value, tip, cells, cells_highligted)
+
+	if err == nil {
+		fmt.Fprint(v, text)
+		c.Hotspot = hs
+		v.Controls = append(v.Controls, c)
+	}
+
 	return err
 }
 
@@ -1153,18 +1188,29 @@ func (v *View) AddButton(text, value, tip string) error {
 		tip = text
 	}
 
-	err := v.AddHotspot(v.wx, v.wy, value, tip, cells, cells_highligted)
+	c := PopoupControl{
+		Type: PUC_BUTTON,
+		x0:   v.wx,
+		y0:   v.wy,
+		x1:   v.wx + len(cells),
+		y1:   v.wy + 1,
+	}
 
-	v.writeMutex.Lock()
-	defer v.writeMutex.Unlock()
-	v.writeCells(v.wx, v.wy, cells)
-	v.wx += len(cells)
+	hs, err := v.AddHotspot(v.wx, v.wy, value, tip, cells, cells_highligted)
 
+	if err == nil {
+		v.writeMutex.Lock()
+		defer v.writeMutex.Unlock()
+		v.writeCells(v.wx, v.wy, cells)
+		v.wx += len(cells)
+		c.Hotspot = hs
+		v.Controls = append(v.Controls, c)
+	}
 	return err
 }
 
 func (v *View) AddInput(tagParams map[string]string) error {
-	name := v.name + "-" + tagParams["id"]
+	name := v.name + "." + tagParams["id"]
 	if _, err := v.gui.View(name); err == nil {
 		return errors.New("input with id " + name + " already exists")
 	}
@@ -1172,6 +1218,14 @@ func (v *View) AddInput(tagParams map[string]string) error {
 	size, _ := strconv.Atoi(tagParams["size"])
 	if size == 0 {
 		return errors.New("input tag must have a size attribute")
+	}
+
+	c := PopoupControl{
+		Type: PUC_INPUT,
+		x0:   v.wx,
+		y0:   v.wy,
+		x1:   v.wx + size,
+		y1:   v.wy + 1,
 	}
 
 	if v, err := v.gui.SetView(name, v.x0+v.wx, v.y0+v.wy, v.x0+v.wx+size, v.y0+v.wy+2, 0); err != nil {
@@ -1184,14 +1238,77 @@ func (v *View) AddInput(tagParams map[string]string) error {
 			v.Mask = '*'
 		}
 
+		v.Editor = EditorFunc(PopupNavigation)
+
 		fmt.Fprint(v, tagParams["value"])
 
 		v.Editable = true
 		v.Wrap = false
+		c.View = v
 	}
+
+	v.Controls = append(v.Controls, c)
 
 	// write placeholder
 	fmt.Fprint(v, strings.Repeat(" ", size))
 
 	return nil
+}
+
+func PopupNavigation(v *View, key Key, ch rune, mod Modifier) {
+
+	if v.gui.popup == nil || v.gui.popup.View == nil {
+		return
+	}
+	switch key {
+	case KeyEsc:
+		v.gui.popup.gui.HidePopup()
+	case KeyEnter:
+		if v.gui.popup.View.ControlInFocus != -1 {
+			c := v.gui.popup.View.Controls[v.gui.popup.View.ControlInFocus]
+			switch c.Type {
+			case PUC_LINK:
+				v.gui.popup.View.OnClickHotspot(v.gui.popup.View, c.Hotspot)
+			case PUC_BUTTON:
+				v.gui.popup.View.OnClickHotspot(v.gui.popup.View, c.Hotspot)
+			case PUC_INPUT:
+				v.gui.popup.View.FocusNext()
+			}
+		}
+
+	case KeyTab:
+		v.gui.popup.View.FocusNext()
+	case KeyBacktab:
+		v.gui.popup.View.FocusPrev()
+	default:
+		if v.Editable {
+			DefaultEditor.Edit(v, key, ch, mod)
+		}
+	}
+}
+
+func (v *View) SetFocus(i int) {
+
+	L := len(v.Controls)
+	if L == 0 {
+		return
+	}
+
+	i = ((i % L) + L) % L
+
+	v.ControlInFocus = i % len(v.Controls)
+	if v.Controls[i].View != nil {
+		v.gui.SetCurrentView(v.Controls[i].View.name)
+	} else {
+		v.gui.currentView = nil
+		screen.HideCursor()
+	}
+}
+
+func (v *View) FocusNext() {
+	v.SetFocus(v.ControlInFocus + 1)
+}
+
+func (v *View) FocusPrev() {
+	v.SetFocus(v.ControlInFocus - 1)
 }
