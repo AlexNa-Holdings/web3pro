@@ -1057,14 +1057,29 @@ func (g *Gui) onKey(ev *gocuiEvent) error {
 			return nil
 		}
 
+		if g.popup != nil && g.popup.View != nil && ev.Key == MouseLeft { // if click on input just set focus
+			for i, c := range g.popup.View.Controls {
+				if c.Type == PUC_INPUT {
+
+					if mx >= g.popup.View.x0+c.x0 &&
+						mx <= g.popup.View.x0+c.x1 &&
+						my >= g.popup.View.y0+c.y0 &&
+						my < g.popup.View.y0+c.y1 {
+						g.popup.View.SetFocus(i)
+						return nil
+					}
+				}
+			}
+		}
+
 		v, err := g.ViewByPosition(mx, my)
 		if err != nil {
 			break
 		}
 
-		if v.gui.popup != nil && v.gui.popup.View != nil {
-			if v.name == v.gui.popup.View.name ||
-				strings.HasPrefix(v.name, v.gui.popup.View.name+".") {
+		if g.popup != nil && g.popup.View != nil {
+			if v.name == g.popup.View.name ||
+				strings.HasPrefix(v.name, g.popup.View.name+".") {
 
 				if v.MouseOverScrollbar() && ev.Key == MouseLeft {
 					g.dragging.on = true

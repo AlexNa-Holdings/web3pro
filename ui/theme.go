@@ -27,12 +27,12 @@ var DarkTheme = Theme{
 
 	BgColor:       gocui.GetColor("#090300"),
 	FgColor:       gocui.GetColor("#A5A2A2"),
-	FrameColor:    gocui.GetColor("#777777"),
+	FrameColor:    gocui.GetColor("#a7a7a7"),
 	SelBgColor:    gocui.GetColor("#090300"),
-	SelFgColor:    gocui.GetColor("#f1f1f1"),
-	SelFrameColor: gocui.ColorCyan,
+	SelFgColor:    gocui.GetColor("#f3f3f3"),
+	SelFrameColor: gocui.GetColor("#7FFFD4"),
 
-	ActionBgColor:    gocui.GetColor("#ffff00"),
+	ActionBgColor:    gocui.GetColor("#FFD700"),
 	ActionFgColor:    gocui.GetColor("#0000cc"),
 	ActionSelBgColor: gocui.ColorCyan,
 	ActionSelFgColor: gocui.ColorBlack,

@@ -16,6 +16,7 @@ type NotificationPane struct {
 	*gocui.View
 	On      bool
 	Message string
+	Error   bool
 }
 
 var Notification *NotificationPane = &NotificationPane{}
@@ -39,8 +40,13 @@ func (p *NotificationPane) SetView(g *gocui.Gui) {
 		}
 		p.View.Autoscroll = false
 		p.View.Frame = false
-		p.View.BgColor = CurrentTheme.HelpBgColor
-		p.View.FgColor = CurrentTheme.HelpFgColor
+		if p.Error {
+			p.View.FgColor = CurrentTheme.ErrorFgColor
+			p.View.BgColor = CurrentTheme.BgColor
+		} else {
+			p.View.BgColor = CurrentTheme.HelpBgColor
+			p.View.FgColor = CurrentTheme.HelpFgColor
+		}
 		fmt.Fprintf(p.View, p.Message)
 	}
 }
@@ -62,9 +68,24 @@ func (n *NotificationPane) Show(text string) {
 	}()
 }
 
+func (n *NotificationPane) Showf(format string, args ...interface{}) {
+	n.Show(fmt.Sprintf(format, args...))
+}
+
+func (n *NotificationPane) ShowError(text string) {
+	n.Error = true
+	n.Show(text)
+}
+
+func (n *NotificationPane) ShowErrorf(format string, args ...interface{}) {
+	n.ShowError(fmt.Sprintf(format, args...))
+}
+
 func (n *NotificationPane) Hide() {
 	if n.View != nil {
 		n.View.Clear()
+		n.View.BgColor = CurrentTheme.HelpBgColor
+		n.View.FgColor = CurrentTheme.HelpFgColor
 	}
 
 	Gui.Update(func(g *gocui.Gui) error {

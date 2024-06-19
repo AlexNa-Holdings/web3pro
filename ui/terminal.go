@@ -31,8 +31,10 @@ type ACOption struct {
 	Result string
 }
 
+const DEFAULT_COMMAND_PREFIX = "w3p"
+
 var Terminal *TerminalPane = &TerminalPane{
-	CommandPrefix:  "w3p",
+	CommandPrefix:  DEFAULT_COMMAND_PREFIX,
 	History:        []string{},
 	ACOptions:      &[]ACOption{},
 	AutoCompleteOn: false,
@@ -102,6 +104,13 @@ func (p *TerminalPane) SetView(g *gocui.Gui, x0, y0, x1, y1 int) {
 			p.layoutAutocomplete(p.ACTitle, p.ACOptions, p.ACHighlite)
 		}
 	}
+}
+
+func (t *TerminalPane) SetCommandPrefix(prefix string) {
+	t.CommandPrefix = prefix
+	t.FormattedPrefix = t.formatPrefix(t.Screen.FgColor, t.Screen.BgColor)
+	t.Prefix.Clear()
+	fmt.Fprint(t.Prefix, t.FormattedPrefix)
 }
 
 func (t *TerminalPane) formatPrefix(fgColor, bgColor gocui.Attribute) string {

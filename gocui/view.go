@@ -16,6 +16,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/mattn/go-runewidth"
+	"github.com/rs/zerolog/log"
 )
 
 // Constants for overlapping edges
@@ -320,11 +321,6 @@ func (v *View) SetCursorUnrestricted(x, y int) error {
 //	y >= 0
 //	x >= 0
 func (v *View) SetCursor(x, y int) error {
-	if v.gui.popup != nil && v.gui.popup.View != nil { // ignore outside events
-		if strings.HasPrefix(v.name, v.gui.popup.View.name+".") {
-			return nil
-		}
-	}
 	if hs := v.findHotspot(x+v.ox, y+v.oy); hs != nil {
 		if v.activeHotspot != hs {
 			v.activeHotspot = hs
@@ -1312,4 +1308,24 @@ func (v *View) FocusNext() {
 
 func (v *View) FocusPrev() {
 	v.SetFocus(v.ControlInFocus - 1)
+}
+
+func (v *View) GetInput(id string) string {
+	for _, c := range v.Controls {
+		if c.Type == PUC_INPUT && c.View != nil && c.View.name == v.name+"."+id {
+			return c.View.Buffer()
+		}
+	}
+	return ""
+}
+
+func (v *View) SetInput(id, value string) {
+	for _, c := range v.Controls {
+		if c.Type == PUC_INPUT && c.View != nil && c.View.name == v.name+"."+id {
+			log.Debug().Msgf("Before %s", c.View.Buffer())
+			c.View.Clear()
+			log.Debug().Msgf("After  %s wx: %d", c.View.Buffer(), c.View.wx)
+			fmt.Fprint(c.View, value)
+		}
+	}
 }

@@ -2,6 +2,7 @@ package ui
 
 import (
 	"github.com/AlexNa-Holdings/web3pro/gocui"
+	"github.com/AlexNa-Holdings/web3pro/wallet"
 )
 
 func DlgWaletCreate() *gocui.Popup {
@@ -23,7 +24,36 @@ func DlgWaletCreate() *gocui.Popup {
 			if hs != nil {
 				switch hs.Value {
 				case "button Ok":
-				// Create wallet
+					name := v.GetInput("name")
+
+					if len(name) == 0 {
+						Notification.ShowError("Name cannot be empty")
+						break
+					}
+
+					if wallet.Exists(name) {
+						Notification.ShowErrorf("Wallet %s already exists", name)
+						break
+					}
+
+					pass := v.GetInput("pass")
+					retype := v.GetInput("retype")
+
+					if pass != retype {
+						Notification.ShowError("Passwords do not match")
+						break
+					}
+
+					err := wallet.Create(name, pass)
+
+					if err != nil {
+						Notification.ShowErrorf("Error creating wallet: %s", err)
+						break
+					}
+
+					Notification.Showf("Wallet %s created", name)
+					Gui.HidePopup()
+
 				case "button Cancel":
 					Gui.HidePopup()
 				}

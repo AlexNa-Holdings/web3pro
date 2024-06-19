@@ -1,24 +1,172 @@
 package wallet
 
-import "github.com/AlexNa-Holdings/web3pro/cmn"
+import (
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/json"
+	"io"
+	"os"
+
+	"github.com/AlexNa-Holdings/web3pro/cmn"
+	"github.com/rs/zerolog/log"
+	"golang.org/x/crypto/pbkdf2"
+)
+
+const SOLT_SIZE = 32
 
 type Wallet struct {
+	Name string `json:"name"`
 }
 
 var CurrentWallet *Wallet
+var CurrentPassword string
 
-func OpenWallet(name string) error {
-	var err error
+func Open(name string, pass string) error {
 
-	CurrentWallet, err = OpenFromFile(cmn.DataFolder + "/" + name + ".wallet")
+	w, err := OpenFromFile(cmn.DataFolder+"/wallets/"+name, pass)
+
+	if err == nil {
+		CurrentWallet = w
+		CurrentPassword = pass
+	}
 
 	return err
 }
 
-func OpenFromFile(file string) (*Wallet, error) {
-	var err error
+func Exists(name string) bool {
+	_, err := os.Stat(cmn.DataFolder + "/wallets/" + name)
+	return !os.IsNotExist(err)
+}
 
+func Create(name, pass string) error {
 	w := &Wallet{}
 
-	return w, err
+	return SaveToFile(w, cmn.DataFolder+"/wallets/"+name, pass)
+}
+
+func List() []string {
+	files, err := os.ReadDir(cmn.DataFolder + "/wallets")
+	if err != nil {
+		log.Error().Msgf("Error reading directory: %v\n", err)
+		return nil
+	}
+
+	names := []string{}
+	for _, file := range files {
+		names = append(names, file.Name())
+	}
+
+	return names
+}
+
+func encrypt(data []byte, passphrase []byte) ([]byte, error) {
+	block, err := aes.NewCipher([]byte(passphrase))
+	if err != nil {
+		return nil, err
+	}
+
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, err
+	}
+
+	nonce := make([]byte, gcm.NonceSize())
+	if _, err = io.ReadFull(rand.Reader, nonce); err != nil {
+		return nil, err
+	}
+
+	ciphertext := gcm.Seal(nonce, nonce, data, nil)
+	return ciphertext, nil
+}
+
+func decrypt(data []byte, passphrase []byte) ([]byte, error) {
+	block, err := aes.NewCipher([]byte(passphrase))
+	if err != nil {
+		return nil, err
+	}
+
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, err
+	}
+
+	nonceSize := gcm.NonceSize()
+	if len(data) < nonceSize {
+		return nil, err
+	}
+
+	nonce, ciphertext := data[:nonceSize], data[nonceSize:]
+	plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return plaintext, nil
+}
+
+// GenerateKey derives a key from a password using PBKDF2
+func generateKey(password string, salt []byte) []byte {
+	return pbkdf2.Key([]byte(password), salt, 4096, 32, sha256.New)
+}
+
+func SaveToFile(w *Wallet, file, pass string) error {
+	jsonData, err := json.Marshal(w)
+	if err != nil {
+		log.Error().Msgf("Error marshaling JSON: %v\n", err)
+		return err
+	}
+
+	solt := make([]byte, SOLT_SIZE)
+	_, err = rand.Read(solt)
+	if err != nil {
+		log.Error().Msgf("Error generating salt: %v\n", err)
+		return err
+	}
+
+	key := generateKey(pass, solt)
+
+	encrypted, err := encrypt(jsonData, key)
+	if err != nil {
+		log.Error().Msgf("Error encrypting data: %v\n", err)
+		return err
+	}
+
+	// write with the soltencrypted
+	err = os.WriteFile(file, append(solt, encrypted...), 0644)
+	if err != nil {
+		log.Error().Msgf("Error writing file: %v\n", err)
+		return err
+	}
+
+	return nil
+}
+
+func OpenFromFile(file string, pass string) (*Wallet, error) {
+	data, err := os.ReadFile(file)
+	if err != nil {
+		log.Error().Msgf("Error reading file: %v\n", err)
+		return nil, err
+	}
+
+	solt := data[:SOLT_SIZE]
+	data = data[SOLT_SIZE:]
+
+	key := generateKey(pass, solt)
+
+	decrypted, err := decrypt(data, key)
+	if err != nil {
+		log.Error().Msgf("Error decrypting data: %v\n", err)
+		return nil, err
+	}
+
+	w := &Wallet{}
+	err = json.Unmarshal(decrypted, w)
+	if err != nil {
+		log.Error().Msgf("Error unmarshaling JSON: %v\n", err)
+		return nil, err
+	}
+
+	return w, nil
 }

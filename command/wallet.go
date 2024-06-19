@@ -2,14 +2,11 @@ package command
 
 import (
 	"fmt"
-	"os"
 	"regexp"
 	"strings"
 
-	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/ui"
 	"github.com/AlexNa-Holdings/web3pro/wallet"
-	"github.com/rs/zerolog/log"
 )
 
 func NewWalletCommand() *Command {
@@ -44,7 +41,7 @@ func Wallet_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 		}
 
 		if !is_subcommand {
-			for _, sc := range []string{"open", "create"} {
+			for _, sc := range []string{"create", "close", "open"} {
 				if input == "" || strings.Contains(sc, si) {
 					options = append(options, ui.ACOption{Name: sc, Result: first_word + " " + sc + " "})
 				}
@@ -58,15 +55,11 @@ func Wallet_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 	if m := re_demo.FindStringSubmatch(params); m != nil {
 		t := m[1]
 
-		// list all files in the wallet directory
-		files, err := os.ReadDir(cmn.DataFolder + "/wallets")
-		if err != nil {
-			log.Error().Msgf("Error reading directory: %v", err)
-		}
+		files := wallet.List()
 
 		for _, file := range files {
-			if t == "" || strings.Contains(file.Name(), t) {
-				options = append(options, ui.ACOption{Name: file.Name(), Result: first_word + " open " + file.Name()})
+			if t == "" || strings.Contains(file, t) {
+				options = append(options, ui.ACOption{Name: file, Result: first_word + " open " + file})
 			}
 		}
 
@@ -88,31 +81,21 @@ func Wallet_Process(c *Command, input string) {
 
 	switch subcommand {
 	case "open":
-		wallet_name := "default"
-		if len(tokens) >= 3 {
-			wallet_name = tokens[2]
-		}
-
-		if err := wallet.OpenWallet(wallet_name); err != nil {
-			ui.PrintErrorf("Error opening wallet: %v", err)
+		if len(tokens) != 3 {
+			ui.PrintErrorf("Please specify wallet name")
 			return
 		}
+		ui.Gui.ShowPopup(ui.DlgWaletOpen(tokens[2]))
 
-		ui.Printf("Wallet '%s' opened\n", wallet_name)
 	case "create":
-
-		// if len(tokens) < 3 {
-		// 	ui.PrintErrorf("Please specify wallet name")
-		// 	return
-		// }
-
-		// // check if file exists
-		// if _, err := os.Stat(cmn.DataFolder + "/wallets/" + wallet_name + ".wallet"); err == nil {
-		// 	ui.PrintErrorf("Wallet file already exists")
-		// 	return
-		// }
-
 		ui.Gui.ShowPopup(ui.DlgWaletCreate())
-
+	case "close":
+		if wallet.CurrentWallet != nil {
+			wallet.CurrentWallet = nil
+			ui.Terminal.SetCommandPrefix(ui.DEFAULT_COMMAND_PREFIX)
+			ui.Notification.Show("Wallet closed")
+		} else {
+			ui.PrintErrorf("No wallet open")
+		}
 	}
 }

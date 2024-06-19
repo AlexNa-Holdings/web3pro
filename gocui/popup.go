@@ -78,6 +78,8 @@ func (p *Popup) Layout(g *Gui) error {
 		}
 
 		v.FrameRunes = []rune{'═', '║', '╔', '╗', '╚', '╝'}
+		v.FrameColor = g.EmFgColor
+		v.TitleColor = g.EmFgColor
 		v.Frame = true
 		v.Title = p.Title
 		v.Subtitle = p.Subtitle
@@ -177,23 +179,4 @@ func (p *Popup) calcLineWidth(line string) int {
 		l = l - len(tag) + GetTagLength(tagName, tagParams)
 	}
 	return l
-}
-
-func (p *Popup) GetInput(id string) string {
-	f, err := p.View.gui.View(p.View.name + "." + id)
-	if err != nil {
-		return ""
-	}
-
-	return f.Buffer()
-}
-
-func (p *Popup) SetInput(id, value string) {
-	f, err := p.View.gui.View(p.View.name + "." + id)
-	if err != nil {
-		return
-	}
-
-	f.Clear()
-	fmt.Fprint(f, value)
 }
