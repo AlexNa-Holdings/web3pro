@@ -26,6 +26,7 @@ func Init() {
 		NewWalletCommand(),
 		NewThemeCommand(),
 		NewClearCommand(),
+		NewBlockchainCommand(),
 	}
 }
 

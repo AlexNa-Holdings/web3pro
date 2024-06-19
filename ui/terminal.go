@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/AlexNa-Holdings/web3pro/gocui"
+	"github.com/rs/zerolog/log"
 )
 
 type TerminalPane struct {
@@ -190,7 +191,10 @@ func (t *TerminalPane) layoutAutocomplete(title string, options *[]ACOption, hig
 
 		for _, option := range *options {
 			text := option.Name
-			p := strings.Index(option.Name, highlite)
+
+			log.Debug().Msgf("option: %s highlite: %s", option.Name, highlite)
+
+			p := strings.Index(strings.ToLower(option.Name), strings.ToLower(highlite))
 			if p >= 0 {
 				text = option.Name[:p] +
 					F(Gui.EmFgColor) +

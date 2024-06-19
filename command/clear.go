@@ -11,7 +11,7 @@ Usage: clear [COMMAND]
 
 This command cleans the terminal screen
 		`,
-		Help:             `Clean th escreen`,
+		Help:             `Clean the screen`,
 		Process:          Clear_Process,
 		AutoCompleteFunc: nil,
 	}

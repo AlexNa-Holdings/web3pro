@@ -53,7 +53,7 @@ func Theme_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 			}
 		}
 
-		return "action", &options, input
+		return "action", &options, si
 	}
 
 	re_demo := regexp.MustCompile(`^demo\s+(\w*)$`)
@@ -64,7 +64,7 @@ func Theme_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 				options = append(options, ui.ACOption{Name: theme.Name, Result: first_word + " demo " + theme.Name})
 			}
 		}
-		return "theme", &options, input
+		return "theme", &options, t
 	}
 
 	re_set := regexp.MustCompile(`^set\s+(\w*)$`)
@@ -76,7 +76,7 @@ func Theme_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 				options = append(options, ui.ACOption{Name: theme.Name, Result: first_word + " set " + theme.Name})
 			}
 		}
-		return "theme", &options, input
+		return "theme", &options, t
 	}
 
 	return input, &options, ""

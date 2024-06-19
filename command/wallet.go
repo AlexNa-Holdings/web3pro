@@ -23,7 +23,7 @@ Commands:
   create         Create new wallet
   close          Close current wallet
   list           List wallets
-  
+
 		`,
 		Help:             `Manage wallets`,
 		Process:          Wallet_Process,
@@ -55,7 +55,7 @@ func Wallet_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 			}
 		}
 
-		return "action", &options, input
+		return "action", &options, si
 	}
 
 	re_demo := regexp.MustCompile(`^open\s+(\w*)$`)
@@ -70,7 +70,7 @@ func Wallet_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 			}
 		}
 
-		return "file", &options, input
+		return "file", &options, t
 	}
 
 	return input, &options, ""

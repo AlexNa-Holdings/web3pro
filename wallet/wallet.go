@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/AlexNa-Holdings/web3pro/blockchain"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/pbkdf2"
@@ -17,7 +18,8 @@ import (
 const SOLT_SIZE = 32
 
 type Wallet struct {
-	Name string `json:"name"`
+	Name        string                  `json:"name"`
+	Blockchains []blockchain.Blockchain `json:"blockchains"`
 }
 
 var CurrentWallet *Wallet
