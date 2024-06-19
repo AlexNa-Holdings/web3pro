@@ -16,7 +16,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/mattn/go-runewidth"
-	"github.com/rs/zerolog/log"
 )
 
 // Constants for overlapping edges
@@ -1322,9 +1321,7 @@ func (v *View) GetInput(id string) string {
 func (v *View) SetInput(id, value string) {
 	for _, c := range v.Controls {
 		if c.Type == PUC_INPUT && c.View != nil && c.View.name == v.name+"."+id {
-			log.Debug().Msgf("Before %s", c.View.Buffer())
 			c.View.Clear()
-			log.Debug().Msgf("After  %s wx: %d", c.View.Buffer(), c.View.wx)
 			fmt.Fprint(c.View, value)
 		}
 	}

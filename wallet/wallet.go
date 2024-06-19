@@ -20,10 +20,11 @@ const SOLT_SIZE = 32
 type Wallet struct {
 	Name        string                  `json:"name"`
 	Blockchains []blockchain.Blockchain `json:"blockchains"`
+	FilePath    string                  `json:"-"`
+	Password    string                  `json:"-"`
 }
 
 var CurrentWallet *Wallet
-var CurrentPassword string
 
 func Open(name string, pass string) error {
 
@@ -31,10 +32,15 @@ func Open(name string, pass string) error {
 
 	if err == nil {
 		CurrentWallet = w
-		CurrentPassword = pass
+		CurrentWallet.FilePath = cmn.DataFolder + "/wallets/" + name
+		CurrentWallet.Password = pass
 	}
 
 	return err
+}
+
+func (w *Wallet) Save() error {
+	return SaveToFile(w, w.FilePath, w.Password)
 }
 
 func Exists(name string) bool {

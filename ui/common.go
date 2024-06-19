@@ -89,8 +89,6 @@ func ProcessClickHotspot(hs *gocui.Hotspot) {
 	command := hs.Value[:index]
 	param := hs.Value[index+1:]
 
-	log.Debug().Msgf("ProcessClickHotspot: %s params: %s", command, param)
-
 	switch command {
 	case "copy":
 		clipboard.WriteAll(param)

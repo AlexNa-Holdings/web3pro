@@ -2,9 +2,9 @@ package command
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 
+	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/ui"
 	"github.com/rs/zerolog/log"
 )
@@ -31,52 +31,33 @@ COMMANDS:
 
 func Theme_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 	options := []ui.ACOption{}
-	params, first_word := Params(input)
+	p := cmn.Split(input)
+	command, subcommand, param := p[0], p[1], p[2]
 
-	re_subcommand := regexp.MustCompile(`^(\w*)$`)
-	if m := re_subcommand.FindStringSubmatch(params); m != nil {
-		si := m[1]
-
-		is_subcommand := false
-		for _, sc := range theme_subcommands {
-			if sc == si {
-				is_subcommand = true
-				break
-			}
+	is_real_subcommand := false
+	for _, sc := range theme_subcommands {
+		if sc == subcommand {
+			is_real_subcommand = true
+			break
 		}
-
-		if !is_subcommand {
-			for _, sc := range []string{"demo", "list", "set"} {
-				if input == "" || strings.Contains(sc, si) {
-					options = append(options, ui.ACOption{Name: sc, Result: first_word + " " + sc + " "})
-				}
-			}
-		}
-
-		return "action", &options, si
 	}
 
-	re_demo := regexp.MustCompile(`^demo\s+(\w*)$`)
-	if m := re_demo.FindStringSubmatch(params); m != nil {
-		t := m[1]
-		for _, theme := range ui.Themes {
-			if t == "" || strings.Contains(theme.Name, t) {
-				options = append(options, ui.ACOption{Name: theme.Name, Result: first_word + " demo " + theme.Name})
+	if !is_real_subcommand {
+		for _, sc := range []string{"demo", "list", "set"} {
+			if input == "" || strings.Contains(sc, subcommand) {
+				options = append(options, ui.ACOption{Name: sc, Result: command + " " + sc + " "})
 			}
 		}
-		return "theme", &options, t
+		return "action", &options, subcommand
 	}
 
-	re_set := regexp.MustCompile(`^set\s+(\w*)$`)
-	if m := re_set.FindStringSubmatch(params); m != nil {
-		t := m[1]
-
+	if subcommand == "demo" || subcommand == "set" {
 		for _, theme := range ui.Themes {
-			if t == "" || strings.Contains(theme.Name, t) {
-				options = append(options, ui.ACOption{Name: theme.Name, Result: first_word + " set " + theme.Name})
+			if param == "" || strings.Contains(theme.Name, param) {
+				options = append(options, ui.ACOption{Name: theme.Name, Result: command + " " + subcommand + " " + theme.Name})
 			}
 		}
-		return "theme", &options, t
+		return "theme", &options, param
 	}
 
 	return input, &options, ""

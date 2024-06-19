@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/AlexNa-Holdings/web3pro/gocui"
-	"github.com/rs/zerolog/log"
 )
 
 type TerminalPane struct {
@@ -183,6 +182,7 @@ func (t *TerminalPane) layoutAutocomplete(title string, options *[]ACOption, hig
 		t.AutoComplete.Editable = false
 		t.AutoComplete.Highlight = true
 		t.AutoComplete.Title = title
+		t.AutoComplete.ScrollBar = true
 		if len(*options) > 1 {
 			t.AutoComplete.Subtitle = "\uf431\uf433\uf432"
 		} else {
@@ -191,8 +191,6 @@ func (t *TerminalPane) layoutAutocomplete(title string, options *[]ACOption, hig
 
 		for _, option := range *options {
 			text := option.Name
-
-			log.Debug().Msgf("option: %s highlite: %s", option.Name, highlite)
 
 			p := strings.Index(strings.ToLower(option.Name), strings.ToLower(highlite))
 			if p >= 0 {

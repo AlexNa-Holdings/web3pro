@@ -2,12 +2,14 @@ package command
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 
+	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/ui"
 	"github.com/AlexNa-Holdings/web3pro/wallet"
 )
+
+var wallet_subcommands = []string{"close", "create", "list", "open"}
 
 func NewWalletCommand() *Command {
 	return &Command{
@@ -33,44 +35,36 @@ Commands:
 
 func Wallet_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 	options := []ui.ACOption{}
-	params, first_word := Params(input)
+	p := cmn.Split(input)
+	command, subcommand, param := p[0], p[1], p[2]
 
-	re_subcommand := regexp.MustCompile(`^(\w*)$`)
-	if m := re_subcommand.FindStringSubmatch(params); m != nil {
-		si := m[1]
-
-		is_subcommand := false
-		for _, sc := range theme_subcommands {
-			if sc == si {
-				is_subcommand = true
-				break
-			}
+	is_real_subcommand := false
+	for _, sc := range wallet_subcommands {
+		if sc == subcommand {
+			is_real_subcommand = true
+			break
 		}
-
-		if !is_subcommand {
-			for _, sc := range []string{"close", "create", "list", "open"} {
-				if input == "" || strings.Contains(sc, si) {
-					options = append(options, ui.ACOption{Name: sc, Result: first_word + " " + sc + " "})
-				}
-			}
-		}
-
-		return "action", &options, si
 	}
 
-	re_demo := regexp.MustCompile(`^open\s+(\w*)$`)
-	if m := re_demo.FindStringSubmatch(params); m != nil {
-		t := m[1]
+	if !is_real_subcommand {
+		for _, sc := range wallet_subcommands {
+			if input == "" || strings.Contains(sc, subcommand) {
+				options = append(options, ui.ACOption{Name: sc, Result: command + " " + sc + " "})
+			}
+		}
+		return "action", &options, subcommand
+	}
 
+	if subcommand == "open" {
 		files := wallet.List()
 
 		for _, file := range files {
-			if t == "" || strings.Contains(file, t) {
-				options = append(options, ui.ACOption{Name: file, Result: first_word + " open " + file})
+			if param == "" || strings.Contains(file, param) {
+				options = append(options, ui.ACOption{Name: file, Result: command + " open " + file})
 			}
 		}
 
-		return "file", &options, t
+		return "file", &options, param
 	}
 
 	return input, &options, ""

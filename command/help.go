@@ -2,9 +2,9 @@ package command
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 
+	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/ui"
 )
 
@@ -28,30 +28,24 @@ EXAMPLES:
 }
 
 func Help_AutoComplete(input string) (string, *[]ui.ACOption, string) {
-	params, first_word := Params(input)
+	options := []ui.ACOption{}
+	p := cmn.Split(input)
+	command, subcommand, _ := p[0], p[1], p[2]
 
-	re_subcommand := regexp.MustCompile(`^(\w*)$`)
+	is_command := false
+	for _, cmd := range Commands {
+		if cmd.Command == subcommand || (cmd.ShortCommand != "" && cmd.ShortCommand == subcommand) {
+			is_command = true
+			break
+		}
+	}
 
-	if m := re_subcommand.FindStringSubmatch(params); m != nil {
-		command := m[1]
-		options := []ui.ACOption{}
-
-		is_command := false
-		for _, cmd := range Commands {
-			if cmd.Command == command || (cmd.ShortCommand != "" && cmd.ShortCommand == command) {
-				is_command = true
-				break
+	if !is_command {
+		for _, sc := range Commands {
+			if strings.Contains(sc.Command, command) || strings.Contains(sc.ShortCommand, command) {
+				options = append(options, ui.ACOption{Name: sc.Command, Result: command + " " + sc.Command})
 			}
 		}
-
-		if !is_command {
-			for _, sc := range Commands {
-				if strings.Contains(sc.Command, command) || strings.Contains(sc.ShortCommand, command) {
-					options = append(options, ui.ACOption{Name: sc.Command, Result: first_word + " " + sc.Command})
-				}
-			}
-		}
-
 		return "command", &options, command
 	}
 

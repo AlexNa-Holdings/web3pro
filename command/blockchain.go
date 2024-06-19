@@ -2,7 +2,6 @@ package command
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/AlexNa-Holdings/web3pro/blockchain"
@@ -10,6 +9,8 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/ui"
 	"github.com/AlexNa-Holdings/web3pro/wallet"
 )
+
+var blockchain_subcommands = []string{"remove", "add", "edit", "list", "use"}
 
 func NewBlockchainCommand() *Command {
 	return &Command{
@@ -34,61 +35,49 @@ Commands:
 
 func Blockchain_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 	options := []ui.ACOption{}
-	params, first_word := Params(input)
+	p := cmn.Split(input)
+	command, subcommand, param := p[0], p[1], p[2]
 
-	re_subcommand := regexp.MustCompile(`^(\w*)$`)
-	if m := re_subcommand.FindStringSubmatch(params); m != nil {
-		si := m[1]
-
-		is_subcommand := false
-		for _, sc := range theme_subcommands {
-			if sc == si {
-				is_subcommand = true
-				break
-			}
+	is_real_subcommand := false
+	for _, sc := range blockchain_subcommands {
+		if sc == subcommand {
+			is_real_subcommand = true
+			break
 		}
-
-		if !is_subcommand {
-			for _, sc := range []string{"remove", "add", "list", "use"} {
-				if input == "" || strings.Contains(sc, si) {
-					options = append(options, ui.ACOption{Name: sc, Result: first_word + " " + sc + " "})
-				}
-			}
-		}
-
-		return "action", &options, si
 	}
 
-	re_demo := regexp.MustCompile(`^use\s+(\w*)$`)
-	if m := re_demo.FindStringSubmatch(params); m != nil {
-		t := m[1]
+	if !is_real_subcommand {
+		for _, sc := range blockchain_subcommands {
+			if input == "" || strings.Contains(sc, subcommand) {
+				options = append(options, ui.ACOption{Name: sc, Result: command + " " + sc + " "})
+			}
+		}
+		return "action", &options, subcommand
+	}
 
+	if subcommand == "use" || subcommand == "remove" || subcommand == "edit" {
 		if wallet.CurrentWallet != nil {
 			for _, chain := range wallet.CurrentWallet.Blockchains {
-				if t == "" || strings.Contains(chain.Name, t) {
-					options = append(options, ui.ACOption{Name: chain.Name, Result: first_word + " use " + chain.Name})
+				if cmn.ContainsButNotEqual(chain.Name, param) {
+					options = append(options, ui.ACOption{Name: chain.Name, Result: command + " " + subcommand + " " + chain.Name})
 				}
 			}
 		}
-
-		return "blockchain", &options, t
+		return "blockchain", &options, subcommand
 	}
 
-	re_demo = regexp.MustCompile(`^add\s+(\w*)$`)
-	if m := re_demo.FindStringSubmatch(params); m != nil {
-		t := m[1]
-
+	if subcommand == "add" {
 		for _, chain := range blockchain.PrefefinedBlockchains {
-			if t == "" || cmn.Contains(chain.Name, t) {
-				options = append(options, ui.ACOption{Name: chain.Name, Result: first_word + " add '" + chain.Name + "' "})
+			if cmn.ContainsButNotEqual(chain.Name, param) {
+				options = append(options, ui.ACOption{Name: chain.Name, Result: command + " add '" + chain.Name + "' "})
 			}
 		}
 
-		if t == "" || cmn.Contains("(custom)", t) {
-			options = append(options, ui.ACOption{Name: "(custom)", Result: first_word + " add custom "})
+		if param == "" || cmn.Contains("(custom)", param) {
+			options = append(options, ui.ACOption{Name: "(custom)", Result: command + " add custom "})
 		}
 
-		return "blockchain", &options, t
+		return "blockchain", &options, param
 	}
 
 	return input, &options, ""
@@ -96,7 +85,7 @@ func Blockchain_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 
 func Blockchain_Process(c *Command, input string) {
 	//parse command subcommand parameters
-	tokens := strings.Fields(input)
+	tokens := cmn.Split(input)
 	if len(tokens) < 2 {
 		fmt.Fprintln(ui.Terminal.Screen, c.Usage)
 		return
@@ -105,6 +94,56 @@ func Blockchain_Process(c *Command, input string) {
 	subcommand := tokens[1]
 
 	switch subcommand {
+	case "add":
+		if wallet.CurrentWallet == nil {
+			ui.PrintErrorf("\nNo wallet open\n")
+			return
+		}
+
+		if len(tokens) < 3 {
+			ui.PrintErrorf("\nUsage: blockchain add [blockchain]\n")
+			return
+		}
+
+		blockchain_name := tokens[2]
+
+		if blockchain_name == "custom" {
+			// TODO
+		} else {
+			// check if such blockchain already added
+			for _, b := range wallet.CurrentWallet.Blockchains {
+				if b.Name == blockchain_name {
+					ui.PrintErrorf("\nBlockchain %s already added\n", blockchain_name)
+					return
+				}
+			}
+
+			for _, b := range blockchain.PrefefinedBlockchains {
+				if b.Name == blockchain_name {
+					wallet.CurrentWallet.Blockchains = append(wallet.CurrentWallet.Blockchains, b)
+
+					err := wallet.CurrentWallet.Save()
+					if err != nil {
+						ui.PrintErrorf("\nFailed to save wallet: %s\n", err)
+						return
+					}
+
+					ui.Printf("\nBlockchain %s added\n", blockchain_name)
+
+					ui.Printf(" Name: %s\n", b.Name)
+					ui.Printf(" URL: %s\n", b.Url)
+					ui.Printf(" ChainID: %d\n", b.ChainId)
+					ui.Printf(" Symbol: %s\n", b.Currency)
+					ui.Printf(" Explorer: %s\n", b.ExplorerUrl)
+
+					ui.Printf("\n")
+					return
+				}
+			}
+
+			ui.PrintErrorf("\nBlockchain %s not found\n", blockchain_name)
+		}
+
 	case "list":
 		if wallet.CurrentWallet == nil {
 			ui.PrintErrorf("\nNo wallet open\n")
@@ -115,10 +154,33 @@ func Blockchain_Process(c *Command, input string) {
 
 		for _, b := range wallet.CurrentWallet.Blockchains {
 			ui.Terminal.Screen.AddLink(b.Name, "command b use "+b.Name, "Use blockchain "+b.Name)
+			ui.Printf(" ")
+			ui.Terminal.Screen.AddLink("\uf044", "command b edit "+b.Name, "Edit blockchain "+b.Name)
 			ui.Printf("\n")
 		}
 
 		ui.Printf("\n")
+	case "edit":
+		if wallet.CurrentWallet == nil {
+			ui.PrintErrorf("\nNo wallet open\n")
+			return
+		}
+
+		if len(tokens) < 3 {
+			ui.PrintErrorf("\nUsage: blockchain edit [blockchain]\n")
+			return
+		}
+
+		blockchain_name := tokens[2]
+
+		for _, b := range wallet.CurrentWallet.Blockchains {
+			if b.Name == blockchain_name {
+				ui.Gui.ShowPopup(ui.DlgBlockchainEdit(blockchain_name))
+				return
+			}
+		}
+
+		ui.PrintErrorf("\nBlockchain %s not found\n", blockchain_name)
 	default:
 		ui.PrintErrorf("\nInvalid subcommand: %s\n", subcommand)
 	}
