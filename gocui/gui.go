@@ -1077,43 +1077,35 @@ func (g *Gui) onKey(ev *gocuiEvent) error {
 			break
 		}
 
-		if g.popup != nil && g.popup.View != nil {
-			if v.name == g.popup.View.name ||
-				strings.HasPrefix(v.name, g.popup.View.name+".") {
+		if g.popup == nil ||
+			(g.popup != nil && g.popup.View != nil &&
+				(v.name == g.popup.View.name ||
+					strings.HasPrefix(v.name, g.popup.View.name+"."))) {
 
-				if v.MouseOverScrollbar() && ev.Key == MouseLeft {
-					g.dragging.on = true
-					g.dragging.view = v
-					g.dragging.start_my = my
-					g.dragging.start_oy = v.oy
-					return nil
-				}
-
-				if err := v.SetCursor(mx-v.x0-1+v.ox, my-v.y0-1+v.oy); err != nil {
-					return err
-				}
-
-				if v.ScrollBar {
-					if ev.Key == MouseWheelUp {
-						v.ScrollUp(3)
-					} else if ev.Key == MouseWheelDown {
-						v.ScrollDown(3)
-					}
-				}
-
-				if v.activeHotspot != nil && ev.Key == MouseLeft {
-					if v.OnClickHotspot != nil {
-						v.OnClickHotspot(v, v.activeHotspot)
-					}
-				}
-
-				if _, err := g.execKeybindings(v, ev); err != nil {
-					return err
-				}
+			if v.MouseOverScrollbar() && ev.Key == MouseLeft {
+				g.dragging.on = true
+				g.dragging.view = v
+				g.dragging.start_my = my
+				g.dragging.start_oy = v.oy
+				return nil
 			}
-		} else {
+
 			if err := v.SetCursor(mx-v.x0-1+v.ox, my-v.y0-1+v.oy); err != nil {
 				return err
+			}
+
+			if v.ScrollBar {
+				if ev.Key == MouseWheelUp {
+					v.ScrollUp(3)
+				} else if ev.Key == MouseWheelDown {
+					v.ScrollDown(3)
+				}
+			}
+
+			if v.activeHotspot != nil && ev.Key == MouseLeft {
+				if v.OnClickHotspot != nil {
+					v.OnClickHotspot(v, v.activeHotspot)
+				}
 			}
 
 			if _, err := g.execKeybindings(v, ev); err != nil {

@@ -80,18 +80,22 @@ func Layout(g *gocui.Gui) error {
 }
 
 func ProcessClickHotspot(hs *gocui.Hotspot) {
-	ss := strings.Split(hs.Value, " ")
+	index := strings.Index(hs.Value, " ")
 
-	if len(ss) < 2 {
+	if index == -1 {
 		return
 	}
 
-	command := ss[0]
-	param := ss[1]
+	command := hs.Value[:index]
+	param := hs.Value[index+1:]
+
+	log.Debug().Msgf("ProcessClickHotspot: %s params: %s", command, param)
 
 	switch command {
 	case "copy":
 		clipboard.WriteAll(param)
 		Notification.Show("Copied: " + param)
+	case "command":
+		Terminal.ProcessCommandFunc(param)
 	}
 }

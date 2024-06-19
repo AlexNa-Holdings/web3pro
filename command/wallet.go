@@ -14,9 +14,16 @@ func NewWalletCommand() *Command {
 		Command:      "wallet",
 		ShortCommand: "w",
 		Usage: `
-Usage: clear [COMMAND]
+Usage: wallet [COMMAND]
 
-This command cleans the terminal screen
+Manage wallets
+
+Commands:
+  open <wallet>  Open wallet
+  create         Create new wallet
+  close          Close current wallet
+  list           List wallets
+  
 		`,
 		Help:             `Manage wallets`,
 		Process:          Wallet_Process,
@@ -41,7 +48,7 @@ func Wallet_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 		}
 
 		if !is_subcommand {
-			for _, sc := range []string{"create", "close", "open"} {
+			for _, sc := range []string{"close", "create", "list", "open"} {
 				if input == "" || strings.Contains(sc, si) {
 					options = append(options, ui.ACOption{Name: sc, Result: first_word + " " + sc + " "})
 				}
@@ -97,5 +104,23 @@ func Wallet_Process(c *Command, input string) {
 		} else {
 			ui.PrintErrorf("No wallet open")
 		}
+	case "list":
+		files := wallet.List()
+		if files == nil {
+			ui.PrintErrorf("Error reading directory")
+			return
+		}
+
+		ui.Printf("\nWallets:\n")
+
+		for _, file := range files {
+			ui.Terminal.Screen.AddLink(file, "command w open "+file, "Open wallet "+file)
+			ui.Printf("\n")
+		}
+
+		ui.Printf("\n")
+	default:
+		ui.PrintErrorf("\nInvalid subcommand: %s\n", subcommand)
 	}
+
 }

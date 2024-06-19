@@ -51,8 +51,9 @@ func (p *NotificationPane) SetView(g *gocui.Gui) {
 	}
 }
 
-func (n *NotificationPane) Show(text string) {
+func (n *NotificationPane) ShowEx(text string, err_flag bool) {
 	n.Hide()
+	n.Error = err_flag
 	Gui.Update(func(g *gocui.Gui) error {
 		n.Message = text
 		n.On = true
@@ -68,13 +69,16 @@ func (n *NotificationPane) Show(text string) {
 	}()
 }
 
+func (n *NotificationPane) Show(text string) {
+	n.ShowEx(text, false)
+}
+
 func (n *NotificationPane) Showf(format string, args ...interface{}) {
 	n.Show(fmt.Sprintf(format, args...))
 }
 
 func (n *NotificationPane) ShowError(text string) {
-	n.Error = true
-	n.Show(text)
+	n.ShowEx(text, true)
 }
 
 func (n *NotificationPane) ShowErrorf(format string, args ...interface{}) {

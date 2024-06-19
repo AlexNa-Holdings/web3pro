@@ -321,7 +321,7 @@ func (v *View) SetCursorUnrestricted(x, y int) error {
 //	y >= 0
 //	x >= 0
 func (v *View) SetCursor(x, y int) error {
-	if hs := v.findHotspot(x+v.ox, y+v.oy); hs != nil {
+	if hs := v.findHotspot(x, y); hs != nil {
 		if v.activeHotspot != hs {
 			v.activeHotspot = hs
 			if v.OnOverHotspot != nil {
