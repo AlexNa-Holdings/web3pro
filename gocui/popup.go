@@ -29,6 +29,13 @@ func (g *Gui) ShowPopup(p *Popup) {
 func (g *Gui) HidePopup() {
 	if g.popup != nil {
 
+		if g.popup.View.activeHotspot != nil {
+			g.popup.View.activeHotspot = nil
+			if g.popup.View.OnOverHotspot != nil {
+				g.popup.View.OnOverHotspot(g.popup.View, nil)
+			}
+		}
+
 		if g.popup.OnClose != nil {
 			g.popup.OnClose(g.popup.View)
 		}
@@ -109,11 +116,12 @@ func (p *Popup) Layout(g *Gui) error {
 			return err
 		}
 
+		v.SetFocus(0)
+
 		if p.OnOpen != nil {
 			p.OnOpen(v)
 		}
 
-		v.SetFocus(0)
 	}
 
 	for _, c := range p.Controls {
@@ -152,7 +160,7 @@ func (p *Popup) ParseTemplate() error {
 					return errors.New("center tag must be at the beginning of the line")
 				}
 
-				n := (p.Width - p.calcLineWidth(line) - 2) / 2
+				n := (p.Width-2-p.calcLineWidth(line))/2 + 1
 				for i := 0; i < n; i++ {
 					fmt.Fprint(p.View, " ")
 				}

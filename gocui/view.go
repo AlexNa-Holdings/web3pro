@@ -1276,6 +1276,20 @@ func PopupNavigation(v *View, key Key, ch rune, mod Modifier) {
 		v.gui.popup.View.FocusNext()
 	case KeyBacktab:
 		v.gui.popup.View.FocusPrev()
+	case KeyArrowRight:
+		if v.ControlInFocus != -1 &&
+			v.Controls[v.ControlInFocus].Type != PUC_INPUT {
+			v.FocusNext()
+		}
+	case KeyArrowLeft:
+		if v.ControlInFocus != -1 &&
+			v.Controls[v.ControlInFocus].Type != PUC_INPUT {
+			v.gui.popup.View.FocusPrev()
+		}
+	case KeyArrowUp:
+		v.gui.popup.View.FocusPrev()
+	case KeyArrowDown:
+		v.gui.popup.View.FocusNext()
 	default:
 		if v.Editable {
 			DefaultEditor.Edit(v, key, ch, mod)

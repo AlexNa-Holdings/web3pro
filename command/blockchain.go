@@ -59,7 +59,8 @@ func Blockchain_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 		if wallet.CurrentWallet != nil {
 			for _, chain := range wallet.CurrentWallet.Blockchains {
 				if cmn.ContainsButNotEqual(chain.Name, param) {
-					options = append(options, ui.ACOption{Name: chain.Name, Result: command + " " + subcommand + " " + chain.Name})
+					options = append(options, ui.ACOption{
+						Name: chain.Name, Result: command + " " + subcommand + " '" + chain.Name + "'"})
 				}
 			}
 		}
@@ -132,9 +133,10 @@ func Blockchain_Process(c *Command, input string) {
 
 					ui.Printf(" Name: %s\n", b.Name)
 					ui.Printf(" URL: %s\n", b.Url)
-					ui.Printf(" ChainID: %d\n", b.ChainId)
+					ui.Printf(" Chain ID: %d\n", b.ChainId)
 					ui.Printf(" Symbol: %s\n", b.Currency)
 					ui.Printf(" Explorer: %s\n", b.ExplorerUrl)
+					ui.Terminal.Screen.AddLink("\uf044", "command b edit "+b.Name, "Edit blockchain '"+b.Name+"'")
 
 					ui.Printf("\n")
 					return
@@ -143,6 +145,44 @@ func Blockchain_Process(c *Command, input string) {
 
 			ui.PrintErrorf("\nBlockchain %s not found\n", blockchain_name)
 		}
+
+	case "remove":
+		if wallet.CurrentWallet == nil {
+			ui.PrintErrorf("\nNo wallet open\n")
+			return
+		}
+
+		if len(tokens) < 3 {
+			ui.PrintErrorf("\nUsage: blockchain remove [blockchain]\n")
+			return
+		}
+
+		blockchain_name := tokens[2]
+
+		for i, b := range wallet.CurrentWallet.Blockchains {
+			if b.Name == blockchain_name {
+
+				ui.Gui.ShowPopup(ui.DlgConfirm(
+					"Remove blockchain",
+					`
+<c>Are you sure you want to remove 
+<c>blockchain '`+blockchain_name+"' ?\n",
+					func() {
+						wallet.CurrentWallet.Blockchains = append(wallet.CurrentWallet.Blockchains[:i], wallet.CurrentWallet.Blockchains[i+1:]...)
+
+						err := wallet.CurrentWallet.Save()
+						if err != nil {
+							ui.PrintErrorf("\nFailed to save wallet: %s\n", err)
+							return
+						}
+
+						ui.Printf("\nBlockchain %s removed\n", blockchain_name)
+					}))
+				return
+			}
+		}
+
+		ui.PrintErrorf("\nBlockchain %s not found\n", blockchain_name)
 
 	case "list":
 		if wallet.CurrentWallet == nil {
@@ -153,9 +193,9 @@ func Blockchain_Process(c *Command, input string) {
 		ui.Printf("\nBlockchains:\n")
 
 		for _, b := range wallet.CurrentWallet.Blockchains {
-			ui.Terminal.Screen.AddLink(b.Name, "command b use "+b.Name, "Use blockchain "+b.Name)
+			ui.Terminal.Screen.AddLink(b.Name, "command b use "+b.Name, "Use blockchain '"+b.Name+"'")
 			ui.Printf(" ")
-			ui.Terminal.Screen.AddLink("\uf044", "command b edit "+b.Name, "Edit blockchain "+b.Name)
+			ui.Terminal.Screen.AddLink("\uf044", "command b edit "+b.Name, "Edit blockchain '"+b.Name+"'")
 			ui.Printf("\n")
 		}
 
