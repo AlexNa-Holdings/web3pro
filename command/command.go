@@ -28,6 +28,7 @@ func Init() {
 		NewThemeCommand(),
 		NewClearCommand(),
 		NewBlockchainCommand(),
+		NewSignerCommand(),
 	}
 }
 

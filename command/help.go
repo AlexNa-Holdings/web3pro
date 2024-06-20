@@ -49,7 +49,7 @@ func Help_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 		return "command", &options, subcommand
 	}
 
-	return input, &[]ui.ACOption{}, ""
+	return "", &[]ui.ACOption{}, ""
 }
 
 func Help_Process(cmd *Command, input string) {

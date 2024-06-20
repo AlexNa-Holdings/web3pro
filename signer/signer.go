@@ -11,6 +11,8 @@ type SignerData struct {
 	P    map[string]string `json:"params"`
 }
 
+var KNOWN_SIGNER_TYPES = []string{"trezor"}
+
 func NewSigner(data *SignerData) (Signer, error) {
 
 	switch data.Type {

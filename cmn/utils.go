@@ -34,3 +34,12 @@ func Split(input string) []string {
 
 	return result
 }
+
+func IsInArray(slice []string, item string) bool {
+	for _, v := range slice {
+		if v == item {
+			return true
+		}
+	}
+	return false
+}

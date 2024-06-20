@@ -38,15 +38,7 @@ func Wallet_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 	p := cmn.Split(input)
 	command, subcommand, param := p[0], p[1], p[2]
 
-	is_real_subcommand := false
-	for _, sc := range wallet_subcommands {
-		if sc == subcommand {
-			is_real_subcommand = true
-			break
-		}
-	}
-
-	if !is_real_subcommand {
+	if !cmn.IsInArray(wallet_subcommands, subcommand) {
 		for _, sc := range wallet_subcommands {
 			if input == "" || strings.Contains(sc, subcommand) {
 				options = append(options, ui.ACOption{Name: sc, Result: command + " " + sc + " "})
@@ -67,7 +59,7 @@ func Wallet_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 		return "file", &options, param
 	}
 
-	return input, &options, ""
+	return "", &options, ""
 }
 
 func Wallet_Process(c *Command, input string) {
