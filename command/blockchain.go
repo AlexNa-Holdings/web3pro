@@ -58,7 +58,7 @@ func Blockchain_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 	if subcommand == "use" || subcommand == "remove" || subcommand == "edit" {
 		if wallet.CurrentWallet != nil {
 			for _, chain := range wallet.CurrentWallet.Blockchains {
-				if cmn.ContainsButNotEqual(chain.Name, param) {
+				if cmn.Contains(chain.Name, param) {
 					options = append(options, ui.ACOption{
 						Name: chain.Name, Result: command + " " + subcommand + " '" + chain.Name + "'"})
 				}
@@ -69,7 +69,7 @@ func Blockchain_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 
 	if subcommand == "add" {
 		for _, chain := range blockchain.PrefefinedBlockchains {
-			if cmn.ContainsButNotEqual(chain.Name, param) {
+			if cmn.Contains(chain.Name, param) {
 				options = append(options, ui.ACOption{Name: chain.Name, Result: command + " add '" + chain.Name + "' "})
 			}
 		}

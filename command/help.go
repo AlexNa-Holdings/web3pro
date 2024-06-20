@@ -34,7 +34,7 @@ func Help_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 
 	is_command := false
 	for _, cmd := range Commands {
-		if cmd.Command == subcommand || (cmd.ShortCommand != "" && cmd.ShortCommand == subcommand) {
+		if cmd.Command == subcommand || cmd.ShortCommand == subcommand {
 			is_command = true
 			break
 		}
@@ -42,11 +42,11 @@ func Help_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 
 	if !is_command {
 		for _, sc := range Commands {
-			if strings.Contains(sc.Command, command) || strings.Contains(sc.ShortCommand, command) {
+			if cmn.Contains(sc.Command, subcommand) || cmn.Contains(sc.ShortCommand, subcommand) {
 				options = append(options, ui.ACOption{Name: sc.Command, Result: command + " " + sc.Command})
 			}
 		}
-		return "command", &options, command
+		return "command", &options, subcommand
 	}
 
 	return input, &[]ui.ACOption{}, ""
@@ -62,7 +62,7 @@ func Help_Process(cmd *Command, input string) {
 			if sc.ShortCommand != "" {
 				short = "(" + sc.ShortCommand + ")"
 			}
-			ui.Printf("%-12s - %s\n", sc.Command+short, sc.Help)
+			ui.Printf("%-13s - %s\n", sc.Command+short, sc.Help)
 		}
 
 		ui.Printf("\n")

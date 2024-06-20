@@ -3,6 +3,7 @@ package command
 import (
 	"strings"
 
+	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/ui"
 )
 
@@ -45,29 +46,11 @@ func Process(input string) {
 
 func AutoComplete(input string) (string, *[]ui.ACOption, string) {
 	options := []ui.ACOption{}
+	p := cmn.Split(input)
+	command, _, _ := p[0], p[1], p[2]
 
-	tokens := strings.Fields(input)
-	if len(tokens) == 0 {
+	if command == "" {
 		return "", &options, ""
-	}
-
-	command := tokens[0]
-
-	is_command := false
-	for _, cmd := range Commands {
-		if cmd.Command == command || (cmd.ShortCommand != "" && cmd.ShortCommand == command) {
-			is_command = true
-			break
-		}
-	}
-
-	if len(tokens) == 1 && !is_command {
-		for _, cmd := range Commands {
-			if strings.Contains(cmd.Command, command) || strings.Contains(cmd.ShortCommand, command) {
-				options = append(options, ui.ACOption{Name: cmd.Command, Result: cmd.Command + " "})
-			}
-		}
-		return "command", &options, command
 	}
 
 	for _, cmd := range Commands {
@@ -78,5 +61,17 @@ func AutoComplete(input string) (string, *[]ui.ACOption, string) {
 		}
 	}
 
-	return command, &options, ""
+	for _, cmd := range Commands {
+		if cmn.Contains(cmd.Command, command) || cmn.Contains(cmd.ShortCommand, command) {
+
+			text := cmd.Command
+			if cmd.ShortCommand != "" {
+				text += " (" + cmd.ShortCommand + ")"
+			}
+
+			options = append(options, ui.ACOption{Name: text, Result: cmd.Command + " "})
+		}
+	}
+
+	return "command", &options, command
 }

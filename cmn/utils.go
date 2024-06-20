@@ -12,13 +12,6 @@ func Contains(s string, subststr string) bool {
 	)
 }
 
-func ContainsButNotEqual(s string, subststr string) bool {
-	return strings.Contains(
-		strings.ToLower(s),
-		strings.ToLower(subststr),
-	) && !strings.EqualFold(s, subststr)
-}
-
 // Split splits the input string into a slice of strings. Guarantees that the
 // result has at least 3 elements.
 func Split(input string) []string {
