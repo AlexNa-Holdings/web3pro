@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/AlexNa-Holdings/web3pro/address"
 	"github.com/AlexNa-Holdings/web3pro/blockchain"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/signer"
@@ -22,6 +23,7 @@ type Wallet struct {
 	Name        string                  `json:"name"`
 	Blockchains []blockchain.Blockchain `json:"blockchains"`
 	Signers     []signer.Signer         `json:"signers"`
+	Addresses   []address.Address       `json:"addresses"`
 	FilePath    string                  `json:"-"`
 	Password    string                  `json:"-"`
 }
@@ -178,4 +180,13 @@ func OpenFromFile(file string, pass string) (*Wallet, error) {
 	}
 
 	return w, nil
+}
+
+func (w *Wallet) GetSigner(sn string) *signer.Signer {
+	for _, s := range w.Signers {
+		if s.SN == sn {
+			return &s
+		}
+	}
+	return nil
 }

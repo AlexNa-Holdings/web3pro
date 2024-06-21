@@ -30,6 +30,7 @@ func Init() {
 		NewBlockchainCommand(),
 		NewSignerCommand(),
 		NewUsbCommand(),
+		NewAddressCommand(),
 	}
 }
 

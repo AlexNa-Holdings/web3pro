@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"encoding/hex"
+
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/signer"
 	"github.com/AlexNa-Holdings/web3pro/wallet"
@@ -80,10 +82,13 @@ func DlgSignerCreate(t string, sn string) *gocui.Popup {
 							break
 						}
 
-						if !bip39.IsMnemonicValid(sn) {
+						m, err := bip39.EntropyFromMnemonic(sn)
+						if err != nil {
 							Notification.ShowError("Invalid mnemonic")
 							break
 						}
+
+						sn = hex.EncodeToString(m[:])
 
 					} else {
 						if len(sn) == 0 {

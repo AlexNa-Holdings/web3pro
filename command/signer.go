@@ -73,12 +73,13 @@ func Signer_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 			if param == signer.GetType(u.Manufacturer, u.Product) {
 				sn, err := usb.GetSN(u)
 				if err == nil {
-					if cmn.Contains(sn, p3) {
+					if cmn.Contains(sn, p3) && p3 != sn {
 						options = append(options, ui.ACOption{Name: sn, Result: command + " add " + param + " " + sn})
 					}
 				}
 			}
 		}
+		return "Serial number", &options, ""
 	}
 
 	return "", &options, ""
@@ -101,6 +102,7 @@ func Signer_Process(c *Command, input string) {
 			ui.Terminal.Screen.AddLink(ui.ICON_EDIT, "command s edit '"+signer.Name+"'", "Edit signer '"+signer.Name+"'")
 			ui.Printf(" ")
 			ui.Terminal.Screen.AddLink(ui.ICON_DELETE, "command s remove '"+signer.Name+"'", "Remove signer '"+signer.Name+"'")
+			ui.Printf("\n")
 		}
 
 		ui.Printf("\n")
