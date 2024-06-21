@@ -1398,7 +1398,7 @@ func (v *View) FocusPrev() {
 
 func (v *View) GetInput(id string) string {
 	for _, c := range v.Controls {
-		if c.Type == PUC_INPUT && c.View != nil && c.View.name == v.name+"."+id {
+		if (c.Type == PUC_INPUT || c.Type == PUC_TEXT_INPUT) && c.View != nil && c.View.name == v.name+"."+id {
 			return c.View.Buffer()
 		}
 	}

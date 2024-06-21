@@ -182,9 +182,9 @@ func OpenFromFile(file string, pass string) (*Wallet, error) {
 	return w, nil
 }
 
-func (w *Wallet) GetSigner(sn string) *signer.Signer {
+func (w *Wallet) GetSigner(n string) *signer.Signer {
 	for _, s := range w.Signers {
-		if s.SN == sn {
+		if s.Name == n {
 			return &s
 		}
 	}

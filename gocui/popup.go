@@ -41,7 +41,7 @@ func (g *Gui) HidePopup() {
 		}
 
 		for _, c := range g.popup.View.Controls {
-			if c.Type == PUC_INPUT {
+			if c.Type == PUC_INPUT || c.Type == PUC_TEXT_INPUT {
 				g.DeleteView(c.View.name)
 			}
 		}
