@@ -97,6 +97,9 @@ type Gui struct {
 	// Emphasis color (AN)
 	EmFgColor Attribute
 
+	// Input field colors (AN)
+	InputBgColor Attribute
+
 	// If Highlight is true, Sel{Bg,Fg}Colors will be used to draw the
 	// frame of the current view.
 	Highlight bool
@@ -167,7 +170,7 @@ func NewGui(mode OutputMode, supportOverlaps bool) (*Gui, error) {
 	}
 
 	g.mouseX, g.mouseY = -1, -1
-	g.BgColor, g.FgColor, g.FrameColor = ColorDefault, ColorDefault, ColorDefault
+	g.BgColor, g.FgColor, g.FrameColor, g.InputBgColor = ColorDefault, ColorDefault, ColorDefault, ColorDefault
 	g.SelBgColor, g.SelFgColor, g.SelFrameColor = ColorDefault, ColorDefault, ColorDefault
 
 	// SupportOverlaps is true when we allow for view edges to overlap with other

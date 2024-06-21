@@ -128,7 +128,7 @@ func Blockchain_Process(c *Command, input string) {
 					ui.Printf(" Chain ID: %d\n", b.ChainId)
 					ui.Printf(" Symbol: %s\n", b.Currency)
 					ui.Printf(" Explorer: %s\n", b.ExplorerUrl)
-					ui.Terminal.Screen.AddLink("\uf044", "command b edit "+b.Name, "Edit blockchain '"+b.Name+"'")
+					ui.Terminal.Screen.AddLink(ui.ICON_EDIT, "command b edit '"+b.Name+"'", "Edit blockchain '"+b.Name+"'")
 
 					ui.Printf("\n")
 					return

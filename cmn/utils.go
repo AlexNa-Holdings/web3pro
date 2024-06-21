@@ -15,6 +15,12 @@ func Contains(s string, subststr string) bool {
 // Split splits the input string into a slice of strings. Guarantees that the
 // result has at least 3 elements.
 func Split(input string) []string {
+	return SplitN(input, 3)
+}
+
+// Split splits the input string into a slice of strings. Guarantees that the
+// result has at least n elements.
+func SplitN(input string, n int) []string {
 	re := regexp.MustCompile(`'[^']*'|"[^"]*"|\b[^'\s"]+\b`)
 	matches := re.FindAllString(input, -1)
 
@@ -28,7 +34,7 @@ func Split(input string) []string {
 	}
 
 	// make sure the result has at least 3 elements
-	for len(result) < 3 {
+	for len(result) < n {
 		result = append(result, "")
 	}
 

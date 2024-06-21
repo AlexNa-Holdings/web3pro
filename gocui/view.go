@@ -36,6 +36,7 @@ const (
 	PUC_LINK = iota
 	PUC_BUTTON
 	PUC_INPUT
+	PUC_TEXT_INPUT
 )
 
 type PopoupControl struct {
@@ -1115,6 +1116,8 @@ func (v *View) AddTagEx(tagName string, tagParams map[string]string) error {
 		v.AddButton(tagParams["text"], "button "+tagParams["id"], tagParams["tip"])
 	case "i": // input
 		v.AddInput(tagParams)
+	case "t": // text input
+		v.AddTextInput(tagParams)
 	}
 	return nil
 }
@@ -1130,6 +1133,9 @@ func GetTagLength(tagName string, tagParams map[string]string) int {
 	case "i": // input
 		size, _ := strconv.Atoi(tagParams["size"])
 		return size
+	case "t": // text input
+		width, _ := strconv.Atoi(tagParams["width"])
+		return width
 	}
 	return 0
 }
@@ -1234,6 +1240,7 @@ func (v *View) AddInput(tagParams map[string]string) error {
 			v.Mask = '*'
 		}
 
+		v.BgColor = v.gui.InputBgColor
 		v.Editor = EditorFunc(PopupNavigation)
 
 		fmt.Fprint(v, tagParams["value"])
@@ -1247,6 +1254,58 @@ func (v *View) AddInput(tagParams map[string]string) error {
 
 	// write placeholder
 	fmt.Fprint(v, strings.Repeat(" ", size))
+
+	return nil
+}
+
+func (v *View) AddTextInput(tagParams map[string]string) error {
+	name := v.name + "." + tagParams["id"]
+	if _, err := v.gui.View(name); err == nil {
+		return errors.New("input with id " + name + " already exists")
+	}
+
+	width, _ := strconv.Atoi(tagParams["width"])
+	if width == 0 {
+		return errors.New("input tag must have a width attribute")
+	}
+
+	height, _ := strconv.Atoi(tagParams["height"])
+	if height == 0 {
+		return errors.New("input tag must have a height attribute")
+	}
+
+	c := PopoupControl{
+		Type: PUC_TEXT_INPUT,
+		x0:   v.wx,
+		y0:   v.wy,
+		x1:   v.wx + width,
+		y1:   v.wy + height + 1,
+	}
+
+	if v, err := v.gui.SetView(name, v.x0+v.wx, v.y0+v.wy, v.x0+v.wx+width, v.y0+v.wy+height+1, 0); err != nil {
+		if !errors.Is(err, ErrUnknownView) {
+			return err
+		}
+		v.Frame = false
+
+		if tagParams["masked"] == "true" {
+			v.Mask = '*'
+		}
+
+		v.BgColor = v.gui.InputBgColor
+		v.Editor = EditorFunc(PopupNavigation)
+
+		fmt.Fprint(v, tagParams["value"])
+
+		v.Editable = true
+		v.Wrap = true
+		c.View = v
+	}
+
+	v.Controls = append(v.Controls, c)
+
+	// write placeholder
+	fmt.Fprint(v, strings.Repeat(" ", width))
 
 	return nil
 }
@@ -1280,16 +1339,30 @@ func PopupNavigation(v *View, key Key, ch rune, mod Modifier) {
 		if v.ControlInFocus != -1 &&
 			v.Controls[v.ControlInFocus].Type != PUC_INPUT {
 			v.FocusNext()
+		} else {
+			DefaultEditor.Edit(v, key, ch, mod)
 		}
 	case KeyArrowLeft:
 		if v.ControlInFocus != -1 &&
 			v.Controls[v.ControlInFocus].Type != PUC_INPUT {
 			v.gui.popup.View.FocusPrev()
+		} else {
+			DefaultEditor.Edit(v, key, ch, mod)
 		}
 	case KeyArrowUp:
-		v.gui.popup.View.FocusPrev()
+		if v.gui.popup.View.ControlInFocus != -1 &&
+			v.gui.popup.View.Controls[v.gui.popup.View.ControlInFocus].Type != PUC_TEXT_INPUT {
+			v.gui.popup.View.FocusPrev()
+		} else {
+			DefaultEditor.Edit(v, key, ch, mod)
+		}
 	case KeyArrowDown:
-		v.gui.popup.View.FocusNext()
+		if v.gui.popup.View.ControlInFocus != -1 &&
+			v.gui.popup.View.Controls[v.gui.popup.View.ControlInFocus].Type != PUC_TEXT_INPUT {
+			v.gui.popup.View.FocusNext()
+		} else {
+			DefaultEditor.Edit(v, key, ch, mod)
+		}
 	default:
 		if v.Editable {
 			DefaultEditor.Edit(v, key, ch, mod)

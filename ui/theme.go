@@ -16,6 +16,7 @@ type Theme struct {
 
 	ErrorFgColor gocui.Attribute
 	EmFgColor    gocui.Attribute
+	InputBgColor gocui.Attribute
 
 	HelpFgColor, HelpBgColor gocui.Attribute
 }
@@ -40,8 +41,9 @@ var DarkTheme = Theme{
 	ErrorFgColor: gocui.GetColor("#ff0000"),
 	EmFgColor:    gocui.ColorCyan,
 
-	HelpFgColor: gocui.GetColor("#f1f1f1"),
-	HelpBgColor: gocui.GetColor("#013220"),
+	HelpFgColor:  gocui.GetColor("#f1f1f1"),
+	HelpBgColor:  gocui.GetColor("#013220"),
+	InputBgColor: gocui.GetColor("#292320"),
 }
 
 var LightTheme = Theme{
@@ -62,8 +64,9 @@ var LightTheme = Theme{
 	ErrorFgColor: gocui.GetColor("#ff0000"),
 	EmFgColor:    gocui.ColorCyan,
 
-	HelpFgColor: gocui.GetColor("#f1f1f1"),
-	HelpBgColor: gocui.GetColor("#013220"),
+	HelpFgColor:  gocui.GetColor("#f1f1f1"),
+	HelpBgColor:  gocui.GetColor("#013220"),
+	InputBgColor: gocui.GetColor("#717171"),
 }
 
 var Themes = map[string]Theme{
@@ -94,6 +97,7 @@ func SetTheme(theme string) {
 
 	Gui.SubTitleFgColor = t.BgColor
 	Gui.SubTitleBgColor = t.EmFgColor
+	Gui.InputBgColor = t.InputBgColor
 
 	CurrentTheme = &t
 

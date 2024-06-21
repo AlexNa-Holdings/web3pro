@@ -8,6 +8,7 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/ui"
 	"github.com/AlexNa-Holdings/web3pro/usb"
 	"github.com/AlexNa-Holdings/web3pro/wallet"
+	"github.com/rs/zerolog/log"
 )
 
 var usb_subcommands = []string{"list"}
@@ -68,6 +69,12 @@ func Usb_Process(c *Command, input string) {
 		n := 1
 		for _, u := range l {
 
+			sn, err := usb.GetSN(u)
+			if err != nil {
+				ui.PrintErrorf("\nError getting usb serial number: %v\n", err)
+				return
+			}
+
 			if param != "all" && signer.GetType(u.Manufacturer, u.Product) == "" {
 				continue
 			}
@@ -79,9 +86,9 @@ func Usb_Process(c *Command, input string) {
 				found := false
 				for _, s := range wallet.CurrentWallet.Signers {
 					if s.Type == signer.GetType(u.Manufacturer, u.Product) &&
-						s.SN == u.Serial {
+						s.SN == sn {
 						ui.Printf("'" + s.Name + "' ")
-						ui.Terminal.Screen.AddLink("\uf044", "command s edit '"+s.Name+"'", "Edit signer")
+						ui.Terminal.Screen.AddLink(ui.ICON_EDIT, "command s edit '"+s.Name+"'", "Edit signer")
 						found = true
 						break
 					}
@@ -97,7 +104,8 @@ func Usb_Process(c *Command, input string) {
 			ui.Printf("\n")
 			ui.Printf("   manufacturer: %s\n", u.Manufacturer)
 			ui.Printf("   product: %s\n", u.Product)
-			ui.Printf("   serial: %s\n", u.Serial)
+			ui.Printf("   serial: %s\n", sn)
+			log.Debug().Msgf("   %v\n", u)
 			ui.Printf("\n")
 		}
 

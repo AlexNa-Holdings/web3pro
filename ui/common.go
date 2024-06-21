@@ -15,6 +15,11 @@ var Gui *gocui.Gui
 var Is_ready = false
 var Is_ready_wg sync.WaitGroup
 
+const (
+	ICON_DELETE = "\uf00d" //"\U000f01b4"
+	ICON_EDIT   = "\uf044"
+)
+
 func Init() {
 	var err error
 

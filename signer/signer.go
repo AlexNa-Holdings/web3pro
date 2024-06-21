@@ -10,7 +10,7 @@ type Signer struct {
 	P    map[string]string `json:"params"`
 }
 
-var KNOWN_SIGNER_TYPES = []string{"trezor"}
+var KNOWN_SIGNER_TYPES = []string{"trezor", "ledger", "mnemonic"}
 
 func GetType(manufacturer string, product string) string {
 	if product == "TREZOR" {
@@ -23,13 +23,3 @@ func GetType(manufacturer string, product string) string {
 
 	return ""
 }
-
-// func NewSigner(data *SignerDevice) (Signer, error) {
-
-// 	switch data.Type {
-// 	case "trezor":
-// 		return NewTrezorSigner(data)
-// 	}
-
-// 	return nil, errors.New("unknown signer type: " + data.Type)
-// }
