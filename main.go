@@ -38,7 +38,7 @@ func main() {
 		ui.Printf("\n" + ui.F(ui.CurrentTheme.EmFgColor) + WEB3_PRO + ui.F(ui.Terminal.Screen.FgColor) + "\n\n")
 		ui.Printf("by X:@AlexNa Telegram:@TheAlexNa\n")
 
-		ui.Printf("Version: %s\n", ui.F(ui.CurrentTheme.EmFgColor)+cmn.VERSION+ui.F(ui.Terminal.Screen.FgColor))
+		ui.Printf("Version: %s\n", cmn.VERSION)
 
 		ui.Printf("Data folder: ")
 		ui.Terminal.Screen.AddLink(cmn.DataFolder, "copy "+cmn.DataFolder, "Copy data folder path to clipboard")

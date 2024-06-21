@@ -46,7 +46,7 @@ func Signer_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 
 	if subcommand == "remove" || subcommand == "edit" {
 		if wallet.CurrentWallet != nil {
-			for _, signer := range wallet.CurrentWallet.SignersData {
+			for _, signer := range wallet.CurrentWallet.Signers {
 				if cmn.Contains(signer.Name, param) {
 					options = append(options, ui.ACOption{
 						Name: signer.Name, Result: command + " " + subcommand + " '" + signer.Name + "'"})

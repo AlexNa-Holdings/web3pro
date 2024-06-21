@@ -3,7 +3,7 @@ package signer
 type TrezorSigner struct {
 }
 
-func NewTrezorSigner(data *SignerData) (TrezorSigner, error) {
+func NewTrezorSigner(data *Signer) (TrezorSigner, error) {
 
 	t := TrezorSigner{}
 

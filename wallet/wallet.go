@@ -19,12 +19,11 @@ import (
 const SOLT_SIZE = 32
 
 type Wallet struct {
-	Name        string                   `json:"name"`
-	Blockchains []blockchain.Blockchain  `json:"blockchains"`
-	SignersData []signer.SignerData      `json:"signers"`
-	FilePath    string                   `json:"-"`
-	Password    string                   `json:"-"`
-	Signers     map[string]signer.Signer `json:"-"`
+	Name        string                  `json:"name"`
+	Blockchains []blockchain.Blockchain `json:"blockchains"`
+	Signers     []signer.Signer         `json:"signers"`
+	FilePath    string                  `json:"-"`
+	Password    string                  `json:"-"`
 }
 
 var CurrentWallet *Wallet
@@ -38,15 +37,6 @@ func Open(name string, pass string) error {
 		CurrentWallet.FilePath = cmn.DataFolder + "/wallets/" + name
 		CurrentWallet.Password = pass
 	}
-
-	for _, sd := range CurrentWallet.SignersData {
-		s, err := signer.NewSigner(&sd)
-		if err != nil {
-			log.Error().Msgf("Error creating signer: %v\n", err)
-		}
-		CurrentWallet.Signers[sd.Name] = s
-	}
-
 	return err
 }
 

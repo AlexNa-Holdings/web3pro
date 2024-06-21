@@ -5,6 +5,7 @@ go 1.21.6
 require (
 	github.com/atotto/clipboard v0.1.4
 	github.com/gdamore/tcell/v2 v2.4.0
+	github.com/karalabe/usb v0.0.2
 	github.com/mattn/go-runewidth v0.0.10
 	github.com/rs/zerolog v1.33.0
 	golang.org/x/crypto v0.24.0
