@@ -14,9 +14,10 @@ func DlgSignerCreate(t string, sn string) *gocui.Popup {
 
 	if t != "mnemonic" {
 		template = `
- Name: <i id:name size:32 value:"">
- Type: ` + t + `
-   SN: <i id:sn size:32>
+   Name: <i id:name size:32 value:""> 
+   Type: ` + t + `
+     SN: <i id:sn size:32>
+Copy of: <cb id:copyof size:32 value:""> 
 
 <c><b text:Ok tip:"create wallet">  <b text:Cancel>`
 	} else {
@@ -47,6 +48,12 @@ func DlgSignerCreate(t string, sn string) *gocui.Popup {
 		OnOpen: func(v *gocui.View) {
 			v.SetInput("name", "")
 			v.SetInput("sn", sn)
+
+			names := []string{}
+			for _, signer := range wallet.CurrentWallet.Signers {
+				names = append(names, signer.Name)
+			}
+			v.SetComboList("copyof", names)
 		},
 		OnClose: func(v *gocui.View) {
 			Gui.SetCurrentView("terminal.input")

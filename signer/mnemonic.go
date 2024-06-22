@@ -14,6 +14,7 @@ import (
 type MnemonicDriver struct {
 	Entropy []byte
 	SN      string
+	*Signer
 }
 
 func NewMnemonicDriver(s *Signer) (MnemonicDriver, error) {
@@ -58,10 +59,9 @@ func (d MnemonicDriver) GetAddresses(start_from int, count int) ([]address.Addre
 		// Get the Ethereum address
 		a := getAddressFromKey(key)
 		addresses = append(addresses, address.Address{
-			Address:    a,
-			SignerType: "mnemonic",
-			SignerSN:   d.SN,
-			Path:       path,
+			Address: a,
+			Signer:  d.Name,
+			Path:    path,
 		})
 	}
 

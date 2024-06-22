@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/rs/zerolog/log"
 )
 
 type PUCType int // PopupControlType
@@ -20,6 +22,7 @@ type Popup struct {
 	OnClickHotspot  func(v *View, hs *Hotspot)
 	OnClose         func(v *View)
 	OnOpen          func(v *View)
+	ComboList       *View
 }
 
 func (g *Gui) ShowPopup(p *Popup) {
@@ -76,7 +79,7 @@ func (p *Popup) Layout(g *Gui) error {
 			}
 		}
 
-		p.Width += 2
+		// p.Width += 2
 	}
 
 	if v, err = g.SetView(p.Name, maxX/2-p.Width/2, maxY/2-p.Height/2, maxX/2+p.Width/2, maxY/2+p.Height/2, 0); err != nil {
@@ -97,6 +100,68 @@ func (p *Popup) Layout(g *Gui) error {
 			}
 		}
 		v.OnClickHotspot = func(v *View, hs *Hotspot) {
+			// Hande comboboxes
+			if hs != nil {
+				params := strings.Split(hs.Value, " ")
+
+				if len(params) >= 2 && params[0] == "combobox" {
+					for _, c := range v.Controls {
+						if c.Type == PUC_COMBOBOX && c.name == v.name+"."+params[1] {
+
+							if p.ComboList != nil {
+								g.DeleteView(p.ComboList.name)
+								p.ComboList = nil
+							} else {
+								width := 8 // minimum width
+
+								log.Debug().Msgf("????? %s %v", c.name, c.Items)
+
+								for _, item := range c.Items {
+									if len(item) > width {
+										width = len(item) + 2
+									}
+								}
+
+								if width > c.x1-c.x0 {
+									width = c.x1 - c.x0
+								}
+
+								height := len(c.Items)
+								if height > v.y1-v.y0-2 {
+									height = v.y1 - v.y0 - 2
+								}
+
+								if height == 0 {
+									height = 1
+								}
+
+								height += 2
+
+								x0 := c.x1 - width
+								y0 := c.y1
+								if y0+height > v.y1 {
+									y0 = v.y1 - height
+								}
+
+								log.Debug().Msgf("x0: %d, y0: %d, width: %d, height: %d", x0, y0, width, height)
+
+								p.ComboList, err = g.SetView(p.name+" combolist", v.x0+x0, v.y0+y0, v.x0+c.x1, v.y0+y0+height, 0)
+								p.ComboList.Frame = true
+								p.ComboList.Editable = false
+								p.ComboList.Wrap = false
+								p.ComboList.Highlight = true
+								// p.ComboList.SelBgColor = g.EmBgColor
+								// p.ComboList.SelFgColor = g.EmFgColor
+								for _, item := range c.Items {
+									fmt.Fprintln(p.ComboList, item)
+								}
+								fmt.Fprintln(p.ComboList, "one more more")
+							}
+						}
+					}
+				}
+			}
+
 			if g.popup.OnClickHotspot != nil {
 				g.popup.OnClickHotspot(v, hs)
 			}

@@ -6,6 +6,7 @@ import (
 
 	"github.com/AlexNa-Holdings/web3pro/blockchain"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
+	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/ui"
 	"github.com/AlexNa-Holdings/web3pro/wallet"
 )
@@ -128,7 +129,7 @@ func Blockchain_Process(c *Command, input string) {
 					ui.Printf(" Chain ID: %d\n", b.ChainId)
 					ui.Printf(" Symbol: %s\n", b.Currency)
 					ui.Printf(" Explorer: %s\n", b.ExplorerUrl)
-					ui.Terminal.Screen.AddLink(ui.ICON_EDIT, "command b edit '"+b.Name+"'", "Edit blockchain '"+b.Name+"'")
+					ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command b edit '"+b.Name+"'", "Edit blockchain '"+b.Name+"'")
 
 					ui.Printf("\n")
 					return

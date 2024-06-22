@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/AlexNa-Holdings/web3pro/cmn"
+	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/signer"
 	"github.com/AlexNa-Holdings/web3pro/ui"
 	"github.com/AlexNa-Holdings/web3pro/usb"
@@ -88,7 +89,7 @@ func Usb_Process(c *Command, input string) {
 					if s.Type == signer.GetType(u.Manufacturer, u.Product) &&
 						s.SN == sn {
 						ui.Printf("'" + s.Name + "' ")
-						ui.Terminal.Screen.AddLink(ui.ICON_EDIT, "command s edit '"+s.Name+"'", "Edit signer")
+						ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command s edit '"+s.Name+"'", "Edit signer")
 						found = true
 						break
 					}

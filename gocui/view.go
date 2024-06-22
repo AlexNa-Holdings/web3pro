@@ -26,6 +26,13 @@ const (
 	RIGHT  = 8 // view is overlapping at right edge
 )
 
+const (
+	ICON_DELETE  = "\uf00d"
+	ICON_EDIT    = "\uf044"
+	ICON_COPY    = "\uf0c5"
+	ICON_DROPBOX = "\ueb6e"
+)
+
 var (
 	// ErrInvalidPoint is returned when client passed invalid coordinates of a cell.
 	// Most likely client has passed negative coordinates of a cell.
@@ -37,6 +44,7 @@ const (
 	PUC_BUTTON
 	PUC_INPUT
 	PUC_TEXT_INPUT
+	PUC_COMBOBOX
 )
 
 type PopoupControl struct {
@@ -44,6 +52,7 @@ type PopoupControl struct {
 	x0, y0, x1, y1 int
 	*View
 	*Hotspot
+	Items []string
 }
 
 // A View is a window. It maintains its own internal buffer and cursor
@@ -1118,6 +1127,8 @@ func (v *View) AddTagEx(tagName string, tagParams map[string]string) error {
 		v.AddInput(tagParams)
 	case "t": // text input
 		v.AddTextInput(tagParams)
+	case "cb": // combo box
+		v.AddComboBox(tagParams)
 	}
 	return nil
 }
@@ -1253,7 +1264,55 @@ func (v *View) AddInput(tagParams map[string]string) error {
 	v.Controls = append(v.Controls, c)
 
 	// write placeholder
-	fmt.Fprint(v, strings.Repeat(" ", size))
+	fmt.Fprint(v, strings.Repeat(" ", size-1))
+
+	return nil
+}
+
+func (v *View) AddComboBox(tagParams map[string]string) error {
+	name := v.name + "." + tagParams["id"]
+	if _, err := v.gui.View(name); err == nil {
+		return errors.New("input with id " + name + " already exists")
+	}
+
+	size, _ := strconv.Atoi(tagParams["size"])
+	if size == 0 {
+		return errors.New("input tag must have a size attribute")
+	}
+
+	c := PopoupControl{
+		Type: PUC_COMBOBOX,
+		x0:   v.wx,
+		y0:   v.wy,
+		x1:   v.wx + size,
+		y1:   v.wy + 2,
+	}
+
+	if tv, err := v.gui.SetView(name, v.x0+v.wx, v.y0+v.wy, v.x0+v.wx+size-1, v.y0+v.wy+2, 0); err != nil {
+		if !errors.Is(err, ErrUnknownView) {
+			return err
+		}
+		tv.Frame = false
+
+		tv.BgColor = tv.gui.InputBgColor
+		tv.Editor = EditorFunc(PopupNavigation)
+
+		fmt.Fprint(tv, tagParams["value"])
+
+		tv.Editable = false
+		tv.Wrap = false
+		c.View = tv
+	}
+
+	v.Controls = append(v.Controls, c)
+
+	// write placeholder
+	fmt.Fprint(v, strings.Repeat(" ", size-2))
+
+	tmp := v.BgColor
+	v.BgColor = v.gui.InputBgColor
+	v.AddLink("\ueb6e", "combobox "+tagParams["id"], "")
+	v.BgColor = tmp
 
 	return nil
 }
@@ -1305,7 +1364,7 @@ func (v *View) AddTextInput(tagParams map[string]string) error {
 	v.Controls = append(v.Controls, c)
 
 	// write placeholder
-	fmt.Fprint(v, strings.Repeat(" ", width))
+	fmt.Fprint(v, strings.Repeat(" ", width-1))
 
 	return nil
 }
@@ -1330,7 +1389,16 @@ func PopupNavigation(v *View, key Key, ch rune, mod Modifier) {
 				v.gui.popup.View.FocusNext()
 			}
 		}
-
+	case KeySpace:
+		if v.gui.popup.View.ControlInFocus != -1 {
+			c := v.gui.popup.View.Controls[v.gui.popup.View.ControlInFocus]
+			switch c.Type {
+			case PUC_LINK:
+				v.gui.popup.View.OnClickHotspot(v.gui.popup.View, c.Hotspot)
+			case PUC_BUTTON:
+				v.gui.popup.View.OnClickHotspot(v.gui.popup.View, c.Hotspot)
+			}
+		}
 	case KeyTab:
 		v.gui.popup.View.FocusNext()
 	case KeyBacktab:
@@ -1380,9 +1448,13 @@ func (v *View) SetFocus(i int) {
 	i = ((i % L) + L) % L
 
 	v.ControlInFocus = i % len(v.Controls)
-	if v.Controls[i].View != nil {
+
+	switch v.Controls[i].Type {
+	case PUC_COMBOBOX:
+		v.SetFocus(i + 1) // skip combobox
+	case PUC_INPUT, PUC_TEXT_INPUT:
 		v.gui.SetCurrentView(v.Controls[i].View.name)
-	} else {
+	default:
 		v.gui.currentView = nil
 		screen.HideCursor()
 	}
@@ -1393,7 +1465,11 @@ func (v *View) FocusNext() {
 }
 
 func (v *View) FocusPrev() {
-	v.SetFocus(v.ControlInFocus - 1)
+	if v.ControlInFocus >= 1 && v.Controls[v.ControlInFocus-1].Type == PUC_COMBOBOX {
+		v.SetFocus(v.ControlInFocus - 2)
+	} else {
+		v.SetFocus(v.ControlInFocus - 1)
+	}
 }
 
 func (v *View) GetInput(id string) string {
@@ -1410,6 +1486,14 @@ func (v *View) SetInput(id, value string) {
 		if c.Type == PUC_INPUT && c.View != nil && c.View.name == v.name+"."+id {
 			c.View.Clear()
 			fmt.Fprint(c.View, value)
+		}
+	}
+}
+
+func (v *View) SetComboList(id string, list []string) {
+	for _, c := range v.Controls {
+		if c.Type == PUC_COMBOBOX && c.View != nil && c.View.name == v.name+"."+id {
+			c.Items = list
 		}
 	}
 }

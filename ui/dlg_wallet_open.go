@@ -37,7 +37,7 @@ func DlgWaletOpen(name string) *gocui.Popup {
 			}
 		},
 		Template: `
-  Password: <i id:pass masked:true size:24>
+ Password: <i id:pass masked:true size:24> 
 
 <c><b text:Ok tip:"create wallet">  <b text:Cancel>`,
 	}

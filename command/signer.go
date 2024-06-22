@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/AlexNa-Holdings/web3pro/cmn"
+	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/signer"
 	"github.com/AlexNa-Holdings/web3pro/ui"
 	"github.com/AlexNa-Holdings/web3pro/usb"
@@ -99,9 +100,9 @@ func Signer_Process(c *Command, input string) {
 	case "list", "":
 		for _, signer := range wallet.CurrentWallet.Signers {
 			ui.Printf("%-10s %s ", signer.Type, signer.Name)
-			ui.Terminal.Screen.AddLink(ui.ICON_EDIT, "command s edit '"+signer.Name+"'", "Edit signer '"+signer.Name+"'")
+			ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command s edit '"+signer.Name+"'", "Edit signer '"+signer.Name+"'")
 			ui.Printf(" ")
-			ui.Terminal.Screen.AddLink(ui.ICON_DELETE, "command s remove '"+signer.Name+"'", "Remove signer '"+signer.Name+"'")
+			ui.Terminal.Screen.AddLink(gocui.ICON_DELETE, "command s remove '"+signer.Name+"'", "Remove signer '"+signer.Name+"'")
 			ui.Printf("\n")
 		}
 
