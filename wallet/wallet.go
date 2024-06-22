@@ -20,12 +20,12 @@ import (
 const SOLT_SIZE = 32
 
 type Wallet struct {
-	Name        string                  `json:"name"`
-	Blockchains []blockchain.Blockchain `json:"blockchains"`
-	Signers     []signer.Signer         `json:"signers"`
-	Addresses   []address.Address       `json:"addresses"`
-	FilePath    string                  `json:"-"`
-	Password    string                  `json:"-"`
+	Name        string                   `json:"name"`
+	Blockchains []*blockchain.Blockchain `json:"blockchains"`
+	Signers     []*signer.Signer         `json:"signers"`
+	Addresses   []*address.Address       `json:"addresses"`
+	FilePath    string                   `json:"-"`
+	Password    string                   `json:"-"`
 }
 
 var CurrentWallet *Wallet
@@ -185,7 +185,7 @@ func OpenFromFile(file string, pass string) (*Wallet, error) {
 func (w *Wallet) GetSigner(n string) *signer.Signer {
 	for _, s := range w.Signers {
 		if s.Name == n {
-			return &s
+			return s
 		}
 	}
 	return nil

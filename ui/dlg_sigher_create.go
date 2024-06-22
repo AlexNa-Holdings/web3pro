@@ -2,6 +2,7 @@ package ui
 
 import (
 	"encoding/hex"
+	"strconv"
 
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/signer"
@@ -53,6 +54,12 @@ Copy of: <cb id:copyof size:32 value:"">
 			for _, signer := range wallet.CurrentWallet.Signers {
 				names = append(names, signer.Name)
 			}
+
+			// debug
+			for i := 0; i < 8; i++ {
+				names = append(names, "name"+strconv.Itoa(i))
+			}
+
 			v.SetComboList("copyof", names)
 		},
 		OnClose: func(v *gocui.View) {
@@ -104,7 +111,7 @@ Copy of: <cb id:copyof size:32 value:"">
 						}
 					}
 
-					wallet.CurrentWallet.Signers = append(wallet.CurrentWallet.Signers, signer.Signer{Name: name, Type: t, SN: sn})
+					wallet.CurrentWallet.Signers = append(wallet.CurrentWallet.Signers, &signer.Signer{Name: name, Type: t, SN: sn})
 					err := wallet.CurrentWallet.Save()
 					if err != nil {
 						Notification.ShowErrorf("Error creating signer: %s", err)

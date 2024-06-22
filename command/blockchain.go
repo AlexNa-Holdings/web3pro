@@ -114,7 +114,9 @@ func Blockchain_Process(c *Command, input string) {
 
 			for _, b := range blockchain.PrefefinedBlockchains {
 				if b.Name == blockchain_name {
-					wallet.CurrentWallet.Blockchains = append(wallet.CurrentWallet.Blockchains, b)
+
+					bch := b
+					wallet.CurrentWallet.Blockchains = append(wallet.CurrentWallet.Blockchains, &bch)
 
 					err := wallet.CurrentWallet.Save()
 					if err != nil {

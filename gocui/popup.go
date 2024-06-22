@@ -135,27 +135,38 @@ func (p *Popup) Layout(g *Gui) error {
 									height = 1
 								}
 
-								height += 2
+								height += 1
 
-								x0 := c.x1 - width
-								y0 := c.y1
-								if y0+height > v.y1 {
+								x0 := v.x0 + c.x1 - width
+								if x0 < v.x0 {
+									x0 = v.x0
+								}
+
+								x1 := v.x0 + c.x1
+
+								y0 := v.y0 + c.y1
+								if y0+height >= v.y1 {
 									y0 = v.y1 - height
 								}
 
-								log.Debug().Msgf("x0: %d, y0: %d, width: %d, height: %d", x0, y0, width, height)
-
-								p.ComboList, err = g.SetView(p.name+" combolist", v.x0+x0, v.y0+y0, v.x0+c.x1, v.y0+y0+height, 0)
-								p.ComboList.Frame = true
-								p.ComboList.Editable = false
-								p.ComboList.Wrap = false
-								p.ComboList.Highlight = true
-								// p.ComboList.SelBgColor = g.EmBgColor
-								// p.ComboList.SelFgColor = g.EmFgColor
-								for _, item := range c.Items {
-									fmt.Fprintln(p.ComboList, item)
+								y1 := y0 + height
+								if y1 >= v.y1 {
+									y1 = v.y1
 								}
-								fmt.Fprintln(p.ComboList, "one more more")
+
+								if p.ComboList, err = g.SetView(c.View.name+".list", x0, y0, x1, y1, 0); err != nil {
+									p.ComboList.Frame = true
+									p.ComboList.Editable = false
+									p.ComboList.Wrap = false
+									p.ComboList.Highlight = true
+									// p.ComboList.SelBgColor = g.EmBgColor
+									// p.ComboList.SelFgColor = g.EmFgColor
+									for _, item := range c.Items {
+										fmt.Fprintln(p.ComboList, item)
+									}
+									g.SetViewOnTop(p.ComboList.name)
+									g.SetCurrentView(p.ComboList.name)
+								}
 							}
 						}
 					}

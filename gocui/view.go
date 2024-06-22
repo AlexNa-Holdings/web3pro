@@ -16,6 +16,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/mattn/go-runewidth"
+	"github.com/rs/zerolog/log"
 )
 
 // Constants for overlapping edges
@@ -59,15 +60,15 @@ type PopoupControl struct {
 // position.
 type View struct {
 	name           string
-	x0, y0, x1, y1 int             // left top right bottom
-	ox, oy         int             // view offsets
-	cx, cy         int             // cursor position
-	rx, ry         int             // Read() offsets
-	wx, wy         int             // Write() offsets
-	lines          [][]cell        // All the data
-	hotspots       []*Hotspot      // AN - hotspots sorted by positions
-	Controls       []PopoupControl // AN - controls
-	ControlInFocus int             // AN - the control in focus
+	x0, y0, x1, y1 int              // left top right bottom
+	ox, oy         int              // view offsets
+	cx, cy         int              // cursor position
+	rx, ry         int              // Read() offsets
+	wx, wy         int              // Write() offsets
+	lines          [][]cell         // All the data
+	hotspots       []*Hotspot       // AN - hotspots sorted by positions
+	Controls       []*PopoupControl // AN - controls
+	ControlInFocus int              // AN - the control in focus
 
 	outMode OutputMode
 
@@ -1178,7 +1179,7 @@ func (v *View) AddLink(text, value, tip string) error {
 	if err == nil {
 		fmt.Fprint(v, text)
 		c.Hotspot = hs
-		v.Controls = append(v.Controls, c)
+		v.Controls = append(v.Controls, &c)
 	}
 
 	return err
@@ -1217,7 +1218,7 @@ func (v *View) AddButton(text, value, tip string) error {
 		v.writeCells(v.wx, v.wy, cells)
 		v.wx += len(cells)
 		c.Hotspot = hs
-		v.Controls = append(v.Controls, c)
+		v.Controls = append(v.Controls, &c)
 	}
 	return err
 }
@@ -1261,7 +1262,7 @@ func (v *View) AddInput(tagParams map[string]string) error {
 		c.View = v
 	}
 
-	v.Controls = append(v.Controls, c)
+	v.Controls = append(v.Controls, &c)
 
 	// write placeholder
 	fmt.Fprint(v, strings.Repeat(" ", size-1))
@@ -1304,7 +1305,7 @@ func (v *View) AddComboBox(tagParams map[string]string) error {
 		c.View = tv
 	}
 
-	v.Controls = append(v.Controls, c)
+	v.Controls = append(v.Controls, &c)
 
 	// write placeholder
 	fmt.Fprint(v, strings.Repeat(" ", size-2))
@@ -1361,7 +1362,7 @@ func (v *View) AddTextInput(tagParams map[string]string) error {
 		c.View = v
 	}
 
-	v.Controls = append(v.Controls, c)
+	v.Controls = append(v.Controls, &c)
 
 	// write placeholder
 	fmt.Fprint(v, strings.Repeat(" ", width-1))
@@ -1491,9 +1492,13 @@ func (v *View) SetInput(id, value string) {
 }
 
 func (v *View) SetComboList(id string, list []string) {
+	log.Debug().Msgf("SetComboList %s %v", id, list)
 	for _, c := range v.Controls {
 		if c.Type == PUC_COMBOBOX && c.View != nil && c.View.name == v.name+"."+id {
+
+			log.Debug().Msgf("Set %s %v", id, list)
 			c.Items = list
+			break
 		}
 	}
 }
