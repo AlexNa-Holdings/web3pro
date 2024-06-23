@@ -44,9 +44,14 @@ func (g *Gui) HidePopup() {
 		}
 
 		for _, c := range g.popup.View.Controls {
-			if c.Type == PUC_INPUT || c.Type == PUC_TEXT_INPUT {
+			if c.Type == C_INPUT || c.Type == C_TEXT_INPUT {
 				g.DeleteView(c.View.name)
 			}
+		}
+
+		if g.popup.ComboList != nil {
+			g.DeleteView(g.popup.ComboList.name)
+			g.popup.ComboList = nil
 		}
 
 		g.DeleteView(g.popup.Name)
@@ -79,7 +84,7 @@ func (p *Popup) Layout(g *Gui) error {
 			}
 		}
 
-		// p.Width += 2
+		p.Width += 2
 	}
 
 	if v, err = g.SetView(p.Name, maxX/2-p.Width/2, maxY/2-p.Height/2, maxX/2+p.Width/2, maxY/2+p.Height/2, 0); err != nil {
@@ -100,21 +105,19 @@ func (p *Popup) Layout(g *Gui) error {
 			}
 		}
 		v.OnClickHotspot = func(v *View, hs *Hotspot) {
-			// Hande comboboxes
+			// Hande droplistes
 			if hs != nil {
 				params := strings.Split(hs.Value, " ")
 
-				if len(params) >= 2 && params[0] == "combobox" {
+				if len(params) >= 2 && params[0] == "droplist" {
 					for _, c := range v.Controls {
-						if c.Type == PUC_COMBOBOX && c.name == v.name+"."+params[1] {
+						if c.Type == C_SELECT && c.ID == params[1] {
 
 							if p.ComboList != nil {
 								g.DeleteView(p.ComboList.name)
 								p.ComboList = nil
 							} else {
 								width := 8 // minimum width
-
-								log.Debug().Msgf("????? %s %v", c.name, c.Items)
 
 								for _, item := range c.Items {
 									if len(item) > width {
@@ -127,8 +130,8 @@ func (p *Popup) Layout(g *Gui) error {
 								}
 
 								height := len(c.Items)
-								if height > v.y1-v.y0-2 {
-									height = v.y1 - v.y0 - 2
+								if height > v.y1-v.y0-1 {
+									height = v.y1 - v.y0 - 1
 								}
 
 								if height == 0 {
@@ -154,17 +157,16 @@ func (p *Popup) Layout(g *Gui) error {
 									y1 = v.y1
 								}
 
-								if p.ComboList, err = g.SetView(c.View.name+".list", x0, y0, x1, y1, 0); err != nil {
+								if p.ComboList, err = g.SetView(v.name+"."+c.ID+".list", x0, y0, x1, y1, 0); err != nil {
 									p.ComboList.Frame = true
 									p.ComboList.Editable = false
 									p.ComboList.Wrap = false
 									p.ComboList.Highlight = true
-									// p.ComboList.SelBgColor = g.EmBgColor
-									// p.ComboList.SelFgColor = g.EmFgColor
+									p.ComboList.ScrollBar = true
+									p.FrameColor = g.EmFgColor
 									for _, item := range c.Items {
 										fmt.Fprintln(p.ComboList, item)
 									}
-									g.SetViewOnTop(p.ComboList.name)
 									g.SetCurrentView(p.ComboList.name)
 								}
 							}
@@ -201,7 +203,7 @@ func (p *Popup) Layout(g *Gui) error {
 	}
 
 	for _, c := range p.Controls {
-		if c.Type == PUC_INPUT {
+		if c.Type == C_INPUT {
 			c.View.x0 = v.x0 + c.x0
 			c.View.x1 = v.x0 + c.x1
 			c.View.y0 = v.y0 + c.y0
@@ -209,6 +211,10 @@ func (p *Popup) Layout(g *Gui) error {
 			c.View.tainted = true
 			g.SetViewOnTop(c.View.name)
 		}
+	}
+
+	if p.ComboList != nil {
+		g.SetViewOnTop(p.ComboList.name)
 	}
 
 	return nil
@@ -255,12 +261,15 @@ func (p *Popup) ParseTemplate() error {
 
 func (p *Popup) calcLineWidth(line string) int {
 	l := len(line)
+	log.Debug().Msgf("line: '%s'", line)
 	re := regexp.MustCompile(`<(\w+)((?:\s+\w+(?::(?:\w+|"[^"]*"))?\s*)*)>`)
 	matches := re.FindAllStringIndex(line, -1)
 	for _, match := range matches {
 		tag := line[match[0]:match[1]]
+		log.Debug().Msgf("tag: '%s'", tag)
 		tagName, tagParams := ParseTag(tag)
 		l = l - len(tag) + GetTagLength(tagName, tagParams)
 	}
+	log.Debug().Msgf("len: %d", l)
 	return l
 }

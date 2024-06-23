@@ -28,10 +28,10 @@ const (
 )
 
 const (
-	ICON_DELETE  = "\uf00d"
-	ICON_EDIT    = "\uf044"
-	ICON_COPY    = "\uf0c5"
-	ICON_DROPBOX = "\ueb6e"
+	ICON_DELETE   = "\uf00d"
+	ICON_EDIT     = "\uf044"
+	ICON_COPY     = "\uf0c5"
+	ICON_DROPLIST = "\ueb6e"
 )
 
 var (
@@ -41,15 +41,16 @@ var (
 )
 
 const (
-	PUC_LINK = iota
-	PUC_BUTTON
-	PUC_INPUT
-	PUC_TEXT_INPUT
-	PUC_COMBOBOX
+	C_LINK = iota
+	C_BUTTON
+	C_INPUT
+	C_TEXT_INPUT
+	C_SELECT
 )
 
 type PopoupControl struct {
 	Type           PUCType
+	ID             string
 	x0, y0, x1, y1 int
 	*View
 	*Hotspot
@@ -1128,8 +1129,8 @@ func (v *View) AddTagEx(tagName string, tagParams map[string]string) error {
 		v.AddInput(tagParams)
 	case "t": // text input
 		v.AddTextInput(tagParams)
-	case "cb": // combo box
-		v.AddComboBox(tagParams)
+	case "select": // combo box
+		v.AddSelect(tagParams)
 	}
 	return nil
 }
@@ -1148,6 +1149,9 @@ func GetTagLength(tagName string, tagParams map[string]string) int {
 	case "t": // text input
 		width, _ := strconv.Atoi(tagParams["width"])
 		return width
+	case "select": // droplist
+		size, _ := strconv.Atoi(tagParams["size"])
+		return size
 	}
 	return 0
 }
@@ -1167,7 +1171,7 @@ func (v *View) AddLink(text, value, tip string) error {
 	cells_highligted := AddCells(nil, v.SelFgColor, v.SelBgColor, text)
 
 	c := PopoupControl{
-		Type: PUC_LINK,
+		Type: C_LINK,
 		x0:   v.wx,
 		y0:   v.wy,
 		x1:   v.wx + len(cells),
@@ -1203,7 +1207,8 @@ func (v *View) AddButton(text, value, tip string) error {
 	}
 
 	c := PopoupControl{
-		Type: PUC_BUTTON,
+		Type: C_BUTTON,
+		ID:   value,
 		x0:   v.wx,
 		y0:   v.wy,
 		x1:   v.wx + len(cells),
@@ -1211,6 +1216,53 @@ func (v *View) AddButton(text, value, tip string) error {
 	}
 
 	hs, err := v.AddHotspot(v.wx, v.wy, value, tip, cells, cells_highligted)
+
+	if err == nil {
+		v.writeMutex.Lock()
+		defer v.writeMutex.Unlock()
+		v.writeCells(v.wx, v.wy, cells)
+		v.wx += len(cells)
+		c.Hotspot = hs
+		v.Controls = append(v.Controls, &c)
+	}
+	return err
+}
+
+func (v *View) AddSelect(tagParams map[string]string) error {
+	size, _ := strconv.Atoi(tagParams["size"])
+	if size == 0 {
+		return errors.New("input tag must have a size attribute")
+	}
+
+	value := tagParams["value"]
+	text := value
+
+	if len(text) > size-1 {
+		text = text[:size-1]
+	}
+
+	if len(text) < size-1 {
+		text += strings.Repeat(" ", size-1-len(text))
+	}
+
+	text += ICON_DROPLIST
+
+	cells := AddCells(nil, v.gui.EmFgColor, v.gui.InputBgColor, text)
+	cells_highligted := AddCells(nil, v.SelFgColor, v.gui.InputBgColor, text)
+
+	list := tagParams["list"]
+
+	c := PopoupControl{
+		Type:  C_SELECT,
+		ID:    tagParams["id"],
+		x0:    v.wx,
+		y0:    v.wy,
+		x1:    v.wx + len(cells),
+		y1:    v.wy + 1,
+		Items: strings.Split(list, ","),
+	}
+
+	hs, err := v.AddHotspot(v.wx, v.wy, "droplist "+tagParams["id"], "", cells, cells_highligted)
 
 	if err == nil {
 		v.writeMutex.Lock()
@@ -1235,14 +1287,15 @@ func (v *View) AddInput(tagParams map[string]string) error {
 	}
 
 	c := PopoupControl{
-		Type: PUC_INPUT,
+		Type: C_INPUT,
+		ID:   tagParams["id"],
 		x0:   v.wx,
 		y0:   v.wy,
-		x1:   v.wx + size,
+		x1:   v.wx + size + 1,
 		y1:   v.wy + 2,
 	}
 
-	if v, err := v.gui.SetView(name, v.x0+v.wx, v.y0+v.wy, v.x0+v.wx+size, v.y0+v.wy+2, 0); err != nil {
+	if v, err := v.gui.SetView(name, v.x0+v.wx, v.y0+v.wy, v.x0+v.wx+size+1, v.y0+v.wy+2, 0); err != nil {
 		if !errors.Is(err, ErrUnknownView) {
 			return err
 		}
@@ -1270,54 +1323,6 @@ func (v *View) AddInput(tagParams map[string]string) error {
 	return nil
 }
 
-func (v *View) AddComboBox(tagParams map[string]string) error {
-	name := v.name + "." + tagParams["id"]
-	if _, err := v.gui.View(name); err == nil {
-		return errors.New("input with id " + name + " already exists")
-	}
-
-	size, _ := strconv.Atoi(tagParams["size"])
-	if size == 0 {
-		return errors.New("input tag must have a size attribute")
-	}
-
-	c := PopoupControl{
-		Type: PUC_COMBOBOX,
-		x0:   v.wx,
-		y0:   v.wy,
-		x1:   v.wx + size,
-		y1:   v.wy + 2,
-	}
-
-	if tv, err := v.gui.SetView(name, v.x0+v.wx, v.y0+v.wy, v.x0+v.wx+size-1, v.y0+v.wy+2, 0); err != nil {
-		if !errors.Is(err, ErrUnknownView) {
-			return err
-		}
-		tv.Frame = false
-
-		tv.BgColor = tv.gui.InputBgColor
-		tv.Editor = EditorFunc(PopupNavigation)
-
-		fmt.Fprint(tv, tagParams["value"])
-
-		tv.Editable = false
-		tv.Wrap = false
-		c.View = tv
-	}
-
-	v.Controls = append(v.Controls, &c)
-
-	// write placeholder
-	fmt.Fprint(v, strings.Repeat(" ", size-2))
-
-	tmp := v.BgColor
-	v.BgColor = v.gui.InputBgColor
-	v.AddLink("\ueb6e", "combobox "+tagParams["id"], "")
-	v.BgColor = tmp
-
-	return nil
-}
-
 func (v *View) AddTextInput(tagParams map[string]string) error {
 	name := v.name + "." + tagParams["id"]
 	if _, err := v.gui.View(name); err == nil {
@@ -1335,14 +1340,15 @@ func (v *View) AddTextInput(tagParams map[string]string) error {
 	}
 
 	c := PopoupControl{
-		Type: PUC_TEXT_INPUT,
+		Type: C_TEXT_INPUT,
+		ID:   tagParams["id"],
 		x0:   v.wx,
 		y0:   v.wy,
-		x1:   v.wx + width,
+		x1:   v.wx + width + 1,
 		y1:   v.wy + height + 1,
 	}
 
-	if v, err := v.gui.SetView(name, v.x0+v.wx, v.y0+v.wy, v.x0+v.wx+width, v.y0+v.wy+height+1, 0); err != nil {
+	if v, err := v.gui.SetView(name, v.x0+v.wx, v.y0+v.wy, v.x0+v.wx+width+1, v.y0+v.wy+height+1, 0); err != nil {
 		if !errors.Is(err, ErrUnknownView) {
 			return err
 		}
@@ -1382,21 +1388,22 @@ func PopupNavigation(v *View, key Key, ch rune, mod Modifier) {
 		if v.gui.popup.View.ControlInFocus != -1 {
 			c := v.gui.popup.View.Controls[v.gui.popup.View.ControlInFocus]
 			switch c.Type {
-			case PUC_LINK:
+			case C_LINK:
 				v.gui.popup.View.OnClickHotspot(v.gui.popup.View, c.Hotspot)
-			case PUC_BUTTON:
+			case C_BUTTON:
 				v.gui.popup.View.OnClickHotspot(v.gui.popup.View, c.Hotspot)
-			case PUC_INPUT:
+			case C_INPUT:
 				v.gui.popup.View.FocusNext()
+			case C_SELECT: // TODO
 			}
 		}
 	case KeySpace:
 		if v.gui.popup.View.ControlInFocus != -1 {
 			c := v.gui.popup.View.Controls[v.gui.popup.View.ControlInFocus]
 			switch c.Type {
-			case PUC_LINK:
+			case C_LINK:
 				v.gui.popup.View.OnClickHotspot(v.gui.popup.View, c.Hotspot)
-			case PUC_BUTTON:
+			case C_BUTTON:
 				v.gui.popup.View.OnClickHotspot(v.gui.popup.View, c.Hotspot)
 			}
 		}
@@ -1406,28 +1413,28 @@ func PopupNavigation(v *View, key Key, ch rune, mod Modifier) {
 		v.gui.popup.View.FocusPrev()
 	case KeyArrowRight:
 		if v.ControlInFocus != -1 &&
-			v.Controls[v.ControlInFocus].Type != PUC_INPUT {
+			v.Controls[v.ControlInFocus].Type != C_INPUT {
 			v.FocusNext()
 		} else {
 			DefaultEditor.Edit(v, key, ch, mod)
 		}
 	case KeyArrowLeft:
 		if v.ControlInFocus != -1 &&
-			v.Controls[v.ControlInFocus].Type != PUC_INPUT {
+			v.Controls[v.ControlInFocus].Type != C_INPUT {
 			v.gui.popup.View.FocusPrev()
 		} else {
 			DefaultEditor.Edit(v, key, ch, mod)
 		}
 	case KeyArrowUp:
 		if v.gui.popup.View.ControlInFocus != -1 &&
-			v.gui.popup.View.Controls[v.gui.popup.View.ControlInFocus].Type != PUC_TEXT_INPUT {
+			v.gui.popup.View.Controls[v.gui.popup.View.ControlInFocus].Type != C_TEXT_INPUT {
 			v.gui.popup.View.FocusPrev()
 		} else {
 			DefaultEditor.Edit(v, key, ch, mod)
 		}
 	case KeyArrowDown:
 		if v.gui.popup.View.ControlInFocus != -1 &&
-			v.gui.popup.View.Controls[v.gui.popup.View.ControlInFocus].Type != PUC_TEXT_INPUT {
+			v.gui.popup.View.Controls[v.gui.popup.View.ControlInFocus].Type != C_TEXT_INPUT {
 			v.gui.popup.View.FocusNext()
 		} else {
 			DefaultEditor.Edit(v, key, ch, mod)
@@ -1451,9 +1458,7 @@ func (v *View) SetFocus(i int) {
 	v.ControlInFocus = i % len(v.Controls)
 
 	switch v.Controls[i].Type {
-	case PUC_COMBOBOX:
-		v.SetFocus(i + 1) // skip combobox
-	case PUC_INPUT, PUC_TEXT_INPUT:
+	case C_INPUT, C_TEXT_INPUT:
 		v.gui.SetCurrentView(v.Controls[i].View.name)
 	default:
 		v.gui.currentView = nil
@@ -1466,16 +1471,12 @@ func (v *View) FocusNext() {
 }
 
 func (v *View) FocusPrev() {
-	if v.ControlInFocus >= 1 && v.Controls[v.ControlInFocus-1].Type == PUC_COMBOBOX {
-		v.SetFocus(v.ControlInFocus - 2)
-	} else {
-		v.SetFocus(v.ControlInFocus - 1)
-	}
+	v.SetFocus(v.ControlInFocus - 1)
 }
 
 func (v *View) GetInput(id string) string {
 	for _, c := range v.Controls {
-		if (c.Type == PUC_INPUT || c.Type == PUC_TEXT_INPUT) && c.View != nil && c.View.name == v.name+"."+id {
+		if (c.Type == C_INPUT || c.Type == C_TEXT_INPUT) && c.View != nil && c.View.name == v.name+"."+id {
 			return c.View.Buffer()
 		}
 	}
@@ -1484,7 +1485,7 @@ func (v *View) GetInput(id string) string {
 
 func (v *View) SetInput(id, value string) {
 	for _, c := range v.Controls {
-		if c.Type == PUC_INPUT && c.View != nil && c.View.name == v.name+"."+id {
+		if c.Type == C_INPUT && c.View != nil && c.View.name == v.name+"."+id {
 			c.View.Clear()
 			fmt.Fprint(c.View, value)
 		}
@@ -1494,7 +1495,7 @@ func (v *View) SetInput(id, value string) {
 func (v *View) SetComboList(id string, list []string) {
 	log.Debug().Msgf("SetComboList %s %v", id, list)
 	for _, c := range v.Controls {
-		if c.Type == PUC_COMBOBOX && c.View != nil && c.View.name == v.name+"."+id {
+		if c.Type == C_SELECT && c.View != nil && c.View.name == v.name+"."+id {
 
 			log.Debug().Msgf("Set %s %v", id, list)
 			c.Items = list

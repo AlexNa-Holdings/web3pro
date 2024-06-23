@@ -19,7 +19,7 @@ type MnemonicDriver struct {
 
 func NewMnemonicDriver(s *Signer) (MnemonicDriver, error) {
 
-	if s.Type != "mnemonic" {
+	if s.Type != "mnemonics" {
 		return MnemonicDriver{}, errors.New("invalid signer type")
 	}
 
@@ -37,12 +37,12 @@ func NewMnemonicDriver(s *Signer) (MnemonicDriver, error) {
 func (d MnemonicDriver) GetAddresses(start_from int, count int) ([]address.Address, error) {
 	addresses := []address.Address{}
 
-	mnemonic, err := bip39.NewMnemonic(d.Entropy)
+	mnemonics, err := bip39.NewMnemonic(d.Entropy)
 	if err != nil {
 		return addresses, err
 	}
 
-	seed := bip39.NewSeed(mnemonic, "")
+	seed := bip39.NewSeed(mnemonics, "")
 	masterKey, err := bip32.NewMasterKey(seed)
 	if err != nil {
 		return addresses, err

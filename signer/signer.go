@@ -23,7 +23,7 @@ type Signer struct {
 	P    map[string]string `json:"params"`
 }
 
-var KNOWN_SIGNER_TYPES = []string{"trezor", "ledger", "mnemonic"}
+var KNOWN_SIGNER_TYPES = []string{"trezor", "ledger", "mnemonics"}
 
 func GetType(manufacturer string, product string) string {
 	if product == "TREZOR" {
@@ -43,7 +43,7 @@ func (s *Signer) GetDriver() (SignerDriver, error) {
 	// 	return NewTrezorDriver(s)
 	// case "ledger":
 	// 	return NewLedgerDriver(s)
-	case "mnemonic":
+	case "mnemonics":
 		return NewMnemonicDriver(s)
 	}
 

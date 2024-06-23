@@ -13,12 +13,12 @@ import (
 func DlgSignerCreate(t string, sn string) *gocui.Popup {
 	template := ""
 
-	if t != "mnemonic" {
+	if t != "mnemonics" {
 		template = `
    Name: <i id:name size:32 value:""> 
    Type: ` + t + `
      SN: <i id:sn size:32>
-Copy of: <cb id:copyof size:32 value:""> 
+Copy of: <select id:copyof size:32 value:""> 
 
 <c><b text:Ok tip:"create wallet">  <b text:Cancel>`
 	} else {
@@ -90,7 +90,7 @@ Copy of: <cb id:copyof size:32 value:"">
 						}
 					}
 
-					if t == "mnemonic" {
+					if t == "mnemonics" {
 						if len(sn) == 0 {
 							Notification.ShowError("Mnemonic cannot be empty")
 							break
@@ -98,7 +98,7 @@ Copy of: <cb id:copyof size:32 value:"">
 
 						m, err := bip39.EntropyFromMnemonic(sn)
 						if err != nil {
-							Notification.ShowError("Invalid mnemonic")
+							Notification.ShowError("Invalid mnemonics")
 							break
 						}
 

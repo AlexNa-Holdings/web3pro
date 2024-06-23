@@ -1062,7 +1062,7 @@ func (g *Gui) onKey(ev *gocuiEvent) error {
 
 		if g.popup != nil && g.popup.View != nil && ev.Key == MouseLeft { // if click on input just set focus
 			for i, c := range g.popup.View.Controls {
-				if c.Type == PUC_INPUT {
+				if c.Type == C_INPUT {
 
 					if mx >= g.popup.View.x0+c.x0 &&
 						mx <= g.popup.View.x0+c.x1 &&
