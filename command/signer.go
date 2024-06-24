@@ -51,6 +51,22 @@ func Signer_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 		return "action", &options, subcommand
 	}
 
+	if subcommand == "addresses" && param != "" {
+		if wallet.CurrentWallet != nil {
+			for _, s := range wallet.CurrentWallet.Signers {
+				if s.Name == param {
+
+					for d_id, d := range signer.STANDARD_DERIVATIONS {
+						if cmn.Contains(d.Name, p3) {
+							options = append(options, ui.ACOption{Name: d.Name, Result: command + " " + subcommand + " '" + param + "' " + d_id})
+						}
+					}
+					return "derivation", &options, p3
+				}
+			}
+		}
+	}
+
 	if subcommand == "remove" || subcommand == "edit" || subcommand == "addresses" {
 		if wallet.CurrentWallet != nil {
 			for _, signer := range wallet.CurrentWallet.Signers {
@@ -141,7 +157,23 @@ func Signer_Process(c *Command, input string) {
 
 		ui.Printf("\n")
 	case "addresses":
-		path := p2
+		path_format := ""
+
+		if p2 == "" {
+			path_format = signer.STANDARD_DERIVATIONS["default"].Format
+		} else {
+			if d, ok := signer.STANDARD_DERIVATIONS[p2]; ok {
+				path_format = d.Format
+			} else {
+				if strings.Contains(p2, "%d") {
+					path_format = p2
+				} else {
+					ui.PrintErrorf("Custom derivation path must contain %%d\n")
+					return
+				}
+			}
+		}
+
 		from, _ := strconv.Atoi(p3)
 
 		signer := wallet.CurrentWallet.GetSigner(p1)
@@ -150,7 +182,7 @@ func Signer_Process(c *Command, input string) {
 			return
 		}
 
-		l, err := signer.GetAddresses(path, from, 10)
+		l, err := signer.GetAddresses(path_format, from, 10)
 		if err != nil {
 			ui.PrintErrorf("\nError getting addresses: %v\n", err)
 			return
@@ -160,14 +192,21 @@ func Signer_Process(c *Command, input string) {
 			ui.Printf("%2d: %s ", from+i, s.Address.String())
 
 			if ea := wallet.CurrentWallet.GetAddress(s.Address.String()); ea == nil {
-				ui.Terminal.Screen.AddLink(gocui.ICON_ADD, "command address add '"+p1+"' \""+s.Path+"\"", "Add address to wallet")
+				ui.Terminal.Screen.AddLink(gocui.ICON_ADD, "command address add "+
+					s.Address.String()+
+					" '"+p1+"' \""+s.Path+"\"", "Add address to wallet")
 			} else {
-				ui.Printf(" %s ", ea.Name)
-				ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command address edit '"+s.Address.String()+"'", "Edit address")
+				ui.Printf("%s ", ea.Name)
+				ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command address edit '"+ea.Name+"'", "Edit address")
+				ui.Printf(" ")
+				ui.Terminal.Screen.AddLink(gocui.ICON_DELETE, "command address remove '"+ea.Name+"'", "Remove address")
 			}
 			ui.Printf("\n")
-
 		}
+		ui.Printf("                                         ")
+		ui.Terminal.Screen.AddLink("...more", "command signer addresses '"+p1+"' \""+path_format+"\" "+strconv.Itoa(from+10), "Show more addresses")
+		ui.Printf("\n")
+		ui.Terminal.Screen.ScrollBottom()
 
 	case "add":
 		ui.Gui.ShowPopup(ui.DlgSignerAdd(p1, p2))

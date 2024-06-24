@@ -9,7 +9,6 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/ui"
 	"github.com/AlexNa-Holdings/web3pro/usb"
 	"github.com/AlexNa-Holdings/web3pro/wallet"
-	"github.com/rs/zerolog/log"
 )
 
 var usb_subcommands = []string{"list"}
@@ -106,7 +105,6 @@ func Usb_Process(c *Command, input string) {
 			ui.Printf("   manufacturer: %s\n", u.Manufacturer)
 			ui.Printf("   product: %s\n", u.Product)
 			ui.Printf("   serial: %s\n", sn)
-			log.Debug().Msgf("   %v\n", u)
 			ui.Printf("\n")
 		}
 

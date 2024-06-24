@@ -6,6 +6,7 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/ui"
 	"github.com/AlexNa-Holdings/web3pro/wallet"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 var address_subcommands = []string{"remove", "add", "edit", "list", "use"}
@@ -33,7 +34,12 @@ Commands:
 
 func Address_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 	options := []ui.ACOption{}
-	p := cmn.Split(input)
+
+	if wallet.CurrentWallet == nil {
+		return "", &options, ""
+	}
+
+	p := cmn.SplitN(input, 5)
 	command, subcommand, param := p[0], p[1], p[2]
 
 	if !cmn.IsInArray(blockchain_subcommands, subcommand) {
@@ -46,25 +52,26 @@ func Address_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 	}
 
 	if subcommand == "use" || subcommand == "remove" || subcommand == "edit" {
-		if wallet.CurrentWallet != nil {
-			for _, a := range wallet.CurrentWallet.Addresses {
-				if cmn.Contains(a.Name+a.Address.String(), param) {
-					options = append(options, ui.ACOption{
-						Name:   a.Address.String() + " " + a.Name,
-						Result: command + " " + subcommand + " '" + a.Name + "'"})
-				}
+		for _, a := range wallet.CurrentWallet.Addresses {
+			if cmn.Contains(a.Name+a.Address.String(), param) {
+				options = append(options, ui.ACOption{
+					Name:   a.Address.String() + " " + a.Name,
+					Result: command + " " + subcommand + " '" + a.Name + "'"})
 			}
 		}
 		return "address", &options, subcommand
 	}
 
 	if subcommand == "add" {
-		if wallet.CurrentWallet != nil {
+		address, signer, _ := p[2], p[3], p[4]
+
+		if common.IsHexAddress(address) {
+
 			for _, s := range wallet.CurrentWallet.Signers {
-				if s.IsConnected() && cmn.Contains(s.Name, param) {
+				if s.IsConnected() && cmn.Contains(s.Name, signer) {
 					options = append(options, ui.ACOption{
 						Name:   s.Name,
-						Result: command + " " + subcommand + " '" + s.Name + "'"})
+						Result: command + " " + subcommand + " " + address + " '" + s.Name + "'"})
 				}
 			}
 			return "signer", &options, param
@@ -82,8 +89,8 @@ func Address_Process(c *Command, input string) {
 	}
 
 	//parse command subcommand parameters
-	tokens := cmn.SplitN(input, 4)
-	_, subcommand, p0, p1 := tokens[0], tokens[1], tokens[2], tokens[3]
+	tokens := cmn.SplitN(input, 5)
+	_, subcommand, p0, p1, p2 := tokens[0], tokens[1], tokens[2], tokens[3], tokens[4]
 
 	switch subcommand {
 	case "add":
@@ -92,17 +99,45 @@ func Address_Process(c *Command, input string) {
 			return
 		}
 
-		signer := wallet.CurrentWallet.GetSigner(p0)
+		if !common.IsHexAddress(p0) {
+			ui.PrintErrorf("\nInvalid address\n")
+			return
+		}
+
+		signer := wallet.CurrentWallet.GetSigner(p1)
 		if signer == nil {
 			ui.PrintErrorf("\nSigner not found\n")
 			return
 		}
-
-		ui.Gui.ShowPopup(ui.DlgAddressAdd(p0, p1))
+		ui.Gui.ShowPopup(ui.DlgAddressAdd(p0, p1, p2))
 
 	case "remove":
+		for i, a := range wallet.CurrentWallet.Addresses {
+			if a.Name == p0 {
+				ui.Gui.ShowPopup(ui.DlgConfirm(
+					"Remove address",
+					`
+<c>Are you sure you want to remove address:
+<c> `+a.Name+`
+<c> `+a.Address.String()+"? \n",
+					func() {
+						wallet.CurrentWallet.Addresses = append(wallet.CurrentWallet.Addresses[:i], wallet.CurrentWallet.Addresses[i+1:]...)
+
+						err := wallet.CurrentWallet.Save()
+						if err != nil {
+							ui.PrintErrorf("\nError saving wallet: %v\n", err)
+							return
+						}
+						ui.Notification.Show("Address removed")
+					}))
+
+				return
+			}
+		}
+		ui.PrintErrorf("\nAddress not found: %s\n", p0)
 	case "list":
 	case "edit":
+		ui.Gui.ShowPopup(ui.DlgAddressEdit(p0))
 	default:
 		ui.PrintErrorf("\nInvalid subcommand: %s\n", subcommand)
 	}

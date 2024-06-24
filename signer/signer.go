@@ -25,6 +25,24 @@ type Signer struct {
 	CopyOf string            `json:"copyof"`
 }
 
+var STANDARD_DERIVATIONS = map[string]struct {
+	Name   string
+	Format string
+}{
+	"legacy": {
+		Name:   "Legacy (MEW, MyCrypto) m/44'/60'/0'/0/%d",
+		Format: "m/44'/60'/0'/0/%d",
+	},
+	"ledger-live": {
+		Name:   "Ledger Live m/44'/60'/%d'/0/0",
+		Format: "m/44'/60'/%d'/0/0",
+	},
+	"default": {
+		Name:   "Default m/44'/60'/0'/0/%d",
+		Format: "m/44'/60'/0'/0/%d",
+	},
+}
+
 var KNOWN_SIGNER_TYPES = []string{"trezor", "ledger", "mnemonics"}
 
 func GetType(manufacturer string, product string) string {

@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/AlexNa-Holdings/web3pro/address"
 	"github.com/rs/zerolog/log"
@@ -33,11 +34,11 @@ func NewMnemonicDriver(s *Signer) (MnemonicDriver, error) {
 	}, nil
 }
 
-func (d MnemonicDriver) GetAddresses(path string, start_from int, count int) ([]address.Address, error) {
+func (d MnemonicDriver) GetAddresses(path_format string, start_from int, count int) ([]address.Address, error) {
 	addresses := []address.Address{}
 
-	if path == "" {
-		path = "m/44'/60'/0'/0/"
+	if !strings.Contains(path_format, "%d") {
+		return addresses, errors.New("path_format must contain %d")
 	}
 
 	mnemonics, err := bip39.NewMnemonic(d.Entropy)
@@ -51,12 +52,8 @@ func (d MnemonicDriver) GetAddresses(path string, start_from int, count int) ([]
 		return addresses, err
 	}
 
-	log.Debug().Msgf("mnemonic: %s", mnemonics)
-
 	for i := 0; i < count; i++ {
-		p := fmt.Sprintf(path+"%d", start_from+i)
-
-		log.Debug().Msgf("path: %s", p)
+		p := fmt.Sprintf(path_format, start_from+i)
 
 		key, err := deriveKey(masterKey, p)
 		if err != nil {

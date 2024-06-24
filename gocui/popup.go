@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-
-	"github.com/rs/zerolog/log"
 )
 
 type PUCType int // PopupControlType
@@ -25,7 +23,9 @@ type Popup struct {
 }
 
 func (g *Gui) ShowPopup(p *Popup) {
-	g.popup = p
+	if p != nil {
+		g.popup = p
+	}
 }
 
 func (g *Gui) HidePopup() {
@@ -243,14 +243,8 @@ func DroplistNavigation(v *View, key Key, ch rune, mod Modifier) {
 		if v.gui.popup.DropList != nil {
 			index := v.gui.popup.DropList.cy
 
-			log.Debug().Msgf("Selected index: %d", index)
-
 			for i, c := range v.gui.popup.View.Controls {
-
-				log.Debug().Msgf("Control: %s name: %s", c.ID, v.name)
 				if c.Type == C_SELECT && strings.HasSuffix(v.name, "."+c.ID+".list") {
-
-					log.Debug().Msgf("Setting input: %s to %s", c.ID, c.Items[index])
 					v.gui.popup.View.SetInput(c.ID, c.Items[index])
 					v.gui.DeleteView(v.name)
 					v.gui.popup.DropList = nil
@@ -313,7 +307,7 @@ func (p *Popup) ParseTemplate() error {
 					return errors.New("center tag must be at the beginning of the line")
 				}
 
-				n := (p.Width-2-p.calcLineWidth(line))/2 + 1
+				n := (p.Width - 2 - p.calcLineWidth(line)) / 2
 				for i := 0; i < n; i++ {
 					fmt.Fprint(p.View, " ")
 				}
