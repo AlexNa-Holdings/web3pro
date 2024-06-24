@@ -11,7 +11,7 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/wallet"
 )
 
-var signer_subcommands = []string{"remove", "add", "edit", "list"}
+var signer_subcommands = []string{"remove", "promote", "add", "edit", "list"}
 
 func NewSignerCommand() *Command {
 	return &Command{
@@ -23,9 +23,11 @@ Usage: signer [COMMAND]
 Manage signers
 
 Commands:
-  add    - Add new signer
-  list   - List signers
-  remove - Remove signer  
+  add     - Add new signer
+  list    - List signers
+  remove  - Remove signer  
+  edit    - Edit signer
+  promote - Promote copy to main signer
 		`,
 		Help:             `Manage signers`,
 		Process:          Signer_Process,
@@ -51,6 +53,18 @@ func Signer_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 		if wallet.CurrentWallet != nil {
 			for _, signer := range wallet.CurrentWallet.Signers {
 				if cmn.Contains(signer.Name, param) {
+					options = append(options, ui.ACOption{
+						Name: signer.Name, Result: command + " " + subcommand + " '" + signer.Name + "'"})
+				}
+			}
+		}
+		return "signer", &options, subcommand
+	}
+
+	if subcommand == "promote" {
+		if wallet.CurrentWallet != nil {
+			for _, signer := range wallet.CurrentWallet.Signers {
+				if signer.CopyOf != "" && cmn.Contains(signer.Name, param) {
 					options = append(options, ui.ACOption{
 						Name: signer.Name, Result: command + " " + subcommand + " '" + signer.Name + "'"})
 				}
@@ -98,18 +112,35 @@ func Signer_Process(c *Command, input string) {
 
 	switch subcommand {
 	case "list", "":
-		for _, signer := range wallet.CurrentWallet.Signers {
-			ui.Printf("%-10s %s ", signer.Type, signer.Name)
+		wallet.CurrentWallet.SortSigners()
+
+		ui.Printf("List of signers:\n")
+
+		for i, signer := range wallet.CurrentWallet.Signers {
+			if signer.CopyOf == "" {
+				ui.Printf("%-13s %-8s ", signer.Name, signer.Type)
+			} else {
+				if i == len(wallet.CurrentWallet.Signers)-1 || wallet.CurrentWallet.Signers[i+1].CopyOf != signer.CopyOf {
+					ui.Printf("╰─ ")
+				} else {
+					ui.Printf("├─ ")
+				}
+				ui.Printf("%-10s %-8s ", signer.Name, signer.Type)
+			}
 			ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command s edit '"+signer.Name+"'", "Edit signer '"+signer.Name+"'")
 			ui.Printf(" ")
 			ui.Terminal.Screen.AddLink(gocui.ICON_DELETE, "command s remove '"+signer.Name+"'", "Remove signer '"+signer.Name+"'")
+			if signer.CopyOf != "" {
+				ui.Printf(" ")
+				ui.Terminal.Screen.AddLink(gocui.ICON_PROMOTE, "command s promote "+signer.Name, "Promote copy to main signer")
+			}
 			ui.Printf("\n")
 		}
 
 		ui.Printf("\n")
 
 	case "add":
-		ui.Gui.ShowPopup(ui.DlgSignerCreate(p1, p2))
+		ui.Gui.ShowPopup(ui.DlgSignerAdd(p1, p2))
 
 	case "remove":
 		for i, signer := range wallet.CurrentWallet.Signers {
@@ -134,6 +165,53 @@ func Signer_Process(c *Command, input string) {
 				return
 			}
 		}
+
+	case "promote":
+		s := wallet.CurrentWallet.GetSigner(p1)
+		if s == nil {
+			ui.PrintErrorf("Signer not found: %s\n", p1)
+			return
+		}
+
+		if s.CopyOf == "" {
+			ui.PrintErrorf("Signer %s is not a copy\n", p1)
+			return
+		}
+
+		m := wallet.CurrentWallet.GetSigner(s.CopyOf)
+		if m == nil {
+			ui.PrintErrorf("Main signer not found: %s\n", s.CopyOf)
+			return
+		}
+
+		ui.Gui.ShowPopup(ui.DlgConfirm(
+			"Promote signer",
+			`Are you sure you want to promote signer '`+p1+"' to main signer?\n",
+			func() {
+				// move all the addresses to the new main signer
+				for _, a := range wallet.CurrentWallet.Addresses {
+					if a.Signer == m.Name {
+						a.Signer = p1
+					}
+				}
+
+				m.CopyOf = s.Name
+				s.CopyOf = ""
+				// switch all the copies
+				for _, signer := range wallet.CurrentWallet.Signers {
+					if signer.CopyOf == m.Name {
+						signer.CopyOf = p1
+					}
+				}
+
+				err := wallet.CurrentWallet.Save()
+				if err != nil {
+					ui.PrintErrorf("\nFailed to save wallet: %s\n", err)
+					return
+				}
+
+				ui.Printf("\nSigner %s promoted\n", p1)
+			}))
 
 	case "edit":
 		for _, signer := range wallet.CurrentWallet.Signers {

@@ -16,7 +16,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/mattn/go-runewidth"
-	"github.com/rs/zerolog/log"
 )
 
 // Constants for overlapping edges
@@ -28,10 +27,11 @@ const (
 )
 
 const (
-	ICON_DELETE   = "\uf00d"
+	ICON_DELETE   = "\U0000f057" //"\uf00d"
 	ICON_EDIT     = "\uf044"
 	ICON_COPY     = "\uf0c5"
 	ICON_DROPLIST = "\ueb6e"
+	ICON_PROMOTE  = "\ued65"
 )
 
 var (
@@ -55,6 +55,7 @@ type PopoupControl struct {
 	*View
 	*Hotspot
 	Items []string
+	Value string
 }
 
 // A View is a window. It maintains its own internal buffer and cursor
@@ -76,6 +77,7 @@ type View struct {
 	activeHotspot  *Hotspot                   // AN - the currently active hotspot
 	OnOverHotspot  func(v *View, hs *Hotspot) // AN - function to be called when the mouse is over a hotspot
 	OnClickHotspot func(v *View, hs *Hotspot) // AN - function to be called when the mouse is clicked on a hotspot
+	DropList       *View                      // AN - the view that is used for the combo list
 
 	// readBuffer is used for storing unread bytes
 	readBuffer []byte
@@ -1245,16 +1247,16 @@ func (v *View) AddSelect(tagParams map[string]string) error {
 		text += strings.Repeat(" ", size-1-len(text))
 	}
 
-	text += ICON_DROPLIST
-
-	cells := AddCells(nil, v.gui.EmFgColor, v.gui.InputBgColor, text)
-	cells_highligted := AddCells(nil, v.SelFgColor, v.gui.InputBgColor, text)
+	cells := AddCells(nil, v.FgColor, v.gui.InputBgColor, text)
+	cells = AddCells(cells, v.gui.EmFgColor, v.gui.InputBgColor, ICON_DROPLIST)
+	cells_highligted := AddCells(nil, v.SelFgColor, v.gui.InputBgColor, text+ICON_DROPLIST)
 
 	list := tagParams["list"]
 
 	c := PopoupControl{
 		Type:  C_SELECT,
 		ID:    tagParams["id"],
+		Value: value,
 		x0:    v.wx,
 		y0:    v.wy,
 		x1:    v.wx + len(cells),
@@ -1394,7 +1396,8 @@ func PopupNavigation(v *View, key Key, ch rune, mod Modifier) {
 				v.gui.popup.View.OnClickHotspot(v.gui.popup.View, c.Hotspot)
 			case C_INPUT:
 				v.gui.popup.View.FocusNext()
-			case C_SELECT: // TODO
+			case C_SELECT:
+				v.gui.popup.View.ShowDropList(c)
 			}
 		}
 	case KeySpace:
@@ -1448,6 +1451,11 @@ func PopupNavigation(v *View, key Key, ch rune, mod Modifier) {
 
 func (v *View) SetFocus(i int) {
 
+	if v.DropList != nil {
+		v.gui.DeleteView(v.DropList.name)
+		v.DropList = nil
+	}
+
 	L := len(v.Controls)
 	if L == 0 {
 		return
@@ -1476,8 +1484,15 @@ func (v *View) FocusPrev() {
 
 func (v *View) GetInput(id string) string {
 	for _, c := range v.Controls {
-		if (c.Type == C_INPUT || c.Type == C_TEXT_INPUT) && c.View != nil && c.View.name == v.name+"."+id {
-			return c.View.Buffer()
+		if c.ID == id {
+			switch c.Type {
+			case C_INPUT, C_TEXT_INPUT:
+				if c.View != nil {
+					return c.View.Buffer()
+				}
+			case C_SELECT:
+				return c.Value
+			}
 		}
 	}
 	return ""
@@ -1485,19 +1500,37 @@ func (v *View) GetInput(id string) string {
 
 func (v *View) SetInput(id, value string) {
 	for _, c := range v.Controls {
-		if c.Type == C_INPUT && c.View != nil && c.View.name == v.name+"."+id {
-			c.View.Clear()
-			fmt.Fprint(c.View, value)
+		if c.ID == id {
+			switch c.Type {
+			case C_INPUT, C_TEXT_INPUT:
+				c.View.Clear()
+				fmt.Fprint(c.View, value)
+			case C_SELECT:
+				c.Value = value
+				text := value
+				size := c.x1 - c.x0
+
+				if len(text) > size-1 {
+					text = text[:size-1]
+				}
+
+				if len(text) < size-1 {
+					text += strings.Repeat(" ", size-1-len(text))
+				}
+
+				c.Cells = AddCells(nil, v.FgColor, v.gui.InputBgColor, text)
+				c.Cells = AddCells(c.Cells, v.gui.EmFgColor, v.gui.InputBgColor, ICON_DROPLIST)
+				c.CellsHighligted = AddCells(nil, v.SelFgColor, v.gui.InputBgColor, text+ICON_DROPLIST)
+
+				v.tainted = true
+			}
 		}
 	}
 }
 
-func (v *View) SetComboList(id string, list []string) {
-	log.Debug().Msgf("SetComboList %s %v", id, list)
+func (v *View) SetList(id string, list []string) {
 	for _, c := range v.Controls {
-		if c.Type == C_SELECT && c.View != nil && c.View.name == v.name+"."+id {
-
-			log.Debug().Msgf("Set %s %v", id, list)
+		if c.Type == C_SELECT && c.ID == id {
 			c.Items = list
 			break
 		}

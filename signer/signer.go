@@ -17,10 +17,11 @@ type SignerDriver interface {
 }
 
 type Signer struct {
-	Name string            `json:"name"`
-	Type string            `json:"type"`
-	SN   string            `json:"sn"`
-	P    map[string]string `json:"params"`
+	Name   string            `json:"name"`
+	Type   string            `json:"type"`
+	SN     string            `json:"sn"`
+	P      map[string]string `json:"params"`
+	CopyOf string            `json:"copyof"`
 }
 
 var KNOWN_SIGNER_TYPES = []string{"trezor", "ledger", "mnemonics"}

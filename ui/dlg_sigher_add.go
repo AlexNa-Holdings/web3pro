@@ -2,7 +2,6 @@ package ui
 
 import (
 	"encoding/hex"
-	"strconv"
 
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/signer"
@@ -10,7 +9,7 @@ import (
 	"github.com/tyler-smith/go-bip39"
 )
 
-func DlgSignerCreate(t string, sn string) *gocui.Popup {
+func DlgSignerAdd(t string, sn string) *gocui.Popup {
 	template := ""
 
 	if t != "mnemonics" {
@@ -50,17 +49,14 @@ Copy of: <select id:copyof size:32 value:"">
 			v.SetInput("name", "")
 			v.SetInput("sn", sn)
 
-			names := []string{}
+			names := []string{""}
 			for _, signer := range wallet.CurrentWallet.Signers {
-				names = append(names, signer.Name)
+				if signer.CopyOf == "" && signer.Type != "mnemonics" {
+					names = append(names, signer.Name)
+				}
 			}
 
-			// debug
-			for i := 0; i < 8; i++ {
-				names = append(names, "name"+strconv.Itoa(i))
-			}
-
-			v.SetComboList("copyof", names)
+			v.SetList("copyof", names)
 		},
 		OnClose: func(v *gocui.View) {
 			Gui.SetCurrentView("terminal.input")
@@ -77,6 +73,7 @@ Copy of: <select id:copyof size:32 value:"">
 
 					name := v.GetInput("name")
 					sn := v.GetInput("sn")
+					copyof := v.GetInput("copyof")
 
 					if len(name) == 0 {
 						Notification.ShowError("Name cannot be empty")
@@ -86,6 +83,21 @@ Copy of: <select id:copyof size:32 value:"">
 					for _, signer := range wallet.CurrentWallet.Signers {
 						if signer.Name == name {
 							Notification.ShowErrorf("Signer %s already exists", name)
+							break
+						}
+					}
+
+					if copyof != "" {
+						found := false
+						for _, signer := range wallet.CurrentWallet.Signers {
+							if signer.Name == copyof && signer.CopyOf == "" && signer.Type != "mnemonics" {
+								found = true
+								break
+							}
+						}
+
+						if !found {
+							Notification.ShowErrorf("Non mnemonics signer %s not found", copyof)
 							break
 						}
 					}
@@ -104,14 +116,28 @@ Copy of: <select id:copyof size:32 value:"">
 
 						sn = hex.EncodeToString(m[:])
 
-					} else {
+					} else { // not mnemonics
 						if len(sn) == 0 {
 							Notification.ShowError("SN cannot be empty")
 							break
 						}
+
+						for _, signer := range wallet.CurrentWallet.Signers {
+							if t == signer.Type && signer.SN == sn {
+								Notification.ShowErrorf("Signer with SN %s already exists", sn)
+								return
+							}
+						}
 					}
 
-					wallet.CurrentWallet.Signers = append(wallet.CurrentWallet.Signers, &signer.Signer{Name: name, Type: t, SN: sn})
+					wallet.CurrentWallet.Signers = append(wallet.CurrentWallet.Signers, &signer.Signer{
+						Name:   name,
+						Type:   t,
+						SN:     sn,
+						CopyOf: copyof,
+					})
+
+					wallet.CurrentWallet.SortSigners()
 					err := wallet.CurrentWallet.Save()
 					if err != nil {
 						Notification.ShowErrorf("Error creating signer: %s", err)

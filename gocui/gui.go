@@ -630,27 +630,27 @@ func (g *Gui) flush() error {
 		if v.Frame {
 			var fgColor, bgColor, frameColor Attribute
 
-			if g.Highlight && v == g.currentView {
-				fgColor = v.SelFgColor
-				bgColor = v.SelBgColor
-				frameColor = g.SelFrameColor
-			} else {
-				bgColor = g.BgColor
-				if v.TitleColor != ColorDefault {
-					fgColor = v.TitleColor
-				} else {
-					fgColor = g.FgColor
-				}
-				if v.FrameColor != ColorDefault {
-					frameColor = v.FrameColor
-				} else {
-					frameColor = g.FrameColor
-				}
-			}
+			// AN
+			// if g.Highlight && v == g.currentView {
+			// 	fgColor = v.SelFgColor
+			// 	bgColor = v.SelBgColor
+			// 	frameColor = g.SelFrameColor
+			// } else{
+			// bgColor = g.BgColor
+			// if v.TitleColor != ColorDefault {
+			// 	fgColor = v.TitleColor
+			// } else {
+			// 	fgColor = g.FgColor
+			// }
+			// if v.FrameColor != ColorDefault {
+			// 	frameColor = v.FrameColor
+			// } else {
+			// 	frameColor = g.FrameColor
+			// }
+			// }
 
-			bgColor = bgColor // AN
-
-			stBgColor := v.SubTitleBgColor
+			fgColor = v.FgColor
+			frameColor = v.FrameColor
 
 			if err := g.drawFrameEdges(v, frameColor, v.BgColor); err != nil {
 				return err
@@ -659,7 +659,7 @@ func (g *Gui) flush() error {
 				return err
 			}
 			if v.Title != "" {
-				if err := g.drawTitle(v, fgColor, v.BgColor, stBgColor); err != nil {
+				if err := g.drawTitle(v, fgColor, v.BgColor, v.SubTitleBgColor); err != nil {
 					return err
 				}
 			}
@@ -1026,12 +1026,14 @@ func (g *Gui) onKey(ev *gocuiEvent) error {
 			break
 		}
 		if g.currentView != nil {
-			if g.currentView.Editable && g.currentView.Editor != nil {
-				g.currentView.Editor.Edit(g.currentView, Key(ev.Key), ev.Ch, Modifier(ev.Mod))
-			}
+			g.currentView.Editor.Edit(g.currentView, Key(ev.Key), ev.Ch, Modifier(ev.Mod))
 		} else {
 			if g.popup != nil && g.popup.View != nil && len(g.popup.View.Controls) > 0 {
-				PopupNavigation(g.popup.View, Key(ev.Key), ev.Ch, Modifier(ev.Mod))
+				if g.popup.View.DropList != nil {
+					g.popup.View.DropList.Editor.Edit(g.popup.View, Key(ev.Key), ev.Ch, Modifier(ev.Mod))
+				} else {
+					PopupNavigation(g.popup.View, Key(ev.Key), ev.Ch, Modifier(ev.Mod))
+				}
 			}
 		}
 	case eventMouse:
@@ -1061,6 +1063,18 @@ func (g *Gui) onKey(ev *gocuiEvent) error {
 		}
 
 		if g.popup != nil && g.popup.View != nil && ev.Key == MouseLeft { // if click on input just set focus
+
+			if g.popup.View.DropList != nil {
+				if mx >= g.popup.View.DropList.x0 &&
+					mx <= g.popup.View.DropList.x1 &&
+					my >= g.popup.View.DropList.y0 &&
+					my < g.popup.View.DropList.y1 {
+
+					g.popup.View.DropList.Editor.Edit(g.popup.View.DropList, Key(ev.Key), ev.Ch, Modifier(ev.Mod))
+					return nil
+				}
+			}
+
 			for i, c := range g.popup.View.Controls {
 				if c.Type == C_INPUT {
 
@@ -1073,6 +1087,7 @@ func (g *Gui) onKey(ev *gocuiEvent) error {
 					}
 				}
 			}
+
 		}
 
 		v, err := g.ViewByPosition(mx, my)

@@ -22,7 +22,6 @@ type Popup struct {
 	OnClickHotspot  func(v *View, hs *Hotspot)
 	OnClose         func(v *View)
 	OnOpen          func(v *View)
-	ComboList       *View
 }
 
 func (g *Gui) ShowPopup(p *Popup) {
@@ -49,9 +48,9 @@ func (g *Gui) HidePopup() {
 			}
 		}
 
-		if g.popup.ComboList != nil {
-			g.DeleteView(g.popup.ComboList.name)
-			g.popup.ComboList = nil
+		if g.popup.DropList != nil {
+			g.DeleteView(g.popup.DropList.name)
+			g.popup.DropList = nil
 		}
 
 		g.DeleteView(g.popup.Name)
@@ -112,64 +111,7 @@ func (p *Popup) Layout(g *Gui) error {
 				if len(params) >= 2 && params[0] == "droplist" {
 					for _, c := range v.Controls {
 						if c.Type == C_SELECT && c.ID == params[1] {
-
-							if p.ComboList != nil {
-								g.DeleteView(p.ComboList.name)
-								p.ComboList = nil
-							} else {
-								width := 8 // minimum width
-
-								for _, item := range c.Items {
-									if len(item) > width {
-										width = len(item) + 2
-									}
-								}
-
-								if width > c.x1-c.x0 {
-									width = c.x1 - c.x0
-								}
-
-								height := len(c.Items)
-								if height > v.y1-v.y0-1 {
-									height = v.y1 - v.y0 - 1
-								}
-
-								if height == 0 {
-									height = 1
-								}
-
-								height += 1
-
-								x0 := v.x0 + c.x1 - width
-								if x0 < v.x0 {
-									x0 = v.x0
-								}
-
-								x1 := v.x0 + c.x1
-
-								y0 := v.y0 + c.y1
-								if y0+height >= v.y1 {
-									y0 = v.y1 - height
-								}
-
-								y1 := y0 + height
-								if y1 >= v.y1 {
-									y1 = v.y1
-								}
-
-								if p.ComboList, err = g.SetView(v.name+"."+c.ID+".list", x0, y0, x1, y1, 0); err != nil {
-									p.ComboList.Frame = true
-									p.ComboList.Editable = false
-									p.ComboList.Wrap = false
-									p.ComboList.Highlight = true
-									p.ComboList.ScrollBar = true
-									p.FrameColor = g.EmFgColor
-									for _, item := range c.Items {
-										fmt.Fprintln(p.ComboList, item)
-									}
-									g.SetCurrentView(p.ComboList.name)
-								}
-							}
+							p.ShowDropList(c)
 						}
 					}
 				}
@@ -213,11 +155,140 @@ func (p *Popup) Layout(g *Gui) error {
 		}
 	}
 
-	if p.ComboList != nil {
-		g.SetViewOnTop(p.ComboList.name)
+	if p.DropList != nil {
+		g.SetViewOnTop(p.DropList.name)
 	}
 
 	return nil
+}
+
+func (v *View) ShowDropList(c *PopoupControl) {
+	var err error
+	g := v.gui
+
+	if v.DropList != nil {
+		g.DeleteView(v.DropList.name)
+		v.DropList = nil
+		screen.HideCursor()
+
+	} else {
+		width := 8 // minimum width
+
+		for _, item := range c.Items {
+			if len(item) > width {
+				width = len(item) + 2
+			}
+		}
+
+		if width > c.x1-c.x0 {
+			width = c.x1 - c.x0
+		}
+
+		height := len(c.Items)
+		if height > v.y1-v.y0-1 {
+			height = v.y1 - v.y0 - 1
+		}
+
+		if height == 0 {
+			height = 1
+		}
+
+		height += 1
+
+		x0 := v.x0 + c.x1 - width
+		if x0 < v.x0 {
+			x0 = v.x0
+		}
+
+		x1 := v.x0 + c.x1
+
+		y0 := v.y0 + c.y1
+		if y0+height >= v.y1 {
+			y0 = v.y1 - height
+		}
+
+		y1 := y0 + height
+		if y1 >= v.y1 {
+			y1 = v.y1
+		}
+
+		if v.DropList, err = g.SetView(v.name+"."+c.ID+".list", x0, y0, x1, y1, 0); err != nil {
+			v.DropList.Frame = true
+			v.DropList.Editable = false
+			v.DropList.Wrap = false
+			v.DropList.Highlight = true
+			v.DropList.ScrollBar = true
+			v.DropList.FrameColor = g.EmFgColor
+			v.DropList.Editor = EditorFunc(DroplistNavigation)
+			for i, item := range c.Items {
+				fmt.Fprint(v.DropList, item)
+				if i < len(c.Items)-1 {
+					fmt.Fprintln(v.DropList)
+				}
+			}
+			g.SetCurrentView(v.DropList.name)
+		}
+	}
+}
+func DroplistNavigation(v *View, key Key, ch rune, mod Modifier) {
+
+	if v.gui.popup == nil || v.gui.popup.View == nil {
+		return
+	}
+	switch key {
+	case KeyEsc:
+		v.gui.popup.gui.HidePopup()
+	case KeyEnter, KeySpace, MouseLeft:
+
+		if v.gui.popup.DropList != nil {
+			index := v.gui.popup.DropList.cy
+
+			log.Debug().Msgf("Selected index: %d", index)
+
+			for i, c := range v.gui.popup.View.Controls {
+
+				log.Debug().Msgf("Control: %s name: %s", c.ID, v.name)
+				if c.Type == C_SELECT && strings.HasSuffix(v.name, "."+c.ID+".list") {
+
+					log.Debug().Msgf("Setting input: %s to %s", c.ID, c.Items[index])
+					v.gui.popup.View.SetInput(c.ID, c.Items[index])
+					v.gui.DeleteView(v.name)
+					v.gui.popup.DropList = nil
+					v.gui.popup.View.tainted = true
+					if key == KeyEnter {
+						v.gui.popup.FocusNext()
+					} else {
+						v.gui.popup.View.SetFocus(i)
+					}
+
+					break
+				}
+			}
+		}
+	case KeyTab:
+		v.gui.popup.View.FocusNext()
+	case KeyBacktab:
+		v.gui.popup.View.FocusPrev()
+	case KeyArrowRight:
+		if v.ControlInFocus != -1 &&
+			v.Controls[v.ControlInFocus].Type != C_INPUT {
+			v.FocusNext()
+		} else {
+			DefaultEditor.Edit(v, key, ch, mod)
+		}
+	case KeyArrowLeft:
+		if v.ControlInFocus != -1 &&
+			v.Controls[v.ControlInFocus].Type != C_INPUT {
+			v.gui.popup.View.FocusPrev()
+		} else {
+			DefaultEditor.Edit(v, key, ch, mod)
+		}
+	case KeyArrowUp:
+		v.MoveCursor(0, -1)
+	case KeyArrowDown:
+		v.MoveCursor(0, 1)
+	default:
+	}
 }
 
 func (p *Popup) ParseTemplate() error {
@@ -261,15 +332,12 @@ func (p *Popup) ParseTemplate() error {
 
 func (p *Popup) calcLineWidth(line string) int {
 	l := len(line)
-	log.Debug().Msgf("line: '%s'", line)
 	re := regexp.MustCompile(`<(\w+)((?:\s+\w+(?::(?:\w+|"[^"]*"))?\s*)*)>`)
 	matches := re.FindAllStringIndex(line, -1)
 	for _, match := range matches {
 		tag := line[match[0]:match[1]]
-		log.Debug().Msgf("tag: '%s'", tag)
 		tagName, tagParams := ParseTag(tag)
 		l = l - len(tag) + GetTagLength(tagName, tagParams)
 	}
-	log.Debug().Msgf("len: %d", l)
 	return l
 }
