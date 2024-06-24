@@ -118,14 +118,14 @@ func Signer_Process(c *Command, input string) {
 
 		for i, signer := range wallet.CurrentWallet.Signers {
 			if signer.CopyOf == "" {
-				ui.Printf("%-13s %-8s ", signer.Name, signer.Type)
+				ui.Printf("%-13s %-9s ", signer.Name, signer.Type)
 			} else {
 				if i == len(wallet.CurrentWallet.Signers)-1 || wallet.CurrentWallet.Signers[i+1].CopyOf != signer.CopyOf {
 					ui.Printf("╰─ ")
 				} else {
 					ui.Printf("├─ ")
 				}
-				ui.Printf("%-10s %-8s ", signer.Name, signer.Type)
+				ui.Printf("%-10s %-9s ", signer.Name, signer.Type)
 			}
 			ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command s edit '"+signer.Name+"'", "Edit signer '"+signer.Name+"'")
 			ui.Printf(" ")

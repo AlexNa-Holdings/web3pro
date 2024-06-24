@@ -13,7 +13,6 @@ import (
 
 type MnemonicDriver struct {
 	Entropy []byte
-	SN      string
 	*Signer
 }
 
@@ -29,7 +28,6 @@ func NewMnemonicDriver(s *Signer) (MnemonicDriver, error) {
 	}
 
 	return MnemonicDriver{
-		SN:      s.SN,
 		Entropy: entropy,
 	}, nil
 }
@@ -66,4 +64,8 @@ func (d MnemonicDriver) GetAddresses(start_from int, count int) ([]address.Addre
 	}
 
 	return addresses, nil
+}
+
+func (d MnemonicDriver) IsConnected() bool {
+	return true
 }

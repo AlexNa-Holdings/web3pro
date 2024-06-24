@@ -2,6 +2,7 @@ package ui
 
 import (
 	"encoding/hex"
+	"strings"
 
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/signer"
@@ -22,10 +23,11 @@ Copy of: <select id:copyof size:32 value:"">
 <c><b text:Ok tip:"create wallet">  <b text:Cancel>`
 	} else {
 		template = `
-     Name: <i id:name size:32 value:"">
+     Name: <i id:name size:32 value:""> 
      Type: ` + t + `
- Mnemonic: <t id:sn width:32 height:8>
+ Mnemonic: <t id:sn width:32 height:8> 
 
+ 
 
 
 
@@ -71,9 +73,9 @@ Copy of: <select id:copyof size:32 value:"">
 						break
 					}
 
-					name := v.GetInput("name")
-					sn := v.GetInput("sn")
-					copyof := v.GetInput("copyof")
+					name := strings.TrimSpace(v.GetInput("name"))
+					sn := strings.TrimSpace(v.GetInput("sn"))
+					copyof := strings.TrimSpace(v.GetInput("copyof"))
 
 					if len(name) == 0 {
 						Notification.ShowError("Name cannot be empty")
@@ -83,7 +85,7 @@ Copy of: <select id:copyof size:32 value:"">
 					for _, signer := range wallet.CurrentWallet.Signers {
 						if signer.Name == name {
 							Notification.ShowErrorf("Signer %s already exists", name)
-							break
+							return
 						}
 					}
 

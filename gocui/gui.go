@@ -1076,7 +1076,7 @@ func (g *Gui) onKey(ev *gocuiEvent) error {
 			}
 
 			for i, c := range g.popup.View.Controls {
-				if c.Type == C_INPUT {
+				if c.Type == C_INPUT || c.Type == C_TEXT_INPUT {
 
 					if mx >= g.popup.View.x0+c.x0 &&
 						mx <= g.popup.View.x0+c.x1 &&

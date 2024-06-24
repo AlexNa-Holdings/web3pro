@@ -3,16 +3,17 @@ package signer
 import (
 	"crypto/ecdsa"
 	"errors"
-	"log"
 
 	"github.com/AlexNa-Holdings/web3pro/address"
 	"github.com/ava-labs/coreth/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/rs/zerolog/log"
 	"github.com/tyler-smith/go-bip32"
 )
 
 type SignerDriver interface {
+	IsConnected() bool
 	GetAddresses(start_from int, count int) ([]address.Address, error)
 }
 
@@ -40,15 +41,15 @@ func GetType(manufacturer string, product string) string {
 
 func (s *Signer) GetDriver() (SignerDriver, error) {
 	switch s.Type {
-	// case "trezor":
-	// 	return NewTrezorDriver(s)
+	case "trezor":
+		return NewTrezorDriver(s)
 	// case "ledger":
 	// 	return NewLedgerDriver(s)
 	case "mnemonics":
 		return NewMnemonicDriver(s)
 	}
 
-	return nil, errors.New("Unknown signer type")
+	return nil, errors.New("unknown signer type")
 }
 
 func (s *Signer) GetAddresses(start_from int, count int) ([]address.Address, error) {
@@ -60,6 +61,16 @@ func (s *Signer) GetAddresses(start_from int, count int) ([]address.Address, err
 
 	return driver.GetAddresses(start_from, count)
 
+}
+
+func (s *Signer) IsConnected() bool {
+	driver, err := s.GetDriver()
+	if err != nil {
+		log.Error().Err(err).Msgf("Error getting driver: %s (%s)", s.Name, s.Type)
+		return false
+	}
+
+	return driver.IsConnected()
 }
 
 // deriveKey derives a key from the master key using the specified path
@@ -93,7 +104,7 @@ func getAddressFromKey(key *ecdsa.PrivateKey) common.Address {
 	publicKey := key.Public()
 	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
 	if !ok {
-		log.Fatal("error casting public key to ECDSA")
+		log.Fatal().Msg("error casting public key to ECDSA")
 	}
 
 	return crypto.PubkeyToAddress(*publicKeyECDSA)

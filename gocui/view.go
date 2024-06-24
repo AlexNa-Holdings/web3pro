@@ -1367,6 +1367,7 @@ func (v *View) AddTextInput(tagParams map[string]string) error {
 
 		v.Editable = true
 		v.Wrap = true
+		v.Autoscroll = true
 		c.View = v
 	}
 
@@ -1398,6 +1399,8 @@ func PopupNavigation(v *View, key Key, ch rune, mod Modifier) {
 				v.gui.popup.View.FocusNext()
 			case C_SELECT:
 				v.gui.popup.View.ShowDropList(c)
+			case C_TEXT_INPUT:
+				DefaultEditor.Edit(v, key, ch, mod)
 			}
 		}
 	case KeySpace:
@@ -1408,6 +1411,8 @@ func PopupNavigation(v *View, key Key, ch rune, mod Modifier) {
 				v.gui.popup.View.OnClickHotspot(v.gui.popup.View, c.Hotspot)
 			case C_BUTTON:
 				v.gui.popup.View.OnClickHotspot(v.gui.popup.View, c.Hotspot)
+			default:
+				DefaultEditor.Edit(v, key, ch, mod)
 			}
 		}
 	case KeyTab:
@@ -1443,9 +1448,7 @@ func PopupNavigation(v *View, key Key, ch rune, mod Modifier) {
 			DefaultEditor.Edit(v, key, ch, mod)
 		}
 	default:
-		if v.Editable {
-			DefaultEditor.Edit(v, key, ch, mod)
-		}
+		DefaultEditor.Edit(v, key, ch, mod)
 	}
 }
 

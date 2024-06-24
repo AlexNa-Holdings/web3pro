@@ -62,7 +62,7 @@ func Address_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 	if subcommand == "add" {
 		if wallet.CurrentWallet != nil {
 			for _, s := range wallet.CurrentWallet.Signers {
-				if cmn.Contains(s.Name, param) {
+				if s.IsConnected() && cmn.Contains(s.Name, param) {
 					options = append(options, ui.ACOption{
 						Name:   s.Name,
 						Result: command + " " + subcommand + " '" + s.Name + "'"})
