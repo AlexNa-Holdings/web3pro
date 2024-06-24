@@ -14,7 +14,7 @@ import (
 
 type SignerDriver interface {
 	IsConnected() bool
-	GetAddresses(start_from int, count int) ([]address.Address, error)
+	GetAddresses(path string, start_from int, count int) ([]address.Address, error)
 }
 
 type Signer struct {
@@ -52,14 +52,14 @@ func (s *Signer) GetDriver() (SignerDriver, error) {
 	return nil, errors.New("unknown signer type")
 }
 
-func (s *Signer) GetAddresses(start_from int, count int) ([]address.Address, error) {
+func (s *Signer) GetAddresses(path string, start_from int, count int) ([]address.Address, error) {
 
 	driver, err := s.GetDriver()
 	if err != nil {
 		return []address.Address{}, err
 	}
 
-	return driver.GetAddresses(start_from, count)
+	return driver.GetAddresses(path, start_from, count)
 
 }
 

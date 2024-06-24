@@ -1,7 +1,6 @@
 package command
 
 import (
-	"strconv"
 	"strings"
 
 	"github.com/AlexNa-Holdings/web3pro/cmn"
@@ -76,7 +75,6 @@ func Address_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 }
 
 func Address_Process(c *Command, input string) {
-	var err error
 
 	if wallet.CurrentWallet == nil {
 		ui.PrintErrorf("\nNo wallet open\n")
@@ -94,35 +92,13 @@ func Address_Process(c *Command, input string) {
 			return
 		}
 
-		if p0 == "" {
-			ui.PrintErrorf("\nUsage: address add sigher\n")
-			return
-		}
-
 		signer := wallet.CurrentWallet.GetSigner(p0)
 		if signer == nil {
 			ui.PrintErrorf("\nSigner not found\n")
 			return
 		}
 
-		start_from := 0
-		if p1 != "" {
-			start_from, err = strconv.Atoi(p1)
-			if err != nil || start_from < 0 {
-				ui.PrintErrorf("\nInvalid start_from parameter: %s\n", p1)
-				return
-			}
-		}
-
-		l, err := signer.GetAddresses(start_from, 10)
-		if err != nil {
-			ui.PrintErrorf("\nError getting addresses: %v\n", err)
-			return
-		}
-
-		for _, s := range l {
-			ui.Printf("\nAddress: %s\n", s.Address.String())
-		}
+		ui.Gui.ShowPopup(ui.DlgAddressAdd(p0, p1))
 
 	case "remove":
 	case "list":

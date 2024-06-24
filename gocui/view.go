@@ -32,6 +32,7 @@ const (
 	ICON_COPY     = "\uf0c5"
 	ICON_DROPLIST = "\ueb6e"
 	ICON_PROMOTE  = "\ued65"
+	ICON_ADD      = "\ueadc"
 )
 
 var (

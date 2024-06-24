@@ -1,6 +1,7 @@
 package command
 
 import (
+	"strconv"
 	"strings"
 
 	"github.com/AlexNa-Holdings/web3pro/cmn"
@@ -11,7 +12,7 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/wallet"
 )
 
-var signer_subcommands = []string{"remove", "promote", "add", "edit", "list"}
+var signer_subcommands = []string{"list", "remove", "promote", "add", "edit", "addresses"}
 
 func NewSignerCommand() *Command {
 	return &Command{
@@ -23,11 +24,12 @@ Usage: signer [COMMAND]
 Manage signers
 
 Commands:
-  add     - Add new signer
-  list    - List signers
-  remove  - Remove signer  
-  edit    - Edit signer
-  promote - Promote copy to main signer
+  add       - Add new signer
+  list      - List signers
+  remove    - Remove signer  
+  edit      - Edit signer
+  promote   - Promote copy to main signer
+  addresses - List addresses of a signer
 		`,
 		Help:             `Manage signers`,
 		Process:          Signer_Process,
@@ -49,7 +51,7 @@ func Signer_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 		return "action", &options, subcommand
 	}
 
-	if subcommand == "remove" || subcommand == "edit" {
+	if subcommand == "remove" || subcommand == "edit" || subcommand == "addresses" {
 		if wallet.CurrentWallet != nil {
 			for _, signer := range wallet.CurrentWallet.Signers {
 				if cmn.Contains(signer.Name, param) {
@@ -107,8 +109,8 @@ func Signer_Process(c *Command, input string) {
 		return
 	}
 
-	p := cmn.SplitN(input, 4)
-	_, subcommand, p1, p2 := p[0], p[1], p[2], p[3]
+	p := cmn.SplitN(input, 5)
+	_, subcommand, p1, p2, p3 := p[0], p[1], p[2], p[3], p[4]
 
 	switch subcommand {
 	case "list", "":
@@ -138,6 +140,34 @@ func Signer_Process(c *Command, input string) {
 		}
 
 		ui.Printf("\n")
+	case "addresses":
+		path := p2
+		from, _ := strconv.Atoi(p3)
+
+		signer := wallet.CurrentWallet.GetSigner(p1)
+		if signer == nil {
+			ui.PrintErrorf("\nSigner not found\n")
+			return
+		}
+
+		l, err := signer.GetAddresses(path, from, 10)
+		if err != nil {
+			ui.PrintErrorf("\nError getting addresses: %v\n", err)
+			return
+		}
+
+		for i, s := range l {
+			ui.Printf("%2d: %s ", from+i, s.Address.String())
+
+			if ea := wallet.CurrentWallet.GetAddress(s.Address.String()); ea == nil {
+				ui.Terminal.Screen.AddLink(gocui.ICON_ADD, "command address add '"+p1+"' \""+s.Path+"\"", "Add address to wallet")
+			} else {
+				ui.Printf(" %s ", ea.Name)
+				ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command address edit '"+s.Address.String()+"'", "Edit address")
+			}
+			ui.Printf("\n")
+
+		}
 
 	case "add":
 		ui.Gui.ShowPopup(ui.DlgSignerAdd(p1, p2))

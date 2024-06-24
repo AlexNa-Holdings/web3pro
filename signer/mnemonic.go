@@ -4,9 +4,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"log"
 
 	"github.com/AlexNa-Holdings/web3pro/address"
+	"github.com/rs/zerolog/log"
 	"github.com/tyler-smith/go-bip32"
 	"github.com/tyler-smith/go-bip39"
 )
@@ -29,11 +29,16 @@ func NewMnemonicDriver(s *Signer) (MnemonicDriver, error) {
 
 	return MnemonicDriver{
 		Entropy: entropy,
+		Signer:  s,
 	}, nil
 }
 
-func (d MnemonicDriver) GetAddresses(start_from int, count int) ([]address.Address, error) {
+func (d MnemonicDriver) GetAddresses(path string, start_from int, count int) ([]address.Address, error) {
 	addresses := []address.Address{}
+
+	if path == "" {
+		path = "m/44'/60'/0'/0/"
+	}
 
 	mnemonics, err := bip39.NewMnemonic(d.Entropy)
 	if err != nil {
@@ -46,12 +51,17 @@ func (d MnemonicDriver) GetAddresses(start_from int, count int) ([]address.Addre
 		return addresses, err
 	}
 
-	for i := 0; i < count; i++ { // Generate first 5 addresses
-		// Derive the key using the path m/44'/60'/0'/0/i
-		path := fmt.Sprintf("m/44'/60'/0'/0/%d", start_from+i)
-		key, err := deriveKey(masterKey, path)
+	log.Debug().Msgf("mnemonic: %s", mnemonics)
+
+	for i := 0; i < count; i++ {
+		p := fmt.Sprintf(path+"%d", start_from+i)
+
+		log.Debug().Msgf("path: %s", p)
+
+		key, err := deriveKey(masterKey, p)
 		if err != nil {
-			log.Fatal(err)
+			log.Error().Msgf("Error deriving key: %v", err)
+			return addresses, err
 		}
 
 		// Get the Ethereum address
@@ -59,7 +69,7 @@ func (d MnemonicDriver) GetAddresses(start_from int, count int) ([]address.Addre
 		addresses = append(addresses, address.Address{
 			Address: a,
 			Signer:  d.Name,
-			Path:    path,
+			Path:    p,
 		})
 	}
 
