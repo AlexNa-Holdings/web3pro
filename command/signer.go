@@ -8,7 +8,7 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/signer"
 	"github.com/AlexNa-Holdings/web3pro/ui"
-	"github.com/AlexNa-Holdings/web3pro/usb"
+	"github.com/AlexNa-Holdings/web3pro/usb_support"
 	"github.com/AlexNa-Holdings/web3pro/wallet"
 )
 
@@ -69,10 +69,10 @@ func Signer_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 
 	if subcommand == "remove" || subcommand == "edit" || subcommand == "addresses" {
 		if wallet.CurrentWallet != nil {
-			for _, signer := range wallet.CurrentWallet.Signers {
-				if cmn.Contains(signer.Name, param) {
+			for _, s := range wallet.CurrentWallet.Signers {
+				if s.IsConnected() && cmn.Contains(s.Name, param) {
 					options = append(options, ui.ACOption{
-						Name: signer.Name, Result: command + " " + subcommand + " '" + signer.Name + "'"})
+						Name: s.Name, Result: command + " " + subcommand + " '" + s.Name + "'"})
 				}
 			}
 		}
@@ -101,10 +101,10 @@ func Signer_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 			return "type", &options, param
 		}
 
-		l, _ := usb.List() // ignore error
+		l, _ := usb_support.List() // ignore error
 		for _, u := range l {
 			if param == signer.GetType(u.Manufacturer, u.Product) {
-				sn, err := usb.GetSN(u)
+				sn, err := usb_support.GetSN(u)
 				if err == nil {
 					if cmn.Contains(sn, p3) && p3 != sn {
 						options = append(options, ui.ACOption{Name: sn, Result: command + " add " + param + " " + sn})
@@ -189,7 +189,9 @@ func Signer_Process(c *Command, input string) {
 		}
 
 		for i, s := range l {
-			ui.Printf("%2d: %s ", from+i, s.Address.String())
+			ui.Printf("%2d: ", from+i)
+			ui.AddAddressLink(nil, &s.Address)
+			ui.Printf(" ")
 
 			if ea := wallet.CurrentWallet.GetAddress(s.Address.String()); ea == nil {
 				ui.Terminal.Screen.AddLink(gocui.ICON_ADD, "command address add "+

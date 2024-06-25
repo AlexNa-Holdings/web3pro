@@ -4,6 +4,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog/log"
 
 	"github.com/AlexNa-Holdings/web3pro/cmn"
@@ -96,4 +97,29 @@ func ProcessClickHotspot(hs *gocui.Hotspot) {
 	case "command":
 		Terminal.ProcessCommandFunc(param)
 	}
+}
+
+func AddAddressLink(v *gocui.View, a *common.Address) {
+	if v == nil {
+		v = Terminal.Screen
+	}
+
+	if a == nil {
+		return
+	}
+
+	v.AddLink(a.String(), "copy "+a.String(), "Copy address")
+}
+
+func AddAddressShortLink(v *gocui.View, a *common.Address) {
+	if v == nil {
+		v = Terminal.Screen
+	}
+
+	if a == nil {
+		return
+	}
+
+	s := a.String()
+	v.AddLink(s[:6]+gocui.ICON_3DOTS+s[len(s)-4:], "copy "+a.String(), "Copy address")
 }

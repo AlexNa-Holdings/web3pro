@@ -192,6 +192,15 @@ func (w *Wallet) GetSigner(n string) *signer.Signer {
 	return nil
 }
 
+func (w *Wallet) GetSignerByTypeAndSN(t, sn string) *signer.Signer {
+	for _, s := range w.Signers {
+		if s.Type == t && s.SN == sn {
+			return s
+		}
+	}
+	return nil
+}
+
 func (w *Wallet) GetAddress(a string) *address.Address {
 	for _, s := range w.Addresses {
 		if s.Address.String() == a {

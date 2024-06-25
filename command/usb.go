@@ -7,7 +7,7 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/signer"
 	"github.com/AlexNa-Holdings/web3pro/ui"
-	"github.com/AlexNa-Holdings/web3pro/usb"
+	"github.com/AlexNa-Holdings/web3pro/usb_support"
 	"github.com/AlexNa-Holdings/web3pro/wallet"
 )
 
@@ -60,7 +60,7 @@ func Usb_Process(c *Command, input string) {
 	case "list", "":
 		ui.Printf("\nUsb Devices:\n")
 
-		l, err := usb.List()
+		l, err := usb_support.List()
 		if err != nil {
 			ui.PrintErrorf("\nError listing usb devices: %v\n", err)
 			return
@@ -69,7 +69,7 @@ func Usb_Process(c *Command, input string) {
 		n := 1
 		for _, u := range l {
 
-			sn, err := usb.GetSN(u)
+			sn, err := usb_support.GetSN(u)
 			if err != nil {
 				ui.PrintErrorf("\nError getting usb serial number: %v\n", err)
 				return
@@ -83,18 +83,12 @@ func Usb_Process(c *Command, input string) {
 			n++
 
 			if wallet.CurrentWallet != nil {
-				found := false
-				for _, s := range wallet.CurrentWallet.Signers {
-					if s.Type == signer.GetType(u.Manufacturer, u.Product) &&
-						s.SN == sn {
-						ui.Printf("'" + s.Name + "' ")
-						ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command s edit '"+s.Name+"'", "Edit signer")
-						found = true
-						break
-					}
-
-				}
-				if !found {
+				es := wallet.CurrentWallet.GetSignerByTypeAndSN(signer.GetType(u.Manufacturer, u.Product), sn)
+				if es != nil {
+					ui.Printf("'" + es.Name + "' ")
+					ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command s edit '"+es.Name+"'", "Edit signer")
+					break
+				} else {
 					t := signer.GetType(u.Manufacturer, u.Product)
 					if t != "" {
 						ui.Terminal.Screen.AddButton("Add signer", "command s add "+t+" "+u.Serial, "Add signer")

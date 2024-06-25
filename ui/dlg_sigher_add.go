@@ -53,7 +53,7 @@ Copy of: <select id:copyof size:32 value:"">
 
 			names := []string{""}
 			for _, signer := range wallet.CurrentWallet.Signers {
-				if signer.CopyOf == "" && signer.Type != "mnemonics" {
+				if signer.CopyOf == "" && signer.Type == t {
 					names = append(names, signer.Name)
 				}
 			}

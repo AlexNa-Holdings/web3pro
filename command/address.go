@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/AlexNa-Holdings/web3pro/cmn"
+	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/ui"
 	"github.com/AlexNa-Holdings/web3pro/wallet"
 	"github.com/ethereum/go-ethereum/common"
@@ -135,8 +136,23 @@ func Address_Process(c *Command, input string) {
 			}
 		}
 		ui.PrintErrorf("\nAddress not found: %s\n", p0)
-	case "list":
+	case "list", "":
+		ui.Printf("\nAddresses:\n")
+		for _, a := range wallet.CurrentWallet.Addresses {
+			ui.Printf("  ")
+			ui.AddAddressLink(nil, &a.Address)
+			ui.Printf("  %s %s ", a.Name, a.Signer)
+			ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command address edit '"+a.Name+"'", "Edit address")
+			ui.Printf(" ")
+			ui.Terminal.Screen.AddLink(gocui.ICON_DELETE, "command address remove '"+a.Name+"'", "Remove address")
+			ui.Printf("\n")
+		}
+
 	case "edit":
+		if wallet.CurrentWallet.GetAddressByName(p0) == nil {
+			ui.PrintErrorf("\nAddress not found: %s\n", p0)
+			return
+		}
 		ui.Gui.ShowPopup(ui.DlgAddressEdit(p0))
 	default:
 		ui.PrintErrorf("\nInvalid subcommand: %s\n", subcommand)

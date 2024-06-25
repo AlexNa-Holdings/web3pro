@@ -53,7 +53,6 @@ func main() {
 		ui.Printf("\n")
 
 		ui.Printf("\nType 'help' for help\n\n")
-
 	}()
 
 	if err := ui.Gui.MainLoop(); err != nil && !errors.Is(err, gocui.ErrQuit) {

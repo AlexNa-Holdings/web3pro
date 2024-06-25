@@ -33,6 +33,7 @@ const (
 	ICON_DROPLIST = "\ueb6e"
 	ICON_PROMOTE  = "\ued65"
 	ICON_ADD      = "\ueadc"
+	ICON_3DOTS    = "\U000f01d8"
 )
 
 var (
