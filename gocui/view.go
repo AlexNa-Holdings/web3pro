@@ -16,6 +16,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/mattn/go-runewidth"
+	"github.com/rs/zerolog/log"
 )
 
 // Constants for overlapping edges
@@ -122,6 +123,8 @@ type View struct {
 	SubTitleFgColor Attribute
 	SubTitleBgColor Attribute
 	EmFgColor       Attribute
+	TitleAttrib     Attribute
+	SubTitleAttrib  Attribute
 
 	// If Editable is true, keystrokes will be added to the view's internal
 	// buffer at the cursor position.
@@ -234,6 +237,7 @@ func (g *Gui) newView(name string, x0, y0, x1, y1 int, mode OutputMode) *View {
 		ei:             newEscapeInterpreter(mode),
 		gui:            g,
 		ControlInFocus: -1,
+		TitleAttrib:    AttrBold,
 	}
 
 	// v.FgColor, v.BgColor = ColorDefault, ColorDefault
@@ -1543,6 +1547,8 @@ func (v *View) SetList(id string, list []string) {
 }
 
 func (v *View) RenderTemplate(template string) error {
+	log.Debug().Msgf("RenderTemplate: %s", v.name)
+
 	v.Clear()
 
 	if v.x1-v.x0 < 3 || v.y1-v.y0 < 3 {
@@ -1560,6 +1566,13 @@ func (v *View) RenderTemplate(template string) error {
 
 	centered := false
 	bold := false
+	blink := false
+	reverse := false
+	underline := false
+	dim := false
+	italic := false
+	strikethrough := false
+
 	autowrap := false
 
 	for _, line := range lines {
@@ -1606,22 +1619,41 @@ func (v *View) RenderTemplate(template string) error {
 
 		var cells []cell
 		for _, l := range splitted_lines {
-			if centered {
-				n := (width - calcLineWidth(l)) / 2
-				for i := 0; i < n; i++ {
-					fmt.Fprint(v, " ")
-				}
-			}
-
 			left := 0
 
 			for _, match := range matches {
 
-				if bold {
-					cells = AddCells(nil, v.FgColor|AttrBold, v.BgColor, l[left:match[0]])
-				} else {
-					cells = AddCells(nil, v.FgColor, v.BgColor, l[left:match[0]])
+				if v.wx == 0 && centered {
+					n := (width - calcLineWidth(l)) / 2
+					for i := 0; i < n; i++ {
+						fmt.Fprint(v, " ")
+					}
 				}
+
+				color := v.FgColor
+				if bold {
+					color |= AttrBold
+				}
+				if underline {
+					color |= AttrUnderline
+				}
+				if reverse {
+					color |= AttrReverse
+				}
+				if dim {
+					color |= AttrDim
+				}
+				if italic {
+					color |= AttrItalic
+				}
+				if strikethrough {
+					color |= AttrStrikeThrough
+				}
+				if blink {
+					color |= AttrBlink
+				}
+				cells = AddCells(nil, color, v.BgColor, l[left:match[0]])
+
 				v.makeWriteable(v.wx, v.wy)
 				v.writeCells(v.wx, v.wy, cells)
 				v.wx += len(cells)
@@ -1641,6 +1673,31 @@ func (v *View) RenderTemplate(template string) error {
 					bold = true
 				case "</b>":
 					bold = false
+				case "<u>":
+					underline = true
+				case "</u>":
+					underline = false
+				case "<r>":
+					reverse = true
+				case "</r>":
+					reverse = false
+				case "<dim>":
+					dim = true
+				case "</dim>":
+					dim = false
+				case "<i>":
+					italic = true
+				case "</i>":
+					italic = false
+				case "<s>":
+					strikethrough = true
+				case "</s>":
+					strikethrough = false
+				case "<blink>":
+					blink = true
+				case "</blink>":
+					blink = false
+
 				default:
 					v.AddTag(tag)
 				}
@@ -1648,11 +1705,37 @@ func (v *View) RenderTemplate(template string) error {
 				left = match[1]
 			}
 
-			if bold {
-				cells = AddCells(nil, v.FgColor|AttrBold, v.BgColor, l[left:])
-			} else {
-				cells = AddCells(nil, v.FgColor, v.BgColor, l[left:])
+			if v.wx == 0 && centered {
+				n := (width - calcLineWidth(l)) / 2
+				for i := 0; i < n; i++ {
+					fmt.Fprint(v, " ")
+				}
 			}
+
+			color := v.FgColor
+			if bold {
+				color |= AttrBold
+			}
+			if underline {
+				color |= AttrUnderline
+			}
+			if reverse {
+				color |= AttrReverse
+			}
+			if dim {
+				color |= AttrDim
+			}
+			if italic {
+				color |= AttrItalic
+			}
+			if strikethrough {
+				color |= AttrStrikeThrough
+			}
+			if blink {
+				color |= AttrBlink
+			}
+			cells = AddCells(nil, color, v.BgColor, l[left:])
+
 			v.makeWriteable(v.wx, v.wy)
 			v.writeCells(v.wx, v.wy, cells)
 			v.wx += len(cells)

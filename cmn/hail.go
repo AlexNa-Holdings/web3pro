@@ -6,6 +6,7 @@ import (
 
 type HailRequest struct {
 	Priorized      bool
+	Title          string
 	Template       string
 	OnOpen         func(g *gocui.Gui, v *gocui.View)
 	OnClose        func()

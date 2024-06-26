@@ -6,6 +6,7 @@ import (
 
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
+	"github.com/rs/zerolog/log"
 )
 
 type HailPaneType struct {
@@ -65,8 +66,8 @@ func open(request *cmn.HailRequest) {
 	}
 
 	if HailPane.View == nil {
-		HailPane.SetView(Gui, 0, 0, 1, 1)
 		Gui.Update(func(g *gocui.Gui) error {
+			HailPane.SetView(Gui, 0, 0, 1, 1)
 			return nil
 		})
 	}
@@ -88,13 +89,19 @@ func (p *HailPaneType) SetView(g *gocui.Gui, x0, y0, x1, y1 int) {
 			panic(err)
 		}
 		p.View.Title = "Hail"
-		p.View.Autoscroll = true
+		if ActiveRequest.Title != "" {
+			p.View.Title = ActiveRequest.Title
+		}
 		p.View.SubTitleFgColor = Theme.HelpFgColor
 		p.View.SubTitleBgColor = Theme.HelpBgColor
 		p.View.FrameColor = Gui.ActionBgColor
 		p.View.TitleColor = Gui.ActionFgColor
 		p.View.EmFgColor = Gui.ActionBgColor
+		// p.View.TitleAttrib |= gocui.AttrBlink
+		p.View.ScrollBar = true
 		p.View.OnResize = func(v *gocui.View) {
+			x0, y0, x1, y1 := v.Dimensions()
+			log.Debug().Msgf("HailPane resized to %d %d %d %d", x0, y0, x1, y1)
 			if ActiveRequest != nil {
 				if ActiveRequest.Template != "" {
 					v.RenderTemplate(ActiveRequest.Template)
