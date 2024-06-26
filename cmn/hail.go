@@ -10,12 +10,14 @@ type HailRequest struct {
 	Priorized      bool
 	Title          string
 	Template       string
-	OnOpen         func(g *gocui.Gui, v *gocui.View)
-	OnClose        func()
-	OnCancel       func()
-	OnSuspend      func()
-	OnResume       func()
-	OnClickHotspot func(v *gocui.View, hs *gocui.Hotspot)
+	OnOpen         func(hr *HailRequest, g *gocui.Gui, v *gocui.View)
+	OnClose        func(hr *HailRequest)
+	OnCancel       func(hr *HailRequest)
+	OnOk           func(hr *HailRequest)
+	OnSuspend      func(hr *HailRequest)
+	OnResume       func(hr *HailRequest)
+	OnTick         func(hr *HailRequest, tick int)
+	OnClickHotspot func(hr *HailRequest, v *gocui.View, hs *gocui.Hotspot)
 	Done           chan bool
 	Suspended      bool
 	TimeoutSec     int // in seconds
@@ -25,12 +27,17 @@ type HailRequest struct {
 }
 
 var HailChannel = make(chan *HailRequest)
+var RemoveHailChannel = make(chan *HailRequest)
 
-func Hail(request *HailRequest) {
+func Hail(hail *HailRequest) {
+	HailChannel <- hail
+}
 
-	if request.TimeoutSec == 0 {
-		request.TimeoutSec = Config.TimeoutSec
-	}
+func HailAndWait(hail *HailRequest) {
+	HailChannel <- hail
+	<-hail.Done
+}
 
-	HailChannel <- request
+func (hail *HailRequest) Close() {
+	RemoveHailChannel <- hail
 }

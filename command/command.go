@@ -35,11 +35,14 @@ func Init() {
 }
 
 func Process(input string) {
+
 	command := strings.Split(input, " ")[0]
 
 	for _, cmd := range Commands {
 		if cmd.Command == command || cmd.ShortCommand == command {
-			cmd.Process(cmd, input)
+			go func() {
+				cmd.Process(cmd, input)
+			}()
 			return
 		}
 	}

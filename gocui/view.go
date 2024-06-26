@@ -1135,6 +1135,9 @@ func (v *View) AddTagEx(tagName string, tagParams map[string]string) error {
 	case "l": // link
 		v.AddLink(tagParams["text"], "link "+tagParams["href"], tagParams["tip"])
 	case "button": // button
+		if tagParams["id"] == "" {
+			tagParams["id"] = tagParams["text"]
+		}
 		v.AddButton(tagParams["text"], "button "+tagParams["id"], tagParams["tip"])
 	case "i": // input
 		v.AddInput(tagParams)

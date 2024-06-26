@@ -23,7 +23,10 @@ type Popup struct {
 
 func (g *Gui) ShowPopup(p *Popup) {
 	if p != nil {
-		g.popup = p
+		g.UpdateAsync(func(g *Gui) error {
+			g.popup = p
+			return nil
+		})
 	}
 }
 

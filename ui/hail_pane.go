@@ -45,7 +45,7 @@ func remove(hail *cmn.HailRequest) {
 	for i, h := range HailQueue {
 		if h == hail {
 			if hail.OnClose != nil {
-				hail.OnClose()
+				hail.OnClose(hail)
 			}
 
 			HailQueue = append(HailQueue[:i], HailQueue[i+1:]...)
@@ -67,23 +67,35 @@ func remove(hail *cmn.HailRequest) {
 	}
 }
 
+func (p *HailPaneType) Close(hail *cmn.HailRequest) {
+	remove(hail)
+}
+
 func cancel(hail *cmn.HailRequest) {
 	if hail.OnCancel != nil {
-		hail.OnCancel()
+		hail.OnCancel(hail)
 	}
 	remove(hail)
 }
 
 func HailPaneTimer() {
+	tick := 0
+
 	for {
 		select {
 		case <-TimerQuit:
 			return
 		case <-time.After(1 * time.Second):
+			tick++
 			if ActiveRequest != nil {
-				if time.Until(ActiveRequest.Expiration) < 0 {
+				if time.Until(ActiveRequest.Expiration) <= 0 {
 					cancel(ActiveRequest)
 				} else {
+
+					if ActiveRequest.OnTick != nil {
+						ActiveRequest.OnTick(ActiveRequest, tick)
+					}
+
 					Gui.UpdateAsync(func(g *gocui.Gui) error {
 						HailPane.UpdateSubtitle()
 						return nil
@@ -96,20 +108,30 @@ func HailPaneTimer() {
 
 func ProcessHails() {
 	for {
-		hail := <-cmn.HailChannel
+		select {
+		case hail := <-cmn.HailChannel:
 
-		add(hail)
-
-		if ActiveRequest != HailQueue[0] {
-			if ActiveRequest != nil {
-				if ActiveRequest.OnSuspend != nil {
-					ActiveRequest.OnSuspend()
-				}
-				ActiveRequest.Suspended = true
+			if hail.TimeoutSec == 0 {
+				hail.TimeoutSec = cmn.Config.TimeoutSec
 			}
-		}
 
-		HailPane.open(HailQueue[0])
+			hail.Done = make(chan bool)
+
+			add(hail)
+
+			if ActiveRequest != HailQueue[0] {
+				if ActiveRequest != nil {
+					if ActiveRequest.OnSuspend != nil {
+						ActiveRequest.OnSuspend(hail)
+					}
+					ActiveRequest.Suspended = true
+				}
+			}
+
+			HailPane.open(HailQueue[0])
+		case hail := <-cmn.RemoveHailChannel:
+			remove(hail)
+		}
 	}
 }
 
@@ -118,7 +140,7 @@ func (p *HailPaneType) open(hail *cmn.HailRequest) {
 
 	if hail.Suspended {
 		if hail.OnResume != nil {
-			hail.OnResume()
+			hail.OnResume(hail)
 		}
 		hail.Suspended = false
 	}
@@ -136,7 +158,7 @@ func (p *HailPaneType) open(hail *cmn.HailRequest) {
 	})
 
 	if hail.OnOpen != nil {
-		hail.OnOpen(Gui, HailPane.View)
+		hail.OnOpen(hail, Gui, HailPane.View)
 	}
 }
 
@@ -202,6 +224,32 @@ func (p *HailPaneType) SetView(g *gocui.Gui, x0, y0, x1, y1 int) {
 				HailPane.UpdateSubtitle()
 				return nil
 			})
+		}
+
+		p.View.OnClickHotspot = func(v *gocui.View, hs *gocui.Hotspot) {
+			if ActiveRequest == nil {
+				return
+			}
+
+			if hs != nil {
+				switch hs.Value {
+				case "button Ok":
+					if ActiveRequest.OnOk != nil {
+						ActiveRequest.OnOk(ActiveRequest)
+					}
+					remove(ActiveRequest)
+				case "button Cancel":
+					if ActiveRequest.OnCancel != nil {
+						ActiveRequest.OnCancel(ActiveRequest)
+					}
+					remove(ActiveRequest)
+				default:
+
+					if ActiveRequest.OnClickHotspot != nil {
+						ActiveRequest.OnClickHotspot(ActiveRequest, v, hs)
+					}
+				}
+			}
 		}
 	}
 }

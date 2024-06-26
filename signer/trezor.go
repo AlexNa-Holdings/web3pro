@@ -49,17 +49,18 @@ func (d TrezorDriver) IsConnected() bool {
 }
 
 func (d TrezorDriver) FindDeviceInfo() (usb.DeviceInfo, error) {
-	devices, err := usb_support.List()
-	if err != nil {
-		log.Error().Msgf("Error listing USB devices", "err", err)
-		return usb.DeviceInfo{}, err
-	}
 
 	sns := []string{d.SN}
 	names := []string{d.Name}
 	for _, c := range d.Copies {
 		sns = append(sns, c.SN)
 		names = append(names, c.Name)
+	}
+
+	devices, err := usb_support.List()
+	if err != nil {
+		log.Error().Msgf("Error listing USB devices", "err", err)
+		return usb.DeviceInfo{}, err
 	}
 
 	for _, info := range devices {
@@ -69,16 +70,37 @@ func (d TrezorDriver) FindDeviceInfo() (usb.DeviceInfo, error) {
 		}
 	}
 
-	cmn.Hail(&cmn.HailRequest{
+	var ret usb.DeviceInfo
+
+	cmn.HailAndWait(&cmn.HailRequest{
 		Title: "Connect Trezor",
 		Template: `<c><w>
 Connect your Trezor device and unlock it.
 <b><u>` + strings.Join(names, ", ") + `</u></b>
 
-<button text:Ok tip:"create wallet">  <button text:Cancel>
+<button text:Cancel>
 `,
+		OnTick: func(hail *cmn.HailRequest, tick int) {
+			if tick%5 == 0 { // once every n ticks
+				devices, err := usb_support.List()
+				if err != nil {
+					log.Error().Msgf("Error listing USB devices", "err", err)
+					return
+				}
+				for _, info := range devices {
+					if info.Product == "TREZOR" && cmn.IsInArray(sns, info.Serial) {
+						ret = info
+						hail.Close()
+					}
+				}
+			}
+		},
+		OnCancel: func(hr *cmn.HailRequest) {
+			log.Debug().Msgf("User clicked Cancel")
+		},
 	})
 
+	ret = ret
 	return usb.DeviceInfo{}, errors.New("device not found")
 }
 
