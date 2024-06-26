@@ -121,6 +121,6 @@ func DlgBlockchainEdit(name string) *gocui.Popup {
       Explorer: <i id:explorer size:32 value:"">
       Currency: <i id:currency size:32 value:"">
 
- <c><b text:Ok tip:"create wallet">  <b text:Cancel>`,
+ <c><button text:Ok tip:"create wallet">  <button text:Cancel>`,
 	}
 }

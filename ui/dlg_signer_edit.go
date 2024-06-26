@@ -74,6 +74,6 @@ func DlgSignerEdit(name string) *gocui.Popup {
  Name: <i id:name size:32 value:"">
  Type: ` + wallet.CurrentWallet.Signers[signer_index].Type + `
  <c>
- <b text:Ok tip:"create wallet">  <b text:Cancel>`,
+ <button text:Ok tip:"create wallet">  <button text:Cancel>`,
 	}
 }

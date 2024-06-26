@@ -41,11 +41,11 @@ func (p *NotificationPane) SetView(g *gocui.Gui) {
 		p.View.Autoscroll = false
 		p.View.Frame = false
 		if p.Error {
-			p.View.FgColor = CurrentTheme.ErrorFgColor
-			p.View.BgColor = CurrentTheme.BgColor
+			p.View.FgColor = Theme.ErrorFgColor
+			p.View.BgColor = Theme.BgColor
 		} else {
-			p.View.BgColor = CurrentTheme.HelpBgColor
-			p.View.FgColor = CurrentTheme.HelpFgColor
+			p.View.BgColor = Theme.HelpBgColor
+			p.View.FgColor = Theme.HelpFgColor
 		}
 		fmt.Fprintf(p.View, p.Message)
 	}
@@ -88,8 +88,8 @@ func (n *NotificationPane) ShowErrorf(format string, args ...interface{}) {
 func (n *NotificationPane) Hide() {
 	if n.View != nil {
 		n.View.Clear()
-		n.View.BgColor = CurrentTheme.HelpBgColor
-		n.View.FgColor = CurrentTheme.HelpFgColor
+		n.View.BgColor = Theme.HelpBgColor
+		n.View.FgColor = Theme.HelpFgColor
 	}
 
 	Gui.Update(func(g *gocui.Gui) error {

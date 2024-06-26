@@ -18,7 +18,7 @@ Address: %s
  Signer: %s
    Path: %s
 
-<c><b text:Ok tip:"create wallet">  <b text:Cancel>`, addr, signer, path)
+<c><button text:Ok tip:"create wallet">  <button text:Cancel>`, addr, signer, path)
 
 	return &gocui.Popup{
 		Title: "Add address",

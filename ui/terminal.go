@@ -177,8 +177,8 @@ func (t *TerminalPane) layoutAutocomplete(title string, options *[]ACOption, hig
 		}
 		t.AutoComplete.Frame = true
 		t.AutoComplete.FrameColor = t.Input.FgColor
-		t.AutoComplete.SubTitleBgColor = CurrentTheme.HelpBgColor
-		t.AutoComplete.SubTitleFgColor = CurrentTheme.HelpFgColor
+		t.AutoComplete.SubTitleBgColor = Theme.HelpBgColor
+		t.AutoComplete.SubTitleFgColor = Theme.HelpFgColor
 		t.AutoComplete.Editable = false
 		t.AutoComplete.Highlight = true
 		t.AutoComplete.Title = title
@@ -328,7 +328,7 @@ func PrintErrorf(format string, a ...interface{}) {
 	str := fmt.Sprintf(format, a...)
 
 	fmt.Fprint(Terminal.Screen,
-		F(CurrentTheme.ErrorFgColor)+
+		F(Theme.ErrorFgColor)+
 			str+
 			F(Terminal.Screen.FgColor))
 }

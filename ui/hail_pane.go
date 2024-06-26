@@ -89,8 +89,8 @@ func (p *HailPaneType) SetView(g *gocui.Gui, x0, y0, x1, y1 int) {
 		}
 		p.View.Title = "Hail"
 		p.View.Autoscroll = true
-		p.View.SubTitleFgColor = CurrentTheme.BgColor
-		p.View.SubTitleBgColor = CurrentTheme.FrameColor
+		p.View.SubTitleFgColor = Theme.HelpFgColor
+		p.View.SubTitleBgColor = Theme.HelpBgColor
 		p.View.FrameColor = Gui.ActionBgColor
 		p.View.TitleColor = Gui.ActionFgColor
 		p.View.EmFgColor = Gui.ActionBgColor
@@ -101,6 +101,6 @@ func (p *HailPaneType) SetView(g *gocui.Gui, x0, y0, x1, y1 int) {
 				}
 			}
 		}
-		p.Subtitle = "(1)"
+		p.Subtitle = "(2)"
 	}
 }

@@ -25,7 +25,7 @@ device marked as copy is the same as the one
 you are adding. If you are not sure, please
 cancel and verify the device.
 
-<b text:Ok tip:"create wallet">  <b text:Cancel>`
+<button text:Ok tip:"create wallet">  <button text:Cancel>`
 	} else {
 		template = `
      Name: <i id:name size:32 value:""> 
@@ -39,7 +39,7 @@ cancel and verify the device.
 
 
 <c>
-<b text:Ok tip:"create wallet">  <b text:Cancel>`
+<button text:Ok tip:"create wallet">  <button text:Cancel>`
 	}
 
 	return &gocui.Popup{

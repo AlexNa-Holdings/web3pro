@@ -24,7 +24,7 @@ Address: %s
  Signer: %s
    Path: %s
 
-<c><b text:Ok tip:"create wallet">  <b text:Cancel>`, currect_a.Address.String(), currect_a.Signer, currect_a.Path)
+<c><button text:Ok tip:"create wallet">  <button text:Cancel>`, currect_a.Address.String(), currect_a.Signer, currect_a.Path)
 
 	return &gocui.Popup{
 		Title: "Edit address",

@@ -29,6 +29,6 @@ func DlgConfirm(title string, text string, action func()) *gocui.Popup {
 			}
 		},
 		Template: text + `
-<c><b text:Ok tip:"create wallet">  <b text:Cancel>`,
+<c><button text:Ok tip:"create wallet">  <button text:Cancel>`,
 	}
 }

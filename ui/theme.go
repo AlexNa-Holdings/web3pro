@@ -6,7 +6,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-type Theme struct {
+type ThemeStruct struct {
 	Name string
 
 	BgColor, FgColor, FrameColor          gocui.Attribute
@@ -21,9 +21,9 @@ type Theme struct {
 	HelpFgColor, HelpBgColor gocui.Attribute
 }
 
-var CurrentTheme *Theme
+var Theme *ThemeStruct
 
-var DarkTheme = Theme{
+var DarkTheme = ThemeStruct{
 	Name: "dark",
 
 	BgColor:       gocui.GetColor("#090300"),
@@ -46,7 +46,7 @@ var DarkTheme = Theme{
 	InputBgColor: gocui.GetColor("#292320"),
 }
 
-var LightTheme = Theme{
+var LightTheme = ThemeStruct{
 	Name: "light",
 
 	BgColor:       gocui.GetColor("#f1f1f1"),
@@ -69,7 +69,7 @@ var LightTheme = Theme{
 	InputBgColor: gocui.GetColor("#717171"),
 }
 
-var Themes = map[string]Theme{
+var Themes = map[string]ThemeStruct{
 	DarkTheme.Name:  DarkTheme,
 	LightTheme.Name: LightTheme,
 }
@@ -99,7 +99,7 @@ func SetTheme(theme string) {
 	Gui.SubTitleBgColor = t.EmFgColor
 	Gui.InputBgColor = t.InputBgColor
 
-	CurrentTheme = &t
+	Theme = &t
 
 	cmn.Config.Theme = theme
 	cmn.ConfigChanged = true

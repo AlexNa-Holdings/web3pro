@@ -636,7 +636,7 @@ func (g *Gui) flush() error {
 			continue
 		}
 		if v.Frame {
-			var fgColor, bgColor, frameColor Attribute
+			// var fgColor, bgColor, frameColor Attribute
 
 			// AN
 			// if g.Highlight && v == g.currentView {
@@ -658,25 +658,21 @@ func (g *Gui) flush() error {
 			// }
 
 			// fgColor = v.FgColor
-			frameColor = v.FrameColor
+			// frameColor = v.FrameColor
 
-			if err := g.drawFrameEdges(v, frameColor, v.BgColor); err != nil {
+			if err := g.drawFrameEdges(v, v.FrameColor, v.BgColor); err != nil {
 				return err
 			}
-			if err := g.drawFrameCorners(v, frameColor, v.BgColor); err != nil {
+			if err := g.drawFrameCorners(v, v.FrameColor, v.BgColor); err != nil {
 				return err
 			}
 			if v.Title != "" {
-				if err := g.drawTitle(v, frameColor, v.BgColor, v.SubTitleBgColor); err != nil {
+				if err := g.drawTitle(v, v.FrameColor, v.BgColor, v.SubTitleBgColor); err != nil {
 					return err
 				}
 			}
 			if v.Subtitle != "" {
-
-				fgColor = v.SubTitleFgColor
-				bgColor = v.SubTitleBgColor
-
-				if err := g.drawSubtitle(v, fgColor, bgColor); err != nil {
+				if err := g.drawSubtitle(v, v.SubTitleFgColor, v.SubTitleBgColor); err != nil {
 					return err
 				}
 			}
@@ -878,7 +874,7 @@ func (g *Gui) drawTitle(v *View, fgColor, bgColor, stBgColor Attribute) error {
 		} else if x > v.x1-2 || x >= g.maxX {
 			break
 		}
-		if err := g.SetRune(x, v.y0, ch, bgColor, fgColor); err != nil {
+		if err := g.SetRune(x, v.y0, ch, bgColor|AttrBold, fgColor); err != nil {
 			return err
 		}
 		x++

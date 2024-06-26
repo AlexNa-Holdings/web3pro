@@ -16,7 +16,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/mattn/go-runewidth"
-	"github.com/rs/zerolog/log"
 )
 
 // Constants for overlapping edges
@@ -1130,7 +1129,7 @@ func (v *View) AddTagEx(tagName string, tagParams map[string]string) error {
 	switch tagName {
 	case "l": // link
 		v.AddLink(tagParams["text"], "link "+tagParams["href"], tagParams["tip"])
-	case "b": // button
+	case "button": // button
 		v.AddButton(tagParams["text"], "button "+tagParams["id"], tagParams["tip"])
 	case "i": // input
 		v.AddInput(tagParams)
@@ -1146,10 +1145,8 @@ func GetTagLength(tagName string, tagParams map[string]string) int {
 	switch tagName {
 	case "l": // link
 		return len(tagParams["text"])
-	case "b": // button
+	case "button": // button
 		return len(tagParams["text"]) + 2
-	case "c": // center
-		return 0
 	case "i": // input
 		size, _ := strconv.Atoi(tagParams["size"])
 		return size
@@ -1198,11 +1195,11 @@ func (v *View) AddLink(text, value, tip string) error {
 
 func (v *View) AddButton(text, value, tip string) error {
 	cells := AddCells(nil, v.EmFgColor, v.BgColor, "\ue0b6")
-	cells = AddCells(cells, v.BgColor, v.EmFgColor, text)
+	cells = AddCells(cells, v.BgColor|AttrBold, v.EmFgColor, text)
 	cells = AddCells(cells, v.EmFgColor, v.BgColor, "\ue0b4")
 
 	cells_highligted := AddCells(nil, v.SelFgColor, v.SelBgColor, "\ue0b6")
-	cells_highligted = AddCells(cells_highligted, v.SelBgColor, v.SelFgColor, text)
+	cells_highligted = AddCells(cells_highligted, v.SelBgColor|AttrBold, v.SelFgColor, text)
 	cells_highligted = AddCells(cells_highligted, v.SelFgColor, v.SelBgColor, "\ue0b4")
 
 	if value != "" {
@@ -1227,6 +1224,7 @@ func (v *View) AddButton(text, value, tip string) error {
 	if err == nil {
 		v.writeMutex.Lock()
 		defer v.writeMutex.Unlock()
+		v.makeWriteable(v.wx, v.wy)
 		v.writeCells(v.wx, v.wy, cells)
 		v.wx += len(cells)
 		c.Hotspot = hs
@@ -1273,6 +1271,7 @@ func (v *View) AddSelect(tagParams map[string]string) error {
 
 	if err == nil {
 		v.writeMutex.Lock()
+		v.makeWriteable(v.wx, v.wy)
 		defer v.writeMutex.Unlock()
 		v.writeCells(v.wx, v.wy, cells)
 		v.wx += len(cells)
@@ -1544,9 +1543,6 @@ func (v *View) SetList(id string, list []string) {
 }
 
 func (v *View) RenderTemplate(template string) error {
-
-	log.Debug().Msgf("RenderTemplate: %s", v.name)
-
 	v.Clear()
 
 	if v.x1-v.x0 < 3 || v.y1-v.y0 < 3 {
@@ -1563,6 +1559,7 @@ func (v *View) RenderTemplate(template string) error {
 	width := v.x1 - v.x0 - 1
 
 	centered := false
+	bold := false
 	autowrap := false
 
 	for _, line := range lines {
@@ -1607,6 +1604,7 @@ func (v *View) RenderTemplate(template string) error {
 
 		splitted_lines = append(splitted_lines, line)
 
+		var cells []cell
 		for _, l := range splitted_lines {
 			if centered {
 				n := (width - calcLineWidth(l)) / 2
@@ -1619,7 +1617,15 @@ func (v *View) RenderTemplate(template string) error {
 
 			for _, match := range matches {
 
-				fmt.Fprint(v, l[left:match[0]])
+				if bold {
+					cells = AddCells(nil, v.FgColor|AttrBold, v.BgColor, l[left:match[0]])
+				} else {
+					cells = AddCells(nil, v.FgColor, v.BgColor, l[left:match[0]])
+				}
+				v.makeWriteable(v.wx, v.wy)
+				v.writeCells(v.wx, v.wy, cells)
+				v.wx += len(cells)
+
 				tag := l[match[0]:match[1]]
 
 				switch tag {
@@ -1631,6 +1637,10 @@ func (v *View) RenderTemplate(template string) error {
 					autowrap = true
 				case "</w>":
 					autowrap = false
+				case "<b>":
+					bold = true
+				case "</b>":
+					bold = false
 				default:
 					v.AddTag(tag)
 				}
@@ -1638,7 +1648,16 @@ func (v *View) RenderTemplate(template string) error {
 				left = match[1]
 			}
 
-			fmt.Fprintln(v, l[left:])
+			if bold {
+				cells = AddCells(nil, v.FgColor|AttrBold, v.BgColor, l[left:])
+			} else {
+				cells = AddCells(nil, v.FgColor, v.BgColor, l[left:])
+			}
+			v.makeWriteable(v.wx, v.wy)
+			v.writeCells(v.wx, v.wy, cells)
+			v.wx += len(cells)
+
+			fmt.Fprint(v, "\n")
 		}
 
 	}
@@ -1648,7 +1667,7 @@ func (v *View) RenderTemplate(template string) error {
 
 func calcLineWidth(line string) int {
 	l := len(line)
-	re := regexp.MustCompile(`<(\w+)((?:\s+\w+(?::(?:\w+|"[^"]*"))?\s*)*)>`)
+	re := regexp.MustCompile(`<(/?\w+)((?:\s+\w+(?::(?:\w+|"[^"]*"))?\s*)*)>`)
 	matches := re.FindAllStringIndex(line, -1)
 	for _, match := range matches {
 		tag := line[match[0]:match[1]]

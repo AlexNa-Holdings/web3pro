@@ -79,7 +79,7 @@ func Theme_Process(cmd *Command, input string) {
 		ui.Printf("\n")
 	case "demo":
 		if len(tokens) < 3 {
-			demoTheme(ui.CurrentTheme.Name)
+			demoTheme(ui.Theme.Name)
 		} else {
 			demoTheme(tokens[2])
 		}

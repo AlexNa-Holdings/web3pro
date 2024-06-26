@@ -72,9 +72,20 @@ func (d TrezorDriver) FindDeviceInfo() (usb.DeviceInfo, error) {
 	cmn.Hail(&cmn.HailRequest{
 		Template: `<c><w>
 Please connect your Trezor device and unlock it.
-` + strings.Join(names, ", ") + `
+<b>` + strings.Join(names, ", ") + `</b>
+asd
+asda
+sfas
+fas
+df
+asd
+f
+sdf
+sa
+df
+asdf
 
-<b text:Ok tip:"create wallet">  <b text:Cancel>
+<button text:Ok tip:"create wallet">  <button text:Cancel>
 `,
 	})
 
