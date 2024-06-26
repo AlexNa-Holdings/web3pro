@@ -18,12 +18,10 @@ func NewUsbCommand() *Command {
 		Command:      "usb",
 		ShortCommand: "",
 		Usage: `
-Usage: usb [COMMAND]
+Usage: 
 
-Manage usb
+  usb {all} - List usb devices
 
-Commands:
-  list   - List usb devices
 		`,
 		Help:             `Manage usb devices`,
 		Process:          Usb_Process,
@@ -36,7 +34,7 @@ func Usb_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 	p := cmn.Split(input)
 	command, subcommand, _ := p[0], p[1], p[2]
 
-	if !cmn.IsInArray(blockchain_subcommands, subcommand) {
+	if !cmn.IsInArray(usb_subcommands, subcommand) {
 		for _, sc := range blockchain_subcommands {
 			if input == "" || strings.Contains(sc, subcommand) {
 				options = append(options, ui.ACOption{Name: sc, Result: command + " " + sc + " "})

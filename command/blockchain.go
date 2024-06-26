@@ -23,10 +23,10 @@ Usage: blockchain [COMMAND]
 Manage blockchains
 
 Commands:
-  add    - Add new blockchain
-  use    - Use blockchain
-  list   - List blockchains
-  remove - Remove blockchain  
+  add [BLOCKCHAIN]    - Add new blockchain
+  use [BLOCKCHAIN]    - Use blockchain
+  list                - List blockchains
+  remove [BLOCKCHAIN] - Remove blockchain  
 		`,
 		Help:             `Manage blockchains`,
 		Process:          Blockchain_Process,

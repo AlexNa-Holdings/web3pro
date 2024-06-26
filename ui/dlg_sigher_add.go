@@ -18,9 +18,14 @@ func DlgSignerAdd(t string, sn string) *gocui.Popup {
    Name: <i id:name size:32 value:""> 
    Type: ` + t + `
      SN: <i id:sn size:32>
-Copy of: <select id:copyof size:32 value:""> 
+	 
+Copy of: <select id:copyof size:32 value:""> <c>
+NOTE: You are responsible to assure that the 
+device marked as copy is the same as the one
+you are adding. If you are not sure, please
+cancel and verify the device.
 
-<c><b text:Ok tip:"create wallet">  <b text:Cancel>`
+<b text:Ok tip:"create wallet">  <b text:Cancel>`
 	} else {
 		template = `
      Name: <i id:name size:32 value:""> 
@@ -33,8 +38,8 @@ Copy of: <select id:copyof size:32 value:"">
 
 
 
- 
-<c><b text:Ok tip:"create wallet">  <b text:Cancel>`
+<c>
+<b text:Ok tip:"create wallet">  <b text:Cancel>`
 	}
 
 	return &gocui.Popup{
@@ -53,7 +58,7 @@ Copy of: <select id:copyof size:32 value:"">
 
 			names := []string{""}
 			for _, signer := range wallet.CurrentWallet.Signers {
-				if signer.CopyOf == "" && signer.Type == t {
+				if signer.Type == t {
 					names = append(names, signer.Name)
 				}
 			}
@@ -87,20 +92,11 @@ Copy of: <select id:copyof size:32 value:"">
 							Notification.ShowErrorf("Signer %s already exists", name)
 							return
 						}
-					}
-
-					if copyof != "" {
-						found := false
-						for _, signer := range wallet.CurrentWallet.Signers {
-							if signer.Name == copyof && signer.CopyOf == "" && signer.Type != "mnemonics" {
-								found = true
-								break
+						for _, copy := range signer.Copies {
+							if copy.Name == name {
+								Notification.ShowErrorf("Signer %s already exists", name)
+								return
 							}
-						}
-
-						if !found {
-							Notification.ShowErrorf("Non mnemonics signer %s not found", copyof)
-							break
 						}
 					}
 
@@ -118,6 +114,12 @@ Copy of: <select id:copyof size:32 value:"">
 
 						sn = hex.EncodeToString(m[:])
 
+						wallet.CurrentWallet.Signers = append(wallet.CurrentWallet.Signers, &signer.Signer{
+							Name: name,
+							Type: t,
+							SN:   sn,
+						})
+
 					} else { // not mnemonics
 						if len(sn) == 0 {
 							Notification.ShowError("SN cannot be empty")
@@ -126,20 +128,42 @@ Copy of: <select id:copyof size:32 value:"">
 
 						for _, signer := range wallet.CurrentWallet.Signers {
 							if t == signer.Type && signer.SN == sn {
-								Notification.ShowErrorf("Signer with SN %s already exists", sn)
+								Notification.ShowErrorf("Signer %s has same SN", signer.Name)
 								return
 							}
+
+							for _, copy := range signer.Copies {
+								if copy.SN == sn {
+									Notification.ShowErrorf("Signer %s has same SN", copy.Name)
+									return
+								}
+							}
+						}
+						if copyof != "" {
+							added := false
+							for _, s := range wallet.CurrentWallet.Signers {
+								if s.Name == copyof {
+									s.Copies = append(s.Copies, signer.SignerCopy{
+										Name: name,
+										SN:   sn,
+									})
+									added = true
+									break
+								}
+							}
+							if !added {
+								Notification.ShowErrorf("Signer %s not found", copyof)
+								break
+							}
+						} else {
+							wallet.CurrentWallet.Signers = append(wallet.CurrentWallet.Signers, &signer.Signer{
+								Name: name,
+								Type: t,
+								SN:   sn,
+							})
 						}
 					}
 
-					wallet.CurrentWallet.Signers = append(wallet.CurrentWallet.Signers, &signer.Signer{
-						Name:   name,
-						Type:   t,
-						SN:     sn,
-						CopyOf: copyof,
-					})
-
-					wallet.CurrentWallet.SortSigners()
 					err := wallet.CurrentWallet.Save()
 					if err != nil {
 						Notification.ShowErrorf("Error creating signer: %s", err)

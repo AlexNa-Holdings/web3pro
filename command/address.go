@@ -22,10 +22,10 @@ Usage: address [COMMAND]
 Manage addresses
 
 Commands:
-  add    - Add new address
-  use    - Use address
-  list   - List addresses
-  remove - Remove address  
+  add [ADDRESS] [SIGNER] [PATH] - Add new address
+  use [ADDRESS]                 - Use address
+  list                          - List addresses
+  remove [ADDRESS]              - Remove address  
 		`,
 		Help:             `Manage addresses`,
 		Process:          Address_Process,

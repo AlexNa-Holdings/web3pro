@@ -3,7 +3,6 @@ package gocui
 import (
 	"errors"
 	"fmt"
-	"regexp"
 	"strings"
 )
 
@@ -14,12 +13,12 @@ type Popup struct {
 	Name            string
 	Width, Height   int
 	Title, Subtitle string
-	Template        string
 	GlgLayout       func(g *Gui) error
 	OnOverHotspot   func(v *View, hs *Hotspot)
 	OnClickHotspot  func(v *View, hs *Hotspot)
 	OnClose         func(v *View)
 	OnOpen          func(v *View)
+	Template        string
 }
 
 func (g *Gui) ShowPopup(p *Popup) {
@@ -77,7 +76,7 @@ func (p *Popup) Layout(g *Gui) error {
 		// calc the longest line
 		lines := strings.Split(p.Template, "\n")
 		for _, line := range lines {
-			l := p.calcLineWidth(line)
+			l := calcLineWidth(line)
 			if l > p.Width {
 				p.Width = l
 			}
@@ -126,7 +125,7 @@ func (p *Popup) Layout(g *Gui) error {
 		g.SetCurrentView(v.name)
 		switch {
 		case p.Template != "":
-			err = p.ParseTemplate()
+			err = p.RenderTemplate(p.Template)
 		case p.GlgLayout != nil:
 			err = p.GlgLayout(g)
 		default:
@@ -150,7 +149,6 @@ func (p *Popup) Layout(g *Gui) error {
 			c.View.x1 = v.x0 + c.x1
 			c.View.y0 = v.y0 + c.y0
 			c.View.y1 = v.y0 + c.y1
-			c.View.tainted = true
 			g.SetViewOnTop(c.View.name)
 		}
 	}
@@ -283,55 +281,4 @@ func DroplistNavigation(v *View, key Key, ch rune, mod Modifier) {
 		v.MoveCursor(0, 1)
 	default:
 	}
-}
-
-func (p *Popup) ParseTemplate() error {
-
-	re := regexp.MustCompile(`<(\w+)((?:\s+\w+(?::(?:\w+|"[^"]*"))?\s*)*)>`)
-	lines := strings.Split(p.Template, "\n")
-
-	if len(lines) == 0 {
-		return errors.New("empty template")
-	}
-
-	for _, line := range lines {
-		matches := re.FindAllStringIndex(line, -1)
-
-		left := 0
-
-		for _, match := range matches {
-			fmt.Fprint(p.View, line[left:match[0]])
-			tag := line[match[0]:match[1]]
-			if tag == "<c>" { // center
-				if left != 0 {
-					return errors.New("center tag must be at the beginning of the line")
-				}
-
-				n := (p.Width - 2 - p.calcLineWidth(line)) / 2
-				for i := 0; i < n; i++ {
-					fmt.Fprint(p.View, " ")
-				}
-			} else {
-				p.View.AddTag(tag)
-			}
-			left = match[1]
-		}
-
-		fmt.Fprintln(p.View, line[left:])
-
-	}
-
-	return nil
-}
-
-func (p *Popup) calcLineWidth(line string) int {
-	l := len(line)
-	re := regexp.MustCompile(`<(\w+)((?:\s+\w+(?::(?:\w+|"[^"]*"))?\s*)*)>`)
-	matches := re.FindAllStringIndex(line, -1)
-	for _, match := range matches {
-		tag := line[match[0]:match[1]]
-		tagName, tagParams := ParseTag(tag)
-		l = l - len(tag) + GetTagLength(tagName, tagParams)
-	}
-	return l
 }

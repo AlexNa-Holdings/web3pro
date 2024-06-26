@@ -235,11 +235,19 @@ func (g *Gui) SetView(name string, x0, y0, x1, y1 int, overlaps byte) (*View, er
 	}
 
 	if v, err := g.View(name); err == nil {
+		resized := v.x0 != x0 || v.y0 != y0 || v.x1 != x1 || v.y1 != y1
+
 		v.x0 = x0
 		v.y0 = y0
 		v.x1 = x1
 		v.y1 = y1
 		v.tainted = true
+
+		if resized {
+			if v.OnResize != nil {
+				v.OnResize(v)
+			}
+		}
 		return v, nil
 	}
 
@@ -649,7 +657,7 @@ func (g *Gui) flush() error {
 			// }
 			// }
 
-			fgColor = v.FgColor
+			// fgColor = v.FgColor
 			frameColor = v.FrameColor
 
 			if err := g.drawFrameEdges(v, frameColor, v.BgColor); err != nil {
@@ -659,7 +667,7 @@ func (g *Gui) flush() error {
 				return err
 			}
 			if v.Title != "" {
-				if err := g.drawTitle(v, fgColor, v.BgColor, v.SubTitleBgColor); err != nil {
+				if err := g.drawTitle(v, frameColor, v.BgColor, v.SubTitleBgColor); err != nil {
 					return err
 				}
 			}

@@ -16,6 +16,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/mattn/go-runewidth"
+	"github.com/rs/zerolog/log"
 )
 
 // Constants for overlapping edges
@@ -79,6 +80,7 @@ type View struct {
 	activeHotspot  *Hotspot                   // AN - the currently active hotspot
 	OnOverHotspot  func(v *View, hs *Hotspot) // AN - function to be called when the mouse is over a hotspot
 	OnClickHotspot func(v *View, hs *Hotspot) // AN - function to be called when the mouse is clicked on a hotspot
+	OnResize       func(v *View)              // AN - function to be called when the view is resized
 	DropList       *View                      // AN - the view that is used for the combo list
 
 	// readBuffer is used for storing unread bytes
@@ -723,6 +725,7 @@ func (v *View) draw() error {
 	}
 
 	v.contentCache = newCache
+	v.tainted = false //A.N.
 	return nil
 }
 
@@ -1171,7 +1174,7 @@ func AddCells(cells []cell, fg, bg Attribute, text string) []cell {
 }
 
 func (v *View) AddLink(text, value, tip string) error {
-	cells := AddCells(nil, v.gui.EmFgColor, v.BgColor, text)
+	cells := AddCells(nil, v.EmFgColor, v.BgColor, text)
 	cells_highligted := AddCells(nil, v.SelFgColor, v.SelBgColor, text)
 
 	c := PopoupControl{
@@ -1194,9 +1197,9 @@ func (v *View) AddLink(text, value, tip string) error {
 }
 
 func (v *View) AddButton(text, value, tip string) error {
-	cells := AddCells(nil, v.gui.EmFgColor, v.BgColor, "\ue0b6")
-	cells = AddCells(cells, v.BgColor, v.gui.EmFgColor, text)
-	cells = AddCells(cells, v.gui.EmFgColor, v.BgColor, "\ue0b4")
+	cells := AddCells(nil, v.EmFgColor, v.BgColor, "\ue0b6")
+	cells = AddCells(cells, v.BgColor, v.EmFgColor, text)
+	cells = AddCells(cells, v.EmFgColor, v.BgColor, "\ue0b4")
 
 	cells_highligted := AddCells(nil, v.SelFgColor, v.SelBgColor, "\ue0b6")
 	cells_highligted = AddCells(cells_highligted, v.SelBgColor, v.SelFgColor, text)
@@ -1250,7 +1253,7 @@ func (v *View) AddSelect(tagParams map[string]string) error {
 	}
 
 	cells := AddCells(nil, v.FgColor, v.gui.InputBgColor, text)
-	cells = AddCells(cells, v.gui.EmFgColor, v.gui.InputBgColor, ICON_DROPLIST)
+	cells = AddCells(cells, v.EmFgColor, v.gui.InputBgColor, ICON_DROPLIST)
 	cells_highligted := AddCells(nil, v.SelFgColor, v.gui.InputBgColor, text+ICON_DROPLIST)
 
 	list := tagParams["list"]
@@ -1524,10 +1527,8 @@ func (v *View) SetInput(id, value string) {
 				}
 
 				c.Cells = AddCells(nil, v.FgColor, v.gui.InputBgColor, text)
-				c.Cells = AddCells(c.Cells, v.gui.EmFgColor, v.gui.InputBgColor, ICON_DROPLIST)
+				c.Cells = AddCells(c.Cells, v.EmFgColor, v.gui.InputBgColor, ICON_DROPLIST)
 				c.CellsHighligted = AddCells(nil, v.SelFgColor, v.gui.InputBgColor, text+ICON_DROPLIST)
-
-				v.tainted = true
 			}
 		}
 	}
@@ -1540,4 +1541,119 @@ func (v *View) SetList(id string, list []string) {
 			break
 		}
 	}
+}
+
+func (v *View) RenderTemplate(template string) error {
+
+	log.Debug().Msgf("RenderTemplate: %s", v.name)
+
+	v.Clear()
+
+	if v.x1-v.x0 < 3 || v.y1-v.y0 < 3 {
+		return nil // no space to render
+	}
+
+	re := regexp.MustCompile(`<(/?\w+)((?:\s+\w+(?::(?:\w+|"[^"]*"))?\s*)*)>`)
+	lines := strings.Split(template, "\n")
+
+	if len(lines) == 0 {
+		return errors.New("empty template")
+	}
+
+	width := v.x1 - v.x0 - 1
+
+	centered := false
+	autowrap := false
+
+	for _, line := range lines {
+		matches := re.FindAllStringIndex(line, -1)
+
+		splitted_lines := []string{}
+
+		if autowrap {
+			spaces := []int{}
+			for calcLineWidth(line) > width && len(line) > 0 {
+				in_tag := false
+				for i, r := range line {
+					switch r {
+					case '<':
+						in_tag = true
+					case '>':
+						in_tag = false
+					case ' ':
+						if !in_tag {
+							spaces = append(spaces, i)
+						}
+					}
+				}
+
+				splited := false
+				for i := len(spaces) - 2; i > 0; i-- {
+					try := line[:spaces[i]]
+
+					if calcLineWidth(try) <= width {
+						splitted_lines = append(splitted_lines, try)
+						line = line[spaces[i]+1:]
+						splited = true
+						break
+					}
+				}
+
+				if !splited {
+					break
+				}
+			}
+		}
+
+		splitted_lines = append(splitted_lines, line)
+
+		for _, l := range splitted_lines {
+			if centered {
+				n := (width - calcLineWidth(l)) / 2
+				for i := 0; i < n; i++ {
+					fmt.Fprint(v, " ")
+				}
+			}
+
+			left := 0
+
+			for _, match := range matches {
+
+				fmt.Fprint(v, l[left:match[0]])
+				tag := l[match[0]:match[1]]
+
+				switch tag {
+				case "<c>":
+					centered = true
+				case "</c>":
+					centered = false
+				case "<w>":
+					autowrap = true
+				case "</w>":
+					autowrap = false
+				default:
+					v.AddTag(tag)
+				}
+
+				left = match[1]
+			}
+
+			fmt.Fprintln(v, l[left:])
+		}
+
+	}
+
+	return nil
+}
+
+func calcLineWidth(line string) int {
+	l := len(line)
+	re := regexp.MustCompile(`<(\w+)((?:\s+\w+(?::(?:\w+|"[^"]*"))?\s*)*)>`)
+	matches := re.FindAllStringIndex(line, -1)
+	for _, match := range matches {
+		tag := line[match[0]:match[1]]
+		tagName, tagParams := ParseTag(tag)
+		l = l - len(tag) + GetTagLength(tagName, tagParams)
+	}
+	return l
 }

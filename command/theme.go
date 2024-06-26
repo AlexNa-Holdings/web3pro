@@ -9,7 +9,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-var theme_subcommands = []string{"list", "demo"}
+var theme_subcommands = []string{"list", "demo", "set"}
 
 func NewThemeCommand() *Command {
 	return &Command{
@@ -22,6 +22,9 @@ This command allows you to change or show the UI theme.
 
 COMMANDS:
 		demo [THEME] - show theme colors (default: current theme)
+		list         - list available themes
+		set [THEME]  - set theme
+
 		`,
 		Help:             `UI themes management`,
 		Process:          Theme_Process,

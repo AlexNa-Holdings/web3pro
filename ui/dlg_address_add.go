@@ -82,14 +82,6 @@ Address: %s
 						break
 					}
 
-					if s.CopyOf != "" {
-						s = wallet.CurrentWallet.GetSigner(s.CopyOf)
-						if s == nil {
-							Notification.ShowErrorf("Signer %s not found", s.CopyOf)
-							break
-						}
-					}
-
 					wallet.CurrentWallet.Addresses = append(wallet.CurrentWallet.Addresses, &address.Address{
 						Name:    name,
 						Address: a,

@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"io"
 	"os"
-	"sort"
 
 	"github.com/AlexNa-Holdings/web3pro/address"
 	"github.com/AlexNa-Holdings/web3pro/blockchain"
@@ -192,6 +191,17 @@ func (w *Wallet) GetSigner(n string) *signer.Signer {
 	return nil
 }
 
+func (w *Wallet) GetSignerWithCopy(name string) (*signer.Signer, int) {
+	for _, s := range w.Signers {
+		for j, c := range s.Copies {
+			if c.Name == name {
+				return s, j
+			}
+		}
+	}
+	return nil, -1
+}
+
 func (w *Wallet) GetSignerByTypeAndSN(t, sn string) *signer.Signer {
 	for _, s := range w.Signers {
 		if s.Type == t && s.SN == sn {
@@ -217,31 +227,4 @@ func (w *Wallet) GetAddressByName(n string) *address.Address {
 		}
 	}
 	return nil
-}
-
-type ByNameAndCopy []*signer.Signer
-
-func (a ByNameAndCopy) Len() int      { return len(a) }
-func (a ByNameAndCopy) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
-func (a ByNameAndCopy) Less(i, j int) bool {
-
-	ni := a[i].Name
-	if a[i].CopyOf != "" {
-		ni = a[i].CopyOf
-	}
-
-	nj := a[j].Name
-	if a[j].CopyOf != "" {
-		nj = a[j].CopyOf
-	}
-
-	if ni == nj {
-		return a[i].CopyOf < a[j].CopyOf
-	} else {
-		return ni < nj
-	}
-}
-
-func (w *Wallet) SortSigners() {
-	sort.Sort(ByNameAndCopy(w.Signers))
 }

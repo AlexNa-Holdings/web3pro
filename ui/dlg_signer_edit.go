@@ -54,17 +54,8 @@ func DlgSignerEdit(name string) *gocui.Popup {
 						}
 					}
 
-					old_name := wallet.CurrentWallet.Signers[signer_index].Name
-					// update all the copies
-					for _, signer := range wallet.CurrentWallet.Signers {
-						if signer.CopyOf == old_name {
-							signer.CopyOf = new_name
-						}
-					}
-
 					wallet.CurrentWallet.Signers[signer_index].Name = new_name
 
-					wallet.CurrentWallet.SortSigners()
 					err := wallet.CurrentWallet.Save()
 					if err != nil {
 						Notification.ShowErrorf("Error renaming signer: %s", err)
@@ -82,7 +73,7 @@ func DlgSignerEdit(name string) *gocui.Popup {
 		Template: `
  Name: <i id:name size:32 value:"">
  Type: ` + wallet.CurrentWallet.Signers[signer_index].Type + `
-
- <c><b text:Ok tip:"create wallet">  <b text:Cancel>`,
+ <c>
+ <b text:Ok tip:"create wallet">  <b text:Cancel>`,
 	}
 }

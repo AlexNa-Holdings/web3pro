@@ -17,12 +17,16 @@ type SignerDriver interface {
 	GetAddresses(path string, start_from int, count int) ([]address.Address, error)
 }
 
+type SignerCopy struct {
+	Name string
+	SN   string
+}
+
 type Signer struct {
-	Name   string            `json:"name"`
-	Type   string            `json:"type"`
-	SN     string            `json:"sn"`
-	P      map[string]string `json:"params"`
-	CopyOf string            `json:"copyof"`
+	Name   string       `json:"name"`
+	Type   string       `json:"type"`
+	SN     string       `json:"sn"`
+	Copies []SignerCopy `json:"copies"`
 }
 
 var STANDARD_DERIVATIONS = map[string]struct {

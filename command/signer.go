@@ -24,12 +24,12 @@ Usage: signer [COMMAND]
 Manage signers
 
 Commands:
-  add       - Add new signer
-  list      - List signers
-  remove    - Remove signer  
-  edit      - Edit signer
-  promote   - Promote copy to main signer
-  addresses - List addresses of a signer
+  add [TYPE] [SERIAL]                    - Add new signer
+  list                                   - List signers
+  remove [SIGNER]                        - Remove signer
+  edit [SIGNER]                          - Edit signer
+  promote [SIGNER]                       - Promote signer to main signer
+  addresses [SIGNER] [DERIVATION] [FROM] - List addresses
 		`,
 		Help:             `Manage signers`,
 		Process:          Signer_Process,
@@ -55,7 +55,6 @@ func Signer_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 		if wallet.CurrentWallet != nil {
 			for _, s := range wallet.CurrentWallet.Signers {
 				if s.Name == param {
-
 					for d_id, d := range signer.STANDARD_DERIVATIONS {
 						if cmn.Contains(d.Name, p3) {
 							options = append(options, ui.ACOption{Name: d.Name, Result: command + " " + subcommand + " '" + param + "' " + d_id})
@@ -70,7 +69,7 @@ func Signer_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 	if subcommand == "remove" || subcommand == "edit" || subcommand == "addresses" {
 		if wallet.CurrentWallet != nil {
 			for _, s := range wallet.CurrentWallet.Signers {
-				if s.IsConnected() && cmn.Contains(s.Name, param) {
+				if cmn.Contains(s.Name, param) {
 					options = append(options, ui.ACOption{
 						Name: s.Name, Result: command + " " + subcommand + " '" + s.Name + "'"})
 				}
@@ -82,9 +81,11 @@ func Signer_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 	if subcommand == "promote" {
 		if wallet.CurrentWallet != nil {
 			for _, signer := range wallet.CurrentWallet.Signers {
-				if signer.CopyOf != "" && cmn.Contains(signer.Name, param) {
-					options = append(options, ui.ACOption{
-						Name: signer.Name, Result: command + " " + subcommand + " '" + signer.Name + "'"})
+				for _, c := range signer.Copies {
+					if cmn.Contains(c.Name, param) {
+						options = append(options, ui.ACOption{
+							Name: c.Name, Result: command + " " + subcommand + " '" + c.Name + "'"})
+					}
 				}
 			}
 		}
@@ -130,29 +131,28 @@ func Signer_Process(c *Command, input string) {
 
 	switch subcommand {
 	case "list", "":
-		wallet.CurrentWallet.SortSigners()
-
 		ui.Printf("List of signers:\n")
 
-		for i, signer := range wallet.CurrentWallet.Signers {
-			if signer.CopyOf == "" {
-				ui.Printf("%-13s %-9s ", signer.Name, signer.Type)
-			} else {
-				if i == len(wallet.CurrentWallet.Signers)-1 || wallet.CurrentWallet.Signers[i+1].CopyOf != signer.CopyOf {
-					ui.Printf("╰─ ")
-				} else {
-					ui.Printf("├─ ")
-				}
-				ui.Printf("%-10s %-9s ", signer.Name, signer.Type)
-			}
+		for _, signer := range wallet.CurrentWallet.Signers {
+			ui.Printf("%-13s %-9s ", signer.Name, signer.Type)
 			ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command s edit '"+signer.Name+"'", "Edit signer '"+signer.Name+"'")
 			ui.Printf(" ")
 			ui.Terminal.Screen.AddLink(gocui.ICON_DELETE, "command s remove '"+signer.Name+"'", "Remove signer '"+signer.Name+"'")
-			if signer.CopyOf != "" {
-				ui.Printf(" ")
-				ui.Terminal.Screen.AddLink(gocui.ICON_PROMOTE, "command s promote "+signer.Name, "Promote copy to main signer")
-			}
 			ui.Printf("\n")
+			for j, c := range signer.Copies {
+				if j != len(signer.Copies)-1 {
+					ui.Printf("├─ ")
+				} else {
+					ui.Printf("╰─ ")
+				}
+				ui.Printf("%-10s ", c.Name)
+				ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command s edit '"+c.Name+"'", "Edit signer '"+c.Name+"'")
+				ui.Printf(" ")
+				ui.Terminal.Screen.AddLink(gocui.ICON_DELETE, "command s remove '"+c.Name+"'", "Remove signer '"+c.Name+"'")
+				ui.Printf(" ")
+				ui.Terminal.Screen.AddLink(gocui.ICON_PROMOTE, "command s promote '"+c.Name+"'", "Promote copy to main signer")
+				ui.Printf("\n")
+			}
 		}
 
 		ui.Printf("\n")
@@ -216,12 +216,11 @@ func Signer_Process(c *Command, input string) {
 	case "remove":
 		for i, signer := range wallet.CurrentWallet.Signers {
 			if signer.Name == p1 {
-
 				ui.Gui.ShowPopup(ui.DlgConfirm(
 					"Remove signer",
 					`
-<c>Are you sure you want to remove 
-<c>signer '`+p1+"' ?\n",
+<c> Are you sure you want to remove 
+<c> signer '`+p1+"' ?\n",
 					func() {
 						wallet.CurrentWallet.Signers = append(wallet.CurrentWallet.Signers[:i], wallet.CurrentWallet.Signers[i+1:]...)
 
@@ -235,23 +234,36 @@ func Signer_Process(c *Command, input string) {
 					}))
 				return
 			}
+
+			for j, c := range signer.Copies {
+				if c.Name == p1 {
+					ui.Gui.ShowPopup(ui.DlgConfirm(
+						"Remove signer's copy",
+						`
+<c> Are you sure you want to remove 
+<c> signer's copy '`+p1+"' ?\n",
+
+						func() {
+							signer.Copies = append(signer.Copies[:j], signer.Copies[j+1:]...)
+
+							err := wallet.CurrentWallet.Save()
+							if err != nil {
+								ui.PrintErrorf("\nFailed to save wallet: %s\n", err)
+								return
+							}
+							ui.Printf("\nSigner's copy %s removed\n", p1)
+						}))
+					return
+				}
+			}
 		}
+
+		ui.PrintErrorf("Signer not found: %s\n", p1)
 
 	case "promote":
-		s := wallet.CurrentWallet.GetSigner(p1)
+		s, ci := wallet.CurrentWallet.GetSignerWithCopy(p1)
 		if s == nil {
 			ui.PrintErrorf("Signer not found: %s\n", p1)
-			return
-		}
-
-		if s.CopyOf == "" {
-			ui.PrintErrorf("Signer %s is not a copy\n", p1)
-			return
-		}
-
-		m := wallet.CurrentWallet.GetSigner(s.CopyOf)
-		if m == nil {
-			ui.PrintErrorf("Main signer not found: %s\n", s.CopyOf)
 			return
 		}
 
@@ -261,19 +273,20 @@ func Signer_Process(c *Command, input string) {
 			func() {
 				// move all the addresses to the new main signer
 				for _, a := range wallet.CurrentWallet.Addresses {
-					if a.Signer == m.Name {
-						a.Signer = p1
+					if a.Signer == s.Name {
+						a.Signer = s.Copies[ci].Name
 					}
 				}
 
-				m.CopyOf = s.Name
-				s.CopyOf = ""
-				// switch all the copies
-				for _, signer := range wallet.CurrentWallet.Signers {
-					if signer.CopyOf == m.Name {
-						signer.CopyOf = p1
-					}
-				}
+				//swap name and SN
+				tmp_name := s.Name
+				tmp_sn := s.SN
+
+				s.Name = s.Copies[ci].Name
+				s.SN = s.Copies[ci].SN
+
+				s.Copies[ci].Name = tmp_name
+				s.Copies[ci].SN = tmp_sn
 
 				err := wallet.CurrentWallet.Save()
 				if err != nil {

@@ -2,8 +2,10 @@ package signer
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/AlexNa-Holdings/web3pro/address"
+	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/usb_support"
 	"github.com/karalabe/usb"
 	"github.com/rs/zerolog/log"
@@ -11,6 +13,7 @@ import (
 
 type TrezorDriver struct {
 	*Signer
+	usb.DeviceInfo
 	usb.Device
 }
 
@@ -26,46 +29,66 @@ func NewTrezorDriver(s *Signer) (TrezorDriver, error) {
 }
 
 func (d TrezorDriver) IsConnected() bool {
-
 	devices, err := usb_support.List()
 	if err != nil {
 		log.Error().Msgf("Error listing USB devices", "err", err)
 		return false
 	}
 
+	sns := []string{d.SN}
+	for _, c := range d.Copies {
+		sns = append(sns, c.SN)
+	}
+
 	for _, device := range devices {
-		if device.Product == "TREZOR" && device.Serial == d.SN {
+		if device.Product == "TREZOR" && cmn.IsInArray(sns, device.Serial) {
 			return true
 		}
 	}
 	return false
 }
 
+func (d TrezorDriver) FindDeviceInfo() (usb.DeviceInfo, error) {
+	devices, err := usb_support.List()
+	if err != nil {
+		log.Error().Msgf("Error listing USB devices", "err", err)
+		return usb.DeviceInfo{}, err
+	}
+
+	sns := []string{d.SN}
+	names := []string{d.Name}
+	for _, c := range d.Copies {
+		sns = append(sns, c.SN)
+		names = append(names, c.Name)
+	}
+
+	for _, info := range devices {
+		if info.Product == "TREZOR" && cmn.IsInArray(sns, info.Serial) {
+
+			return info, nil
+		}
+	}
+
+	cmn.Hail(&cmn.HailRequest{
+		Template: `<c><w>
+Please connect your Trezor device and unlock it.
+` + strings.Join(names, ", ") + `
+
+<b text:Ok tip:"create wallet">  <b text:Cancel>
+`,
+	})
+
+	return usb.DeviceInfo{}, errors.New("device not found")
+}
+
 func (d TrezorDriver) GetAddresses(path_format string, start_from int, count int) ([]address.Address, error) {
+	var err error
 	addresses := []address.Address{}
 
-	// find sutable device
-
-	if d.IsConnected() {
-		l, err := usb_support.List()
-		if err != nil {
-			log.Error().Msgf("Error listing USB devices: %v", err)
-			return addresses, err
-		}
-
-		for _, info := range l {
-			if info.Product == "TREZOR" && info.Serial == d.SN {
-				d.Device, err = info.Open()
-				if err != nil {
-					log.Error().Msgf("Error opening USB device: %v", err)
-					return addresses, err
-				}
-			}
-		}
-
-		// p := trezor.Initialize
-
-		log.Debug().Msgf("Device: %v", d.Device)
+	d.DeviceInfo, err = d.FindDeviceInfo()
+	if err != nil {
+		log.Debug().Msgf("Error finding device: %s", err)
+		return addresses, err
 	}
 
 	return addresses, nil

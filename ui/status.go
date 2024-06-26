@@ -15,7 +15,7 @@ type StatusPane struct {
 
 var Status *StatusPane = &StatusPane{
 	MinWidth:  30,
-	MinHeight: 7,
+	MinHeight: 3,
 }
 
 func (p *StatusPane) SetView(g *gocui.Gui, x0, y0, x1, y1 int) {
