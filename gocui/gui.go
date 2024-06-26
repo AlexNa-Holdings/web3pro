@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"runtime"
 	"strings"
+
+	"github.com/rs/zerolog/log"
 )
 
 // OutputMode represents an output mode, which determines how colors
@@ -1092,6 +1094,26 @@ func (g *Gui) onKey(ev *gocuiEvent) error {
 				}
 			}
 
+		}
+
+		if ev.Key == MouseLeft {
+			// check if click on a title
+			for i := len(g.views); i > 0; i-- {
+				v := g.views[i-1]
+				if my == v.y0 {
+					title_length := len(v.Title) + 4
+					if len(v.Subtitle) > 0 {
+						title_length += len(v.Subtitle) + 3
+					}
+					if mx >= v.x0+2 && mx < v.x0+2+title_length {
+						log.Debug().Msgf("Click on title %s", v.Title)
+						if v.OnClickTitle != nil {
+							v.OnClickTitle(v)
+							return nil
+						}
+					}
+				}
+			}
 		}
 
 		v, err := g.ViewByPosition(mx, my)

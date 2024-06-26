@@ -80,6 +80,7 @@ type View struct {
 	activeHotspot  *Hotspot                   // AN - the currently active hotspot
 	OnOverHotspot  func(v *View, hs *Hotspot) // AN - function to be called when the mouse is over a hotspot
 	OnClickHotspot func(v *View, hs *Hotspot) // AN - function to be called when the mouse is clicked on a hotspot
+	OnClickTitle   func(v *View)              // AN - function to be called when the title is clicked
 	OnResize       func(v *View)              // AN - function to be called when the view is resized
 	DropList       *View                      // AN - the view that is used for the combo list
 

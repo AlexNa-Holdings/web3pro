@@ -26,12 +26,14 @@ type SConfig struct {
 	WalletName string `yaml:"wallet_name"` // last wallet used
 	Verbosity  string `yaml:"verbosity"`   // log verbosity
 	Theme      string `yaml:"theme"`       // UI theme
+	TimeoutSec int    `yaml:"timeout_sec"` // default timeout for hail requests
 }
 
-var Config *SConfig = &SConfig{
+var Config *SConfig = &SConfig{ //Default config
 	WalletName: "default",
 	Verbosity:  "trace",
 	Theme:      "dark",
+	TimeoutSec: 60,
 }
 
 func InitConfig() {
