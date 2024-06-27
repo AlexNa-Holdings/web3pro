@@ -100,8 +100,11 @@ Connect your Trezor device and unlock it.
 		},
 	})
 
-	ret = ret
-	return usb.DeviceInfo{}, errors.New("device not found")
+	if ret.Path == "" {
+		return ret, errors.New("device not found")
+	}
+
+	return ret, nil
 }
 
 func (d TrezorDriver) GetAddresses(path_format string, start_from int, count int) ([]address.Address, error) {
