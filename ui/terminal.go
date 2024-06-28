@@ -311,7 +311,6 @@ func OnAutocompleteMouseDown(g *gocui.Gui, v *gocui.View) error {
 	}
 
 	return nil
-
 }
 
 func showHistory() {
@@ -319,27 +318,33 @@ func showHistory() {
 	for _, h := range Terminal.History {
 		options = append(options, ACOption{Name: h, Result: h})
 	}
-
 	Terminal.ShowAutocomplete("History", &options, "")
 }
 
 func PrintErrorf(format string, a ...interface{}) {
+	Gui.UpdateAsync(func(g *gocui.Gui) error {
+		str := fmt.Sprintf(format, a...)
 
-	str := fmt.Sprintf(format, a...)
+		fmt.Fprint(Terminal.Screen,
+			F(Theme.ErrorFgColor)+
+				str+
+				F(Terminal.Screen.FgColor))
 
-	fmt.Fprint(Terminal.Screen,
-		F(Theme.ErrorFgColor)+
-			str+
-			F(Terminal.Screen.FgColor))
+		return nil
+	})
 }
 
 func Printf(format string, a ...interface{}) {
-
-	str := fmt.Sprintf(format, a...)
-
-	fmt.Fprint(Terminal.Screen, str)
+	Gui.UpdateAsync(func(g *gocui.Gui) error {
+		str := fmt.Sprintf(format, a...)
+		fmt.Fprint(Terminal.Screen, str)
+		return nil
+	})
 }
 
 func ResetColors() {
-	fmt.Fprint(Terminal.Screen, FB(Terminal.Screen.FgColor, Terminal.Screen.BgColor))
+	Gui.UpdateAsync(func(g *gocui.Gui) error {
+		fmt.Fprint(Terminal.Screen, FB(Terminal.Screen.FgColor, Terminal.Screen.BgColor))
+		return nil
+	})
 }

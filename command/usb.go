@@ -7,7 +7,6 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/signer"
 	"github.com/AlexNa-Holdings/web3pro/ui"
-	"github.com/AlexNa-Holdings/web3pro/usb_support"
 	"github.com/AlexNa-Holdings/web3pro/wallet"
 )
 
@@ -20,7 +19,7 @@ func NewUsbCommand() *Command {
 		Usage: `
 Usage: 
 
-  usb {all} - List usb devices
+  usb  - List usb devices
 
 		`,
 		Help:             `Manage usb devices`,
@@ -52,13 +51,13 @@ func Usb_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 
 func Usb_Process(c *Command, input string) {
 	p := cmn.Split(input)
-	_, subcommand, param := p[0], p[1], p[2]
+	_, subcommand := p[0], p[1]
 
 	switch subcommand {
 	case "list", "":
 		ui.Printf("\nUsb Devices:\n")
 
-		l, err := usb_support.List()
+		l, err := cmn.Core.Enumerate()
 		if err != nil {
 			ui.PrintErrorf("\nError listing usb devices: %v\n", err)
 			return
@@ -67,36 +66,28 @@ func Usb_Process(c *Command, input string) {
 		n := 1
 		for _, u := range l {
 
-			sn, err := usb_support.GetSN(u)
-			if err != nil {
-				ui.PrintErrorf("\nError getting usb serial number: %v\n", err)
-				return
-			}
+			t := signer.GetType(u.Vendor, u.Product)
+			device_name := signer.GetDeviceName(u)
 
-			if param != "all" && signer.GetType(u.Manufacturer, u.Product) == "" {
-				continue
-			}
-
-			ui.Printf("%02d ", n)
+			ui.Printf("%02d %-7s %s ", n, t, device_name)
 			n++
 
 			if wallet.CurrentWallet != nil {
-				es := wallet.CurrentWallet.GetSignerByTypeAndSN(signer.GetType(u.Manufacturer, u.Product), sn)
+				es := wallet.CurrentWallet.GetSignerByTypeAndSN(t, device_name)
 				if es != nil {
 					ui.Printf("'" + es.Name + "' ")
 					ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command s edit '"+es.Name+"'", "Edit signer")
 					break
 				} else {
-					t := signer.GetType(u.Manufacturer, u.Product)
 					if t != "" {
-						ui.Terminal.Screen.AddButton("Add signer", "command s add "+t+" "+u.Serial, "Add signer")
+						ui.Terminal.Screen.AddButton("Add signer", "command s add "+t+" "+u.Path, "Add signer") //TODO
 					}
 				}
 			}
 			ui.Printf("\n")
-			ui.Printf("   manufacturer: %s\n", u.Manufacturer)
+			ui.Printf("   vendor: %s\n", u.Vendor)
 			ui.Printf("   product: %s\n", u.Product)
-			ui.Printf("   serial: %s\n", sn)
+			ui.Printf("   serial: %s\n", device_name)
 			ui.Printf("\n")
 		}
 

@@ -50,6 +50,8 @@ func remove(hail *cmn.HailRequest) {
 
 			HailQueue = append(HailQueue[:i], HailQueue[i+1:]...)
 
+			h.Done <- true
+
 			if len(HailQueue) > 0 {
 				HailPane.open(HailQueue[0])
 			} else {

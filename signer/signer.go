@@ -5,6 +5,9 @@ import (
 	"errors"
 
 	"github.com/AlexNa-Holdings/web3pro/address"
+	"github.com/AlexNa-Holdings/web3pro/cmn"
+	"github.com/AlexNa-Holdings/web3pro/core"
+	"github.com/AlexNa-Holdings/web3pro/usb"
 	"github.com/ava-labs/coreth/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -49,16 +52,34 @@ var STANDARD_DERIVATIONS = map[string]struct {
 
 var KNOWN_SIGNER_TYPES = []string{"trezor", "ledger", "mnemonics"}
 
-func GetType(manufacturer string, product string) string {
-	if product == "TREZOR" {
+func GetType(vid int, pid int) string {
+
+	if usb.IsTrezor(uint16(vid), uint16(pid)) {
 		return "trezor"
 	}
 
-	if manufacturer == "Ledger" {
+	if usb.IsLedger(uint16(vid), uint16(pid)) {
 		return "ledger"
 	}
-
 	return ""
+}
+
+func GetDeviceName(e core.EnumerateEntry) string {
+	t := GetType(e.Vendor, e.Product)
+	switch t {
+	case "trezor":
+		s, err := cmn.Core.Acquire(e.Path, "", false)
+		if err != nil {
+			log.Error().Err(err).Msg("Error acquiring device")
+			return ""
+		}
+		return s
+
+	case "ledger":
+		return "Ledger ID"
+	}
+	return ""
+
 }
 
 func (s *Signer) GetDriver() (SignerDriver, error) {
@@ -78,10 +99,17 @@ func (s *Signer) GetAddresses(path string, start_from int, count int) ([]address
 
 	driver, err := s.GetDriver()
 	if err != nil {
+		log.Error().Err(err).Msgf("GetAddresses: Error getting driver: %s (%s)", s.Name, s.Type)
 		return []address.Address{}, err
 	}
 
-	return driver.GetAddresses(path, start_from, count)
+	addresses, err := driver.GetAddresses(path, start_from, count)
+	if err != nil {
+		log.Error().Err(err).Msgf("GetAddresses: Error getting addresses: %s (%s)", s.Name, s.Type)
+		return []address.Address{}, err
+	}
+
+	return addresses, nil
 
 }
 

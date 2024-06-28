@@ -6,11 +6,14 @@ package main
 
 import (
 	"errors"
+	"runtime"
 
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/command"
+	"github.com/AlexNa-Holdings/web3pro/core"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/ui"
+	"github.com/AlexNa-Holdings/web3pro/usb"
 	"github.com/rs/zerolog/log"
 )
 
@@ -27,6 +30,12 @@ func main() {
 	command.Init()
 	ui.Init()
 	defer ui.Gui.Close()
+
+	bus := initUsb()
+	cmn.Bus = usb.Init(bus...)
+	defer cmn.Bus.Close()
+
+	cmn.Core = core.New(cmn.Bus, allowCancel(), false)
 
 	ui.Is_ready_wg.Add(1)
 	go func() {
@@ -60,4 +69,34 @@ func main() {
 	}
 
 	cmn.SaveConfig()
+}
+
+func initUsb() []core.USBBus {
+	log.Trace().Msg("Initing libusb")
+
+	w, err := usb.InitLibUSB(!usb.HIDUse, allowCancel(), detachKernelDriver())
+	if err != nil {
+		log.Fatal().Msgf("libusb: %s", err)
+	}
+
+	if !usb.HIDUse {
+		return []core.USBBus{w}
+	}
+
+	log.Trace().Msg("Initing hidapi")
+	h, err := usb.InitHIDAPI()
+	if err != nil {
+		log.Fatal().Msgf("hidapi: %s", err)
+	}
+	return []core.USBBus{w, h}
+}
+
+// Does OS allow sync canceling via our custom libusb patches?
+func allowCancel() bool {
+	return runtime.GOOS != "freebsd" && runtime.GOOS != "openbsd"
+}
+
+// Does OS detach kernel driver in libusb?
+func detachKernelDriver() bool {
+	return runtime.GOOS == "linux"
 }

@@ -3,7 +3,23 @@ package cmn
 import (
 	"regexp"
 	"strings"
+
+	"github.com/AlexNa-Holdings/web3pro/core"
+	"github.com/AlexNa-Holdings/web3pro/usb"
 )
+
+var Bus *usb.USB
+var Core *core.Core
+
+func GetID(info core.EnumerateEntry) (string, error) {
+
+	// switch info.Vendor {
+	// case "Ledger":
+	// 	// TO DO
+	// 	return "12345", nil
+	// }
+	return info.Path, nil
+}
 
 func Contains(s string, subststr string) bool {
 	return strings.Contains(

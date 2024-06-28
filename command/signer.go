@@ -8,7 +8,6 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/signer"
 	"github.com/AlexNa-Holdings/web3pro/ui"
-	"github.com/AlexNa-Holdings/web3pro/usb_support"
 	"github.com/AlexNa-Holdings/web3pro/wallet"
 )
 
@@ -102,18 +101,18 @@ func Signer_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 			return "type", &options, param
 		}
 
-		l, _ := usb_support.List() // ignore error
-		for _, u := range l {
-			if param == signer.GetType(u.Manufacturer, u.Product) {
-				sn, err := usb_support.GetSN(u)
-				if err == nil {
-					if cmn.Contains(sn, p3) && p3 != sn {
-						options = append(options, ui.ACOption{Name: sn, Result: command + " add " + param + " " + sn})
-					}
-				}
-			}
-		}
-		return "Serial number", &options, ""
+		// l, _ := core.List() // ignore error
+		// for _, u := range l {
+		// 	if param == signer.GetType(u.Manufacturer, u.Product) {
+		// 		sn, err := cmn.GetSN(u)
+		// 		if err == nil {
+		// 			if cmn.Contains(sn, p3) && p3 != sn {
+		// 				options = append(options, ui.ACOption{Name: sn, Result: command + " add " + param + " " + sn})
+		// 			}
+		// 		}
+		// 	}
+		// }
+		// return "Serial number", &options, ""
 	}
 
 	return "", &options, ""
