@@ -15,21 +15,24 @@ import (
 	"github.com/tyler-smith/go-bip32"
 )
 
-type SignerDriver interface {
-	IsConnected() bool
-	GetAddresses(path string, start_from int, count int) ([]address.Address, error)
-}
-
-type SignerCopy struct {
-	Name string
-	SN   string
-}
-
 type Signer struct {
 	Name   string       `json:"name"`
 	Type   string       `json:"type"`
 	SN     string       `json:"sn"`
 	Copies []SignerCopy `json:"copies"`
+}
+
+type SignerDriver interface {
+	IsConnected(signer *Signer) bool
+	GetAddresses(signer *Signer, path string, start_from int, count int) ([]address.Address, error)
+}
+
+var WalletTrezorDriver = NewTrezorDriver()
+var WalletMnemonicsDriver = NewMnemonicDriver()
+
+type SignerCopy struct {
+	Name string
+	SN   string
 }
 
 var STANDARD_DERIVATIONS = map[string]struct {
@@ -64,13 +67,25 @@ func GetType(vid int, pid int) string {
 	return ""
 }
 
+func (s *Signer) GetDriver() (SignerDriver, error) {
+	switch s.Type {
+	case "trezor":
+		return WalletTrezorDriver, nil
+	case "mnemonics":
+		return WalletMnemonicsDriver, nil
+	}
+
+	return nil, errors.New("unknown signer type")
+}
+
 func GetDeviceName(e core.EnumerateEntry) string {
+	log.Trace().Msgf("GetDeviceName: %s %s", e.Vendor, e.Product)
 	t := GetType(e.Vendor, e.Product)
 	switch t {
 	case "trezor":
 		s, err := cmn.Core.Acquire(e.Path, "", false)
 		if err != nil {
-			log.Error().Err(err).Msg("Error acquiring device")
+			log.Error().Err(err).Msg("GetDeviceName: Error acquiring device")
 			return ""
 		}
 		return s
@@ -82,19 +97,6 @@ func GetDeviceName(e core.EnumerateEntry) string {
 
 }
 
-func (s *Signer) GetDriver() (SignerDriver, error) {
-	switch s.Type {
-	case "trezor":
-		return NewTrezorDriver(s)
-	// case "ledger":
-	// 	return NewLedgerDriver(s)
-	case "mnemonics":
-		return NewMnemonicDriver(s)
-	}
-
-	return nil, errors.New("unknown signer type")
-}
-
 func (s *Signer) GetAddresses(path string, start_from int, count int) ([]address.Address, error) {
 
 	driver, err := s.GetDriver()
@@ -103,7 +105,7 @@ func (s *Signer) GetAddresses(path string, start_from int, count int) ([]address
 		return []address.Address{}, err
 	}
 
-	addresses, err := driver.GetAddresses(path, start_from, count)
+	addresses, err := driver.GetAddresses(s, path, start_from, count)
 	if err != nil {
 		log.Error().Err(err).Msgf("GetAddresses: Error getting addresses: %s (%s)", s.Name, s.Type)
 		return []address.Address{}, err
@@ -120,7 +122,7 @@ func (s *Signer) IsConnected() bool {
 		return false
 	}
 
-	return driver.IsConnected()
+	return driver.IsConnected(s)
 }
 
 // deriveKey derives a key from the master key using the specified path

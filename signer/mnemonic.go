@@ -13,35 +13,40 @@ import (
 )
 
 type MnemonicDriver struct {
-	Entropy []byte
-	*Signer
+	EntropyCache map[string][]byte
 }
 
-func NewMnemonicDriver(s *Signer) (MnemonicDriver, error) {
-
-	if s.Type != "mnemonics" {
-		return MnemonicDriver{}, errors.New("invalid signer type")
-	}
-
-	entropy, err := hex.DecodeString(s.SN)
-	if err != nil {
-		return MnemonicDriver{}, err
-	}
-
+func NewMnemonicDriver() MnemonicDriver {
 	return MnemonicDriver{
-		Entropy: entropy,
-		Signer:  s,
-	}, nil
+		EntropyCache: make(map[string][]byte),
+	}
 }
 
-func (d MnemonicDriver) GetAddresses(path_format string, start_from int, count int) ([]address.Address, error) {
+func (d MnemonicDriver) GetEntropy(signer *Signer) ([]byte, error) {
+	entropy, ok := d.EntropyCache[signer.SN]
+	if !ok {
+		entropy, err := hex.DecodeString(signer.SN)
+		if err != nil {
+			return entropy, err
+		}
+		d.EntropyCache[signer.SN] = entropy // never remove from cache
+	}
+	return entropy, nil
+}
+
+func (d MnemonicDriver) GetAddresses(s *Signer, path_format string, start_from int, count int) ([]address.Address, error) {
 	addresses := []address.Address{}
 
 	if !strings.Contains(path_format, "%d") {
 		return addresses, errors.New("path_format must contain %d")
 	}
 
-	mnemonics, err := bip39.NewMnemonic(d.Entropy)
+	entropy, err := d.GetEntropy(s)
+	if err != nil {
+		return addresses, err
+	}
+
+	mnemonics, err := bip39.NewMnemonic(entropy)
 	if err != nil {
 		return addresses, err
 	}
@@ -65,7 +70,7 @@ func (d MnemonicDriver) GetAddresses(path_format string, start_from int, count i
 		a := getAddressFromKey(key)
 		addresses = append(addresses, address.Address{
 			Address: a,
-			Signer:  d.Name,
+			Signer:  s.Name,
 			Path:    p,
 		})
 	}
@@ -73,6 +78,6 @@ func (d MnemonicDriver) GetAddresses(path_format string, start_from int, count i
 	return addresses, nil
 }
 
-func (d MnemonicDriver) IsConnected() bool {
+func (d MnemonicDriver) IsConnected(signer *Signer) bool {
 	return true
 }

@@ -85,10 +85,14 @@ func Usb_Process(c *Command, input string) {
 				}
 			}
 			ui.Printf("\n")
-			ui.Printf("   vendor: %s\n", u.Vendor)
-			ui.Printf("   product: %s\n", u.Product)
-			ui.Printf("   serial: %s\n", device_name)
+			ui.Printf("   vendor: %x\n", u.Vendor)
+			ui.Printf("   product: %x\n", u.Product)
+			ui.Printf("   path: %s\n", u.Path)
 			ui.Printf("\n")
+		}
+
+		if len(l) == 0 {
+			ui.Printf("No usb devices found\n")
 		}
 
 	default:

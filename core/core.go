@@ -416,8 +416,6 @@ func (c *Core) Acquire(
 	debug bool,
 ) (string, error) {
 
-	log.Trace().Msg("Acquire")
-
 	// avoid enumerating while acquiring the device
 	// https://github.com/trezor/trezord-go/issues/221
 	c.libusbMutex.Lock()
@@ -427,24 +425,22 @@ func (c *Core) Acquire(
 	// because that is what enumerate returns;
 	// we convert it to actual path for USB layer
 
-	log.Trace().Msgf("Acquire: input path %s prev %s", path, prev)
+	log.Trace().Msg(fmt.Sprintf("input path %s prev %s", path, prev))
 
 	prevSession := c.findPrevSession(path, debug)
 
-	log.Trace().Msgf("Acquire: actually previous %s", prevSession)
+	log.Trace().Msg(fmt.Sprintf("actually previous %s", prevSession))
 
 	if prevSession != prev {
-		log.Error().Msg("Acquire: wrong previous session")
 		return "", ErrWrongPrevSession
 	}
 
 	if (!c.allowStealing) && prevSession != "" {
-		log.Trace().Msg("Acquire: not allowed to steal")
 		return "", ErrOtherCall
 	}
 
 	if prev != "" {
-		log.Trace().Msg("Acquire: releasing previous")
+		log.Trace().Msg("releasing previous")
 		err := c.release(prev, false, debug)
 		if err != nil {
 			return "", err
@@ -458,20 +454,17 @@ func (c *Core) Acquire(
 
 	pathI, err := strconv.Atoi(path)
 	if err != nil {
-		log.Error().Msgf("Acquire: invalid path %s", path)
 		return "", err
 	}
 
 	usbPath, exists := c.usbPaths[pathI]
 	if !exists {
-		log.Error().Msg("Acquire: device not found")
 		return "", errors.New("device not found")
 	}
 
-	log.Trace().Msg("Acquire: trying to connect")
+	log.Trace().Msg("trying to connect")
 	dev, err := c.tryConnect(usbPath, debug, reset)
 	if err != nil {
-		log.Trace().Msg("error on connect")
 		return "", err
 	}
 
@@ -484,7 +477,7 @@ func (c *Core) Acquire(
 		id:   id,
 	}
 
-	log.Trace().Msgf("Acquire: new session is %s", id)
+	log.Trace().Msg(fmt.Sprintf("new session is %s", id))
 
 	s := c.sessions(debug)
 	s.Store(id, sess)
