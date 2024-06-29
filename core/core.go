@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
@@ -9,8 +10,11 @@ import (
 	"sort"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
+	"github.com/AlexNa-Holdings/web3pro/wire"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
 
@@ -175,8 +179,15 @@ func (c *Core) backgroundListen() {
 		linfos := len(c.lastInfos)
 		c.lastInfosMutex.RUnlock()
 		if linfos > 0 {
+
+			save_level := zerolog.GlobalLevel()
+			zerolog.SetGlobalLevel(zerolog.Disabled) // disable logging for the background enum
+
 			log.Trace().Msg("background enum runs")
 			_, err := c.Enumerate()
+
+			zerolog.SetGlobalLevel(save_level)
+
 			if err != nil {
 				// we dont really care here
 				log.Trace().Msg("error - " + err.Error())
@@ -245,7 +256,7 @@ func (c *Core) Enumerate() ([]EnumerateEntry, error) {
 	// Use saved info if call is in progress, otherwise enumerate.
 	infos := c.lastInfos
 
-	log.Trace().Msg(fmt.Sprintf("callsInProgress %d", c.callsInProgress))
+	log.Trace().Msgf("callsInProgress %d", c.callsInProgress)
 	if c.callsInProgress == 0 {
 		log.Trace().Msg("bus")
 		busInfos, err := c.bus.Enumerate()
@@ -261,25 +272,6 @@ func (c *Core) Enumerate() ([]EnumerateEntry, error) {
 	c.releaseDisconnected(infos, false)
 	c.releaseDisconnected(infos, true)
 	return entries, nil
-}
-
-func (c *Core) findSession(e *EnumerateEntry, path string, debug bool) {
-	s := (c.sessions(debug))
-	s.Range(func(_, v interface{}) bool {
-		ss := v.(*session)
-		if ss.path == path {
-			// Copying to prevent overwriting on Acquire and
-			// wrong comparison in Listen.
-			ssidCopy := ss.id
-			if debug {
-				e.DebugSession = &ssidCopy
-			} else {
-				e.Session = &ssidCopy
-			}
-			return false
-		}
-		return true
-	})
 }
 
 func (c *Core) createEnumerateEntry(info USBInfo) EnumerateEntry {
@@ -411,6 +403,43 @@ func (c *Core) findPrevSession(path string, debug bool) string {
 	return res
 }
 
+func (c *Core) findSession(e *EnumerateEntry, path string, debug bool) {
+	s := (c.sessions(debug))
+	s.Range(func(_, v interface{}) bool {
+		ss := v.(*session)
+		if ss.path == path {
+			// Copying to prevent overwriting on Acquire and
+			// wrong comparison in Listen.
+			ssidCopy := ss.id
+			if debug {
+				e.DebugSession = &ssidCopy
+			} else {
+				e.Session = &ssidCopy
+			}
+			return false
+		}
+		return true
+	})
+}
+
+func (c *Core) GetTrezorName(path string) string {
+	var err error
+
+	s := c.findPrevSession(path, false)
+
+	if s != "" {
+		s, err = c.Acquire(path, "", false)
+		if err != nil {
+			log.Error().Err(err).Msg("GetTrezorName: Error acquiring device")
+			return ""
+		}
+	}
+
+	name := "123" + s
+
+	return name
+}
+
 func (c *Core) Acquire(
 	path, prev string,
 	debug bool,
@@ -425,11 +454,7 @@ func (c *Core) Acquire(
 	// because that is what enumerate returns;
 	// we convert it to actual path for USB layer
 
-	log.Trace().Msg(fmt.Sprintf("input path %s prev %s", path, prev))
-
 	prevSession := c.findPrevSession(path, debug)
-
-	log.Trace().Msg(fmt.Sprintf("actually previous %s", prevSession))
 
 	if prevSession != prev {
 		return "", ErrWrongPrevSession
@@ -525,173 +550,171 @@ const (
 	CallModeReadWrite CallMode = 2
 )
 
-// func (c *Core) Call(
-// 	body []byte,
-// 	ssid string,
-// 	mode CallMode,
-// 	debug bool,
-// 	ctx context.Context,
-// ) ([]byte, error) {
+func (c *Core) CallTrezor(
+	body []byte,
+	ssid string,
+	mode CallMode,
+	debug bool,
+	ctx context.Context,
+) ([]byte, error) {
 
-// 	c.callMutex.Lock()
-// 	c.callsInProgress++
-// 	c.callMutex.Unlock()
+	c.callMutex.Lock()
+	c.callsInProgress++
+	c.callMutex.Unlock()
 
-// 	defer func() {
-// 		c.callMutex.Lock()
-// 		c.callsInProgress--
-// 		c.callMutex.Unlock()
-// 	}()
+	defer func() {
+		c.callMutex.Lock()
+		c.callsInProgress--
+		c.callMutex.Unlock()
+	}()
 
-// 	s := c.sessions(debug)
-// 	v, ok := s.Load(ssid)
-// 	if !ok {
-// 		return nil, ErrSessionNotFound
-// 	}
+	s := c.sessions(debug)
+	v, ok := s.Load(ssid)
+	if !ok {
+		return nil, ErrSessionNotFound
+	}
 
-// 	acquired := v.(*session)
+	acquired := v.(*session)
 
-// 	if mode != CallModeWrite {
-// 		// This check is implemented only for /call and /read:
-// 		// - /call: Two /calls should not run concurrently. Otherwise the "message writes" and "message reads"
-// 		//   could interleave and the second caller would read the first response.
-// 		// - /read: Although this could be possible we do not have a use case for that at the moment.
-// 		// The check IS NOT implemented for /post, meaning /post can write even though some /call or /read
-// 		// is in progress (but there are some read/write locks later on).
+	if mode != CallModeWrite {
+		// This check is implemented only for /call and /read:
+		// - /call: Two /calls should not run concurrently. Otherwise the "message writes" and "message reads"
+		//   could interleave and the second caller would read the first response.
+		// - /read: Although this could be possible we do not have a use case for that at the moment.
+		// The check IS NOT implemented for /post, meaning /post can write even though some /call or /read
+		// is in progress (but there are some read/write locks later on).
 
-// 		log.Trace().Msg("checking other call on same session")
-// 		freeToCall := atomic.CompareAndSwapInt32(&acquired.call, 0, 1)
-// 		if !freeToCall {
-// 			return nil, ErrOtherCall
-// 		}
+		log.Trace().Msg("checking other call on same session")
+		freeToCall := atomic.CompareAndSwapInt32(&acquired.call, 0, 1)
+		if !freeToCall {
+			return nil, ErrOtherCall
+		}
 
-// 		log.Trace().Msg("checking other call on same session done")
-// 		defer func() {
-// 			atomic.StoreInt32(&acquired.call, 0)
-// 		}()
-// 	}
+		log.Trace().Msg("checking other call on same session done")
+		defer func() {
+			atomic.StoreInt32(&acquired.call, 0)
+		}()
+	}
 
-// 	finished := make(chan bool, 1)
-// 	defer func() {
-// 		finished <- true
-// 	}()
+	finished := make(chan bool, 1)
+	defer func() {
+		finished <- true
+	}()
 
-// 	go func() {
-// 		select {
-// 		case <-finished:
-// 			return
-// 		case <-ctx.Done():
-// 			log.Trace().Msg(fmt.Sprintf("detected request close %s, auto-release", ctx.Err().Error()))
-// 			errRelease := c.release(ssid, false, debug)
-// 			if errRelease != nil {
-// 				// just log, since request is already closed
-// 				log.Trace().Msg(fmt.Sprintf("Error while releasing: %s", errRelease.Error()))
-// 			}
-// 		}
-// 	}()
+	go func() {
+		select {
+		case <-finished:
+			return
+		case <-ctx.Done():
+			log.Trace().Msg(fmt.Sprintf("detected request close %s, auto-release", ctx.Err().Error()))
+			errRelease := c.release(ssid, false, debug)
+			if errRelease != nil {
+				// just log, since request is already closed
+				log.Trace().Msg(fmt.Sprintf("Error while releasing: %s", errRelease.Error()))
+			}
+		}
+	}()
 
-// 	log.Trace().Msg("before actual logic")
-// 	bytes, err := c.readWriteDev(body, acquired, mode)
-// 	log.Trace().Msg("after actual logic")
+	log.Trace().Msg("before actual logic")
+	bytes, err := c.readWriteDev(body, acquired, mode)
+	log.Trace().Msg("after actual logic")
 
-// 	return bytes, err
-// }
+	return bytes, err
+}
 
-// func (c *Core) writeDev(body []byte, device io.Writer) error {
-// 	log.Trace().Msg("decodeRaw")
-// 	msg, err := c.decodeRaw(body)
-// 	if err != nil {
-// 		return err
-// 	}
+func (c *Core) writeDev(body []byte, device io.Writer) error {
+	log.Trace().Msg("decodeRaw")
+	msg, err := c.decodeRaw(body)
+	if err != nil {
+		return err
+	}
 
-// 	log.Trace().Msg("writeTo")
-// 	_, err = msg.WriteTo(device)
-// 	return err
-// }
+	log.Trace().Msg("writeTo")
+	_, err = msg.WriteTo(device)
+	return err
+}
 
-// func (c *Core) readDev(device io.Reader) ([]byte, error) {
-// 	log.Trace().Msg("readFrom")
-// 	msg, err := wire.ReadFrom(device, c.log)
-// 	if err != nil {
-// 		return nil, err
-// 	}
+func (c *Core) readDev(device io.Reader) ([]byte, error) {
+	log.Trace().Msg("readFrom")
+	msg, err := wire.ReadFrom(device)
+	if err != nil {
+		return nil, err
+	}
 
-// 	log.Trace().Msg("encoding back")
-// 	return c.encodeRaw(msg)
-// }
+	log.Trace().Msg("encoding back")
+	return c.encodeRaw(msg)
+}
 
-// func (c *Core) readWriteDev(
-// 	body []byte,
-// 	acquired *session,
-// 	mode CallMode,
-// ) ([]byte, error) {
+func (c *Core) readWriteDev(
+	body []byte,
+	acquired *session,
+	mode CallMode,
+) ([]byte, error) {
 
-// 	if mode == CallModeRead {
-// 		if len(body) != 0 {
-// 			return nil, errors.New("non-empty body on read mode")
-// 		}
-// 		log.Trace().Msg("skipping write")
-// 	} else {
-// 		acquired.writeMutex.Lock()
-// 		err := c.writeDev(body, acquired.dev)
-// 		acquired.writeMutex.Unlock()
-// 		if err != nil {
-// 			return nil, err
-// 		}
-// 	}
+	if mode == CallModeRead {
+		if len(body) != 0 {
+			return nil, errors.New("non-empty body on read mode")
+		}
+		log.Trace().Msg("skipping write")
+	} else {
+		acquired.writeMutex.Lock()
+		err := c.writeDev(body, acquired.dev)
+		acquired.writeMutex.Unlock()
+		if err != nil {
+			return nil, err
+		}
+	}
 
-// 	if mode == CallModeWrite {
-// 		log.Trace().Msg("skipping read")
-// 		return []byte{0}, nil
-// 	}
-// 	acquired.readMutex.Lock()
-// 	defer acquired.readMutex.Unlock()
-// 	return c.readDev(acquired.dev)
-// }
+	if mode == CallModeWrite {
+		log.Trace().Msg("skipping read")
+		return []byte{0}, nil
+	}
+	acquired.readMutex.Lock()
+	defer acquired.readMutex.Unlock()
+	return c.readDev(acquired.dev)
+}
 
-// func (c *Core) decodeRaw(body []byte) (*wire.Message, error) {
-// 	log.Trace().Msg("readAll")
+func (c *Core) decodeRaw(body []byte) (*wire.Message, error) {
+	log.Trace().Msg("readAll")
 
-// 	log.Trace().Msg("decodeString")
+	log.Trace().Msg("decodeString")
 
-// 	if len(body) < 6 {
-// 		log.Trace().Msg("body too short")
-// 		return nil, ErrMalformedData
-// 	}
+	if len(body) < 6 {
+		log.Trace().Msg("body too short")
+		return nil, ErrMalformedData
+	}
 
-// 	kind := binary.BigEndian.Uint16(body[0:2])
-// 	size := binary.BigEndian.Uint32(body[2:6])
-// 	data := body[6:]
-// 	if uint32(len(data)) != size {
-// 		log.Trace().Msg("wrong data length")
-// 		return nil, ErrMalformedData
-// 	}
+	kind := binary.BigEndian.Uint16(body[0:2])
+	size := binary.BigEndian.Uint32(body[2:6])
+	data := body[6:]
+	if uint32(len(data)) != size {
+		log.Trace().Msg("wrong data length")
+		return nil, ErrMalformedData
+	}
 
-// 	if wire.Validate(data) != nil {
-// 		log.Trace().Msg("invalid data")
-// 		return nil, ErrMalformedData
-// 	}
+	if wire.Validate(data) != nil {
+		log.Trace().Msg("invalid data")
+		return nil, ErrMalformedData
+	}
 
-// 	log.Trace().Msg("returning")
-// 	return &wire.Message{
-// 		Kind: kind,
-// 		Data: data,
+	log.Trace().Msg("returning")
+	return &wire.Message{
+		Kind: kind,
+		Data: data,
+	}, nil
+}
 
-// 		Log: c.log,
-// 	}, nil
-// }
+func (c *Core) encodeRaw(msg *wire.Message) ([]byte, error) {
+	log.Trace().Msg("start")
+	var header [6]byte
+	data := msg.Data
+	kind := msg.Kind
+	size := uint32(len(msg.Data))
 
-// func (c *Core) encodeRaw(msg *wire.Message) ([]byte, error) {
-// 	log.Trace().Msg("start")
-// 	var header [6]byte
-// 	data := msg.Data
-// 	kind := msg.Kind
-// 	size := uint32(len(msg.Data))
+	binary.BigEndian.PutUint16(header[0:2], kind)
+	binary.BigEndian.PutUint32(header[2:6], size)
 
-// 	binary.BigEndian.PutUint16(header[0:2], kind)
-// 	binary.BigEndian.PutUint32(header[2:6], size)
+	res := append(header[:], data...)
 
-// 	res := append(header[:], data...)
-
-// 	return res, nil
-// }
+	return res, nil
+}

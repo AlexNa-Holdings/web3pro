@@ -322,29 +322,22 @@ func showHistory() {
 }
 
 func PrintErrorf(format string, a ...interface{}) {
-	Gui.UpdateAsync(func(g *gocui.Gui) error {
-		str := fmt.Sprintf(format, a...)
-
-		fmt.Fprint(Terminal.Screen,
-			F(Theme.ErrorFgColor)+
-				str+
-				F(Terminal.Screen.FgColor))
-
-		return nil
-	})
+	str := fmt.Sprintf(format, a...)
+	Terminal.Screen.Write([]byte(F(Theme.ErrorFgColor) + str + F(Terminal.Screen.FgColor)))
 }
 
 func Printf(format string, a ...interface{}) {
-	Gui.UpdateAsync(func(g *gocui.Gui) error {
-		str := fmt.Sprintf(format, a...)
-		fmt.Fprint(Terminal.Screen, str)
-		return nil
-	})
+	str := fmt.Sprintf(format, a...)
+	Terminal.Screen.Write([]byte(str))
 }
 
 func ResetColors() {
-	Gui.UpdateAsync(func(g *gocui.Gui) error {
-		fmt.Fprint(Terminal.Screen, FB(Terminal.Screen.FgColor, Terminal.Screen.BgColor))
+	Terminal.Screen.Write([]byte(FB(Terminal.Screen.FgColor, Terminal.Screen.BgColor)))
+}
+
+func Flush() {
+	Gui.Update(func(g *gocui.Gui) error {
+		Terminal.Screen.ScrollBottom()
 		return nil
 	})
 }

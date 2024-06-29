@@ -15,7 +15,6 @@ type Hotspot struct {
 }
 
 func (v *View) AddHotspot(x, y int, value string, tip string, cells []cell, cells_highligted []cell) (*Hotspot, error) {
-
 	if len(cells) != len(cells_highligted) {
 		return nil, errors.New("cells and cells_highligted must have the same length")
 	}

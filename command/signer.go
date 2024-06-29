@@ -155,6 +155,7 @@ func Signer_Process(c *Command, input string) {
 		}
 
 		ui.Printf("\n")
+		ui.Flush()
 	case "addresses":
 		path_format := ""
 

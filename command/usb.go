@@ -95,6 +95,8 @@ func Usb_Process(c *Command, input string) {
 			ui.Printf("No usb devices found\n")
 		}
 
+		ui.Flush()
+
 	default:
 		ui.PrintErrorf("\nInvalid subcommand: %s\n", subcommand)
 	}

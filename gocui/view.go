@@ -7,7 +7,6 @@ package gocui
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"io"
 	"regexp"
 	"strconv"
@@ -16,7 +15,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/mattn/go-runewidth"
-	"github.com/rs/zerolog/log"
 )
 
 // Constants for overlapping edges
@@ -1193,7 +1191,7 @@ func (v *View) AddLink(text, value, tip string) error {
 	hs, err := v.AddHotspot(v.wx, v.wy, value, tip, cells, cells_highligted)
 
 	if err == nil {
-		fmt.Fprint(v, text)
+		v.Write([]byte(text))
 		c.Hotspot = hs
 		v.Controls = append(v.Controls, &c)
 	}
@@ -1322,7 +1320,7 @@ func (v *View) AddInput(tagParams map[string]string) error {
 		v.BgColor = v.gui.InputBgColor
 		v.Editor = EditorFunc(PopupNavigation)
 
-		fmt.Fprint(v, tagParams["value"])
+		v.Write([]byte(tagParams["value"]))
 
 		v.Editable = true
 		v.Wrap = false
@@ -1332,7 +1330,7 @@ func (v *View) AddInput(tagParams map[string]string) error {
 	v.Controls = append(v.Controls, &c)
 
 	// write placeholder
-	fmt.Fprint(v, strings.Repeat(" ", size-1))
+	v.Write([]byte(strings.Repeat(" ", size-1)))
 
 	return nil
 }
@@ -1375,7 +1373,7 @@ func (v *View) AddTextInput(tagParams map[string]string) error {
 		v.BgColor = v.gui.InputBgColor
 		v.Editor = EditorFunc(PopupNavigation)
 
-		fmt.Fprint(v, tagParams["value"])
+		v.Write([]byte(tagParams["value"]))
 
 		v.Editable = true
 		v.Wrap = true
@@ -1386,7 +1384,7 @@ func (v *View) AddTextInput(tagParams map[string]string) error {
 	v.Controls = append(v.Controls, &c)
 
 	// write placeholder
-	fmt.Fprint(v, strings.Repeat(" ", width-1))
+	v.Write([]byte(strings.Repeat(" ", width-1)))
 
 	return nil
 }
@@ -1519,7 +1517,7 @@ func (v *View) SetInput(id, value string) {
 			switch c.Type {
 			case C_INPUT, C_TEXT_INPUT:
 				c.View.Clear()
-				fmt.Fprint(c.View, value)
+				c.View.Write([]byte(value))
 			case C_SELECT:
 				c.Value = value
 				text := value
@@ -1551,8 +1549,6 @@ func (v *View) SetList(id string, list []string) {
 }
 
 func (v *View) RenderTemplate(template string) error {
-	log.Debug().Msgf("RenderTemplate: %s", v.name)
-
 	v.Clear()
 
 	if v.x1-v.x0 < 3 || v.y1-v.y0 < 3 {
@@ -1630,7 +1626,7 @@ func (v *View) RenderTemplate(template string) error {
 				if v.wx == 0 && centered {
 					n := (width - calcLineWidth(l)) / 2
 					for i := 0; i < n; i++ {
-						fmt.Fprint(v, " ")
+						v.Write([]byte(" "))
 					}
 				}
 
@@ -1712,7 +1708,7 @@ func (v *View) RenderTemplate(template string) error {
 			if v.wx == 0 && centered {
 				n := (width - calcLineWidth(l)) / 2
 				for i := 0; i < n; i++ {
-					fmt.Fprint(v, " ")
+					v.Write([]byte(" "))
 				}
 			}
 
@@ -1744,7 +1740,7 @@ func (v *View) RenderTemplate(template string) error {
 			v.writeCells(v.wx, v.wy, cells)
 			v.wx += len(cells)
 
-			fmt.Fprint(v, "\n")
+			v.Write([]byte("\n"))
 		}
 
 	}

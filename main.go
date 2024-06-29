@@ -44,7 +44,7 @@ func main() {
 		ui.Terminal.AutoCompleteFunc = command.AutoComplete
 		ui.Terminal.ProcessCommandFunc = command.Process
 
-		ui.Printf("\n" + ui.F(ui.Theme.EmFgColor) + WEB3_PRO + ui.F(ui.Terminal.Screen.FgColor) + "\n\n")
+		ui.Printf(ui.F(ui.Theme.EmFgColor) + WEB3_PRO + ui.F(ui.Terminal.Screen.FgColor) + "\n\n")
 		ui.Printf("by X:@AlexNa Telegram:@TheAlexNa\n")
 
 		ui.Printf("Version: %s\n", cmn.VERSION)

@@ -145,15 +145,17 @@ func (b *LibUSB) Enumerate() ([]core.USBInfo, error) {
 			log.Trace().Msg("getting device descriptor")
 			dd, err := lowlevel.Get_Device_Descriptor(dev)
 			if err != nil {
-				log.Trace().Msg("error getting device descriptor " + err.Error())
+				log.Error().Msg("error getting device descriptor " + err.Error())
 				continue
 			}
+			log.Trace().Msgf("device vendor: %x product: %x", dd.IDVendor, dd.IDProduct)
 			path := b.identify(dev)
+			log.Trace().Msg("path: " + path)
 			inset := paths[path]
 			if !inset {
 				debug, err := detectDebug(dev)
 				if err != nil {
-					log.Trace().Msg("error detecting debug " + err.Error())
+					log.Error().Msg("error detecting debug " + err.Error())
 					continue
 				}
 				infos = append(infos, core.USBInfo{

@@ -31,7 +31,7 @@ type SConfig struct {
 
 var Config *SConfig = &SConfig{ //Default config
 	WalletName: "default",
-	Verbosity:  "trace",
+	Verbosity:  "debug",
 	Theme:      "dark",
 	TimeoutSec: 60,
 }
@@ -62,6 +62,27 @@ func InitConfig() {
 	if err != nil {
 		log.Error().Msgf("error restoring config: %v", err)
 	}
+
+	switch Config.Verbosity {
+	case "trace":
+		log.Level(zerolog.TraceLevel)
+	case "debug":
+		log.Level(zerolog.DebugLevel)
+	case "info":
+		log.Level(zerolog.InfoLevel)
+	case "warn":
+		log.Level(zerolog.WarnLevel)
+	case "error":
+		log.Level(zerolog.ErrorLevel)
+	case "fatal":
+		log.Level(zerolog.FatalLevel)
+	case "panic":
+		log.Level(zerolog.PanicLevel)
+	default:
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	}
+
+	log.Info().Msgf("Log level: %s", Config.Verbosity)
 
 	//create wallets folder if needed
 	err = os.MkdirAll(filepath.Join(DataFolder, "wallets"), os.ModePerm)

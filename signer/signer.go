@@ -79,17 +79,11 @@ func (s *Signer) GetDriver() (SignerDriver, error) {
 }
 
 func GetDeviceName(e core.EnumerateEntry) string {
-	log.Trace().Msgf("GetDeviceName: %s %s", e.Vendor, e.Product)
+	log.Trace().Msgf("GetDeviceName: %x %x", e.Vendor, e.Product)
 	t := GetType(e.Vendor, e.Product)
 	switch t {
 	case "trezor":
-		s, err := cmn.Core.Acquire(e.Path, "", false)
-		if err != nil {
-			log.Error().Err(err).Msg("GetDeviceName: Error acquiring device")
-			return ""
-		}
-		return s
-
+		return cmn.Core.GetTrezorName(e.Path)
 	case "ledger":
 		return "Ledger ID"
 	}
