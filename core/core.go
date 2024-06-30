@@ -422,28 +422,36 @@ func (c *Core) findSession(e *EnumerateEntry, path string, debug bool) {
 	})
 }
 
-func (c *Core) GetTrezorName(path string) string {
+func (c *Core) GetDevice(path string) (USBDevice, error) {
+	log.Trace().Msg("GetDevice")
 	var err error
-
 	s := c.findPrevSession(path, false)
 
-	if s != "" {
+	log.Trace().Msg(fmt.Sprintf("prev session %s", s))
+
+	if s == "" {
 		s, err = c.Acquire(path, "", false)
 		if err != nil {
 			log.Error().Err(err).Msg("GetTrezorName: Error acquiring device")
-			return ""
+			return nil, err
 		}
 	}
 
-	name := "123" + s
+	v, ok := c.normalSessions.Load(s)
+	if !ok {
+		return nil, errors.New("session not found")
+	}
 
-	return name
+	ss := v.(*session)
+	return ss.dev, nil
 }
 
 func (c *Core) Acquire(
 	path, prev string,
 	debug bool,
 ) (string, error) {
+
+	log.Trace().Msg("Acquire")
 
 	// avoid enumerating while acquiring the device
 	// https://github.com/trezor/trezord-go/issues/221
@@ -550,7 +558,7 @@ const (
 	CallModeReadWrite CallMode = 2
 )
 
-func (c *Core) CallTrezor(
+func (c *Core) RawCall(
 	body []byte,
 	ssid string,
 	mode CallMode,
@@ -606,11 +614,11 @@ func (c *Core) CallTrezor(
 		case <-finished:
 			return
 		case <-ctx.Done():
-			log.Trace().Msg(fmt.Sprintf("detected request close %s, auto-release", ctx.Err().Error()))
+			log.Trace().Msgf("detected request close %s, auto-release", ctx.Err().Error())
 			errRelease := c.release(ssid, false, debug)
 			if errRelease != nil {
 				// just log, since request is already closed
-				log.Trace().Msg(fmt.Sprintf("Error while releasing: %s", errRelease.Error()))
+				log.Error().Msgf("Error while releasing: %s", errRelease.Error())
 			}
 		}
 	}()

@@ -67,7 +67,10 @@ func Usb_Process(c *Command, input string) {
 		for _, u := range l {
 
 			t := signer.GetType(u.Vendor, u.Product)
-			device_name := signer.GetDeviceName(u)
+			device_name, err := signer.GetDeviceName(u)
+			if err != nil {
+				device_name = "Unknown"
+			}
 
 			ui.Printf("%02d %-7s %s ", n, t, device_name)
 			n++

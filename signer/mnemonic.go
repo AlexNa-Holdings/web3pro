@@ -34,6 +34,10 @@ func (d MnemonicDriver) GetEntropy(signer *Signer) ([]byte, error) {
 	return entropy, nil
 }
 
+func (d MnemonicDriver) GetName(path string) (string, error) {
+	return "", nil
+}
+
 func (d MnemonicDriver) GetAddresses(s *Signer, path_format string, start_from int, count int) ([]address.Address, error) {
 	addresses := []address.Address{}
 

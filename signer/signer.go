@@ -5,7 +5,6 @@ import (
 	"errors"
 
 	"github.com/AlexNa-Holdings/web3pro/address"
-	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/core"
 	"github.com/AlexNa-Holdings/web3pro/usb"
 	"github.com/ava-labs/coreth/accounts"
@@ -24,6 +23,7 @@ type Signer struct {
 
 type SignerDriver interface {
 	IsConnected(signer *Signer) bool
+	GetName(path string) (string, error) // only for HW wallets
 	GetAddresses(signer *Signer, path string, start_from int, count int) ([]address.Address, error)
 }
 
@@ -78,16 +78,16 @@ func (s *Signer) GetDriver() (SignerDriver, error) {
 	return nil, errors.New("unknown signer type")
 }
 
-func GetDeviceName(e core.EnumerateEntry) string {
+func GetDeviceName(e core.EnumerateEntry) (string, error) {
 	log.Trace().Msgf("GetDeviceName: %x %x", e.Vendor, e.Product)
 	t := GetType(e.Vendor, e.Product)
 	switch t {
 	case "trezor":
-		return cmn.Core.GetTrezorName(e.Path)
+		return WalletTrezorDriver.GetName(e.Path)
 	case "ledger":
-		return "Ledger ID"
+		return "Ledger ID", nil //TODO
 	}
-	return ""
+	return "", errors.New("unknown signer type")
 
 }
 
