@@ -5,6 +5,7 @@ import (
 
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/ui"
+	"github.com/rs/zerolog/log"
 )
 
 type CommandProcessFunc func(*Command, string)
@@ -35,6 +36,8 @@ func Init() {
 }
 
 func Process(input string) {
+
+	log.Trace().Msgf("Processing command: %s", input)
 
 	command := strings.Split(input, " ")[0]
 

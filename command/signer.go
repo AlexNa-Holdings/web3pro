@@ -81,9 +81,9 @@ func Signer_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 		if wallet.CurrentWallet != nil {
 			for _, signer := range wallet.CurrentWallet.Signers {
 				for _, c := range signer.Copies {
-					if cmn.Contains(c.Name, param) {
+					if cmn.Contains(c, param) {
 						options = append(options, ui.ACOption{
-							Name: c.Name, Result: command + " " + subcommand + " '" + c.Name + "'"})
+							Name: c, Result: command + " " + subcommand + " '" + c + "'"})
 					}
 				}
 			}
@@ -134,8 +134,11 @@ func Signer_Process(c *Command, input string) {
 
 		for _, signer := range wallet.CurrentWallet.Signers {
 			ui.Printf("%-13s %-9s ", signer.Name, signer.Type)
-			ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command s edit '"+signer.Name+"'", "Edit signer '"+signer.Name+"'")
-			ui.Printf(" ")
+
+			if signer.Type == "mnemonics" {
+				ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command s edit '"+signer.Name+"'", "Edit signer '"+signer.Name+"'")
+				ui.Printf(" ")
+			}
 			ui.Terminal.Screen.AddLink(gocui.ICON_DELETE, "command s remove '"+signer.Name+"'", "Remove signer '"+signer.Name+"'")
 			ui.Printf("\n")
 			for j, c := range signer.Copies {
@@ -144,12 +147,10 @@ func Signer_Process(c *Command, input string) {
 				} else {
 					ui.Printf("╰─ ")
 				}
-				ui.Printf("%-10s ", c.Name)
-				ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command s edit '"+c.Name+"'", "Edit signer '"+c.Name+"'")
+				ui.Printf("%-10s ", c)
+				ui.Terminal.Screen.AddLink(gocui.ICON_DELETE, "command s remove '"+c+"'", "Remove signer '"+c+"'")
 				ui.Printf(" ")
-				ui.Terminal.Screen.AddLink(gocui.ICON_DELETE, "command s remove '"+c.Name+"'", "Remove signer '"+c.Name+"'")
-				ui.Printf(" ")
-				ui.Terminal.Screen.AddLink(gocui.ICON_PROMOTE, "command s promote '"+c.Name+"'", "Promote copy to main signer")
+				ui.Terminal.Screen.AddLink(gocui.ICON_PROMOTE, "command s promote '"+c+"'", "Promote copy to main signer")
 				ui.Printf("\n")
 			}
 		}
@@ -236,7 +237,7 @@ func Signer_Process(c *Command, input string) {
 			}
 
 			for j, c := range signer.Copies {
-				if c.Name == p1 {
+				if c == p1 {
 					ui.Gui.ShowPopup(ui.DlgConfirm(
 						"Remove signer's copy",
 						`
@@ -274,19 +275,14 @@ func Signer_Process(c *Command, input string) {
 				// move all the addresses to the new main signer
 				for _, a := range wallet.CurrentWallet.Addresses {
 					if a.Signer == s.Name {
-						a.Signer = s.Copies[ci].Name
+						a.Signer = s.Copies[ci]
 					}
 				}
 
 				//swap name and SN
 				tmp_name := s.Name
-				tmp_sn := s.SN
-
-				s.Name = s.Copies[ci].Name
-				s.SN = s.Copies[ci].SN
-
-				s.Copies[ci].Name = tmp_name
-				s.Copies[ci].SN = tmp_sn
+				s.Name = s.Copies[ci]
+				s.Copies[ci] = tmp_name
 
 				err := wallet.CurrentWallet.Save()
 				if err != nil {

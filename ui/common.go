@@ -91,7 +91,7 @@ func Layout(g *gocui.Gui) error {
 	return nil
 }
 
-func ProcessClickHotspot(hs *gocui.Hotspot) {
+func ProcessClicksOnScreen(hs *gocui.Hotspot) {
 	index := strings.Index(hs.Value, " ")
 
 	if index == -1 {

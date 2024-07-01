@@ -69,22 +69,20 @@ func Usb_Process(c *Command, input string) {
 			t := signer.GetType(u.Vendor, u.Product)
 			device_name, err := signer.GetDeviceName(u)
 			if err != nil {
-				device_name = "Unknown"
+				ui.PrintErrorf("\nError getting device name: %v\n", err)
+				return
 			}
 
 			ui.Printf("%02d %-7s %s ", n, t, device_name)
 			n++
 
 			if wallet.CurrentWallet != nil {
-				es := wallet.CurrentWallet.GetSignerByTypeAndSN(t, device_name)
+				es := wallet.CurrentWallet.GetSigner(device_name)
 				if es != nil {
-					ui.Printf("'" + es.Name + "' ")
-					ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command s edit '"+es.Name+"'", "Edit signer")
+					ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command s edit '"+device_name+"'", "Edit signer")
 					break
 				} else {
-					if t != "" {
-						ui.Terminal.Screen.AddButton("Add signer", "command s add "+t+" "+u.Path, "Add signer") //TODO
-					}
+					ui.Terminal.Screen.AddButton("Add signer", "command s add "+t+" '"+device_name+"'", "Add signer") //TODO
 				}
 			}
 			ui.Printf("\n")
@@ -93,6 +91,8 @@ func Usb_Process(c *Command, input string) {
 			ui.Printf("   path: %s\n", u.Path)
 			ui.Printf("\n")
 		}
+
+		ui.Printf("\n")
 
 		if len(l) == 0 {
 			ui.Printf("No usb devices found\n")

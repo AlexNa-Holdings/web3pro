@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/AlexNa-Holdings/web3pro/gocui"
+	"github.com/rs/zerolog/log"
 )
 
 type TerminalPane struct {
@@ -69,7 +70,10 @@ func (p *TerminalPane) SetView(g *gocui.Gui, x0, y0, x1, y1 int) {
 		}
 
 		p.Screen.OnClickHotspot = func(_ *gocui.View, hs *gocui.Hotspot) {
-			ProcessClickHotspot(hs)
+
+			log.Trace().Msgf("Hotspot clicked: %s", hs.Value)
+
+			ProcessClicksOnScreen(hs)
 		}
 	}
 

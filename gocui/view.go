@@ -1208,7 +1208,7 @@ func (v *View) AddButton(text, value, tip string) error {
 	cells_highligted = AddCells(cells_highligted, v.SelBgColor|AttrBold, v.SelFgColor, text)
 	cells_highligted = AddCells(cells_highligted, v.SelFgColor, v.SelBgColor, "\ue0b4")
 
-	if value != "" {
+	if value == "" {
 		value = "button " + text
 	}
 

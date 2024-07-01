@@ -104,12 +104,19 @@ func (d TrezorDriver) Init(path string) (*ConnectedDevice, error) {
 		return nil, err
 	}
 
+	// remove from tge KnownDevices all with the same lab label
+	for k, v := range d.KnownDevices {
+		if *v.Label == *features.Label {
+			delete(d.KnownDevices, k)
+		}
+	}
+
 	cd := ConnectedDevice{
 		Features: *features,
 	}
 
 	d.KnownDevices[path] = cd
-	log.Trace().Msgf("Initialized trezor dev: %s\n", cd.Label)
+	log.Trace().Msgf("Initialized trezor dev: %s\n", *cd.Label)
 	return &cd, nil
 }
 

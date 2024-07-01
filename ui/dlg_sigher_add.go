@@ -10,14 +10,13 @@ import (
 	"github.com/tyler-smith/go-bip39"
 )
 
-func DlgSignerAdd(t string, sn string) *gocui.Popup {
+func DlgSignerAdd(t string, name string) *gocui.Popup {
 	template := ""
 
 	if t != "mnemonics" {
 		template = `
-   Name: <i id:name size:32 value:""> 
+   Name: ` + name + `
    Type: ` + t + `
-     SN: <i id:sn size:32>
 	 
 Copy of: <select id:copyof size:32 value:""> <c>
 NOTE: You are responsible to assure that the 
@@ -53,8 +52,7 @@ cancel and verify the device.
 			}
 		},
 		OnOpen: func(v *gocui.View) {
-			v.SetInput("name", "")
-			v.SetInput("sn", sn)
+			v.SetInput("name", name)
 
 			names := []string{""}
 			for _, signer := range wallet.CurrentWallet.Signers {
@@ -78,29 +76,21 @@ cancel and verify the device.
 						break
 					}
 
-					name := strings.TrimSpace(v.GetInput("name"))
-					sn := strings.TrimSpace(v.GetInput("sn"))
 					copyof := strings.TrimSpace(v.GetInput("copyof"))
 
-					if len(name) == 0 {
-						Notification.ShowError("Name cannot be empty")
-						break
-					}
-
-					for _, signer := range wallet.CurrentWallet.Signers {
-						if signer.Name == name {
-							Notification.ShowErrorf("Signer %s already exists", name)
-							return
-						}
-						for _, copy := range signer.Copies {
-							if copy.Name == name {
-								Notification.ShowErrorf("Signer %s already exists", name)
-								return
-							}
-						}
-					}
-
 					if t == "mnemonics" {
+						name := strings.TrimSpace(v.GetInput("name"))
+						if len(name) == 0 {
+							Notification.ShowError("Name cannot be empty")
+							break
+						}
+
+						if wallet.CurrentWallet.GetSigner(name) != nil {
+							Notification.ShowErrorf("Signer %s already exists", name)
+							break
+						}
+
+						sn := strings.TrimSpace(v.GetInput("sn"))
 						if len(sn) == 0 {
 							Notification.ShowError("Mnemonic cannot be empty")
 							break
@@ -121,37 +111,17 @@ cancel and verify the device.
 						})
 
 					} else { // not mnemonics
-						if len(sn) == 0 {
-							Notification.ShowError("SN cannot be empty")
+
+						if wallet.CurrentWallet.GetSigner(name) != nil {
+							Notification.ShowErrorf("Signer %s already exists", name)
 							break
 						}
 
-						for _, signer := range wallet.CurrentWallet.Signers {
-							if t == signer.Type && signer.SN == sn {
-								Notification.ShowErrorf("Signer %s has same SN", signer.Name)
-								return
-							}
-
-							for _, copy := range signer.Copies {
-								if copy.SN == sn {
-									Notification.ShowErrorf("Signer %s has same SN", copy.Name)
-									return
-								}
-							}
-						}
 						if copyof != "" {
-							added := false
-							for _, s := range wallet.CurrentWallet.Signers {
-								if s.Name == copyof {
-									s.Copies = append(s.Copies, signer.SignerCopy{
-										Name: name,
-										SN:   sn,
-									})
-									added = true
-									break
-								}
-							}
-							if !added {
+							ms := wallet.CurrentWallet.GetSigner(copyof)
+							if ms != nil {
+								ms.Copies = append(ms.Copies, name)
+							} else {
 								Notification.ShowErrorf("Signer %s not found", copyof)
 								break
 							}
@@ -159,7 +129,6 @@ cancel and verify the device.
 							wallet.CurrentWallet.Signers = append(wallet.CurrentWallet.Signers, &signer.Signer{
 								Name: name,
 								Type: t,
-								SN:   sn,
 							})
 						}
 					}

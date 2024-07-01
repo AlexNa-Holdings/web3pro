@@ -15,10 +15,10 @@ import (
 )
 
 type Signer struct {
-	Name   string       `json:"name"`
-	Type   string       `json:"type"`
-	SN     string       `json:"sn"`
-	Copies []SignerCopy `json:"copies"`
+	Name   string   `json:"name"`
+	Type   string   `json:"type"`
+	SN     string   `json:"sn"`
+	Copies []string `json:"copies"`
 }
 
 type SignerDriver interface {
@@ -29,11 +29,6 @@ type SignerDriver interface {
 
 var WalletTrezorDriver = NewTrezorDriver()
 var WalletMnemonicsDriver = NewMnemonicDriver()
-
-type SignerCopy struct {
-	Name string
-	SN   string
-}
 
 var STANDARD_DERIVATIONS = map[string]struct {
 	Name   string
