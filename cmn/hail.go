@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/AlexNa-Holdings/web3pro/gocui"
+	"github.com/rs/zerolog/log"
 )
 
 type HailRequest struct {
@@ -27,13 +28,14 @@ type HailRequest struct {
 }
 
 var HailChannel = make(chan *HailRequest)
-var RemoveHailChannel = make(chan *HailRequest)
+var RemoveHailChannel = make(chan *HailRequest, 10)
 
 func Hail(hail *HailRequest) {
 	HailChannel <- hail
 }
 
 func HailAndWait(hail *HailRequest) {
+	log.Trace().Msgf("Hail & Wait: %s", hail.Title)
 	HailChannel <- hail
 	<-hail.Done
 }

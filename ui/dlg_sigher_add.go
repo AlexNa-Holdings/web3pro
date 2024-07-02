@@ -29,7 +29,7 @@ cancel and verify the device.
 		template = `
      Name: <i id:name size:32 value:""> 
      Type: ` + t + `
- Mnemonic: <t id:sn width:32 height:8> 
+ Mnemonic: <t id:mnemonics width:32 height:8> 
 
  
 
@@ -90,24 +90,22 @@ cancel and verify the device.
 							break
 						}
 
-						sn := strings.TrimSpace(v.GetInput("sn"))
-						if len(sn) == 0 {
+						mm := strings.TrimSpace(v.GetInput("mnemonics"))
+						if len(mm) == 0 {
 							Notification.ShowError("Mnemonic cannot be empty")
 							break
 						}
 
-						m, err := bip39.EntropyFromMnemonic(sn)
+						m, err := bip39.EntropyFromMnemonic(mm)
 						if err != nil {
 							Notification.ShowError("Invalid mnemonics")
 							break
 						}
 
-						sn = hex.EncodeToString(m[:])
-
 						wallet.CurrentWallet.Signers = append(wallet.CurrentWallet.Signers, &signer.Signer{
 							Name: name,
 							Type: t,
-							SN:   sn,
+							SN:   hex.EncodeToString(m[:]),
 						})
 
 					} else { // not mnemonics

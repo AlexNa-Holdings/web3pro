@@ -27,7 +27,7 @@ var HailQueue []*cmn.HailRequest
 var Mutex = &sync.Mutex{}
 var TimerQuit = make(chan bool)
 
-func add(hail *cmn.HailRequest) {
+func add(hail *cmn.HailRequest) bool { // returns if on top
 	Mutex.Lock()
 	defer Mutex.Unlock()
 
@@ -36,35 +36,36 @@ func add(hail *cmn.HailRequest) {
 	} else {
 		HailQueue = append(HailQueue, hail)
 	}
+
+	return hail == HailQueue[0]
 }
 
 func remove(hail *cmn.HailRequest) {
-	Mutex.Lock()
-	defer Mutex.Unlock()
 
+	Mutex.Lock()
 	for i, h := range HailQueue {
 		if h == hail {
-			if hail.OnClose != nil {
-				hail.OnClose(hail)
-			}
-
 			HailQueue = append(HailQueue[:i], HailQueue[i+1:]...)
+		}
+	}
+	Mutex.Unlock()
 
-			h.Done <- true
+	if hail.OnClose != nil {
+		hail.OnClose(hail)
+	}
+	hail.Done <- true
 
-			if len(HailQueue) > 0 {
-				HailPane.open(HailQueue[0])
-			} else {
-				Gui.UpdateAsync(func(g *gocui.Gui) error {
-					Gui.DeleteView("hail")
-					HailPane.View = nil
-					// stop timer
-					TimerQuit <- true
-					return nil
-				})
-			}
-
-			return
+	if ActiveRequest == hail { // we closed the active request
+		if len(HailQueue) > 0 {
+			HailPane.open(HailQueue[0])
+		} else {
+			Gui.UpdateAsync(func(g *gocui.Gui) error {
+				Gui.DeleteView("hail")
+				HailPane.View = nil
+				// stop timer
+				TimerQuit <- true
+				return nil
+			})
 		}
 	}
 }
@@ -113,24 +114,18 @@ func ProcessHails() {
 		select {
 		case hail := <-cmn.HailChannel:
 
+			log.Trace().Msgf("Hail received: %s", hail.Title)
+
 			if hail.TimeoutSec == 0 {
 				hail.TimeoutSec = cmn.Config.TimeoutSec
 			}
 
-			hail.Done = make(chan bool)
-
-			add(hail)
-
-			if ActiveRequest != HailQueue[0] {
-				if ActiveRequest != nil {
-					if ActiveRequest.OnSuspend != nil {
-						ActiveRequest.OnSuspend(hail)
-					}
-					ActiveRequest.Suspended = true
-				}
+			hail.Done = make(chan bool, 10)
+			on_top := add(hail)
+			if on_top {
+				HailPane.open(hail)
 			}
 
-			HailPane.open(HailQueue[0])
 		case hail := <-cmn.RemoveHailChannel:
 			remove(hail)
 		}
@@ -138,6 +133,16 @@ func ProcessHails() {
 }
 
 func (p *HailPaneType) open(hail *cmn.HailRequest) {
+
+	if ActiveRequest != hail {
+		if ActiveRequest != nil {
+			if ActiveRequest.OnSuspend != nil {
+				ActiveRequest.OnSuspend(hail)
+			}
+			ActiveRequest.Suspended = true
+		}
+	}
+
 	ActiveRequest = hail
 
 	if hail.Suspended {

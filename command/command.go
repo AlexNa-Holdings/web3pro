@@ -23,6 +23,7 @@ type Command struct {
 var Commands []*Command
 
 func Init() {
+
 	Commands = []*Command{
 		NewHelpCommand(),
 		NewWalletCommand(),
@@ -36,7 +37,6 @@ func Init() {
 }
 
 func Process(input string) {
-
 	log.Trace().Msgf("Processing command: %s", input)
 
 	command := strings.Split(input, " ")[0]
@@ -45,6 +45,7 @@ func Process(input string) {
 		if cmd.Command == command || cmd.ShortCommand == command {
 			go func() {
 				cmd.Process(cmd, input)
+				ui.Flush()
 			}()
 			return
 		}

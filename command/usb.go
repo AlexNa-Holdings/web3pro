@@ -80,16 +80,16 @@ func Usb_Process(c *Command, input string) {
 				es := wallet.CurrentWallet.GetSigner(device_name)
 				if es != nil {
 					ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command s edit '"+device_name+"'", "Edit signer")
-					break
 				} else {
 					ui.Terminal.Screen.AddButton("Add signer", "command s add "+t+" '"+device_name+"'", "Add signer") //TODO
 				}
 			}
 			ui.Printf("\n")
-			ui.Printf("   vendor: %x\n", u.Vendor)
-			ui.Printf("   product: %x\n", u.Product)
-			ui.Printf("   path: %s\n", u.Path)
-			ui.Printf("\n")
+			switch t {
+			// case "ledger":
+			case "trezor":
+				ui.Printf(signer.WalletTrezorDriver.PrintDetails(u.Path))
+			}
 		}
 
 		ui.Printf("\n")

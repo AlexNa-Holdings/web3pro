@@ -13,25 +13,10 @@ import (
 )
 
 type MnemonicDriver struct {
-	EntropyCache map[string][]byte
 }
 
 func NewMnemonicDriver() MnemonicDriver {
-	return MnemonicDriver{
-		EntropyCache: make(map[string][]byte),
-	}
-}
-
-func (d MnemonicDriver) GetEntropy(signer *Signer) ([]byte, error) {
-	entropy, ok := d.EntropyCache[signer.SN]
-	if !ok {
-		entropy, err := hex.DecodeString(signer.SN)
-		if err != nil {
-			return entropy, err
-		}
-		d.EntropyCache[signer.SN] = entropy // never remove from cache
-	}
-	return entropy, nil
+	return MnemonicDriver{}
 }
 
 func (d MnemonicDriver) GetName(path string) (string, error) {
@@ -45,7 +30,7 @@ func (d MnemonicDriver) GetAddresses(s *Signer, path_format string, start_from i
 		return addresses, errors.New("path_format must contain %d")
 	}
 
-	entropy, err := d.GetEntropy(s)
+	entropy, err := hex.DecodeString(s.SN)
 	if err != nil {
 		return addresses, err
 	}

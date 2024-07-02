@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/rs/zerolog/log"
 	"github.com/tyler-smith/go-bip32"
+	"google.golang.org/protobuf/protoadapt"
 )
 
 type Signer struct {
@@ -149,4 +150,18 @@ func getAddressFromKey(key *ecdsa.PrivateKey) common.Address {
 	}
 
 	return crypto.PubkeyToAddress(*publicKeyECDSA)
+}
+
+func (s *Signer) GetFamilyNames() []string {
+	r := []string{s.Name}
+	r = append(r, s.Copies...)
+	return r
+}
+
+func V2Of(m protoadapt.MessageV1) protoadapt.MessageV2 {
+	return protoadapt.MessageV2Of(m)
+}
+
+func V1Of(m protoadapt.MessageV2) protoadapt.MessageV1 {
+	return protoadapt.MessageV1Of(m)
 }

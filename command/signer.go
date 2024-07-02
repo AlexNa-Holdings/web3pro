@@ -210,6 +210,7 @@ func Signer_Process(c *Command, input string) {
 		ui.Terminal.Screen.AddLink("...more", "command signer addresses '"+p1+"' \""+path_format+"\" "+strconv.Itoa(from+10), "Show more addresses")
 		ui.Printf("\n")
 		ui.Terminal.Screen.ScrollBottom()
+		ui.Flush()
 
 	case "add":
 		ui.Gui.ShowPopup(ui.DlgSignerAdd(p1, p2))
