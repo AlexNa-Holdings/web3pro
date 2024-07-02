@@ -7,10 +7,10 @@ package gocui
 import (
 	"errors"
 	"fmt"
-	"log"
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/rs/zerolog/log"
 )
 
 var simulationScreen tcell.SimulationScreen
@@ -44,12 +44,11 @@ func (g *Gui) GetTestingScreen() TestingScreen {
 //
 // cleanup := testingScreen.StartGui()
 // defer cleanup()
-//
 func (t *TestingScreen) StartGui() func() {
 	t.gui.testNotify = make(chan struct{})
 	go func() {
 		if err := t.gui.MainLoop(); err != nil && !errors.Is(err, ErrQuit) {
-			log.Panic(err)
+			log.Error().Msgf("SetView error: %s", err)
 		}
 	}()
 	t.WaitSync()

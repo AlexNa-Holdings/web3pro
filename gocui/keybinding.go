@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/rs/zerolog/log"
 )
 
 // Key represents special keys or keys combinations.
@@ -76,7 +77,7 @@ func ParseAll(input []string) (map[interface{}]Modifier, error) {
 func MustParse(input string) (interface{}, Modifier) {
 	k, m, err := Parse(input)
 	if err != nil {
-		panic(err)
+		log.Error().Err(err).Msgf("SetView error: %s", err)
 	}
 	return k, m
 }
@@ -86,7 +87,7 @@ func MustParse(input string) (interface{}, Modifier) {
 func MustParseAll(input []string) map[interface{}]Modifier {
 	result, err := ParseAll(input)
 	if err != nil {
-		panic(err)
+		log.Error().Err(err).Msgf("SetView error: %s", err)
 	}
 	return result
 }

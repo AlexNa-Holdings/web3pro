@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/AlexNa-Holdings/web3pro/wire"
-	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
 
@@ -29,6 +28,8 @@ import (
 // package and use abstract interfaces instead
 
 // USB* interfaces are implemented in usb package
+
+var USBLog = false
 
 type USBBus interface {
 	Enumerate() ([]USBInfo, error)
@@ -179,18 +180,10 @@ func (c *Core) backgroundListen() {
 		linfos := len(c.lastInfos)
 		c.lastInfosMutex.RUnlock()
 		if linfos > 0 {
-
-			save_level := zerolog.GlobalLevel()
-			zerolog.SetGlobalLevel(zerolog.Disabled) // disable logging for the background enum
-
-			log.Trace().Msg("background enum runs")
 			_, err := c.Enumerate()
-
-			zerolog.SetGlobalLevel(save_level)
-
 			if err != nil {
 				// we dont really care here
-				log.Trace().Msg("error - " + err.Error())
+				Trace("error - " + err.Error())
 			}
 		}
 	}
@@ -238,7 +231,6 @@ func (c *Core) saveUsbPaths(devs []USBInfo) []USBInfo {
 }
 
 func (c *Core) Enumerate() ([]EnumerateEntry, error) {
-
 	// avoid enumerating while acquiring the device
 	// https://github.com/trezor/trezord-go/issues/221
 	c.libusbMutex.Lock()
@@ -256,9 +248,9 @@ func (c *Core) Enumerate() ([]EnumerateEntry, error) {
 	// Use saved info if call is in progress, otherwise enumerate.
 	infos := c.lastInfos
 
-	log.Trace().Msgf("callsInProgress %d", c.callsInProgress)
+	Tracef("callsInProgress %d", c.callsInProgress)
 	if c.callsInProgress == 0 {
-		log.Trace().Msg("bus")
+		Trace("bus")
 		busInfos, err := c.bus.Enumerate()
 		if err != nil {
 			return nil, err
@@ -268,7 +260,7 @@ func (c *Core) Enumerate() ([]EnumerateEntry, error) {
 	}
 
 	entries := c.createEnumerateEntries(infos)
-	log.Trace().Msg("release disconnected")
+	Trace("release disconnected")
 	c.releaseDisconnected(infos, false)
 	c.releaseDisconnected(infos, true)
 	return entries, nil
@@ -321,12 +313,12 @@ func (c *Core) releaseDisconnected(infos []USBInfo, debug bool) {
 			}
 		}
 		if !connected {
-			log.Trace().Msg(fmt.Sprintf("disconnected device %s", ssid))
+			Trace(fmt.Sprintf("disconnected device %s", ssid))
 			err := c.release(ssid, true, debug)
 			// just log if there is an error
 			// they are disconnected anyway
 			if err != nil {
-				log.Trace().Msg(fmt.Sprintf("Error on releasing disconnected device: %s", err))
+				Trace(fmt.Sprintf("Error on releasing disconnected device: %s", err))
 			}
 		}
 		return true
@@ -342,27 +334,27 @@ func (c *Core) release(
 	disconnected bool,
 	debug bool,
 ) error {
-	log.Trace().Msg(fmt.Sprintf("session %s", ssid))
+	Trace(fmt.Sprintf("session %s", ssid))
 	s := c.sessions(debug)
 	v, ok := s.Load(ssid)
 	if !ok {
-		log.Trace().Msg("session not found")
+		Trace("session not found")
 		return ErrSessionNotFound
 	}
 	s.Delete(ssid)
 	acquired := v.(*session)
-	log.Trace().Msg("bus close")
+	Trace("bus close")
 	err := acquired.dev.Close(disconnected)
 	return err
 }
 
 func (c *Core) Listen(entries []EnumerateEntry, ctx context.Context) ([]EnumerateEntry, error) {
-	log.Trace().Msg("start")
+	Trace("start")
 
 	EnumerateEntries(entries).Sort()
 
 	for i := 0; i < iterMax; i++ {
-		log.Trace().Msg("before enumerating")
+		Trace("before enumerating")
 		e, enumErr := c.Enumerate()
 		if enumErr != nil {
 			return nil, enumErr
@@ -371,21 +363,21 @@ func (c *Core) Listen(entries []EnumerateEntry, ctx context.Context) ([]Enumerat
 			e[i].Type = 0 // type is not exported/imported to json
 		}
 		if reflect.DeepEqual(entries, e) {
-			log.Trace().Msg("equal, waiting")
+			Trace("equal, waiting")
 			select {
 			case <-ctx.Done():
-				log.Trace().Msg(fmt.Sprintf("request closed (%s)", ctx.Err().Error()))
+				Trace(fmt.Sprintf("request closed (%s)", ctx.Err().Error()))
 				return nil, nil
 			default:
 				time.Sleep(iterDelay * time.Millisecond)
 			}
 		} else {
-			log.Trace().Msg("different")
+			Trace("different")
 			entries = e
 			break
 		}
 	}
-	log.Trace().Msg("encoding and exiting")
+	Trace("encoding and exiting")
 	return entries, nil
 }
 
@@ -423,11 +415,11 @@ func (c *Core) findSession(e *EnumerateEntry, path string, debug bool) {
 }
 
 func (c *Core) GetDevice(path string) (USBDevice, error) {
-	log.Trace().Msg("GetDevice")
+	Trace("GetDevice")
 	var err error
 	s := c.findPrevSession(path, false)
 
-	log.Trace().Msg(fmt.Sprintf("prev session %s", s))
+	Trace(fmt.Sprintf("prev session %s", s))
 
 	if s == "" {
 		s, err = c.Acquire(path, "", false)
@@ -451,7 +443,7 @@ func (c *Core) Acquire(
 	debug bool,
 ) (string, error) {
 
-	log.Trace().Msg("Acquire")
+	Trace("Acquire")
 
 	// avoid enumerating while acquiring the device
 	// https://github.com/trezor/trezord-go/issues/221
@@ -473,7 +465,7 @@ func (c *Core) Acquire(
 	}
 
 	if prev != "" {
-		log.Trace().Msg("releasing previous")
+		Trace("releasing previous")
 		err := c.release(prev, false, debug)
 		if err != nil {
 			return "", err
@@ -495,7 +487,7 @@ func (c *Core) Acquire(
 		return "", errors.New("device not found")
 	}
 
-	log.Trace().Msg("trying to connect")
+	Trace("trying to connect")
 	dev, err := c.tryConnect(usbPath, debug, reset)
 	if err != nil {
 		return "", err
@@ -510,7 +502,7 @@ func (c *Core) Acquire(
 		id:   id,
 	}
 
-	log.Trace().Msg(fmt.Sprintf("new session is %s", id))
+	Trace(fmt.Sprintf("new session is %s", id))
 
 	s := c.sessions(debug)
 	s.Store(id, sess)
@@ -524,15 +516,15 @@ func (c *Core) Acquire(
 func (c *Core) tryConnect(path string, debug bool, reset bool) (USBDevice, error) {
 	tries := 0
 	for {
-		log.Trace().Msg(fmt.Sprintf("try number %d", tries))
+		Trace(fmt.Sprintf("try number %d", tries))
 		dev, err := c.bus.Connect(path, debug, reset)
 		if err != nil {
 			if tries < 3 {
-				log.Trace().Msg("sleeping")
+				Trace("sleeping")
 				tries++
 				time.Sleep(100 * time.Millisecond)
 			} else {
-				log.Trace().Msg("tryConnect - too many times, exiting")
+				Trace("tryConnect - too many times, exiting")
 				return nil, err
 			}
 		} else {
@@ -592,13 +584,13 @@ func (c *Core) RawCall(
 		// The check IS NOT implemented for /post, meaning /post can write even though some /call or /read
 		// is in progress (but there are some read/write locks later on).
 
-		log.Trace().Msg("checking other call on same session")
+		Trace("checking other call on same session")
 		freeToCall := atomic.CompareAndSwapInt32(&acquired.call, 0, 1)
 		if !freeToCall {
 			return nil, ErrOtherCall
 		}
 
-		log.Trace().Msg("checking other call on same session done")
+		Trace("checking other call on same session done")
 		defer func() {
 			atomic.StoreInt32(&acquired.call, 0)
 		}()
@@ -614,7 +606,7 @@ func (c *Core) RawCall(
 		case <-finished:
 			return
 		case <-ctx.Done():
-			log.Trace().Msgf("detected request close %s, auto-release", ctx.Err().Error())
+			Tracef("detected request close %s, auto-release", ctx.Err().Error())
 			errRelease := c.release(ssid, false, debug)
 			if errRelease != nil {
 				// just log, since request is already closed
@@ -623,33 +615,33 @@ func (c *Core) RawCall(
 		}
 	}()
 
-	log.Trace().Msg("before actual logic")
+	Trace("before actual logic")
 	bytes, err := c.readWriteDev(body, acquired, mode)
-	log.Trace().Msg("after actual logic")
+	Trace("after actual logic")
 
 	return bytes, err
 }
 
 func (c *Core) writeDev(body []byte, device io.Writer) error {
-	log.Trace().Msg("decodeRaw")
+	Trace("decodeRaw")
 	msg, err := c.decodeRaw(body)
 	if err != nil {
 		return err
 	}
 
-	log.Trace().Msg("writeTo")
+	Trace("writeTo")
 	_, err = msg.WriteTo(device)
 	return err
 }
 
 func (c *Core) readDev(device io.Reader) ([]byte, error) {
-	log.Trace().Msg("readFrom")
+	Trace("readFrom")
 	msg, err := wire.ReadFrom(device)
 	if err != nil {
 		return nil, err
 	}
 
-	log.Trace().Msg("encoding back")
+	Trace("encoding back")
 	return c.encodeRaw(msg)
 }
 
@@ -663,7 +655,7 @@ func (c *Core) readWriteDev(
 		if len(body) != 0 {
 			return nil, errors.New("non-empty body on read mode")
 		}
-		log.Trace().Msg("skipping write")
+		Trace("skipping write")
 	} else {
 		acquired.writeMutex.Lock()
 		err := c.writeDev(body, acquired.dev)
@@ -674,7 +666,7 @@ func (c *Core) readWriteDev(
 	}
 
 	if mode == CallModeWrite {
-		log.Trace().Msg("skipping read")
+		Trace("skipping read")
 		return []byte{0}, nil
 	}
 	acquired.readMutex.Lock()
@@ -683,12 +675,12 @@ func (c *Core) readWriteDev(
 }
 
 func (c *Core) decodeRaw(body []byte) (*wire.Message, error) {
-	log.Trace().Msg("readAll")
+	Trace("readAll")
 
-	log.Trace().Msg("decodeString")
+	Trace("decodeString")
 
 	if len(body) < 6 {
-		log.Trace().Msg("body too short")
+		Trace("body too short")
 		return nil, ErrMalformedData
 	}
 
@@ -696,16 +688,16 @@ func (c *Core) decodeRaw(body []byte) (*wire.Message, error) {
 	size := binary.BigEndian.Uint32(body[2:6])
 	data := body[6:]
 	if uint32(len(data)) != size {
-		log.Trace().Msg("wrong data length")
+		Trace("wrong data length")
 		return nil, ErrMalformedData
 	}
 
 	if wire.Validate(data) != nil {
-		log.Trace().Msg("invalid data")
+		Trace("invalid data")
 		return nil, ErrMalformedData
 	}
 
-	log.Trace().Msg("returning")
+	Trace("returning")
 	return &wire.Message{
 		Kind: kind,
 		Data: data,
@@ -713,7 +705,7 @@ func (c *Core) decodeRaw(body []byte) (*wire.Message, error) {
 }
 
 func (c *Core) encodeRaw(msg *wire.Message) ([]byte, error) {
-	log.Trace().Msg("start")
+	Trace("start")
 	var header [6]byte
 	data := msg.Data
 	kind := msg.Kind
@@ -725,4 +717,16 @@ func (c *Core) encodeRaw(msg *wire.Message) ([]byte, error) {
 	res := append(header[:], data...)
 
 	return res, nil
+}
+
+func Tracef(format string, v ...interface{}) {
+	if USBLog {
+		Tracef(format, v...)
+	}
+}
+
+func Trace(format string, v ...interface{}) {
+	if USBLog {
+		Trace(format)
+	}
 }

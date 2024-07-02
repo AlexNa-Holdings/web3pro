@@ -41,6 +41,7 @@ func add(hail *cmn.HailRequest) bool { // returns if on top
 }
 
 func remove(hail *cmn.HailRequest) {
+	log.Trace().Msgf("Removing hail: %s", hail.Title)
 
 	Mutex.Lock()
 	for i, h := range HailQueue {
@@ -53,7 +54,10 @@ func remove(hail *cmn.HailRequest) {
 	if hail.OnClose != nil {
 		hail.OnClose(hail)
 	}
+
+	log.Debug().Msgf("Hail removed signal sent: %s", hail.Title)
 	hail.Done <- true
+	log.Debug().Msgf("After hail removed signal sent: %s", hail.Title)
 
 	if ActiveRequest == hail { // we closed the active request
 		if len(HailQueue) > 0 {
@@ -70,11 +74,8 @@ func remove(hail *cmn.HailRequest) {
 	}
 }
 
-func (p *HailPaneType) Close(hail *cmn.HailRequest) {
-	remove(hail)
-}
-
 func cancel(hail *cmn.HailRequest) {
+	log.Debug().Msgf("Cancel: hail: %s", hail.Title)
 	if hail.OnCancel != nil {
 		hail.OnCancel(hail)
 	}
@@ -119,14 +120,13 @@ func ProcessHails() {
 			if hail.TimeoutSec == 0 {
 				hail.TimeoutSec = cmn.Config.TimeoutSec
 			}
-
-			hail.Done = make(chan bool, 10)
 			on_top := add(hail)
 			if on_top {
 				HailPane.open(hail)
 			}
 
 		case hail := <-cmn.RemoveHailChannel:
+			log.Trace().Msgf("ProcessHails: Remove hail received: %s", hail.Title)
 			remove(hail)
 		}
 	}
@@ -201,8 +201,9 @@ func (p *HailPaneType) SetView(g *gocui.Gui, x0, y0, x1, y1 int) {
 
 	if p.View, err = g.SetView("hail", x0, y0, x1, y1, 0); err != nil {
 		if !errors.Is(err, gocui.ErrUnknownView) {
-			panic(err)
+			log.Error().Err(err).Msgf("SetView error: %s", err)
 		}
+
 		p.View.Title = "Hail"
 		if ActiveRequest.Title != "" {
 			p.View.Title = ActiveRequest.Title
@@ -214,8 +215,6 @@ func (p *HailPaneType) SetView(g *gocui.Gui, x0, y0, x1, y1 int) {
 		p.View.EmFgColor = Gui.ActionBgColor
 		p.View.ScrollBar = true
 		p.View.OnResize = func(v *gocui.View) {
-			x0, y0, x1, y1 := v.Dimensions()
-			log.Debug().Msgf("HailPane resized to %d %d %d %d", x0, y0, x1, y1)
 			if ActiveRequest != nil {
 				if ActiveRequest.Template != "" {
 					v.RenderTemplate(ActiveRequest.Template)
@@ -241,11 +240,13 @@ func (p *HailPaneType) SetView(g *gocui.Gui, x0, y0, x1, y1 int) {
 			if hs != nil {
 				switch hs.Value {
 				case "button Ok":
+					log.Trace().Msgf("HailPane: button Ok")
 					if ActiveRequest.OnOk != nil {
 						ActiveRequest.OnOk(ActiveRequest)
 					}
 					remove(ActiveRequest)
 				case "button Cancel":
+					log.Trace().Msgf("HailPane: button Cancel")
 					if ActiveRequest.OnCancel != nil {
 						ActiveRequest.OnCancel(ActiveRequest)
 					}

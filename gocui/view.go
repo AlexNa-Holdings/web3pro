@@ -15,6 +15,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/mattn/go-runewidth"
+	"github.com/rs/zerolog/log"
 )
 
 // Constants for overlapping edges
@@ -614,12 +615,12 @@ func (v *View) Rewind() {
 	if err := v.SetReadPos(0, 0); err != nil {
 		// SetReadPos returns error only if x and y are negative
 		// we are passing 0, 0, thus no error should occur.
-		panic(err)
+		log.Error().Err(err).Msgf("SetView error: %s", err)
 	}
 	if err := v.SetWritePos(0, 0); err != nil {
 		// SetWritePos returns error only if x and y are negative
 		// we are passing 0, 0, thus no error should occur.
-		panic(err)
+		log.Error().Err(err).Msgf("SetView error: %s", err)
 	}
 }
 

@@ -46,14 +46,14 @@ func (p *TerminalPane) SetView(g *gocui.Gui, x0, y0, x1, y1 int) {
 
 	if p.View, err = g.SetView("terminal", x0, y0, x1, y1, 0); err != nil {
 		if !errors.Is(err, gocui.ErrUnknownView) {
-			panic(err)
+			log.Error().Err(err).Msgf("SetView error: %s", err)
 		}
 		p.Title = "Terminal"
 	}
 
 	if p.Screen, err = g.SetView("terminal.screen", x0, y0, x1, y1-1, 0); err != nil {
 		if !errors.Is(err, gocui.ErrUnknownView) {
-			panic(err)
+			log.Error().Err(err).Msgf("SetView error: %s", err)
 		}
 		p.Screen.Autoscroll = false
 		p.Screen.Wrap = false
@@ -83,7 +83,7 @@ func (p *TerminalPane) SetView(g *gocui.Gui, x0, y0, x1, y1 int) {
 
 		if p.Input, err = g.SetView("terminal.input", prefix_len, y1-2, x1, y1, 0); err != nil {
 			if !errors.Is(err, gocui.ErrUnknownView) {
-				panic(err)
+				log.Error().Err(err).Msgf("SetView error: %s", err)
 			}
 			p.Input.Frame = false
 			p.Input.Editable = true
@@ -94,7 +94,7 @@ func (p *TerminalPane) SetView(g *gocui.Gui, x0, y0, x1, y1 int) {
 
 		if p.Prefix, err = g.SetView("terminal.prefix", x0, y1-2, prefix_len+1, y1, 0); err != nil {
 			if !errors.Is(err, gocui.ErrUnknownView) {
-				panic(err)
+				log.Error().Err(err).Msgf("SetView error: %s", err)
 			}
 			p.Prefix.Frame = false
 
@@ -177,7 +177,7 @@ func (t *TerminalPane) layoutAutocomplete(title string, options *[]ACOption, hig
 
 	if t.AutoComplete, err = Gui.SetView("terminal.autocomplete", x, sy1-frame_height, x+frame_width, sy1-1, 0); err != nil {
 		if !errors.Is(err, gocui.ErrUnknownView) {
-			panic(err)
+			log.Error().Err(err).Msgf("SetView error: %s", err)
 		}
 		t.AutoComplete.Frame = true
 		t.AutoComplete.FrameColor = t.Input.FgColor

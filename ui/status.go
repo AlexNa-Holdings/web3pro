@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/AlexNa-Holdings/web3pro/gocui"
+	"github.com/rs/zerolog/log"
 )
 
 type StatusPane struct {
@@ -23,7 +24,7 @@ func (p *StatusPane) SetView(g *gocui.Gui, x0, y0, x1, y1 int) {
 
 	if p.View, err = g.SetView("status", x0, y0, x1, y1, 0); err != nil {
 		if !errors.Is(err, gocui.ErrUnknownView) {
-			panic(err)
+			log.Error().Err(err).Msgf("SetView error: %s", err)
 		}
 		p.View.Title = "Status"
 		p.View.Autoscroll = true

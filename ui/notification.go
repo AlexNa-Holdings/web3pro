@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/AlexNa-Holdings/web3pro/gocui"
+	"github.com/rs/zerolog/log"
 )
 
 const NOTIFICATION_TIME = 3
@@ -36,7 +37,7 @@ func (p *NotificationPane) SetView(g *gocui.Gui) {
 
 	if p.View, err = g.SetView("notifiction", x, maxY-2, maxX, maxY, 0); err != nil {
 		if !errors.Is(err, gocui.ErrUnknownView) {
-			panic(err)
+			log.Error().Err(err).Msgf("SetView error: %s", err)
 		}
 		p.View.Autoscroll = false
 		p.View.Frame = false

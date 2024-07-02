@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"runtime"
 
+	"github.com/AlexNa-Holdings/web3pro/core"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v2"
@@ -27,6 +28,7 @@ type SConfig struct {
 	Verbosity  string `yaml:"verbosity"`   // log verbosity
 	Theme      string `yaml:"theme"`       // UI theme
 	TimeoutSec int    `yaml:"timeout_sec"` // default timeout for hail requests
+	USBLog     bool   `yaml:"usb_log"`     // log USB events
 }
 
 var Config *SConfig = &SConfig{ //Default config
@@ -34,6 +36,7 @@ var Config *SConfig = &SConfig{ //Default config
 	Verbosity:  "debug",
 	Theme:      "dark",
 	TimeoutSec: 60,
+	USBLog:     false,
 }
 
 func InitConfig() {
@@ -83,6 +86,8 @@ func InitConfig() {
 	}
 
 	log.Info().Msgf("Log level: %s", Config.Verbosity)
+
+	core.USBLog = Config.USBLog
 
 	//create wallets folder if needed
 	err = os.MkdirAll(filepath.Join(DataFolder, "wallets"), os.ModePerm)

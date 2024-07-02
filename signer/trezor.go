@@ -11,15 +11,15 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/address"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/core"
+	"github.com/AlexNa-Holdings/web3pro/signer/trezorproto"
 	"github.com/ava-labs/coreth/accounts"
-	"github.com/ethereum/go-ethereum/accounts/usbwallet/trezor"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/protobuf/proto"
 )
 
 type ConnectedDevice struct {
-	trezor.Features
+	trezorproto.Features
 }
 
 type TrezorDriver struct {
@@ -34,7 +34,7 @@ func NewTrezorDriver() TrezorDriver {
 
 func (d *TrezorDriver) Open(s *Signer) (core.USBDevice, error) {
 
-	log.Trace().Msgf("Opening trezor: %s\n", s.Name)
+	log.Trace().Msgf("Opening trezor: %s", s.Name)
 
 	usb_path := ""
 
@@ -45,7 +45,30 @@ func (d *TrezorDriver) Open(s *Signer) (core.USBDevice, error) {
 		}
 	}
 
-	log.Trace().Msgf("Trezor known path: %s\n", usb_path)
+	log.Trace().Msgf("Trezor known path: %s", usb_path)
+
+	if usb_path == "" { // try one enumeration to find th edevice before asking the user
+		l, err := cmn.Core.Enumerate()
+		if err != nil {
+			log.Error().Err(err).Msg("Error listing usb devices")
+			return nil, err
+		}
+
+		for _, info := range l {
+			if GetType(info.Vendor, info.Product) == "trezor" {
+				n, err := GetDeviceName(info)
+				if err != nil {
+					log.Error().Err(err).Msg("Error getting device name")
+					return nil, err
+				}
+				if cmn.IsInArray(s.GetFamilyNames(), n) {
+					usb_path = info.Path
+					log.Trace().Msgf("Trezor found on silent try: %s", s.Name)
+					break
+				}
+			}
+		}
+	}
 
 	if usb_path != "" {
 		dev, err := cmn.Core.GetDevice(usb_path)
@@ -55,12 +78,12 @@ func (d *TrezorDriver) Open(s *Signer) (core.USBDevice, error) {
 			delete(d.KnownDevices, usb_path)
 			usb_path = ""
 		} else {
-			log.Debug().Msgf("Opened trezor: %s\n", s.Name)
+			log.Debug().Msgf("Opened trezor: %s", s.Name)
 			return dev, nil
 		}
 	}
 
-	log.Trace().Msgf("Trezor not found: %s\n", s.Name)
+	log.Trace().Msgf("Trezor not found: %s", s.Name)
 
 	copies := ""
 	if len(s.Copies) > 0 {
@@ -84,6 +107,7 @@ Please connect your Trezor device:
 <button text:Cancel>`,
 		OnTick: func(h *cmn.HailRequest, tick int) {
 			if tick%3 == 0 {
+				log.Trace().Msg("Connect Trezor: Tick...")
 				l, err := cmn.Core.Enumerate()
 				if err != nil {
 					log.Error().Err(err).Msg("Error listing usb devices")
@@ -109,10 +133,10 @@ Please connect your Trezor device:
 	})
 
 	if usb_path == "" {
+		log.Error().Msg("Open: Trezor not found")
 		return nil, errors.New("trezor not found")
 	}
 
-	log.Debug().Msgf("Opening trezor: %s\n", usb_path)
 	return cmn.Core.GetDevice(usb_path)
 }
 
@@ -128,14 +152,14 @@ func (d TrezorDriver) IsConnected(s *Signer) bool {
 func (d TrezorDriver) GetAddresses(s *Signer, path_format string, start_from int, count int) ([]address.Address, error) {
 	r := []address.Address{}
 
-	log.Trace().Msgf("Getting addresses for %s\n", s.Name)
+	log.Trace().Msgf("Getting addresses for %s", s.Name)
 
 	dev, err := d.Open(s)
 	if err != nil {
 		return r, err
 	}
 
-	log.Trace().Msgf("Opened trezor: %s", s.Name)
+	log.Trace().Msgf("Device opened. Trying getting the addresses")
 
 	for i := 0; i < count; i++ {
 		path := fmt.Sprintf(path_format, start_from+i)
@@ -144,25 +168,20 @@ func (d TrezorDriver) GetAddresses(s *Signer, path_format string, start_from int
 			return r, err
 		}
 
-		eth_addr := V2Of(new(trezor.EthereumAddress))
+		eth_addr := new(trezorproto.EthereumAddress)
 		if err := d.Call(dev,
-			V2Of(&trezor.EthereumGetAddress{AddressN: []uint32(dp)}), eth_addr); err != nil {
+			&trezorproto.EthereumGetAddress{AddressN: []uint32(dp)}, eth_addr); err != nil {
 			return r, err
 		}
 
-		ethAddress := V1Of(eth_addr).(*trezor.EthereumAddress)
-
 		var a common.Address
-		if len(ethAddress.AddressBin) > 0 { // Older firmwares use binary formats
-			a = common.BytesToAddress(ethAddress.AddressBin)
-		} else {
-			if ethAddress.AddressHex == nil {
-				return r, errors.New("trezor: nil address returned")
-			}
 
-			a = common.HexToAddress(*ethAddress.AddressHex)
+		if addr := eth_addr.GetXOldAddress(); len(addr) > 0 { // Older firmwares use binary formats
+			a = common.BytesToAddress(addr)
 		}
-
+		if addr := eth_addr.GetAddress(); len(addr) > 0 { // Newer firmwares use hexadecimal formats
+			a = common.HexToAddress(addr)
+		}
 		r = append(r, address.Address{Address: a})
 	}
 	return r, nil
@@ -170,14 +189,15 @@ func (d TrezorDriver) GetAddresses(s *Signer, path_format string, start_from int
 
 // Type returns the protocol buffer type number of a specific message. If the
 // message is nil, this method panics!
-func MessageType(msg proto.Message) trezor.MessageType {
-	return trezor.MessageType(trezor.MessageType_value["MessageType_"+reflect.TypeOf(msg).Elem().Name()])
+func MessageType(msg proto.Message) trezorproto.MessageType {
+
+	return trezorproto.MessageType(trezorproto.MessageType_value["MessageType_"+reflect.TypeOf(msg).Elem().Name()])
 }
 
 // Name returns the friendly message type name of a specific protocol buffer
 // type number.
-func MessageName(kind trezor.MessageType) string {
-	name := trezor.MessageType_name[int32(kind)]
+func MessageName(kind trezorproto.MessageType) string {
+	name := trezorproto.MessageType_name[int32(kind)]
 	if len(name) < 12 {
 		return name
 	}
@@ -236,17 +256,17 @@ func (d TrezorDriver) Init(path string) (*ConnectedDevice, error) {
 		return nil, err
 	}
 
-	kind, reply, err := d.RawCall(dev, V2Of(&trezor.Initialize{}))
+	kind, reply, err := d.RawCall(dev, &trezorproto.Initialize{})
 	if err != nil {
 		log.Error().Err(err).Msgf("Init: Error initializing device: %s", path)
 		return nil, err
 	}
-	if kind != trezor.MessageType_MessageType_Features {
-		log.Error().Msgf("Init: Expected reply type %s, got %s", MessageName(trezor.MessageType_MessageType_Features), MessageName(kind))
-		return nil, errors.New("trezor: expected reply type " + MessageName(trezor.MessageType_MessageType_Features) + ", got " + MessageName(kind))
+	if kind != trezorproto.MessageType_MessageType_Features {
+		log.Error().Msgf("Init: Expected reply type %s, got %s", MessageName(trezorproto.MessageType_MessageType_Features), MessageName(kind))
+		return nil, errors.New("trezor: expected reply type " + MessageName(trezorproto.MessageType_MessageType_Features) + ", got " + MessageName(kind))
 	}
-	features := new(trezor.Features)
-	err = proto.Unmarshal(reply, V2Of(features))
+	features := new(trezorproto.Features)
+	err = proto.Unmarshal(reply, features)
 	if err != nil {
 		log.Error().Err(err).Msgf("Init: Error unmarshalling features: %s", path)
 		return nil, err
@@ -288,71 +308,68 @@ func (d TrezorDriver) RequsetPin() (string, error) {
 
 func (d TrezorDriver) Call(dev core.USBDevice, req proto.Message, result proto.Message) error {
 
-	log.Debug().Msgf("Trezor call: %s", MessageName(MessageType(req)))
+	log.Debug().Msgf("Call: %s", MessageName(MessageType(req)))
+	log.Debug().Msgf("Call: %v", req)
 
 	kind, reply, err := d.RawCall(dev, req)
 	if err != nil {
+		log.Error().Msgf("Call: Error calling device: %s", err)
 		return err
 	}
 	for {
-		// fmt.Printf("for loop new call. kind: %s ...\n", MessageName(kind))
 		switch kind {
-		case trezor.MessageType_MessageType_PinMatrixRequest:
+		case trezorproto.MessageType_MessageType_PinMatrixRequest:
 			{
 				log.Trace().Msg("*** NB! Enter PIN (not echoed)...")
 				pin, _ := d.RequsetPin()
-				// pin, err := w.ui.ReadPassword()
-				// if err != nil {
-				// 	kind, reply, _ = w.rawCall(&trezor.Cancel{})
-				// 	return err
-				// }
 				// check if pin is valid
 				pinStr := string(pin)
 				for _, ch := range pinStr {
 					if !strings.ContainsRune("123456789", ch) || len(pin) < 1 {
-						d.RawCall(dev, V2Of(&trezor.Cancel{}))
+						d.RawCall(dev, &trezorproto.Cancel{})
 						return errors.New("trezor: Invalid PIN provided")
 					}
 				}
 				// send pin
-				kind, reply, err = d.RawCall(dev, V2Of(&trezor.PinMatrixAck{Pin: &pinStr}))
+				kind, reply, err = d.RawCall(dev, &trezorproto.PinMatrixAck{Pin: &pinStr})
 				if err != nil {
+					log.Error().Msgf("Call: Error sending pin: %s", err)
 					return err
 				}
 				log.Trace().Msgf("Trezor pin success. kind: %s\n", MessageName(kind))
 			}
-		case trezor.MessageType_MessageType_PassphraseRequest:
+		case trezorproto.MessageType_MessageType_PassphraseRequest:
 			{
 				log.Trace().Msg("*** NB! Enter Pass	phrase ...")
 				pass := "12345" // TODOphrase ...")
 				// pass, err := w.ui.ReadPassword()
 				// if err != nil {
-				// 	kind, reply, _ = d.RawCall(dev, V2Of(&trezor.Cancel{}))
+				// 	kind, reply, _ = d.RawCall(dev, &trezorproto.Cancel{})
 				// 	return err
 				// }
 				passStr := string(pass)
 				// send it
-				kind, reply, err = d.RawCall(dev, V2Of(&trezor.PassphraseAck{Passphrase: &passStr}))
+				kind, reply, err = d.RawCall(dev, &trezorproto.PassphraseAck{Passphrase: &passStr})
 				if err != nil {
 					return err
 				}
 				log.Trace().Msgf("Trezor pass success. kind: %s\n", MessageName(kind))
 			}
-		case trezor.MessageType_MessageType_ButtonRequest:
+		case trezorproto.MessageType_MessageType_ButtonRequest:
 			{
 				log.Trace().Msg("*** NB! Button request on your Trezor screen ...")
 				// Trezor is waiting for user confirmation, ack and wait for the next message
-				kind, reply, err = d.RawCall(dev, V2Of(&trezor.ButtonAck{}))
+				kind, reply, err = d.RawCall(dev, &trezorproto.ButtonAck{})
 				if err != nil {
 					return err
 				}
 				log.Trace().Msgf("Trezor button success. kind: %s\n", MessageName(kind))
 			}
-		case trezor.MessageType_MessageType_Failure:
+		case trezorproto.MessageType_MessageType_Failure:
 			{
 				// Trezor returned a failure, extract and return the message
-				failure := new(trezor.Failure)
-				if err := proto.Unmarshal(reply, V2Of(failure)); err != nil {
+				failure := new(trezorproto.Failure)
+				if err := proto.Unmarshal(reply, failure); err != nil {
 					return err
 				}
 				// fmt.Printf("Trezor failure success. kind: %s\n", MessageName(kind))
@@ -370,11 +387,16 @@ func (d TrezorDriver) Call(dev core.USBDevice, req proto.Message, result proto.M
 	}
 }
 
-func (d TrezorDriver) RawCall(dev core.USBDevice, req proto.Message) (trezor.MessageType, []byte, error) {
+func (d TrezorDriver) RawCall(dev core.USBDevice, req proto.Message) (trezorproto.MessageType, []byte, error) {
+
+	log.Debug().Msgf("RawCall: %s", MessageName(MessageType(req)))
+
 	data, err := proto.Marshal(req)
 	if err != nil {
+		log.Error().Msgf("RawCall: Error marshalling request: %s", err)
 		return 0, nil, err
 	}
+
 	payload := make([]byte, 8+len(data))
 	copy(payload, []byte{0x23, 0x23})
 	binary.BigEndian.PutUint16(payload[2:], uint16(MessageType(req)))
@@ -398,6 +420,7 @@ func (d TrezorDriver) RawCall(dev core.USBDevice, req proto.Message) (trezor.Mes
 		// Send over to the dev
 		// log.Trace().Msgf("Data chunk sent to the Trezor: %v\n", hexutil.Bytes(chunk))
 		if _, err := dev.Write(chunk); err != nil {
+			log.Error().Msgf("RawCall: Error writing to device: %s", err)
 			return 0, nil, err
 		}
 	}
@@ -408,13 +431,16 @@ func (d TrezorDriver) RawCall(dev core.USBDevice, req proto.Message) (trezor.Mes
 		reply []byte
 	)
 	for {
+
 		// Read the next chunk from the Trezor wallet
 		if _, err := io.ReadFull(dev, chunk); err != nil {
+			log.Error().Msgf("RawCall: Error reading from device: %s", err)
 			return 0, nil, err
 		}
 
 		// Make sure the transport header matches
 		if chunk[0] != 0x3f || (len(reply) == 0 && (chunk[1] != 0x23 || chunk[2] != 0x23)) {
+			log.Error().Msgf("RawCall: Invalid reply header: %v", chunk)
 			return 0, nil, errTrezorReplyInvalidHeader
 		}
 		// If it's the first chunk, retrieve the reply message type and total message length
@@ -434,8 +460,12 @@ func (d TrezorDriver) RawCall(dev core.USBDevice, req proto.Message) (trezor.Mes
 			reply = append(reply, payload[:left]...)
 			break
 		}
+
+		log.Trace().Msg("3")
+
 	}
-	return trezor.MessageType(kind), reply, nil
+
+	return trezorproto.MessageType(kind), reply, nil
 }
 
 func (d TrezorDriver) PrintDetails(path string) string {
@@ -460,8 +490,6 @@ func (d TrezorDriver) PrintDetails(path string) string {
 	// r += fmt.Sprintf("  Revision: %v\n", dev.Revision)
 	// r += fmt.Sprintf("  BootloaderHash: %v\n", dev.BootloaderHash)
 	r += fmt.Sprintf("  Imported: %t\n", SB(dev.Imported))
-	r += fmt.Sprintf("  PinCached: %t\n", SB(dev.PinCached))
-	r += fmt.Sprintf("  PassphraseCached: %t\n", SB(dev.PassphraseCached))
 	r += fmt.Sprintf("  FirmwarePresent: %t\n", SB(dev.FirmwarePresent))
 	r += fmt.Sprintf("  NeedsBackup: %t\n", SB(dev.NeedsBackup))
 	r += fmt.Sprintf("  Flags: %d\n", SU32(dev.Flags))
