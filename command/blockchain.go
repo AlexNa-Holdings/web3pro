@@ -131,7 +131,7 @@ func Blockchain_Process(c *Command, input string) {
 					ui.Printf(" Chain ID: %d\n", b.ChainId)
 					ui.Printf(" Symbol: %s\n", b.Currency)
 					ui.Printf(" Explorer: %s\n", b.ExplorerUrl)
-					ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command b edit '"+b.Name+"'", "Edit blockchain '"+b.Name+"'")
+					ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command b edit '"+b.Name+"'", "Edit blockchain '"+b.Name+"'", "")
 
 					ui.Printf("\n")
 					return
@@ -188,9 +188,9 @@ func Blockchain_Process(c *Command, input string) {
 		ui.Printf("\nBlockchains:\n")
 
 		for _, b := range wallet.CurrentWallet.Blockchains {
-			ui.Terminal.Screen.AddLink(b.Name, "command b use "+b.Name, "Use blockchain '"+b.Name+"'")
+			ui.Terminal.Screen.AddLink(b.Name, "command b use "+b.Name, "Use blockchain '"+b.Name+"'", "")
 			ui.Printf(" ")
-			ui.Terminal.Screen.AddLink("\uf044", "command b edit "+b.Name, "Edit blockchain '"+b.Name+"'")
+			ui.Terminal.Screen.AddLink("\uf044", "command b edit "+b.Name, "Edit blockchain '"+b.Name+"'", "")
 			ui.Printf("\n")
 		}
 

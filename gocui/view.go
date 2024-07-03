@@ -37,6 +37,9 @@ const (
 	ICON_BACK     = "\U000f006e"
 )
 
+const REGEX_TAGS = `<(/?\w+)((?:\s+\w+(?::(?:[^>\s]+|"[^"]*"|'[^']*'))?\s*)*)>`
+const REGEX_SINGLE_TAG = `(\w+)(?::(".*?"|'.*?'|[^>\s]+))`
+
 var (
 	// ErrInvalidPoint is returned when client passed invalid coordinates of a cell.
 	// Most likely client has passed negative coordinates of a cell.
@@ -1087,7 +1090,7 @@ func (v *View) MouseOverScrollbar() bool {
 
 func ParseTag(tag string) (string, map[string]string) {
 	// Regular expression to match the whole tag, capturing the tag name and parameters
-	tagRe := regexp.MustCompile(`<(/?\w+)((?:\s+\w+(?::(?:[^>\s]+|"[^"]*"))?\s*)*)>`)
+	tagRe := regexp.MustCompile(REGEX_TAGS)
 
 	tagName := ""
 	tagParams := make(map[string]string)
@@ -1098,7 +1101,7 @@ func ParseTag(tag string) (string, map[string]string) {
 		params := tagMatch[2]
 		if params != "" {
 			// Regular expression to match individual parameters
-			paramRe := regexp.MustCompile(`(\w+)(?::(".*?"|[^>\s]+))`)
+			paramRe := regexp.MustCompile(REGEX_SINGLE_TAG)
 			paramMatches := paramRe.FindAllStringSubmatch(params, -1)
 
 			for _, paramMatch := range paramMatches {
@@ -1107,7 +1110,8 @@ func ParseTag(tag string) (string, map[string]string) {
 
 				if len(paramMatch) > 2 && paramMatch[2] != "" {
 					paramValue = paramMatch[2]
-					if strings.HasPrefix(paramValue, `"`) && strings.HasSuffix(paramValue, `"`) {
+					if (strings.HasPrefix(paramValue, `"`) && strings.HasSuffix(paramValue, `"`)) ||
+						(strings.HasPrefix(paramValue, `'`) && strings.HasSuffix(paramValue, `'`)) {
 						// Remove quotes from the value
 						paramValue = paramValue[1 : len(paramValue)-1]
 					}
@@ -1133,12 +1137,12 @@ func (v *View) AddTag(text string) error {
 func (v *View) AddTagEx(tagName string, tagParams map[string]string) error {
 	switch tagName {
 	case "l": // link
-		v.AddLink(tagParams["text"], tagParams["action"], tagParams["tip"])
+		v.AddLink(tagParams["text"], tagParams["action"], tagParams["tip"], tagParams["id"])
 	case "button": // button
 		if tagParams["id"] == "" {
 			tagParams["id"] = tagParams["text"]
 		}
-		v.AddButton(tagParams["text"], "button "+tagParams["id"], tagParams["tip"])
+		v.AddButton(tagParams["text"], "button "+tagParams["id"], tagParams["id"], tagParams["tip"], tagParams["color"], tagParams["bgcolor"])
 	case "i": // input
 		v.AddInput(tagParams)
 	case "t": // text input
@@ -1149,12 +1153,21 @@ func (v *View) AddTagEx(tagName string, tagParams map[string]string) error {
 	return nil
 }
 
+func (v *View) GetHotspotById(id string) *Hotspot {
+	for _, hs := range v.hotspots {
+		if hs.ID == id {
+			return hs
+		}
+	}
+	return nil
+}
+
 func GetTagLength(tagName string, tagParams map[string]string) int {
 	switch tagName {
 	case "l": // link
-		return len(tagParams["text"])
+		return utf8.RuneCountInString(tagParams["text"])
 	case "button": // button
-		return len(tagParams["text"]) + 2
+		return utf8.RuneCountInString(tagParams["text"]) + 2
 	case "i": // input
 		size, _ := strconv.Atoi(tagParams["size"])
 		return size
@@ -1178,7 +1191,7 @@ func AddCells(cells []cell, fg, bg Attribute, text string) []cell {
 	return cells
 }
 
-func (v *View) AddLink(text, value, tip string) error {
+func (v *View) AddLink(text, value, tip, id string) error {
 	cells := AddCells(nil, v.EmFgColor, v.BgColor, text)
 	cells_highligted := AddCells(nil, v.SelFgColor, v.SelBgColor, text)
 
@@ -1190,7 +1203,7 @@ func (v *View) AddLink(text, value, tip string) error {
 		y1:   v.wy + 1,
 	}
 
-	hs, err := v.AddHotspot(v.wx, v.wy, value, tip, cells, cells_highligted)
+	hs, err := v.AddHotspot(v.wx, v.wy, id, value, tip, cells, cells_highligted)
 
 	if err == nil {
 		v.Write([]byte(text))
@@ -1201,10 +1214,20 @@ func (v *View) AddLink(text, value, tip string) error {
 	return err
 }
 
-func (v *View) AddButton(text, value, tip string) error {
-	cells := AddCells(nil, v.EmFgColor, v.BgColor, "\ue0b6")
-	cells = AddCells(cells, v.BgColor|AttrBold, v.EmFgColor, text)
-	cells = AddCells(cells, v.EmFgColor, v.BgColor, "\ue0b4")
+func (v *View) AddButton(text, value, tip, id, color, bgcolor string) error {
+	fg, bg := v.BgColor, v.EmFgColor
+
+	if color != "" {
+		fg = GetColor(color)
+	}
+
+	if bgcolor != "" {
+		bg = GetColor(bgcolor)
+	}
+
+	cells := AddCells(nil, bg, v.BgColor, "\ue0b6")
+	cells = AddCells(cells, fg|AttrBold, bg, text)
+	cells = AddCells(cells, bg, v.BgColor, "\ue0b4")
 
 	cells_highligted := AddCells(nil, v.SelFgColor, v.SelBgColor, "\ue0b6")
 	cells_highligted = AddCells(cells_highligted, v.SelBgColor|AttrBold, v.SelFgColor, text)
@@ -1227,7 +1250,7 @@ func (v *View) AddButton(text, value, tip string) error {
 		y1:   v.wy + 1,
 	}
 
-	hs, err := v.AddHotspot(v.wx, v.wy, value, tip, cells, cells_highligted)
+	hs, err := v.AddHotspot(v.wx, v.wy, id, value, tip, cells, cells_highligted)
 
 	if err == nil {
 		v.writeMutex.Lock()
@@ -1250,11 +1273,11 @@ func (v *View) AddSelect(tagParams map[string]string) error {
 	value := tagParams["value"]
 	text := value
 
-	if len(text) > size-1 {
+	if utf8.RuneCountInString(text) > size-1 {
 		text = text[:size-1]
 	}
 
-	if len(text) < size-1 {
+	if utf8.RuneCountInString(text) < size-1 {
 		text += strings.Repeat(" ", size-1-len(text))
 	}
 
@@ -1275,7 +1298,7 @@ func (v *View) AddSelect(tagParams map[string]string) error {
 		Items: strings.Split(list, ","),
 	}
 
-	hs, err := v.AddHotspot(v.wx, v.wy, "droplist "+tagParams["id"], "", cells, cells_highligted)
+	hs, err := v.AddHotspot(v.wx, v.wy, tagParams["id"], "droplist "+tagParams["id"], "", cells, cells_highligted)
 
 	if err == nil {
 		v.writeMutex.Lock()
@@ -1557,7 +1580,7 @@ func (v *View) RenderTemplate(template string) error {
 		return nil // no space to render
 	}
 
-	re := regexp.MustCompile(`<(/?\w+)((?:\s+\w+(?::(?:[^>\s]+|"[^"]*"))?\s*)*)>`)
+	re := regexp.MustCompile(REGEX_TAGS)
 	lines := strings.Split(template, "\n")
 
 	if len(lines) == 0 {
@@ -1751,13 +1774,14 @@ func (v *View) RenderTemplate(template string) error {
 }
 
 func calcLineWidth(line string) int {
-	l := len(line)
-	re := regexp.MustCompile(`<(/?\w+)((?:\s+\w+(?::(?:[^>\s]+|"[^"]*"))?\s*)*)>`)
+	l := utf8.RuneCountInString(line)
+	re := regexp.MustCompile(REGEX_TAGS)
 	matches := re.FindAllStringIndex(line, -1)
 	for _, match := range matches {
 		tag := line[match[0]:match[1]]
 		tagName, tagParams := ParseTag(tag)
-		l = l - len(tag) + GetTagLength(tagName, tagParams)
+		l = l - utf8.RuneCountInString(tag) + GetTagLength(tagName, tagParams)
 	}
+
 	return l
 }

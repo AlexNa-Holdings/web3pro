@@ -142,9 +142,9 @@ func Address_Process(c *Command, input string) {
 			ui.Printf("  ")
 			ui.AddAddressLink(nil, &a.Address)
 			ui.Printf("  %s %s ", a.Name, a.Signer)
-			ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command address edit '"+a.Name+"'", "Edit address")
+			ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command address edit '"+a.Name+"'", "Edit address", "")
 			ui.Printf(" ")
-			ui.Terminal.Screen.AddLink(gocui.ICON_DELETE, "command address remove '"+a.Name+"'", "Remove address")
+			ui.Terminal.Screen.AddLink(gocui.ICON_DELETE, "command address remove '"+a.Name+"'", "Remove address", "")
 			ui.Printf("\n")
 		}
 

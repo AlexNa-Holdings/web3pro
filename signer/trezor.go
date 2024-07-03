@@ -11,6 +11,7 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/address"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/core"
+	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/signer/trezorproto"
 	"github.com/ava-labs/coreth/accounts"
 	"github.com/ethereum/go-ethereum/common"
@@ -19,16 +20,16 @@ import (
 )
 
 type ConnectedDevice struct {
-	trezorproto.Features
+	*trezorproto.Features
 }
 
 type TrezorDriver struct {
-	KnownDevices map[string]ConnectedDevice
+	KnownDevices map[string]*ConnectedDevice
 }
 
 func NewTrezorDriver() TrezorDriver {
 	return TrezorDriver{
-		KnownDevices: make(map[string]ConnectedDevice), // usb path -> dev
+		KnownDevices: make(map[string]*ConnectedDevice), // usb path -> dev
 	}
 }
 
@@ -280,34 +281,62 @@ func (d TrezorDriver) Init(path string) (*ConnectedDevice, error) {
 	}
 
 	cd := ConnectedDevice{
-		Features: *features,
+		Features: features,
 	}
 
-	d.KnownDevices[path] = cd
+	d.KnownDevices[path] = &cd
 	//	log.Trace().Msgf("Initialized trezor dev: %v\n", *(cd.Label))
 	return &cd, nil
 }
 
 func (d TrezorDriver) RequsetPin() (string, error) {
+	template := "<c><w>\n<l id:pin text:'____________'> <button text:'\U000f006e ' id:back>\n\n"
+
+	ids := []int{7, 8, 9, 4, 5, 6, 1, 2, 3}
+
+	for i := 0; i < 9; i++ {
+		template += fmt.Sprintf("<button color:#000000 bgcolor:#006400 text:' - ' id:%d> ", ids[i])
+		if (i+1)%3 == 0 {
+			template += "\n\n"
+		}
+	}
+	template += "<button text:OK> <button text:Cancel>"
+
+	pin := ""
+
 	cmn.HailAndWait(&cmn.HailRequest{
-		Title: "Enter Trezor PIN",
-		Template: "<c><w><button text:\U000f006e id:back>" + `
+		Title:    "Enter Trezor PIN",
+		Template: template,
+		OnClickHotspot: func(h *cmn.HailRequest, v *gocui.View, hs *gocui.Hotspot) {
+			if hs != nil {
+				s := cmn.Split(hs.Value)
+				command, value := s[0], s[1]
 
-		<button text:"###" id:1> <button text:"###" id:2> <button text:"###" id:3> 
-
-<button text:"###" id:4> <button text:"###" id:5> <button text:"###" id:6> 
-
-<button text:"###" id:7> <button text:"###" id:8> <button text:"###" id:9> 
-		
-<button text:"OK"> <button text:"Cancel">
-`,
+				switch command {
+				case "button":
+					switch value {
+					case "back":
+						if len(pin) > 0 {
+							pin = pin[:len(pin)-1]
+							v.GetHotspotById("pin").SetText(strings.Repeat("*", len(pin)) + "______________")
+						}
+					case "1", "2", "3", "4", "5", "6", "7", "8", "9":
+						pin += value
+						v.GetHotspotById("pin").SetText(strings.Repeat("*", len(pin)) + "______________")
+					}
+				}
+			}
+		},
 	})
 
-	return "", nil
+	if pin == "" {
+		return "", errors.New("pin request canceled")
+	}
+
+	return pin, nil
 
 } //\U000f006e
 func (d TrezorDriver) Call(dev core.USBDevice, req proto.Message, result proto.Message) error {
-
 	log.Debug().Msgf("Call: %s", MessageName(MessageType(req)))
 	log.Debug().Msgf("Call: %v", req)
 

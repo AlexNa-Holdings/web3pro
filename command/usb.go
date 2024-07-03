@@ -79,9 +79,9 @@ func Usb_Process(c *Command, input string) {
 			if wallet.CurrentWallet != nil {
 				es := wallet.CurrentWallet.GetSigner(device_name)
 				if es != nil {
-					ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command s edit '"+device_name+"'", "Edit signer")
+					ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command s edit '"+device_name+"'", "Edit signer", "")
 				} else {
-					ui.Terminal.Screen.AddButton("Add signer", "command s add "+t+" '"+device_name+"'", "Add signer") //TODO
+					ui.Terminal.Screen.AddButton("Add signer", "command s add "+t+" '"+device_name+"'", "Add signer", "", "", "")
 				}
 			}
 			ui.Printf("\n")

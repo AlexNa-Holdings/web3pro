@@ -100,7 +100,7 @@ func Wallet_Process(c *Command, input string) {
 		ui.Printf("\nWallets:\n")
 
 		for _, file := range files {
-			ui.Terminal.Screen.AddLink(file, "command w open "+file, "Open wallet "+file)
+			ui.Terminal.Screen.AddLink(file, "command w open "+file, "Open wallet "+file, "")
 			ui.Printf("\n")
 		}
 

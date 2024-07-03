@@ -3,6 +3,7 @@ package ui
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -238,21 +239,20 @@ func (p *HailPaneType) SetView(g *gocui.Gui, x0, y0, x1, y1 int) {
 			}
 
 			if hs != nil {
-				switch hs.Value {
-				case "button Ok":
+				switch strings.ToLower(hs.Value) {
+				case "button ok":
 					log.Trace().Msgf("HailPane: button Ok")
 					if ActiveRequest.OnOk != nil {
 						ActiveRequest.OnOk(ActiveRequest)
 					}
 					remove(ActiveRequest)
-				case "button Cancel":
+				case "button cancel":
 					log.Trace().Msgf("HailPane: button Cancel")
 					if ActiveRequest.OnCancel != nil {
 						ActiveRequest.OnCancel(ActiveRequest)
 					}
 					remove(ActiveRequest)
 				default:
-
 					if ActiveRequest.OnClickHotspot != nil {
 						ActiveRequest.OnClickHotspot(ActiveRequest, v, hs)
 					}

@@ -136,10 +136,10 @@ func Signer_Process(c *Command, input string) {
 			ui.Printf("%-13s %-9s ", signer.Name, signer.Type)
 
 			if signer.Type == "mnemonics" {
-				ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command s edit '"+signer.Name+"'", "Edit signer '"+signer.Name+"'")
+				ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command s edit '"+signer.Name+"'", "Edit signer '"+signer.Name+"'", "")
 				ui.Printf(" ")
 			}
-			ui.Terminal.Screen.AddLink(gocui.ICON_DELETE, "command s remove '"+signer.Name+"'", "Remove signer '"+signer.Name+"'")
+			ui.Terminal.Screen.AddLink(gocui.ICON_DELETE, "command s remove '"+signer.Name+"'", "Remove signer '"+signer.Name+"'", "")
 			ui.Printf("\n")
 			for j, c := range signer.Copies {
 				if j != len(signer.Copies)-1 {
@@ -148,9 +148,9 @@ func Signer_Process(c *Command, input string) {
 					ui.Printf("╰─ ")
 				}
 				ui.Printf("%-10s ", c)
-				ui.Terminal.Screen.AddLink(gocui.ICON_DELETE, "command s remove '"+c+"'", "Remove signer '"+c+"'")
+				ui.Terminal.Screen.AddLink(gocui.ICON_DELETE, "command s remove '"+c+"'", "Remove signer '"+c+"'", "")
 				ui.Printf(" ")
-				ui.Terminal.Screen.AddLink(gocui.ICON_PROMOTE, "command s promote '"+c+"'", "Promote copy to main signer")
+				ui.Terminal.Screen.AddLink(gocui.ICON_PROMOTE, "command s promote '"+c+"'", "Promote copy to main signer", "")
 				ui.Printf("\n")
 			}
 		}
@@ -197,17 +197,17 @@ func Signer_Process(c *Command, input string) {
 			if ea := wallet.CurrentWallet.GetAddress(s.Address.String()); ea == nil {
 				ui.Terminal.Screen.AddLink(gocui.ICON_ADD, "command address add "+
 					s.Address.String()+
-					" '"+p1+"' \""+s.Path+"\"", "Add address to wallet")
+					" '"+p1+"' \""+s.Path+"\"", "Add address to wallet", "")
 			} else {
 				ui.Printf("%s ", ea.Name)
-				ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command address edit '"+ea.Name+"'", "Edit address")
+				ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command address edit '"+ea.Name+"'", "Edit address", "")
 				ui.Printf(" ")
-				ui.Terminal.Screen.AddLink(gocui.ICON_DELETE, "command address remove '"+ea.Name+"'", "Remove address")
+				ui.Terminal.Screen.AddLink(gocui.ICON_DELETE, "command address remove '"+ea.Name+"'", "Remove address", "")
 			}
 			ui.Printf("\n")
 		}
 		ui.Printf("                                         ")
-		ui.Terminal.Screen.AddLink("...more", "command signer addresses '"+p1+"' \""+path_format+"\" "+strconv.Itoa(from+10), "Show more addresses")
+		ui.Terminal.Screen.AddLink("...more", "command signer addresses '"+p1+"' \""+path_format+"\" "+strconv.Itoa(from+10), "Show more addresses", "")
 		ui.Printf("\n")
 		ui.Terminal.Screen.ScrollBottom()
 		ui.Flush()

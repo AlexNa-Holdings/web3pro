@@ -50,15 +50,15 @@ func main() {
 		ui.Printf("Version: %s\n", cmn.VERSION)
 
 		ui.Printf("Data folder: ")
-		ui.Terminal.Screen.AddLink(cmn.DataFolder, "copy "+cmn.DataFolder, "Copy data folder path to clipboard")
+		ui.Terminal.Screen.AddLink(cmn.DataFolder, "copy "+cmn.DataFolder, "Copy data folder path to clipboard", "")
 		ui.Printf("\n")
 
 		ui.Printf("Log file: ")
-		ui.Terminal.Screen.AddLink(cmn.LogPath, "copy "+cmn.LogPath, "Copy log file path to clipboard")
+		ui.Terminal.Screen.AddLink(cmn.LogPath, "copy "+cmn.LogPath, "Copy log file path to clipboard", "")
 		ui.Printf("\n")
 
 		ui.Printf("Config file: ")
-		ui.Terminal.Screen.AddLink(cmn.ConfPath, "copy "+cmn.ConfPath, "Copy config file path to clipboard")
+		ui.Terminal.Screen.AddLink(cmn.ConfPath, "copy "+cmn.ConfPath, "Copy config file path to clipboard", "")
 		ui.Printf("\n")
 
 		ui.Printf("\nType 'help' for help\n\n")

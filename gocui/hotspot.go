@@ -6,6 +6,7 @@ import (
 )
 
 type Hotspot struct {
+	ID              string
 	X, Y            int
 	L               int
 	Value           string
@@ -14,7 +15,7 @@ type Hotspot struct {
 	CellsHighligted []cell
 }
 
-func (v *View) AddHotspot(x, y int, value string, tip string, cells []cell, cells_highligted []cell) (*Hotspot, error) {
+func (v *View) AddHotspot(x, y int, id string, value string, tip string, cells []cell, cells_highligted []cell) (*Hotspot, error) {
 	if len(cells) != len(cells_highligted) {
 		return nil, errors.New("cells and cells_highligted must have the same length")
 	}
@@ -27,7 +28,7 @@ func (v *View) AddHotspot(x, y int, value string, tip string, cells []cell, cell
 		return v.hotspots[i].Y >= y
 	})
 
-	h := Hotspot{x, y, len(cells), value, tip, cells, cells_highligted}
+	h := Hotspot{id, x, y, len(cells), value, tip, cells, cells_highligted}
 
 	// Insert the new hotspot at the found index
 	v.hotspots = append(v.hotspots, &h)            // Increase the size by one
@@ -35,6 +36,23 @@ func (v *View) AddHotspot(x, y int, value string, tip string, cells []cell, cell
 	v.hotspots[index] = &h                         // Insert the new element
 
 	return &h, nil
+}
+
+func (h *Hotspot) SetText(t string) {
+	// trancate to L
+	if len(t) > h.L {
+		t = t[:h.L]
+	}
+
+	// fill up spaces
+	for len(t) < h.L {
+		t += " "
+	}
+
+	for i := 0; i < h.L; i++ {
+		h.Cells[i].chr = rune(t[i])
+		h.CellsHighligted[i].chr = rune(t[i])
+	}
 }
 
 func (v *View) findHotspot(x, y int) *Hotspot {
