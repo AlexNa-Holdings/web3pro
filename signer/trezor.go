@@ -291,21 +291,21 @@ func (d TrezorDriver) Init(path string) (*ConnectedDevice, error) {
 func (d TrezorDriver) RequsetPin() (string, error) {
 	cmn.HailAndWait(&cmn.HailRequest{
 		Title: "Enter Trezor PIN",
-		Template: `<c><w>
+		Template: "<c><w><button text:\U000f006e id:back>" + `
 
-<button text="###"> <button text="###"> <button text="###"> 
-<button text="###"> <button text="###"> <button text="###"> 
-<button text="###"> <button text="###"> <button text="###"> 
+		<button text:"###" id:1> <button text:"###" id:2> <button text:"###" id:3> 
 
+<button text:"###" id:4> <button text:"###" id:5> <button text:"###" id:6> 
+
+<button text:"###" id:7> <button text:"###" id:8> <button text:"###" id:9> 
 		
-<button text="OK"> <button text="Cancel">
-		`,
+<button text:"OK"> <button text:"Cancel">
+`,
 	})
 
 	return "", nil
 
-}
-
+} //\U000f006e
 func (d TrezorDriver) Call(dev core.USBDevice, req proto.Message, result proto.Message) error {
 
 	log.Debug().Msgf("Call: %s", MessageName(MessageType(req)))

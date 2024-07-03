@@ -34,6 +34,7 @@ const (
 	ICON_PROMOTE  = "\ued65"
 	ICON_ADD      = "\ueadc"
 	ICON_3DOTS    = "\U000f01d8"
+	ICON_BACK     = "\U000f006e"
 )
 
 var (
@@ -1086,7 +1087,7 @@ func (v *View) MouseOverScrollbar() bool {
 
 func ParseTag(tag string) (string, map[string]string) {
 	// Regular expression to match the whole tag, capturing the tag name and parameters
-	tagRe := regexp.MustCompile(`<(\w+)((?:\s+\w+(?::(?:\w+|"[^"]*"))?\s*)*)>`)
+	tagRe := regexp.MustCompile(`<(/?\w+)((?:\s+\w+(?::(?:[^>\s]+|"[^"]*"))?\s*)*)>`)
 
 	tagName := ""
 	tagParams := make(map[string]string)
@@ -1097,7 +1098,7 @@ func ParseTag(tag string) (string, map[string]string) {
 		params := tagMatch[2]
 		if params != "" {
 			// Regular expression to match individual parameters
-			paramRe := regexp.MustCompile(`(\w+)(?::(".*?"|\S+))?`)
+			paramRe := regexp.MustCompile(`(\w+)(?::(".*?"|[^>\s]+))`)
 			paramMatches := paramRe.FindAllStringSubmatch(params, -1)
 
 			for _, paramMatch := range paramMatches {
@@ -1132,7 +1133,7 @@ func (v *View) AddTag(text string) error {
 func (v *View) AddTagEx(tagName string, tagParams map[string]string) error {
 	switch tagName {
 	case "l": // link
-		v.AddLink(tagParams["text"], "link "+tagParams["href"], tagParams["tip"])
+		v.AddLink(tagParams["text"], tagParams["action"], tagParams["tip"])
 	case "button": // button
 		if tagParams["id"] == "" {
 			tagParams["id"] = tagParams["text"]
@@ -1556,7 +1557,7 @@ func (v *View) RenderTemplate(template string) error {
 		return nil // no space to render
 	}
 
-	re := regexp.MustCompile(`<(/?\w+)((?:\s+\w+(?::(?:\w+|"[^"]*"))?\s*)*)>`)
+	re := regexp.MustCompile(`<(/?\w+)((?:\s+\w+(?::(?:[^>\s]+|"[^"]*"))?\s*)*)>`)
 	lines := strings.Split(template, "\n")
 
 	if len(lines) == 0 {
@@ -1751,7 +1752,7 @@ func (v *View) RenderTemplate(template string) error {
 
 func calcLineWidth(line string) int {
 	l := len(line)
-	re := regexp.MustCompile(`<(/?\w+)((?:\s+\w+(?::(?:\w+|"[^"]*"))?\s*)*)>`)
+	re := regexp.MustCompile(`<(/?\w+)((?:\s+\w+(?::(?:[^>\s]+|"[^"]*"))?\s*)*)>`)
 	matches := re.FindAllStringIndex(line, -1)
 	for _, match := range matches {
 		tag := line[match[0]:match[1]]
