@@ -69,7 +69,7 @@ func Address_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 		if common.IsHexAddress(address) {
 
 			for _, s := range wallet.CurrentWallet.Signers {
-				if s.IsConnected() && cmn.Contains(s.Name, signer) {
+				if cmn.Contains(s.Name, signer) {
 					options = append(options, ui.ACOption{
 						Name:   s.Name,
 						Result: command + " " + subcommand + " " + address + " '" + s.Name + "'"})

@@ -1,10 +1,9 @@
-package signer
+package cmn
 
 import (
 	"crypto/ecdsa"
 	"errors"
 
-	"github.com/AlexNa-Holdings/web3pro/address"
 	"github.com/AlexNa-Holdings/web3pro/core"
 	"github.com/AlexNa-Holdings/web3pro/usb"
 	"github.com/ava-labs/coreth/accounts"
@@ -14,22 +13,6 @@ import (
 	"github.com/tyler-smith/go-bip32"
 	"google.golang.org/protobuf/protoadapt"
 )
-
-type Signer struct {
-	Name   string   `json:"name"`
-	Type   string   `json:"type"`
-	SN     string   `json:"sn"`
-	Copies []string `json:"copies"`
-}
-
-type SignerDriver interface {
-	IsConnected(signer *Signer) bool
-	GetName(path string) (string, error) // only for HW wallets
-	GetAddresses(signer *Signer, path string, start_from int, count int) ([]address.Address, error)
-}
-
-var WalletTrezorDriver = NewTrezorDriver()
-var WalletMnemonicsDriver = NewMnemonicDriver()
 
 var STANDARD_DERIVATIONS = map[string]struct {
 	Name   string
@@ -51,7 +34,7 @@ var STANDARD_DERIVATIONS = map[string]struct {
 
 var KNOWN_SIGNER_TYPES = []string{"trezor", "ledger", "mnemonics"}
 
-func GetType(vid int, pid int) string {
+func GetDeviceType(vid int, pid int) string {
 
 	if usb.IsTrezor(uint16(vid), uint16(pid)) {
 		return "trezor"
@@ -76,7 +59,7 @@ func (s *Signer) GetDriver() (SignerDriver, error) {
 
 func GetDeviceName(e core.EnumerateEntry) (string, error) {
 	log.Trace().Msgf("GetDeviceName: %x %x", e.Vendor, e.Product)
-	t := GetType(e.Vendor, e.Product)
+	t := GetDeviceType(e.Vendor, e.Product)
 	switch t {
 	case "trezor":
 		return WalletTrezorDriver.GetName(e.Path)
@@ -87,18 +70,18 @@ func GetDeviceName(e core.EnumerateEntry) (string, error) {
 
 }
 
-func (s *Signer) GetAddresses(path string, start_from int, count int) ([]address.Address, error) {
+func (s *Signer) GetAddresses(path string, start_from int, count int) ([]Address, error) {
 
 	driver, err := s.GetDriver()
 	if err != nil {
 		log.Error().Err(err).Msgf("GetAddresses: Error getting driver: %s (%s)", s.Name, s.Type)
-		return []address.Address{}, err
+		return []Address{}, err
 	}
 
 	addresses, err := driver.GetAddresses(s, path, start_from, count)
 	if err != nil {
 		log.Error().Err(err).Msgf("GetAddresses: Error getting addresses: %s (%s)", s.Name, s.Type)
-		return []address.Address{}, err
+		return []Address{}, err
 	}
 
 	return addresses, nil
@@ -116,7 +99,7 @@ func (s *Signer) IsConnected() bool {
 }
 
 // deriveKey derives a key from the master key using the specified path
-func deriveKey(masterKey *bip32.Key, path string) (*ecdsa.PrivateKey, error) {
+func DeriveKey(masterKey *bip32.Key, path string) (*ecdsa.PrivateKey, error) {
 	// Parse the derivation path
 	derivationPath, err := accounts.ParseDerivationPath(path)
 	if err != nil {
@@ -142,7 +125,7 @@ func deriveKey(masterKey *bip32.Key, path string) (*ecdsa.PrivateKey, error) {
 }
 
 // getAddressFromKey generates an Ethereum address from the private key
-func getAddressFromKey(key *ecdsa.PrivateKey) common.Address {
+func GetAddressFromKey(key *ecdsa.PrivateKey) common.Address {
 	publicKey := key.Public()
 	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
 	if !ok {

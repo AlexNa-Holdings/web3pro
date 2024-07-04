@@ -1,4 +1,4 @@
-package blockchain
+package cmn
 
 var PrefefinedBlockchains []Blockchain = []Blockchain{
 	{

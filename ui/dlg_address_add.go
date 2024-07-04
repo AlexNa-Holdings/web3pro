@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/AlexNa-Holdings/web3pro/address"
+	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/wallet"
 	"github.com/ethereum/go-ethereum/common"
@@ -32,9 +32,7 @@ Address: %s
 			}
 		},
 		OnOpen: func(v *gocui.View) {
-
 			name := ""
-
 			dp := strings.Split(path, "/")
 			if len(dp) >= 5 {
 
@@ -83,7 +81,7 @@ Address: %s
 						break
 					}
 
-					wallet.CurrentWallet.Addresses = append(wallet.CurrentWallet.Addresses, &address.Address{
+					wallet.CurrentWallet.Addresses = append(wallet.CurrentWallet.Addresses, &cmn.Address{
 						Name:    name,
 						Address: a,
 						Signer:  s.Name,

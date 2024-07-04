@@ -4,8 +4,8 @@ import (
 	"encoding/hex"
 	"strings"
 
+	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
-	"github.com/AlexNa-Holdings/web3pro/signer"
 	"github.com/AlexNa-Holdings/web3pro/wallet"
 	"github.com/tyler-smith/go-bip39"
 )
@@ -55,9 +55,9 @@ cancel and verify the device.
 			v.SetInput("name", name)
 
 			names := []string{""}
-			for _, signer := range wallet.CurrentWallet.Signers {
-				if signer.Type == t {
-					names = append(names, signer.Name)
+			for _, s := range wallet.CurrentWallet.Signers {
+				if s.Type == t {
+					names = append(names, s.Name)
 				}
 			}
 
@@ -102,7 +102,7 @@ cancel and verify the device.
 							break
 						}
 
-						wallet.CurrentWallet.Signers = append(wallet.CurrentWallet.Signers, &signer.Signer{
+						wallet.CurrentWallet.Signers = append(wallet.CurrentWallet.Signers, &cmn.Signer{
 							Name: name,
 							Type: t,
 							SN:   hex.EncodeToString(m[:]),
@@ -124,7 +124,7 @@ cancel and verify the device.
 								break
 							}
 						} else {
-							wallet.CurrentWallet.Signers = append(wallet.CurrentWallet.Signers, &signer.Signer{
+							wallet.CurrentWallet.Signers = append(wallet.CurrentWallet.Signers, &cmn.Signer{
 								Name: name,
 								Type: t,
 							})

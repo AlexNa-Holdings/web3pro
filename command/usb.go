@@ -5,7 +5,6 @@ import (
 
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
-	"github.com/AlexNa-Holdings/web3pro/signer"
 	"github.com/AlexNa-Holdings/web3pro/ui"
 	"github.com/AlexNa-Holdings/web3pro/wallet"
 )
@@ -34,7 +33,7 @@ func Usb_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 	command, subcommand, _ := p[0], p[1], p[2]
 
 	if !cmn.IsInArray(usb_subcommands, subcommand) {
-		for _, sc := range blockchain_subcommands {
+		for _, sc := range usb_subcommands {
 			if input == "" || strings.Contains(sc, subcommand) {
 				options = append(options, ui.ACOption{Name: sc, Result: command + " " + sc + " "})
 			}
@@ -66,8 +65,8 @@ func Usb_Process(c *Command, input string) {
 		n := 1
 		for _, u := range l {
 
-			t := signer.GetType(u.Vendor, u.Product)
-			device_name, err := signer.GetDeviceName(u)
+			t := cmn.GetDeviceType(u.Vendor, u.Product)
+			device_name, err := cmn.GetDeviceName(u)
 			if err != nil {
 				ui.PrintErrorf("\nError getting device name: %v\n", err)
 				return
@@ -88,7 +87,7 @@ func Usb_Process(c *Command, input string) {
 			switch t {
 			// case "ledger":
 			case "trezor":
-				ui.Printf(signer.WalletTrezorDriver.PrintDetails(u.Path))
+				ui.Printf(cmn.WalletTrezorDriver.PrintDetails(u.Path))
 			}
 		}
 

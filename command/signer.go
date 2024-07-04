@@ -6,7 +6,6 @@ import (
 
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
-	"github.com/AlexNa-Holdings/web3pro/signer"
 	"github.com/AlexNa-Holdings/web3pro/ui"
 	"github.com/AlexNa-Holdings/web3pro/wallet"
 )
@@ -54,7 +53,7 @@ func Signer_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 		if wallet.CurrentWallet != nil {
 			for _, s := range wallet.CurrentWallet.Signers {
 				if s.Name == param {
-					for d_id, d := range signer.STANDARD_DERIVATIONS {
+					for d_id, d := range cmn.STANDARD_DERIVATIONS {
 						if cmn.Contains(d.Name, p3) {
 							options = append(options, ui.ACOption{Name: d.Name, Result: command + " " + subcommand + " '" + param + "' " + d_id})
 						}
@@ -79,8 +78,8 @@ func Signer_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 
 	if subcommand == "promote" {
 		if wallet.CurrentWallet != nil {
-			for _, signer := range wallet.CurrentWallet.Signers {
-				for _, c := range signer.Copies {
+			for _, s := range wallet.CurrentWallet.Signers {
+				for _, c := range s.Copies {
 					if cmn.Contains(c, param) {
 						options = append(options, ui.ACOption{
 							Name: c, Result: command + " " + subcommand + " '" + c + "'"})
@@ -92,8 +91,8 @@ func Signer_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 	}
 
 	if subcommand == "add" {
-		if !cmn.IsInArray(signer.KNOWN_SIGNER_TYPES, param) {
-			for _, t := range signer.KNOWN_SIGNER_TYPES {
+		if !cmn.IsInArray(cmn.KNOWN_SIGNER_TYPES, param) {
+			for _, t := range cmn.KNOWN_SIGNER_TYPES {
 				if cmn.Contains(t, param) {
 					options = append(options, ui.ACOption{Name: t, Result: command + " add " + t + " "})
 				}
@@ -103,7 +102,7 @@ func Signer_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 
 		// l, _ := core.List() // ignore error
 		// for _, u := range l {
-		// 	if param == signer.GetType(u.Manufacturer, u.Product) {
+		// 	if param == wallet.GetType(u.Manufacturer, u.Product) {
 		// 		sn, err := cmn.GetSN(u)
 		// 		if err == nil {
 		// 			if cmn.Contains(sn, p3) && p3 != sn {
@@ -132,17 +131,17 @@ func Signer_Process(c *Command, input string) {
 	case "list", "":
 		ui.Printf("List of signers:\n")
 
-		for _, signer := range wallet.CurrentWallet.Signers {
-			ui.Printf("%-13s %-9s ", signer.Name, signer.Type)
+		for _, s := range wallet.CurrentWallet.Signers {
+			ui.Printf("%-13s %-9s ", s.Name, s.Type)
 
-			if signer.Type == "mnemonics" {
-				ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command s edit '"+signer.Name+"'", "Edit signer '"+signer.Name+"'", "")
+			if s.Type == "mnemonics" {
+				ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command s edit '"+s.Name+"'", "Edit signer '"+s.Name+"'", "")
 				ui.Printf(" ")
 			}
-			ui.Terminal.Screen.AddLink(gocui.ICON_DELETE, "command s remove '"+signer.Name+"'", "Remove signer '"+signer.Name+"'", "")
+			ui.Terminal.Screen.AddLink(gocui.ICON_DELETE, "command s remove '"+s.Name+"'", "Remove signer '"+s.Name+"'", "")
 			ui.Printf("\n")
-			for j, c := range signer.Copies {
-				if j != len(signer.Copies)-1 {
+			for j, c := range s.Copies {
+				if j != len(s.Copies)-1 {
 					ui.Printf("├─ ")
 				} else {
 					ui.Printf("╰─ ")
@@ -161,9 +160,9 @@ func Signer_Process(c *Command, input string) {
 		path_format := ""
 
 		if p2 == "" {
-			path_format = signer.STANDARD_DERIVATIONS["default"].Format
+			path_format = cmn.STANDARD_DERIVATIONS["default"].Format
 		} else {
-			if d, ok := signer.STANDARD_DERIVATIONS[p2]; ok {
+			if d, ok := cmn.STANDARD_DERIVATIONS[p2]; ok {
 				path_format = d.Format
 			} else {
 				if strings.Contains(p2, "%d") {
@@ -177,13 +176,13 @@ func Signer_Process(c *Command, input string) {
 
 		from, _ := strconv.Atoi(p3)
 
-		signer := wallet.CurrentWallet.GetSigner(p1)
-		if signer == nil {
+		s := wallet.CurrentWallet.GetSigner(p1)
+		if s == nil {
 			ui.PrintErrorf("\nSigner not found\n")
 			return
 		}
 
-		l, err := signer.GetAddresses(path_format, from, 10)
+		l, err := s.GetAddresses(path_format, from, 10)
 		if err != nil {
 			ui.PrintErrorf("\nError getting addresses: %v\n", err)
 			return
@@ -216,8 +215,8 @@ func Signer_Process(c *Command, input string) {
 		ui.Gui.ShowPopup(ui.DlgSignerAdd(p1, p2))
 
 	case "remove":
-		for i, signer := range wallet.CurrentWallet.Signers {
-			if signer.Name == p1 {
+		for i, s := range wallet.CurrentWallet.Signers {
+			if s.Name == p1 {
 				ui.Gui.ShowPopup(ui.DlgConfirm(
 					"Remove signer",
 					`
@@ -237,7 +236,7 @@ func Signer_Process(c *Command, input string) {
 				return
 			}
 
-			for j, c := range signer.Copies {
+			for j, c := range s.Copies {
 				if c == p1 {
 					ui.Gui.ShowPopup(ui.DlgConfirm(
 						"Remove signer's copy",
@@ -246,7 +245,7 @@ func Signer_Process(c *Command, input string) {
 <c> signer's copy '`+p1+"' ?\n",
 
 						func() {
-							signer.Copies = append(signer.Copies[:j], signer.Copies[j+1:]...)
+							s.Copies = append(s.Copies[:j], s.Copies[j+1:]...)
 
 							err := wallet.CurrentWallet.Save()
 							if err != nil {
@@ -295,9 +294,9 @@ func Signer_Process(c *Command, input string) {
 			}))
 
 	case "edit":
-		for _, signer := range wallet.CurrentWallet.Signers {
-			if signer.Name == p1 {
-				ui.Gui.ShowPopup(ui.DlgSignerEdit(signer.Name))
+		for _, s := range wallet.CurrentWallet.Signers {
+			if s.Name == p1 {
+				ui.Gui.ShowPopup(ui.DlgSignerEdit(s.Name))
 				return
 			}
 		}

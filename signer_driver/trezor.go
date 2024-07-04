@@ -1,4 +1,4 @@
-package signer
+package signer_driver
 
 import (
 	"encoding/binary"
@@ -8,11 +8,10 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/AlexNa-Holdings/web3pro/address"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/core"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
-	"github.com/AlexNa-Holdings/web3pro/signer/trezorproto"
+	"github.com/AlexNa-Holdings/web3pro/signer_driver/trezorproto"
 	"github.com/ava-labs/coreth/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog/log"
@@ -33,7 +32,7 @@ func NewTrezorDriver() TrezorDriver {
 	}
 }
 
-func (d *TrezorDriver) Open(s *Signer) (core.USBDevice, error) {
+func (d *TrezorDriver) Open(s *cmn.Signer) (core.USBDevice, error) {
 
 	log.Trace().Msgf("Opening trezor: %s", s.Name)
 
@@ -56,8 +55,8 @@ func (d *TrezorDriver) Open(s *Signer) (core.USBDevice, error) {
 		}
 
 		for _, info := range l {
-			if GetType(info.Vendor, info.Product) == "trezor" {
-				n, err := GetDeviceName(info)
+			if cmn.GetDeviceType(info.Vendor, info.Product) == "trezor" {
+				n, err := cmn.GetDeviceName(info)
 				if err != nil {
 					log.Error().Err(err).Msg("Error getting device name")
 					return nil, err
@@ -116,8 +115,8 @@ Please connect your Trezor device:
 				}
 
 				for _, info := range l {
-					if GetType(info.Vendor, info.Product) == "trezor" {
-						n, err := GetDeviceName(info)
+					if cmn.GetDeviceType(info.Vendor, info.Product) == "trezor" {
+						n, err := cmn.GetDeviceName(info)
 						if err != nil {
 							log.Error().Err(err).Msg("Error getting device name")
 							return
@@ -141,7 +140,7 @@ Please connect your Trezor device:
 	return cmn.Core.GetDevice(usb_path)
 }
 
-func (d TrezorDriver) IsConnected(s *Signer) bool {
+func (d TrezorDriver) IsConnected(s *cmn.Signer) bool {
 	for _, kd := range d.KnownDevices {
 		if kd.Label != nil && *kd.Label == s.Name {
 			return true
@@ -150,8 +149,8 @@ func (d TrezorDriver) IsConnected(s *Signer) bool {
 	return false
 }
 
-func (d TrezorDriver) GetAddresses(s *Signer, path_format string, start_from int, count int) ([]address.Address, error) {
-	r := []address.Address{}
+func (d TrezorDriver) GetAddresses(s *cmn.Signer, path_format string, start_from int, count int) ([]cmn.Address, error) {
+	r := []cmn.Address{}
 
 	log.Trace().Msgf("Getting addresses for %s", s.Name)
 
@@ -184,7 +183,7 @@ func (d TrezorDriver) GetAddresses(s *Signer, path_format string, start_from int
 			a = common.HexToAddress(addr)
 		}
 
-		r = append(r, address.Address{
+		r = append(r, cmn.Address{
 			Address: a,
 			Path:    path,
 		})

@@ -9,10 +9,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/AlexNa-Holdings/web3pro/address"
-	"github.com/AlexNa-Holdings/web3pro/blockchain"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
-	"github.com/AlexNa-Holdings/web3pro/signer"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/pbkdf2"
 )
@@ -20,12 +17,13 @@ import (
 const SOLT_SIZE = 32
 
 type Wallet struct {
-	Name        string                   `json:"name"`
-	Blockchains []*blockchain.Blockchain `json:"blockchains"`
-	Signers     []*signer.Signer         `json:"signers"`
-	Addresses   []*address.Address       `json:"addresses"`
-	FilePath    string                   `json:"-"`
-	Password    string                   `json:"-"`
+	Name        string            `json:"name"`
+	Blockchains []*cmn.Blockchain `json:"blockchains"`
+	Signers     []*cmn.Signer     `json:"signers"`
+	Addresses   []*cmn.Address    `json:"addresses"`
+	Tokens      []*cmn.Token      `json:"tokens"`
+	FilePath    string            `json:"-"`
+	Password    string            `json:"-"`
 }
 
 var CurrentWallet *Wallet
@@ -182,7 +180,7 @@ func OpenFromFile(file string, pass string) (*Wallet, error) {
 	return w, nil
 }
 
-func (w *Wallet) GetSigner(n string) *signer.Signer {
+func (w *Wallet) GetSigner(n string) *cmn.Signer {
 	for _, s := range w.Signers {
 		if s.Name == n {
 			return s
@@ -191,7 +189,7 @@ func (w *Wallet) GetSigner(n string) *signer.Signer {
 	return nil
 }
 
-func (w *Wallet) GetSignerWithCopy(name string) (*signer.Signer, int) {
+func (w *Wallet) GetSignerWithCopy(name string) (*cmn.Signer, int) {
 	for _, s := range w.Signers {
 		for j, c := range s.Copies {
 			if c == name {
@@ -202,7 +200,7 @@ func (w *Wallet) GetSignerWithCopy(name string) (*signer.Signer, int) {
 	return nil, -1
 }
 
-func (w *Wallet) GetAddress(a string) *address.Address {
+func (w *Wallet) GetAddress(a string) *cmn.Address {
 	for _, s := range w.Addresses {
 		if s.Address.String() == a {
 			return s
@@ -211,7 +209,7 @@ func (w *Wallet) GetAddress(a string) *address.Address {
 	return nil
 }
 
-func (w *Wallet) GetAddressByName(n string) *address.Address {
+func (w *Wallet) GetAddressByName(n string) *cmn.Address {
 	for _, s := range w.Addresses {
 		if s.Name == n {
 			return s

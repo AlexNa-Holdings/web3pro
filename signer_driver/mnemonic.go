@@ -1,4 +1,4 @@
-package signer
+package signer_driver
 
 import (
 	"encoding/hex"
@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/AlexNa-Holdings/web3pro/address"
+	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/rs/zerolog/log"
 	"github.com/tyler-smith/go-bip32"
 	"github.com/tyler-smith/go-bip39"
@@ -23,8 +23,8 @@ func (d MnemonicDriver) GetName(path string) (string, error) {
 	return "", nil
 }
 
-func (d MnemonicDriver) GetAddresses(s *Signer, path_format string, start_from int, count int) ([]address.Address, error) {
-	addresses := []address.Address{}
+func (d MnemonicDriver) GetAddresses(s *cmn.Signer, path_format string, start_from int, count int) ([]cmn.Address, error) {
+	addresses := []cmn.Address{}
 
 	if !strings.Contains(path_format, "%d") {
 		return addresses, errors.New("path_format must contain %d")
@@ -49,15 +49,15 @@ func (d MnemonicDriver) GetAddresses(s *Signer, path_format string, start_from i
 	for i := 0; i < count; i++ {
 		p := fmt.Sprintf(path_format, start_from+i)
 
-		key, err := deriveKey(masterKey, p)
+		key, err := cmn.DeriveKey(masterKey, p)
 		if err != nil {
 			log.Error().Msgf("Error deriving key: %v", err)
 			return addresses, err
 		}
 
 		// Get the Ethereum address
-		a := getAddressFromKey(key)
-		addresses = append(addresses, address.Address{
+		a := cmn.GetAddressFromKey(key)
+		addresses = append(addresses, cmn.Address{
 			Address: a,
 			Signer:  s.Name,
 			Path:    p,
@@ -67,6 +67,10 @@ func (d MnemonicDriver) GetAddresses(s *Signer, path_format string, start_from i
 	return addresses, nil
 }
 
-func (d MnemonicDriver) IsConnected(signer *Signer) bool {
+func (d MnemonicDriver) IsConnected(signer *cmn.Signer) bool {
 	return true
+}
+
+func (d MnemonicDriver) PrintDetails(path string) string {
+	return ""
 }

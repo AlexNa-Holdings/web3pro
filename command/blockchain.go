@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/AlexNa-Holdings/web3pro/blockchain"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/ui"
@@ -61,7 +60,7 @@ func Blockchain_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 	}
 
 	if subcommand == "add" {
-		for _, chain := range blockchain.PrefefinedBlockchains {
+		for _, chain := range cmn.PrefefinedBlockchains {
 			if cmn.Contains(chain.Name, param) {
 				options = append(options, ui.ACOption{Name: chain.Name, Result: command + " add '" + chain.Name + "' "})
 			}
@@ -112,7 +111,7 @@ func Blockchain_Process(c *Command, input string) {
 				}
 			}
 
-			for _, b := range blockchain.PrefefinedBlockchains {
+			for _, b := range cmn.PrefefinedBlockchains {
 				if b.Name == blockchain_name {
 
 					bch := b
@@ -179,7 +178,7 @@ func Blockchain_Process(c *Command, input string) {
 
 		ui.PrintErrorf("\nBlockchain %s not found\n", blockchain_name)
 
-	case "list":
+	case "list", "":
 		if wallet.CurrentWallet == nil {
 			ui.PrintErrorf("\nNo wallet open\n")
 			return

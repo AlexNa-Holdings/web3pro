@@ -12,6 +12,7 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/command"
 	"github.com/AlexNa-Holdings/web3pro/core"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
+	"github.com/AlexNa-Holdings/web3pro/signer_driver"
 	"github.com/AlexNa-Holdings/web3pro/ui"
 	"github.com/AlexNa-Holdings/web3pro/usb"
 	"github.com/rs/zerolog/log"
@@ -26,6 +27,9 @@ ____/|__/  \___//_.___//____/ /_/     /_/    \____/ `
 
 func main() {
 	cmn.InitConfig()
+
+	cmn.WalletTrezorDriver = signer_driver.NewTrezorDriver()
+	cmn.WalletMnemonicsDriver = signer_driver.NewMnemonicDriver()
 
 	command.Init()
 	ui.Init()
