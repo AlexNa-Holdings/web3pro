@@ -33,6 +33,7 @@ func Init() {
 		NewSignerCommand(),
 		NewUsbCommand(),
 		NewAddressCommand(),
+		NewTokenCommand(),
 	}
 }
 
