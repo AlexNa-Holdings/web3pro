@@ -11,6 +11,7 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/command"
 	"github.com/AlexNa-Holdings/web3pro/core"
+	"github.com/AlexNa-Holdings/web3pro/eth"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/signer_driver"
 	"github.com/AlexNa-Holdings/web3pro/ui"
@@ -31,6 +32,7 @@ func main() {
 	cmn.WalletTrezorDriver = signer_driver.NewTrezorDriver()
 	cmn.WalletMnemonicsDriver = signer_driver.NewMnemonicDriver()
 
+	eth.LoadABIs()
 	command.Init()
 	ui.Init()
 	defer ui.Gui.Close()

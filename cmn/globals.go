@@ -1,6 +1,9 @@
 package cmn
 
-import "github.com/ethereum/go-ethereum/common"
+import (
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
+)
 
 type Signer struct {
 	Name   string   `json:"name"`
@@ -33,12 +36,15 @@ type Blockchain struct {
 	ChainId     uint   `json:"chain_id"`
 	ExplorerUrl string `json:"explorer_url"`
 	Currency    string `json:"currency"`
+
+	Client *ethclient.Client `json:"-"`
 }
 
 type Token struct {
-	Blockchain string `json:"blockchain"`
-	Name       string `json:"name"`
-	Symbol     string `json:"symbol"`
-	Address    string `json:"address"`
-	Decimals   int    `json:"decimals"`
+	Blockchain string         `json:"blockchain"`
+	Name       string         `json:"name"`
+	Symbol     string         `json:"symbol"`
+	Address    common.Address `json:"address"`
+	Decimals   int            `json:"decimals"`
+	Native     bool           `json:"native"`
 }

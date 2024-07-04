@@ -21,7 +21,7 @@ Usage:
   usb  - List usb devices
 
 		`,
-		Help:             `Manage usb devices`,
+		Help:             `List usb devices`,
 		Process:          Usb_Process,
 		AutoCompleteFunc: Usb_AutoComplete,
 	}

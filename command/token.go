@@ -1,12 +1,15 @@
 package command
 
 import (
-	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/AlexNa-Holdings/web3pro/cmn"
+	"github.com/AlexNa-Holdings/web3pro/eth"
+	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/ui"
 	"github.com/AlexNa-Holdings/web3pro/wallet"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 var token_subcommands = []string{"remove", "add", "edit", "list"}
@@ -32,6 +35,13 @@ Commands:
 }
 
 func Token_AutoComplete(input string) (string, *[]ui.ACOption, string) {
+
+	if wallet.CurrentWallet == nil {
+		return "", nil, ""
+	}
+
+	w := wallet.CurrentWallet
+
 	options := []ui.ACOption{}
 	p := cmn.Split(input)
 	command, subcommand, param := p[0], p[1], p[2]
@@ -45,30 +55,14 @@ func Token_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 		return "action", &options, subcommand
 	}
 
-	if subcommand == "use" || subcommand == "remove" || subcommand == "edit" {
-		if wallet.CurrentWallet != nil {
-			for _, chain := range wallet.CurrentWallet.Blockchains {
-				if cmn.Contains(chain.Name, param) {
-					options = append(options, ui.ACOption{
-						Name: chain.Name, Result: command + " " + subcommand + " '" + chain.Name + "'"})
-				}
+	if subcommand == "list" || subcommand == "add" {
+		for _, chain := range w.Blockchains {
+			if cmn.Contains(chain.Name, param) {
+				options = append(options, ui.ACOption{
+					Name: chain.Name, Result: command + " " + subcommand + " '" + chain.Name + "' "})
 			}
 		}
 		return "blockchain", &options, subcommand
-	}
-
-	if subcommand == "add" {
-		for _, chain := range cmn.PrefefinedBlockchains {
-			if cmn.Contains(chain.Name, param) {
-				options = append(options, ui.ACOption{Name: chain.Name, Result: command + " add '" + chain.Name + "' "})
-			}
-		}
-
-		if param == "" || cmn.Contains("(custom)", param) {
-			options = append(options, ui.ACOption{Name: "(custom)", Result: command + " add custom "})
-		}
-
-		return "blockchain", &options, param
 	}
 
 	return "", &options, ""
@@ -80,28 +74,133 @@ func Token_Process(c *Command, input string) {
 		return
 	}
 
+	w := wallet.CurrentWallet
+
 	//parse command subcommand parameters
-	tokens := cmn.Split(input)
-	if len(tokens) < 2 {
-		fmt.Fprintln(ui.Terminal.Screen, c.Usage)
-		return
-	}
+	p := cmn.SplitN(input, 4)
 	//execute command
-	subcommand := tokens[1]
+	subcommand := p[1]
 
 	switch subcommand {
 	case "add":
+
+		chain := p[2]
+		address := p[3]
+
+		if chain == "" {
+			ui.PrintErrorf("\nUsage: token add [BLOCKCHAIN] [ADDRESS]\n")
+			return
+		}
+
+		if address == "" {
+			ui.PrintErrorf("\nUsage: token add %s [ADDRESS]\n", chain)
+			return
+		}
+
+		if !common.IsHexAddress(address) {
+			ui.PrintErrorf("\nInvalid address: %s\n", address)
+			return
+		}
+
+		addr := common.HexToAddress(address)
+		bchain := w.GetBlockchain(chain)
+		if bchain == nil {
+			ui.PrintErrorf("\nBlockchain not found: %s\n", chain)
+			return
+		}
+
+		if w.GetTokenByAddress(bchain.Name, addr) != nil {
+			ui.PrintErrorf("\nToken already exists: %s\n", address)
+			return
+		}
+
+		symbol, name, decimals, err := eth.GetERC20TokenInfo(bchain, &addr)
+		if err != nil {
+			ui.PrintErrorf("\nError getting token info: %v\n", err)
+			return
+		}
+
+		t := &cmn.Token{
+			Blockchain: bchain.Name,
+			Name:       name,
+			Symbol:     symbol,
+			Address:    addr,
+			Decimals:   decimals,
+		}
+
+		w.Tokens = append(w.Tokens, t)
+		w.Save()
+
+		ui.Printf("\nToken added: %s %s\n", symbol, addr.String())
 	case "remove":
+		chain := p[2]
+		address := p[3]
+
+		if chain == "" {
+			ui.PrintErrorf("\nUsage: token remove [BLOCKCHAIN] [ADDRESS]\n")
+			return
+		}
+
+		if address == "" {
+			ui.PrintErrorf("\nUsage: token remove %s [ADDRESS]\n", chain)
+			return
+		}
+
+		if !common.IsHexAddress(address) {
+			ui.PrintErrorf("\nInvalid address: %s\n", address)
+			return
+		}
+
+		addr := common.HexToAddress(address)
+
+		t := w.GetTokenByAddress(chain, addr)
+		if t == nil {
+			ui.PrintErrorf("\nToken not found: %s\n", address)
+			return
+		}
+
+		ui.Gui.ShowPopup(ui.DlgConfirm(
+			"Remove address",
+			`
+<c>Are you sure you want to remove token:
+<c> `+t.Name+`
+<c> `+t.Symbol+"? \n",
+			func() {
+				w.DeleteToken(chain, addr)
+				w.Save()
+				ui.Notification.Show("Token removed")
+			}))
 	case "list", "":
+
+		chain := p[2]
 
 		ui.Printf("\nTokens:\n")
 
-		// for _, b := range wallet.CurrentWallet.Blockchains {
-		// 	ui.Terminal.Screen.AddLink(b.Name, "command b use "+b.Name, "Use blockchain '"+b.Name+"'", "")
-		// 	ui.Printf(" ")
-		// 	ui.Terminal.Screen.AddLink("\uf044", "command b edit "+b.Name, "Edit blockchain '"+b.Name+"'", "")
-		// 	ui.Printf("\n")
-		// }
+		// Sort the tokens by Blockchain and Symbol
+		sort.Slice(w.Tokens, func(i, j int) bool {
+			if w.Tokens[i].Blockchain == w.Tokens[j].Blockchain {
+				return w.Tokens[i].Symbol < w.Tokens[j].Symbol
+			}
+			return w.Tokens[i].Blockchain < w.Tokens[j].Blockchain
+		})
+
+		for _, t := range w.Tokens {
+			if chain != "" && t.Blockchain != chain {
+				continue
+			}
+			ui.Printf("  %-8s %-10s ", t.Symbol, t.Blockchain)
+
+			if t.Native {
+				ui.Printf("Native")
+			} else {
+				ui.AddAddressShortLink(ui.Terminal.Screen, &t.Address)
+				ui.Printf(" ")
+				ui.Terminal.Screen.AddLink(gocui.ICON_DELETE, "command token remove '"+t.Blockchain+"' '"+t.Address.String()+"'", "Remove token", "")
+				ui.Printf(" %s", t.Name)
+			}
+
+			ui.Printf("\n")
+		}
 
 		ui.Printf("\n")
 	case "edit":

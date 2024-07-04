@@ -10,6 +10,7 @@ import (
 	"os"
 
 	"github.com/AlexNa-Holdings/web3pro/cmn"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/pbkdf2"
 )
@@ -30,14 +31,67 @@ var CurrentWallet *Wallet
 
 func Open(name string, pass string) error {
 
-	w, err := OpenFromFile(cmn.DataFolder+"/wallets/"+name, pass)
+	w, err := openFromFile(cmn.DataFolder+"/wallets/"+name, pass)
 
 	if err == nil {
 		CurrentWallet = w
 		CurrentWallet.FilePath = cmn.DataFolder + "/wallets/" + name
 		CurrentWallet.Password = pass
+
+		CurrentWallet.AuditNativeTokens()
 	}
 	return err
+}
+
+func (w *Wallet) AuditNativeTokens() {
+
+	eddited := false
+
+	for _, b := range w.Blockchains {
+		found := false
+		for _, t := range w.Tokens {
+			if t.Blockchain == b.Name && t.Native {
+				found = true
+				break
+			}
+		}
+		if !found {
+			w.Tokens = append(w.Tokens, &cmn.Token{
+				Blockchain: b.Name,
+				Name:       b.Currency,
+				Symbol:     b.Currency,
+				Decimals:   18,
+				Native:     true,
+			})
+			eddited = true
+		}
+	}
+
+	to_remove := []int{}
+	for i, t := range w.Tokens {
+		if t.Native && w.GetBlockchain(t.Blockchain) == nil {
+			to_remove = append([]int{i}, to_remove...)
+			break
+		}
+	}
+
+	for _, i := range to_remove {
+		w.Tokens = append(w.Tokens[:i], w.Tokens[i+1:]...)
+		eddited = true
+	}
+
+	if eddited {
+		w.Save()
+	}
+}
+
+func (w *Wallet) GetBlockchain(n string) *cmn.Blockchain {
+	for _, b := range w.Blockchains {
+		if b.Name == n {
+			return b
+		}
+	}
+	return nil
 }
 
 func (w *Wallet) Save() error {
@@ -152,7 +206,7 @@ func SaveToFile(w *Wallet, file, pass string) error {
 	return nil
 }
 
-func OpenFromFile(file string, pass string) (*Wallet, error) {
+func openFromFile(file string, pass string) (*Wallet, error) {
 	data, err := os.ReadFile(file)
 	if err != nil {
 		log.Error().Msgf("Error reading file: %v\n", err)
@@ -216,4 +270,22 @@ func (w *Wallet) GetAddressByName(n string) *cmn.Address {
 		}
 	}
 	return nil
+}
+
+func (w *Wallet) GetTokenByAddress(b string, a common.Address) *cmn.Token {
+	for _, t := range w.Tokens {
+		if t.Blockchain == b && t.Address == a {
+			return t
+		}
+	}
+	return nil
+}
+
+func (w *Wallet) DeleteToken(b string, a common.Address) {
+	for i, t := range w.Tokens {
+		if t.Blockchain == b && t.Address == a {
+			w.Tokens = append(w.Tokens[:i], w.Tokens[i+1:]...)
+			return
+		}
+	}
 }
