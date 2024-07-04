@@ -29,6 +29,7 @@ var Mutex = &sync.Mutex{}
 var TimerQuit = make(chan bool)
 
 func add(hail *cmn.HailRequest) bool { // returns if on top
+	log.Trace().Msgf("Adding hail: %s", hail.Title)
 	Mutex.Lock()
 	defer Mutex.Unlock()
 
@@ -37,6 +38,8 @@ func add(hail *cmn.HailRequest) bool { // returns if on top
 	} else {
 		HailQueue = append(HailQueue, hail)
 	}
+
+	log.Debug().Msgf("Hail added signal sent: %s on top: %b", hail.Title, hail == HailQueue[0])
 
 	return hail == HailQueue[0]
 }
@@ -51,6 +54,8 @@ func remove(hail *cmn.HailRequest) {
 		}
 	}
 	Mutex.Unlock()
+
+	log.Debug().Msgf("Hail removed: %s  n_left: %d", hail.Title, len(HailQueue))
 
 	if hail.OnClose != nil {
 		hail.OnClose(hail)
@@ -92,7 +97,7 @@ func HailPaneTimer() {
 			return
 		case <-time.After(1 * time.Second):
 			tick++
-			if ActiveRequest != nil {
+			if ActiveRequest != nil && !ActiveRequest.TimerPaused {
 				if time.Until(ActiveRequest.Expiration) <= 0 {
 					cancel(ActiveRequest)
 				} else {
@@ -134,6 +139,8 @@ func ProcessHails() {
 }
 
 func (p *HailPaneType) open(hail *cmn.HailRequest) {
+
+	log.Trace().Msgf("HailPane: open: %s", hail.Title)
 
 	if ActiveRequest != hail {
 		if ActiveRequest != nil {

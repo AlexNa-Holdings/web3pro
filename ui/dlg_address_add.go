@@ -15,6 +15,7 @@ func DlgAddressAdd(addr string, signer string, path string) *gocui.Popup {
 	template := fmt.Sprintf(`
 Address: %s	
    Name: <i id:name size:32 value:""> 
+    Tag: <i id:tag size:32 value:"">
  Signer: %s
    Path: %s
 
@@ -86,6 +87,7 @@ Address: %s
 						Name:    name,
 						Address: a,
 						Signer:  s.Name,
+						Tag:     v.GetInput("tag"),
 						Path:    path,
 					})
 

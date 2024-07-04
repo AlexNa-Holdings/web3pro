@@ -21,6 +21,7 @@ func DlgAddressEdit(name string) *gocui.Popup {
 	template := fmt.Sprintf(`
 Address: %s	
    Name: <i id:name size:32 value:""> 
+    Tag: <i id:tag size:32 value:"">
  Signer: %s
    Path: %s
 
@@ -37,6 +38,7 @@ Address: %s
 		},
 		OnOpen: func(v *gocui.View) {
 			v.SetInput("name", currect_a.Name)
+			v.SetInput("tag", currect_a.Tag)
 		},
 		OnClose: func(v *gocui.View) {
 			Gui.SetCurrentView("terminal.input")
@@ -61,6 +63,7 @@ Address: %s
 					}
 
 					currect_a.Name = name
+					currect_a.Tag = v.GetInput("tag")
 
 					err := wallet.CurrentWallet.Save()
 					if err != nil {

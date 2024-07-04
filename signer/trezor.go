@@ -183,7 +183,11 @@ func (d TrezorDriver) GetAddresses(s *Signer, path_format string, start_from int
 		if addr := eth_addr.GetAddress(); len(addr) > 0 { // Newer firmwares use hexadecimal formats
 			a = common.HexToAddress(addr)
 		}
-		r = append(r, address.Address{Address: a})
+
+		r = append(r, address.Address{
+			Address: a,
+			Path:    path,
+		})
 	}
 	return r, nil
 }
@@ -295,13 +299,12 @@ func (d TrezorDriver) RequsetPin() (string, error) {
 	ids := []int{7, 8, 9, 4, 5, 6, 1, 2, 3}
 
 	for i := 0; i < 9; i++ {
-		template += fmt.Sprintf("<button color:#000000 bgcolor:#006400 text:' - ' id:%d> ", ids[i])
+		template += fmt.Sprintf("<button color:g.HelpFgColor bgcolor:g.HelpBgColor text:' - ' id:%d> ", ids[i])
 		if (i+1)%3 == 0 {
 			template += "\n\n"
 		}
 	}
 	template += "<button text:OK> <button text:Cancel>"
-
 	pin := ""
 
 	cmn.HailAndWait(&cmn.HailRequest{
@@ -335,7 +338,69 @@ func (d TrezorDriver) RequsetPin() (string, error) {
 
 	return pin, nil
 
-} //\U000f006e
+}
+
+func (d TrezorDriver) RequsetPassword() (string, error) {
+	password := ""
+	canceled := false
+
+	cmn.HailAndWait(&cmn.HailRequest{
+		Title: "Select Wallet Type",
+		Template: `<c><w>
+<button text:Standard color:g.HelpFgColor bgcolor:g.HelpBgColor id:standard> <button text:Hidden color:g.HelpFgColor bgcolor:g.HelpBgColor id:hidden> 
+
+<button text:Cancel>`,
+
+		OnClickHotspot: func(h *cmn.HailRequest, v *gocui.View, hs *gocui.Hotspot) {
+			if hs != nil {
+				s := cmn.Split(hs.Value)
+				command, value := s[0], s[1]
+
+				switch command {
+				case "button":
+					switch value {
+					case "standard":
+						h.Close()
+					case "hidden":
+						h.TimerPaused = true
+						v.GetGui().ShowPopup(&gocui.Popup{
+							Title: "Enter Trezor Password",
+							Template: `<c><w>
+Password: <i id:password size:16 masked:true>
+
+<button text:OK> <button text:Cancel>`,
+							OnClickHotspot: func(v *gocui.View, hs *gocui.Hotspot) {
+								if hs != nil {
+									switch hs.Value {
+									case "button OK":
+										password = v.GetInput("password")
+										v.GetGui().HidePopup()
+										h.Close()
+									case "button Cancel":
+										v.GetGui().HidePopup()
+									}
+								}
+							},
+						})
+						h.TimerPaused = false
+					}
+				}
+			}
+		},
+		OnCancel: func(h *cmn.HailRequest) {
+			canceled = true
+		},
+	})
+
+	if canceled {
+		return "", errors.New("password request canceled")
+	}
+
+	log.Debug().Msgf("Password: %s", password)
+
+	return password, nil
+}
+
 func (d TrezorDriver) Call(dev core.USBDevice, req proto.Message, result proto.Message) error {
 	log.Debug().Msgf("Call: %s", MessageName(MessageType(req)))
 	log.Debug().Msgf("Call: %v", req)
@@ -350,11 +415,17 @@ func (d TrezorDriver) Call(dev core.USBDevice, req proto.Message, result proto.M
 		case trezorproto.MessageType_MessageType_PinMatrixRequest:
 			{
 				log.Trace().Msg("*** NB! Enter PIN (not echoed)...")
-				pin, _ := d.RequsetPin()
-				// check if pin is valid
+				pin, err := d.RequsetPin()
+				if err != nil {
+					log.Error().Msgf("Call: Error getting pin: %s", err)
+					d.RawCall(dev, &trezorproto.Cancel{})
+					return err
+				}
+
 				pinStr := string(pin)
 				for _, ch := range pinStr {
 					if !strings.ContainsRune("123456789", ch) || len(pin) < 1 {
+						log.Error().Msgf("Call: Invalid PIN provided")
 						d.RawCall(dev, &trezorproto.Cancel{})
 						return errors.New("trezor: Invalid PIN provided")
 					}
@@ -370,12 +441,11 @@ func (d TrezorDriver) Call(dev core.USBDevice, req proto.Message, result proto.M
 		case trezorproto.MessageType_MessageType_PassphraseRequest:
 			{
 				log.Trace().Msg("*** NB! Enter Pass	phrase ...")
-				pass := "12345" // TODOphrase ...")
-				// pass, err := w.ui.ReadPassword()
-				// if err != nil {
-				// 	kind, reply, _ = d.RawCall(dev, &trezorproto.Cancel{})
-				// 	return err
-				// }
+				pass, err := d.RequsetPassword()
+				if err != nil {
+					d.RawCall(dev, &trezorproto.Cancel{})
+					return err
+				}
 				passStr := string(pass)
 				// send it
 				kind, reply, err = d.RawCall(dev, &trezorproto.PassphraseAck{Passphrase: &passStr})

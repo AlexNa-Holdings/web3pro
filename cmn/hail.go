@@ -21,6 +21,7 @@ type HailRequest struct {
 	Done           chan bool
 	Suspended      bool
 	TimeoutSec     int // in seconds
+	TimerPaused    bool
 
 	// Internal
 	Expiration time.Time
@@ -37,6 +38,7 @@ func Hail(hail *HailRequest) {
 func HailAndWait(hail *HailRequest) {
 	Hail(hail)
 	<-hail.Done
+	close(hail.Done)
 }
 
 func (hail *HailRequest) Close() {

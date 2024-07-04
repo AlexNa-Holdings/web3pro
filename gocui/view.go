@@ -216,6 +216,10 @@ type cellCache struct {
 
 type lineType []cell
 
+func (v *View) GetGui() *Gui {
+	return v.gui
+}
+
 // String returns a string from a given cell slice.
 func (l lineType) String() string {
 	str := ""
@@ -1089,6 +1093,9 @@ func (v *View) MouseOverScrollbar() bool {
 }
 
 func ParseTag(tag string) (string, map[string]string) {
+
+	log.Debug().Msgf("Parsing tag: %s", tag)
+
 	// Regular expression to match the whole tag, capturing the tag name and parameters
 	tagRe := regexp.MustCompile(REGEX_TAGS)
 
@@ -1118,6 +1125,8 @@ func ParseTag(tag string) (string, map[string]string) {
 				}
 
 				tagParams[paramName] = paramValue
+
+				log.Debug().Msgf("  Tag param: %s=%s", paramName, paramValue)
 			}
 		}
 	}
@@ -1214,15 +1223,78 @@ func (v *View) AddLink(text, value, tip, id string) error {
 	return err
 }
 
+func (v *View) ParseColor(color string) Attribute {
+	c := strings.TrimSpace(color)
+
+	switch c {
+	case "":
+		return v.FgColor
+	case "v.BgColor":
+		return v.BgColor
+	case "v.FgColor":
+		return v.FgColor
+	case "v.SelBgColor":
+		return v.SelBgColor
+	case "v.SelFgColor":
+		return v.SelFgColor
+	case "v.SubTitleFgColor":
+		return v.SubTitleFgColor
+	case "v.SubTitleBgColor":
+		return v.SubTitleBgColor
+	case "v.EmFgColor":
+		return v.EmFgColor
+	case "v.TitleAttrib":
+		return v.TitleAttrib
+	case "v.SubTitleAttrib":
+		return v.SubTitleAttrib
+	case "g.BgColor":
+		return v.gui.BgColor
+	case "g.FgColor":
+		return v.gui.FgColor
+	case "g.SelBgColor":
+		return v.gui.SelBgColor
+	case "g.SelFgColor":
+		return v.gui.SelFgColor
+	case "g.SubTitleFgColor":
+		return v.gui.SubTitleFgColor
+	case "g.SubTitleBgColor":
+		return v.gui.SubTitleBgColor
+	case "g.EmFgColor":
+		return v.gui.EmFgColor
+	case "g.TitleAttrib":
+		return v.gui.FrameColor
+	case "g.InputBgColor":
+		return v.gui.InputBgColor
+	case "g.ErrorFgColor":
+		return v.gui.ErrorFgColor
+	case "g.ActionBgColor":
+		return v.gui.ActionBgColor
+	case "g.ActionFgColor":
+		return v.gui.ActionFgColor
+	case "g.ActionSelBgColor":
+		return v.gui.ActionSelBgColor
+	case "g.ActionSelFgColor":
+		return v.gui.ActionSelFgColor
+	case "g.HelpBgColor":
+		return v.gui.HelpBgColor
+	case "g.HelpFgColor":
+		return v.gui.HelpFgColor
+	}
+
+	return GetColor(color)
+}
+
 func (v *View) AddButton(text, value, tip, id, color, bgcolor string) error {
 	fg, bg := v.BgColor, v.EmFgColor
 
 	if color != "" {
-		fg = GetColor(color)
+		fg = v.ParseColor(color)
+		log.Debug().Msgf("ParsedColor fg: %6x from %s", fg, color)
 	}
 
 	if bgcolor != "" {
-		bg = GetColor(bgcolor)
+		bg = v.ParseColor(bgcolor)
+		log.Debug().Msgf("ParsedColor fg: %6x from %s", bg, bgcolor)
 	}
 
 	cells := AddCells(nil, bg, v.BgColor, "\ue0b6")

@@ -42,7 +42,7 @@ var DarkTheme = ThemeStruct{
 	EmFgColor:    gocui.ColorCyan,
 
 	HelpFgColor:  gocui.GetColor("#f1f1f1"),
-	HelpBgColor:  gocui.GetColor("#013220"),
+	HelpBgColor:  gocui.GetColor("#028002"),
 	InputBgColor: gocui.GetColor("#292320"),
 }
 
@@ -98,6 +98,9 @@ func SetTheme(theme string) {
 	Gui.SubTitleFgColor = t.BgColor
 	Gui.SubTitleBgColor = t.EmFgColor
 	Gui.InputBgColor = t.InputBgColor
+
+	Gui.HelpFgColor = t.HelpFgColor
+	Gui.HelpBgColor = t.HelpBgColor
 
 	Theme = &t
 

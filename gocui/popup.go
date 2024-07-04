@@ -19,6 +19,7 @@ type Popup struct {
 	OnClose         func(v *View)
 	OnOpen          func(v *View)
 	Template        string
+	Closed          chan bool
 }
 
 func (g *Gui) ShowPopup(p *Popup) {
@@ -27,6 +28,17 @@ func (g *Gui) ShowPopup(p *Popup) {
 			g.popup = p
 			return nil
 		})
+	}
+}
+
+func (g *Gui) ShowPopupAndWait(p *Popup) {
+	if p != nil {
+		p.Closed = make(chan bool)
+		g.Update(func(g *Gui) error {
+			g.popup = p
+			return nil
+		})
+		<-p.Closed
 	}
 }
 
@@ -56,6 +68,11 @@ func (g *Gui) HidePopup() {
 		}
 
 		g.DeleteView(g.popup.Name)
+
+		if g.popup.Closed != nil {
+			g.popup.Closed <- true
+			close(g.popup.Closed)
+		}
 		g.popup = nil
 	}
 }

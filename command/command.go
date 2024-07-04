@@ -46,6 +46,7 @@ func Process(input string) {
 			go func() {
 				cmd.Process(cmd, input)
 				ui.Flush()
+				ui.Gui.SetCurrentView("terminal.input")
 			}()
 			return
 		}
