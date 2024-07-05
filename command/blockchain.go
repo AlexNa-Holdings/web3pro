@@ -101,7 +101,7 @@ func Blockchain_Process(c *Command, input string) {
 		blockchain_name := tokens[2]
 
 		if blockchain_name == "custom" {
-			// TODO
+			ui.Gui.ShowPopup(ui.DlgBlockchain(""))
 		} else {
 			// check if such blockchain already added
 			for _, b := range wallet.CurrentWallet.Blockchains {
@@ -211,7 +211,7 @@ func Blockchain_Process(c *Command, input string) {
 
 		for _, b := range wallet.CurrentWallet.Blockchains {
 			if b.Name == blockchain_name {
-				ui.Gui.ShowPopup(ui.DlgBlockchainEdit(blockchain_name))
+				ui.Gui.ShowPopup(ui.DlgBlockchain(blockchain_name))
 				return
 			}
 		}
