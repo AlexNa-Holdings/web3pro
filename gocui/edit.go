@@ -6,6 +6,8 @@ package gocui
 
 import (
 	"errors"
+
+	"github.com/rs/zerolog/log"
 )
 
 // Editor interface must be satisfied by gocui editors.
@@ -57,8 +59,10 @@ func simpleEditor(v *View, key Key, ch rune, mod Modifier) {
 	case KeyEsc:
 		// If not here the esc key will act like the KeySpace
 	default:
-		v.EditWrite(ch)
+		v.EditWrite(ch) // make it refresh on screen afer editing
 	}
+
+	v.ClearCache()
 }
 
 // EditWrite writes a rune at the cursor position.
@@ -197,6 +201,7 @@ func (v *View) MoveCursor(dx, dy int) {
 
 	maxX, maxY := v.Size()
 	newXOnScreen, newYOnScreen, _ := v.linesPosOnScreen(newX, newY)
+	log.Debug().Msgf("newXOnScreen: %d, newYOnScreen: %d", newXOnScreen, newYOnScreen)
 
 	// Set the view offset
 	if newYOnScreen > v.oy+maxY-1 {
@@ -210,19 +215,24 @@ func (v *View) MoveCursor(dx, dy int) {
 		if newXOnScreen > v.ox+maxX-1 {
 			v.ox = newXOnScreen - maxX + 1
 		}
+
+		if newXOnScreen < v.ox {
+			v.ox = newXOnScreen
+		}
+
 		// Size of the line preview when moving to the left edge.
 		// This should help to display hidden text of the line when
 		// wrapping is off and moving towards beginning of the line.
 		// 2 is currently set as the max length of characters which are visible.
-		prevSize := 0 // this is default, no preview (used when hitting the beginnig)
-		if maxX > 2 && newXOnScreen-2 >= 0 {
-			prevSize = 2
-		} else if maxX > 1 && newXOnScreen-1 >= 0 {
-			prevSize = 1
-		}
-		if newXOnScreen-prevSize < v.ox {
-			v.ox = newXOnScreen - prevSize
-		}
+		// AN prevSize := 0 // this is default, no preview (used when hitting the beginnig)
+		// if maxX > 2 && newXOnScreen-2 >= 0 {
+		// 	prevSize = 2
+		// } else if maxX > 1 && newXOnScreen-1 >= 0 {
+		// 	prevSize = 1
+		// }
+		// if newXOnScreen-prevSize < v.ox {
+		// 	v.ox = newXOnScreen - prevSize
+		// }
 	}
 
 	v.cx, v.cy = newX, newY

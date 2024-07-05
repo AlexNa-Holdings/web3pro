@@ -48,11 +48,16 @@ func Wallet_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 	}
 
 	if subcommand == "open" {
+
+		if param != "" && !strings.HasSuffix(param, " ") {
+			return "", nil, param
+		}
+
 		files := wallet.List()
 
 		for _, file := range files {
 			if param == "" || strings.Contains(file, param) {
-				options = append(options, ui.ACOption{Name: file, Result: command + " open " + file})
+				options = append(options, ui.ACOption{Name: file, Result: command + " open " + file + " "})
 			}
 		}
 

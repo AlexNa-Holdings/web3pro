@@ -273,9 +273,17 @@ func (w *Wallet) GetAddressByName(n string) *cmn.Address {
 	return nil
 }
 
+func (w *Wallet) GetToken(b string, a string) *cmn.Token {
+	t := w.GetTokenByAddress(b, common.HexToAddress(a))
+	if t == nil {
+		t = w.GetTokenBySymbol(b, a)
+	}
+	return t
+}
+
 func (w *Wallet) GetTokenByAddress(b string, a common.Address) *cmn.Token {
 	for _, t := range w.Tokens {
-		if t.Blockchain == b && t.Address == a {
+		if t.Blockchain == b && !t.Native && t.Address == a {
 			return t
 		}
 	}

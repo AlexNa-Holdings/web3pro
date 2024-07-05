@@ -34,6 +34,7 @@ func Init() {
 		NewUsbCommand(),
 		NewAddressCommand(),
 		NewTokenCommand(),
+		NewSendCommand(),
 	}
 }
 

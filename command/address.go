@@ -56,7 +56,7 @@ func Address_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 		for _, a := range wallet.CurrentWallet.Addresses {
 			if cmn.Contains(a.Name+a.Address.String(), param) {
 				options = append(options, ui.ACOption{
-					Name:   a.Address.String() + " " + a.Name,
+					Name:   ui.ShortAddress(a.Address) + " " + a.Name,
 					Result: command + " " + subcommand + " '" + a.Name + "'"})
 			}
 		}

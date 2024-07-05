@@ -35,6 +35,7 @@ const (
 	ICON_ADD      = "\ueadc"
 	ICON_3DOTS    = "\U000f01d8"
 	ICON_BACK     = "\U000f006e"
+	ICON_SEND     = "\U000f048a"
 )
 
 const REGEX_TAGS = `<(/?\w+)((?:\s+\w+(?::(?:[^>\s]+|"[^"]*"|'[^']*'))?\s*)*)>`
@@ -740,6 +741,10 @@ func (v *View) draw() error {
 	return nil
 }
 
+func (v *View) ClearCache() {
+	v.contentCache = nil
+}
+
 // Clear empties the view and resets the view offsets, cursor position, read offsets and write offsets
 func (v *View) Clear() {
 	v.writeMutex.Lock()
@@ -1416,6 +1421,7 @@ func (v *View) AddInput(tagParams map[string]string) error {
 
 		v.Editable = true
 		v.Wrap = false
+		v.Autoscroll = true
 		c.View = v
 	}
 

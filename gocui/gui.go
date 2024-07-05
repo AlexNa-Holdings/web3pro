@@ -549,10 +549,12 @@ func (g *Gui) MainLoop() error {
 		select {
 		case ev := <-g.gEvents:
 			if err := g.handleEvent(&ev); err != nil {
+				log.Error().Err(err).Msg("error handling event")
 				return err
 			}
 		case ev := <-g.userEvents:
 			if err := ev.f(g); err != nil {
+				log.Error().Err(err).Msg("error handling user event")
 				return err
 			}
 		case <-g.stop:
@@ -560,9 +562,11 @@ func (g *Gui) MainLoop() error {
 		}
 
 		if err := g.consumeevents(); err != nil {
+			log.Error().Err(err).Msg("error consuming events")
 			return err
 		}
 		if err := g.flush(); err != nil {
+			log.Error().Err(err).Msg("error flushing")
 			return err
 		}
 		// used during testing for synchronization
@@ -683,10 +687,12 @@ func (g *Gui) flush() error {
 			}
 		}
 		if err := g.draw(v); err != nil {
+			log.Error().Err(err).Msgf("error drawing view %s", v.name)
 			return err
 		}
 		if v.ScrollBar {
 			if err := g.drawScrollBar(v, v.FgColor, v.BgColor); err != nil {
+				log.Error().Err(err).Msgf("error drawing scrollbar for view %s", v.name)
 				return err
 			}
 		}

@@ -78,7 +78,7 @@ func Token_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 					Result: command + " balance '" + b.Name + "' " + id + " "})
 			}
 		}
-		return "token", &options, subcommand
+		return "token", &options, token
 	}
 
 	adr := p[4]
@@ -88,11 +88,11 @@ func Token_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 		for _, a := range w.Addresses {
 			if cmn.Contains(a.Name+a.Address.String(), adr) {
 				options = append(options, ui.ACOption{
-					Name:   a.Address.String() + " " + a.Name,
+					Name:   ui.ShortAddress(a.Address) + " " + a.Name,
 					Result: command + " balance '" + b.Name + "' " + token + " " + a.Address.String()})
 			}
 		}
-		return "address", &options, subcommand
+		return "address", &options, adr
 	}
 
 	if subcommand == "list" || subcommand == "add" || subcommand == "remove" || subcommand == "balance" {
@@ -102,7 +102,7 @@ func Token_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 					Name: chain.Name, Result: command + " " + subcommand + " '" + chain.Name + "' "})
 			}
 		}
-		return "blockchain", &options, subcommand
+		return "blockchain", &options, param
 	}
 
 	return "", &options, ""
@@ -285,10 +285,18 @@ func Token_Process(c *Command, input string) {
 			}
 
 			if balance.Cmp(big.NewInt(0)) != 0 {
+
+				tid := t.Symbol
+				if !t.Unique {
+					tid = t.Address.String()
+				}
+
 				ui.AddAddressShortLink(ui.Terminal.Screen, &a.Address)
 				ui.Printf(" ")
 				ui.AddValueSymbolLink(ui.Terminal.Screen, balance, t)
-				ui.Printf(" %s\n", a.Name)
+				ui.Printf(" %s ", a.Name)
+				ui.Terminal.Screen.AddLink(gocui.ICON_SEND, "command send '"+chain+"' '"+tid+"' '"+a.Address.String()+"'", "Send tokens", "")
+				ui.Printf("\n")
 			}
 		}
 
