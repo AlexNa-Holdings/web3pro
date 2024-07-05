@@ -100,18 +100,22 @@ func Signer_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 			return "type", &options, param
 		}
 
-		// l, _ := core.List() // ignore error
-		// for _, u := range l {
-		// 	if param == wallet.GetType(u.Manufacturer, u.Product) {
-		// 		sn, err := cmn.GetSN(u)
-		// 		if err == nil {
-		// 			if cmn.Contains(sn, p3) && p3 != sn {
-		// 				options = append(options, ui.ACOption{Name: sn, Result: command + " add " + param + " " + sn})
-		// 			}
-		// 		}
-		// 	}
-		// }
-		// return "Serial number", &options, ""
+		l, err := cmn.Core.Enumerate()
+		if err != nil {
+			ui.PrintErrorf("\nError listing usb devices: %v\n", err)
+			return "", &options, ""
+		}
+		for _, u := range l {
+			if param == cmn.GetDeviceType(u.Vendor, u.Product) {
+				dn, err := cmn.GetDeviceName(u)
+				if err == nil {
+					if cmn.Contains(dn, p3) && p3 != dn {
+						options = append(options, ui.ACOption{Name: dn, Result: command + " add " + param + " '" + dn + "'"})
+					}
+				}
+			}
+		}
+		return "Serial number", &options, ""
 	}
 
 	return "", &options, ""

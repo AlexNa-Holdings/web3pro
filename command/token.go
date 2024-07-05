@@ -12,7 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-var token_subcommands = []string{"remove", "add", "edit", "list"}
+var token_subcommands = []string{"remove", "add", "balance", "list"}
 
 func NewTokenCommand() *Command {
 	return &Command{
@@ -24,9 +24,10 @@ Usage: token [COMMAND]
 Manage tokens
 
 Commands:
-  add [BLOCKCHAIN] [ADDRESS]   - Add new token
-  list                         - List tokens
-  remove [BLOCKCHAIN] [ADDRESS]- Remove token  
+  add [BLOCKCHAIN] [ADDRESS]    - Add new token
+  list [BLOCKCHAIN]             - List tokens
+  remove [BLOCKCHAIN] [ADDRESS] - Remove token  
+  balance [BLOCKCHAIN] [TOKEN/ADDRESS] [ADDRESS] - Get token balance
 		`,
 		Help:             `Manage tokens`,
 		Process:          Token_Process,
@@ -43,7 +44,7 @@ func Token_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 	w := wallet.CurrentWallet
 
 	options := []ui.ACOption{}
-	p := cmn.Split(input)
+	p := cmn.SplitN(input, 5)
 	command, subcommand, param := p[0], p[1], p[2]
 
 	if !cmn.IsInArray(token_subcommands, subcommand) {
@@ -55,7 +56,45 @@ func Token_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 		return "action", &options, subcommand
 	}
 
-	if subcommand == "list" || subcommand == "add" {
+	b := w.GetBlockchain(param)
+	token := p[3]
+
+	if subcommand == "balance" && b != nil &&
+		(token == "" || (w.GetTokenByAddress(b.Name, common.HexToAddress(token)) == nil && w.GetTokenBySymbol(b.Name, token) == nil)) {
+		for _, t := range w.Tokens {
+			if t.Blockchain != b.Name {
+				continue
+			}
+			if cmn.Contains(t.Symbol, token) || cmn.Contains(t.Address.String(), token) || cmn.Contains(t.Name, token) {
+
+				id := t.Symbol
+				if !t.Unique {
+					id = t.Address.String()
+				}
+
+				options = append(options, ui.ACOption{
+					Name:   t.Symbol,
+					Result: command + " balance '" + b.Name + "' " + id + " "})
+			}
+		}
+		return "token", &options, subcommand
+	}
+
+	adr := p[4]
+
+	if subcommand == "balance" && b != nil &&
+		(w.GetTokenByAddress(b.Name, common.HexToAddress(token)) != nil || w.GetTokenBySymbol(b.Name, token) != nil) {
+		for _, a := range w.Addresses {
+			if cmn.Contains(a.Name+a.Address.String(), adr) {
+				options = append(options, ui.ACOption{
+					Name:   a.Address.String() + " " + a.Name,
+					Result: command + " balance '" + b.Name + "' " + token + " " + a.Address.String()})
+			}
+		}
+		return "address", &options, subcommand
+	}
+
+	if subcommand == "list" || subcommand == "add" || subcommand == "remove" || subcommand == "balance" {
 		for _, chain := range w.Blockchains {
 			if cmn.Contains(chain.Name, param) {
 				options = append(options, ui.ACOption{
@@ -77,7 +116,7 @@ func Token_Process(c *Command, input string) {
 	w := wallet.CurrentWallet
 
 	//parse command subcommand parameters
-	p := cmn.SplitN(input, 4)
+	p := cmn.SplitN(input, 5)
 	//execute command
 	subcommand := p[1]
 
@@ -198,12 +237,56 @@ func Token_Process(c *Command, input string) {
 				ui.Terminal.Screen.AddLink(gocui.ICON_DELETE, "command token remove '"+t.Blockchain+"' '"+t.Address.String()+"'", "Remove token", "")
 				ui.Printf(" %s", t.Name)
 			}
-
 			ui.Printf("\n")
 		}
 
 		ui.Printf("\n")
-	case "edit":
+	case "balance":
+		chain := p[2]
+		token := p[3]
+		address := p[4]
+
+		if chain == "" {
+			ui.PrintErrorf("\nUsage: token balance [BLOCKCHAIN] [TOKEN/ADDRESS] [ADDRESS]\n")
+			return
+		}
+
+		bchain := w.GetBlockchain(chain)
+		if bchain == nil {
+			ui.PrintErrorf("\nBlockchain not found: %s\n", chain)
+			return
+		}
+
+		if token == "" {
+			ui.PrintErrorf("\nUsage: token balance %s [TOKEN/ADDRESS] [ADDRESS]\n", chain)
+			return
+		}
+
+		t := w.GetTokenBySymbol(chain, token)
+		if t == nil {
+			t = w.GetTokenByAddress(chain, common.HexToAddress(token))
+		}
+
+		if t == nil {
+			ui.PrintErrorf("\nToken not found (or ambiguous): %s\n", token)
+			return
+		}
+
+		for _, a := range w.Addresses {
+			if address != "" && a.Address.String() != address {
+				continue
+			}
+
+			balance, err := eth.BalanceOf(bchain, t, a.Address)
+			if err != nil {
+				ui.PrintErrorf("\nError getting balance: %v\n", err)
+				return
+			}
+
+			ui.AddAddressShortLink(ui.Terminal.Screen, &a.Address)
+			ui.Printf(" %s %s %s\n", cmn.FormatAmount(balance, t.Decimals, true), t.Symbol, a.Name)
+		}
+
 	default:
 		ui.PrintErrorf("\nInvalid subcommand: %s\n", subcommand)
 	}

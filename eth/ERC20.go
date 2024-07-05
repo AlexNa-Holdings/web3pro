@@ -2,29 +2,13 @@ package eth
 
 import (
 	"context"
-	"fmt"
+	"math/big"
 
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/rs/zerolog/log"
 )
-
-func OpenClient(b *cmn.Blockchain) error {
-
-	if b.Client != nil {
-		return nil
-	}
-
-	client, err := ethclient.Dial(b.Url)
-	if err != nil {
-		return fmt.Errorf("OpenClient: Cannot dial to (%s). Error:(%v)", b.Url, err)
-	}
-
-	b.Client = client
-	return nil
-}
 
 func GetERC20TokenInfo(b *cmn.Blockchain, address *common.Address) (string, string, int, error) {
 
@@ -87,4 +71,41 @@ func GetERC20TokenInfo(b *cmn.Blockchain, address *common.Address) (string, stri
 	decimals := int(decodedResultD.Result)
 
 	return symbol, name, decimals, nil
+}
+
+func GetERC20Balance(b *cmn.Blockchain, t *cmn.Token, address common.Address) (*big.Int, error) {
+
+	err := OpenClient(b)
+	if err != nil {
+		log.Error().Msgf("GetERC20Balance: Failed to open client: %v", err)
+		return nil, err
+	}
+
+	msg := ethereum.CallMsg{
+		To: &t.Address,
+	}
+
+	msg.Data, err = ERC20.Pack("balanceOf", address)
+	if err != nil {
+		log.Error().Msgf("GetERC20Balance: Cannot pack data. Error:(%v)", err)
+		return nil, err
+	}
+
+	output, err := b.Client.CallContract(context.Background(), msg, nil)
+	if err != nil {
+		log.Error().Msgf("GetERC20Balance: Cannot call contract. Error:(%v)", err)
+		return nil, err
+	}
+
+	var decodedResult struct {
+		Balance *big.Int
+	}
+
+	err = ERC20.UnpackIntoInterface(&decodedResult, "balanceOf", output)
+	if err != nil {
+		log.Error().Msgf("GetERC20Balance: Cannot unpack data. Error:(%v)", err)
+		return nil, err
+	}
+
+	return decodedResult.Balance, nil
 }

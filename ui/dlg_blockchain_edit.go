@@ -116,7 +116,7 @@ func DlgBlockchainEdit(name string) *gocui.Popup {
 		},
 		Template: `
           Name: <i id:name size:32 value:"">
-	       RPC: <i id:rpc size:32 value:"">
+           RPC: <i id:rpc size:32 value:"">
        ChainId: <i id:chainid size:32 value:"">
       Explorer: <i id:explorer size:32 value:"">
       Currency: <i id:currency size:32 value:"">

@@ -128,7 +128,7 @@ func (t *TerminalPane) formatPrefix(fgColor, bgColor gocui.Attribute) string {
 func (t *TerminalPane) ShowAutocomplete(title string, options *[]ACOption, highlite string) {
 	t.HideAutocomplete()
 
-	if len(*options) > 0 {
+	if options != nil && len(*options) > 0 {
 
 		t.ACOptions = options
 		t.ACTitle = title

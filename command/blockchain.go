@@ -189,7 +189,9 @@ func Blockchain_Process(c *Command, input string) {
 		for _, b := range wallet.CurrentWallet.Blockchains {
 			ui.Terminal.Screen.AddLink(b.Name, "command b use "+b.Name, "Use blockchain '"+b.Name+"'", "")
 			ui.Printf(" ")
-			ui.Terminal.Screen.AddLink("\uf044", "command b edit "+b.Name, "Edit blockchain '"+b.Name+"'", "")
+			ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command b edit "+b.Name, "Edit blockchain '"+b.Name+"'", "")
+			ui.Printf(" ")
+			ui.Terminal.Screen.AddLink(gocui.ICON_DELETE, "command b remove "+b.Name, "Remove blockchain '"+b.Name+"'", "")
 			ui.Printf("\n")
 		}
 

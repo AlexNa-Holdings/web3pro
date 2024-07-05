@@ -1094,8 +1094,6 @@ func (v *View) MouseOverScrollbar() bool {
 
 func ParseTag(tag string) (string, map[string]string) {
 
-	log.Debug().Msgf("Parsing tag: %s", tag)
-
 	// Regular expression to match the whole tag, capturing the tag name and parameters
 	tagRe := regexp.MustCompile(REGEX_TAGS)
 
@@ -1126,7 +1124,6 @@ func ParseTag(tag string) (string, map[string]string) {
 
 				tagParams[paramName] = paramValue
 
-				log.Debug().Msgf("  Tag param: %s=%s", paramName, paramValue)
 			}
 		}
 	}
@@ -1289,12 +1286,10 @@ func (v *View) AddButton(text, value, tip, id, color, bgcolor string) error {
 
 	if color != "" {
 		fg = v.ParseColor(color)
-		log.Debug().Msgf("ParsedColor fg: %6x from %s", fg, color)
 	}
 
 	if bgcolor != "" {
 		bg = v.ParseColor(bgcolor)
-		log.Debug().Msgf("ParsedColor fg: %6x from %s", bg, bgcolor)
 	}
 
 	cells := AddCells(nil, bg, v.BgColor, "\ue0b6")

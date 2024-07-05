@@ -34,11 +34,12 @@ func Open(name string, pass string) error {
 	w, err := openFromFile(cmn.DataFolder+"/wallets/"+name, pass)
 
 	if err == nil {
-		CurrentWallet = w
-		CurrentWallet.FilePath = cmn.DataFolder + "/wallets/" + name
-		CurrentWallet.Password = pass
+		w.FilePath = cmn.DataFolder + "/wallets/" + name
+		w.Password = pass
 
-		CurrentWallet.AuditNativeTokens()
+		w.AuditNativeTokens()
+		w.MarkUniqueTokens()
+		CurrentWallet = w
 	}
 	return err
 }
@@ -281,11 +282,40 @@ func (w *Wallet) GetTokenByAddress(b string, a common.Address) *cmn.Token {
 	return nil
 }
 
+func (w *Wallet) GetTokenBySymbol(b string, s string) *cmn.Token {
+	for _, t := range w.Tokens {
+		if t.Blockchain == b && t.Symbol == s {
+			if !t.Unique {
+				return nil // Ambiguous
+			}
+			return t
+		}
+	}
+	return nil
+}
+
 func (w *Wallet) DeleteToken(b string, a common.Address) {
 	for i, t := range w.Tokens {
 		if t.Blockchain == b && t.Address == a {
 			w.Tokens = append(w.Tokens[:i], w.Tokens[i+1:]...)
 			return
+		}
+	}
+}
+
+func (w *Wallet) MarkUniqueTokens() {
+	for _, b := range w.Blockchains {
+		for i, t := range w.Tokens {
+			if t.Blockchain == b.Name {
+				t.Unique = true
+				for j := 0; j < i; j++ {
+					if w.Tokens[j].Blockchain == b.Name && w.Tokens[j].Symbol == t.Symbol {
+						t.Unique = false
+						w.Tokens[j].Unique = false
+						break
+					}
+				}
+			}
 		}
 	}
 }

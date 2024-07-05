@@ -47,4 +47,5 @@ type Token struct {
 	Address    common.Address `json:"address"`
 	Decimals   int            `json:"decimals"`
 	Native     bool           `json:"native"`
+	Unique     bool           `json:"-"` // Unique name in the blockchain
 }
