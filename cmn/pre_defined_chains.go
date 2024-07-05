@@ -3,7 +3,7 @@ package cmn
 var PrefefinedBlockchains []Blockchain = []Blockchain{
 	{
 		Name:        "Ethereum",
-		Url:         "https://mainnet-infura.brave.com/",
+		Url:         "https://ethereum-rpc.publicnode.com",
 		ChainId:     1,
 		ExplorerUrl: "https://etherscan.io",
 		Currency:    "ETH",

@@ -23,6 +23,8 @@ func OpenClient(b *cmn.Blockchain) error {
 		return fmt.Errorf("OpenClient: Cannot dial to (%s). Error:(%v)", b.Url, err)
 	}
 
+	log.Trace().Msgf("OpenClient: Client opened to (%s)", b.Url)
+
 	b.Client = client
 	return nil
 }
