@@ -1,6 +1,7 @@
 package command
 
 import (
+	"math/big"
 	"sort"
 	"strings"
 
@@ -283,8 +284,12 @@ func Token_Process(c *Command, input string) {
 				return
 			}
 
-			ui.AddAddressShortLink(ui.Terminal.Screen, &a.Address)
-			ui.Printf(" %s %s %s\n", cmn.FormatAmount(balance, t.Decimals, true), t.Symbol, a.Name)
+			if balance.Cmp(big.NewInt(0)) != 0 {
+				ui.AddAddressShortLink(ui.Terminal.Screen, &a.Address)
+				ui.Printf(" ")
+				ui.AddValueSymbolLink(ui.Terminal.Screen, balance, t)
+				ui.Printf(" %s\n", a.Name)
+			}
 		}
 
 	default:

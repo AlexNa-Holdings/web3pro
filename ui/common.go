@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"math/big"
 	"strings"
 	"sync"
 
@@ -132,5 +133,35 @@ func AddAddressShortLink(v *gocui.View, a *common.Address) {
 	}
 
 	s := a.String()
-	v.AddLink(s[:6]+gocui.ICON_3DOTS+s[len(s)-4:], "copy "+a.String(), "Copy address", "")
+	v.AddLink(s[:6]+gocui.ICON_3DOTS+s[len(s)-4:], "copy "+a.String(), "Copy "+a.String(), "")
+}
+
+func AddValueLink(v *gocui.View, val *big.Int, t *cmn.Token) {
+	if v == nil {
+		return
+	}
+
+	if t == nil {
+		return
+	}
+
+	text := cmn.FormatAmount(val, t.Decimals, true)
+	n := cmn.Amount2Str(val, t.Decimals)
+
+	v.AddLink(text, "copy "+n, "Copy "+n, "")
+}
+
+func AddValueSymbolLink(v *gocui.View, val *big.Int, t *cmn.Token) {
+	if v == nil {
+		return
+	}
+
+	if t == nil {
+		return
+	}
+
+	text := cmn.FormatAmount(val, t.Decimals, true) + t.Symbol
+	n := cmn.Amount2Str(val, t.Decimals)
+
+	v.AddLink(text, "copy "+n, "Copy "+n, "")
 }

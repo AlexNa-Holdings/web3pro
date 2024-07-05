@@ -69,6 +69,29 @@ func IsInArray(slice []string, item string) bool {
 	return false
 }
 
+func Amount2Str(amount *big.Int, decimals int) string {
+	str := amount.String()
+
+	if len(str) <= decimals {
+		str = strings.Repeat("0", decimals-len(str)+1) + str // +1 for the dot
+	}
+
+	str = str[:len(str)-decimals] + "." + str[len(str)-decimals:]
+
+	// remove traling 0
+	for str[len(str)-1] == '0' {
+		str = str[:len(str)-1]
+	}
+
+	// remove trailing dot
+	if str[len(str)-1] == '.' {
+		str = str[:len(str)-1]
+	}
+
+	return str
+
+}
+
 func FormatAmount(v *big.Int, decimals int, fixed bool) string {
 	suffixes := []string{"", "K", "M", "B", "T", "Qa", "Qi", "^21", "^24", "^27", "^30", "^33", "^36", "^39",
 		"^42", "^45", "^48", "^51", "^54", "^57", "^60", "^63", "^66", "^69", "^72", "^75", "^76"}
