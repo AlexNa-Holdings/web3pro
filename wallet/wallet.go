@@ -52,6 +52,7 @@ func (w *Wallet) AuditNativeTokens() {
 		found := false
 		for _, t := range w.Tokens {
 			if t.Blockchain == b.Name && t.Native {
+				t.Symbol = b.Currency
 				found = true
 				break
 			}

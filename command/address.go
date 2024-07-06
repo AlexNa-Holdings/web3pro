@@ -1,16 +1,16 @@
 package command
 
 import (
+	"sort"
 	"strings"
 
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/ui"
 	"github.com/AlexNa-Holdings/web3pro/wallet"
-	"github.com/ethereum/go-ethereum/common"
 )
 
-var address_subcommands = []string{"remove", "add", "edit", "list", "use"}
+var address_subcommands = []string{"remove", "edit", "list", "use"}
 
 func NewAddressCommand() *Command {
 	return &Command{
@@ -22,7 +22,6 @@ Usage: address [COMMAND]
 Manage addresses
 
 Commands:
-  add [ADDRESS] [SIGNER] [PATH] - Add new address
   use [ADDRESS]                 - Use address
   list                          - List addresses
   remove [ADDRESS]              - Remove address  
@@ -63,22 +62,6 @@ func Address_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 		return "address", &options, subcommand
 	}
 
-	if subcommand == "add" {
-		address, signer, _ := p[2], p[3], p[4]
-
-		if common.IsHexAddress(address) {
-
-			for _, s := range wallet.CurrentWallet.Signers {
-				if cmn.Contains(s.Name, signer) {
-					options = append(options, ui.ACOption{
-						Name:   s.Name,
-						Result: command + " " + subcommand + " " + address + " '" + s.Name + "'"})
-				}
-			}
-			return "signer", &options, param
-		}
-	}
-
 	return "", &options, ""
 }
 
@@ -91,27 +74,9 @@ func Address_Process(c *Command, input string) {
 
 	//parse command subcommand parameters
 	tokens := cmn.SplitN(input, 5)
-	_, subcommand, p0, p1, p2 := tokens[0], tokens[1], tokens[2], tokens[3], tokens[4]
+	_, subcommand, p0 := tokens[0], tokens[1], tokens[2]
 
 	switch subcommand {
-	case "add":
-		if wallet.CurrentWallet == nil {
-			ui.PrintErrorf("\nNo wallet open\n")
-			return
-		}
-
-		if !common.IsHexAddress(p0) {
-			ui.PrintErrorf("\nInvalid address\n")
-			return
-		}
-
-		signer := wallet.CurrentWallet.GetSigner(p1)
-		if signer == nil {
-			ui.PrintErrorf("\nSigner not found\n")
-			return
-		}
-		ui.Gui.ShowPopup(ui.DlgAddressAdd(p0, p1, p2))
-
 	case "remove":
 		for i, a := range wallet.CurrentWallet.Addresses {
 			if a.Name == p0 {
@@ -137,9 +102,13 @@ func Address_Process(c *Command, input string) {
 		}
 		ui.PrintErrorf("\nAddress not found: %s\n", p0)
 	case "list", "":
+
+		sort.Slice(wallet.CurrentWallet.Addresses, func(i, j int) bool {
+			return wallet.CurrentWallet.Addresses[i].Name < wallet.CurrentWallet.Addresses[j].Name
+		})
 		ui.Printf("\nAddresses:\n")
 		for _, a := range wallet.CurrentWallet.Addresses {
-			ui.AddAddressLink(nil, a.Address)
+			ui.AddAddressShortLink(nil, a.Address)
 			ui.Printf(" ")
 			ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command address edit '"+a.Name+"'", "Edit address", "")
 			ui.Printf(" ")

@@ -146,6 +146,9 @@ func (p *Popup) Layout(g *Gui) error {
 		switch {
 		case p.Template != "":
 			err = p.RenderTemplate(p.Template)
+			if err != nil {
+				return err
+			}
 		case p.GlgLayout != nil:
 			err = p.GlgLayout(g)
 		default:

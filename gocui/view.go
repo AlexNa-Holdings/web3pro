@@ -1679,8 +1679,8 @@ func (v *View) RenderTemplate(template string) error {
 	for _, line := range lines {
 
 		if strings.Contains(line, "\t") {
-			log.Error().Msgf("tabs are not allowed in templates : %s", line)
-			return errors.New("tabs are not allowed in templates")
+			log.Warn().Msgf("tabs are not allowed in templates : %s", line)
+			line = strings.ReplaceAll(line, "\t", " ")
 		}
 
 		matches := re.FindAllStringIndex(line, -1)

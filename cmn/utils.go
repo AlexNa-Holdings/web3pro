@@ -101,7 +101,7 @@ func FormatAmount(v *big.Int, decimals int, fixed bool) string {
 	//if v == 0
 	if v.Cmp(big.NewInt(0)) == 0 || decimals < 0 || decimals > 75 {
 		if fixed {
-			return "  0.00    "
+			return "  0.00   "
 		}
 		return "0.00"
 	}
@@ -137,8 +137,6 @@ func FormatAmount(v *big.Int, decimals int, fixed bool) string {
 			break
 		}
 
-		log.Debug().Msgf("try: %s", strValue[decPos-exp*3-3:decPos-exp*3])
-
 		if strValue[decPos-exp*3-3:decPos-exp*3] != "000" {
 			break
 		}
@@ -160,7 +158,7 @@ func FormatAmount(v *big.Int, decimals int, fixed bool) string {
 	}
 
 	if fixed {
-		return fmt.Sprintf("%3s.%s%-4s", tree, two, suffix)
+		return fmt.Sprintf("%3s.%s%-3s", tree, two, suffix)
 
 	} else {
 

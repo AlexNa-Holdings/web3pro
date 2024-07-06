@@ -132,8 +132,14 @@ func Send_Process(c *Command, input string) {
 		return
 	}
 
+	a_from := w.GetAddress(from)
+	if a_from == nil {
+		ui.PrintErrorf("\nAddress not found: %s\n", from)
+		return
+	}
+
 	if to == "" || amount == "" {
-		ui.Gui.ShowPopup(ui.DlgSend(b, t, from, to, amount))
+		ui.Gui.ShowPopup(ui.DlgSend(b, t, a_from, to, amount))
 		return
 	}
 
@@ -154,5 +160,5 @@ func Send_Process(c *Command, input string) {
 		return
 	}
 
-	eth.HailToSend(b, t, common.HexToAddress(from), common.HexToAddress(to), amt)
+	eth.HailToSend(b, t, a_from, common.HexToAddress(to), amt)
 }

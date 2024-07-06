@@ -8,7 +8,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func DlgSend(b *cmn.Blockchain, t *cmn.Token, from, to string, amount string) *gocui.Popup {
+func DlgSend(b *cmn.Blockchain, t *cmn.Token, from *cmn.Address, to string, amount string) *gocui.Popup {
+
 	tc := cmn.AddressShortLinkTag(t.Address)
 	if t.Native {
 		tc = "Native"
@@ -16,9 +17,9 @@ func DlgSend(b *cmn.Blockchain, t *cmn.Token, from, to string, amount string) *g
 
 	template := `
      Blockchain: ` + b.Name + `
-          Token: <b>` + t.Symbol + `/<b>
+          Token: <b>` + t.Symbol + `</b>
  Token Contract: ` + tc + ` 
-           From: ` + from + `
+           From: ` + from.Name + `
              To: <i id:to size:43> 
          Amount: <i id:amount size:24> 
  <c>
@@ -41,11 +42,6 @@ func DlgSend(b *cmn.Blockchain, t *cmn.Token, from, to string, amount string) *g
 					to := v.GetInput("to")
 					amount := v.GetInput("amount")
 
-					if !common.IsHexAddress(from) {
-						Notification.ShowErrorf("Invalid address: %s", from)
-						return
-					}
-
 					if !common.IsHexAddress(to) {
 						Notification.ShowErrorf("Invalid address: %s", to)
 						return
@@ -58,7 +54,7 @@ func DlgSend(b *cmn.Blockchain, t *cmn.Token, from, to string, amount string) *g
 						return
 					}
 
-					eth.HailToSend(b, t, common.HexToAddress(from), common.HexToAddress(to), val)
+					eth.HailToSend(b, t, from, common.HexToAddress(to), val)
 					Gui.HidePopup()
 
 				case "button Cancel":

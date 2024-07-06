@@ -233,7 +233,7 @@ func Token_Process(c *Command, input string) {
 			if t.Native {
 				ui.Printf("Native")
 			} else {
-				ui.AddAddressShortLink(ui.Terminal.Screen, &t.Address)
+				ui.AddAddressShortLink(ui.Terminal.Screen, t.Address)
 				ui.Printf(" ")
 				ui.Terminal.Screen.AddLink(gocui.ICON_DELETE, "command token remove '"+t.Blockchain+"' '"+t.Address.String()+"'", "Remove token", "")
 				ui.Printf(" %s", t.Name)
@@ -291,7 +291,7 @@ func Token_Process(c *Command, input string) {
 					tid = t.Address.String()
 				}
 
-				ui.AddAddressShortLink(ui.Terminal.Screen, &a.Address)
+				ui.AddAddressShortLink(ui.Terminal.Screen, a.Address)
 				ui.Printf(" ")
 				ui.AddValueSymbolLink(ui.Terminal.Screen, balance, t)
 				ui.Printf(" %s ", a.Name)

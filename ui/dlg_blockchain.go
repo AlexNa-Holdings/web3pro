@@ -120,6 +120,7 @@ func DlgBlockchain(name string) *gocui.Popup {
 						})
 					}
 
+					wallet.CurrentWallet.AuditNativeTokens()
 					err = wallet.CurrentWallet.Save()
 					if err != nil {
 						Notification.ShowErrorf("Failed to save wallet: %s", err)

@@ -132,13 +132,9 @@ func AddAddressLink(v *gocui.View, a common.Address) {
 	v.AddLink(a.String(), "copy "+a.String(), "Copy address", "")
 }
 
-func AddAddressShortLink(v *gocui.View, a *common.Address) {
+func AddAddressShortLink(v *gocui.View, a common.Address) {
 	if v == nil {
 		v = Terminal.Screen
-	}
-
-	if a == nil {
-		return
 	}
 
 	s := a.String()

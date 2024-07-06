@@ -20,6 +20,7 @@ var PrefefinedBlockchains []Blockchain = []Blockchain{
 		Url:         "https://rpc.v4.testnet.pulsechain.com",
 		ChainId:     943,
 		ExplorerUrl: "https://alfajores-blockscout.celo-testnet.org",
+		Currency:    "tPLS",
 	},
 	{
 		Name:        "Binance Smart Chain Mainnet",
