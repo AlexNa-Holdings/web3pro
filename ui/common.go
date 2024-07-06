@@ -22,6 +22,9 @@ func Init() {
 
 	Is_ready = false
 
+	cmn.StandardOnClickHotspot = ProcessOnClickHotspot
+	cmn.StandardOnOverHotspot = ProcessOnOverHotspot
+
 	go ProcessHails()
 
 	Gui, err = gocui.NewGui(gocui.OutputTrue, true)
@@ -92,7 +95,7 @@ func Layout(g *gocui.Gui) error {
 	return nil
 }
 
-func ProcessClicksOnScreen(hs *gocui.Hotspot) {
+func ProcessOnClickHotspot(v *gocui.View, hs *gocui.Hotspot) {
 	index := strings.Index(hs.Value, " ")
 
 	if index == -1 {
@@ -108,24 +111,25 @@ func ProcessClicksOnScreen(hs *gocui.Hotspot) {
 		Notification.Show("Copied: " + param)
 	case "command":
 		Terminal.ProcessCommandFunc(param)
+	case "open":
+		cmn.OpenBrowser(param)
 	}
 }
 
-func AddAddressLink(v *gocui.View, a *common.Address) {
+func ProcessOnOverHotspot(v *gocui.View, hs *gocui.Hotspot) {
+	if hs != nil {
+		Bottom.Printf(hs.Tip)
+	} else {
+		Bottom.Printf("")
+	}
+}
+
+func AddAddressLink(v *gocui.View, a common.Address) {
 	if v == nil {
 		v = Terminal.Screen
 	}
 
-	if a == nil {
-		return
-	}
-
 	v.AddLink(a.String(), "copy "+a.String(), "Copy address", "")
-}
-
-func ShortAddress(a common.Address) string {
-	s := a.String()
-	return s[:6] + gocui.ICON_3DOTS + s[len(s)-4:]
 }
 
 func AddAddressShortLink(v *gocui.View, a *common.Address) {

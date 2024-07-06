@@ -3,11 +3,15 @@ package cmn
 import (
 	"fmt"
 	"math/big"
+	"os/exec"
 	"regexp"
+	"runtime"
 	"strings"
 
 	"github.com/AlexNa-Holdings/web3pro/core"
+	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/usb"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog/log"
 )
 
@@ -73,23 +77,19 @@ func Amount2Str(amount *big.Int, decimals int) string {
 	str := amount.String()
 
 	if len(str) <= decimals {
-		str = strings.Repeat("0", decimals-len(str)+1) + str // +1 for the dot
+		str = strings.Repeat("0", decimals-len(str)) + str
 	}
 
 	str = str[:len(str)-decimals] + "." + str[len(str)-decimals:]
 
-	// remove traling 0
-	for str[len(str)-1] == '0' {
-		str = str[:len(str)-1]
-	}
-
-	// remove trailing dot
-	if str[len(str)-1] == '.' {
-		str = str[:len(str)-1]
+	str = strings.TrimRight(str, "0")
+	str = strings.TrimRight(str, ".")
+	str = strings.TrimLeft(str, "0")
+	if str == "" || str[0] == '.' {
+		str = "0" + str
 	}
 
 	return str
-
 }
 
 func FormatAmount(v *big.Int, decimals int, fixed bool) string {
@@ -167,4 +167,91 @@ func FormatAmount(v *big.Int, decimals int, fixed bool) string {
 		return fmt.Sprintf("%s.%s%s", tree, two, suffix)
 	}
 
+}
+
+func (t *Token) Str2Value(str string) (*big.Int, error) {
+
+	log.Debug().Msgf("Str2Value: %s", str)
+
+	s := strings.TrimSpace(str)
+	if s == "" {
+		return nil, fmt.Errorf("empty string")
+	}
+
+	//check that only digits and max one dot
+	dot_index := -1
+	for i, c := range s {
+		if c == '.' {
+			if dot_index != -1 {
+				return nil, fmt.Errorf("Two dots in the string")
+			} else {
+				dot_index = i
+				continue
+			}
+		}
+		if c < '0' || c > '9' {
+			return nil, fmt.Errorf("invalid character: %c", c)
+		}
+	}
+
+	// remove dot
+	if dot_index != -1 {
+		s = s[:dot_index] + s[dot_index+1:]
+	} else {
+		dot_index = len(s)
+	}
+
+	log.Debug().Msgf("Removed dot: %s", s)
+
+	n_after_dot := len(s) - dot_index
+	if n_after_dot < t.Decimals {
+		s += strings.Repeat("0", t.Decimals-n_after_dot)
+	} else {
+		s = s[dot_index+t.Decimals:]
+	}
+
+	log.Debug().Msgf("Added zeros: %s", s)
+
+	value, ok := new(big.Int).SetString(s, 10)
+	if !ok {
+		return nil, fmt.Errorf("invalid number: %s", s)
+	}
+
+	return value, nil
+}
+
+func ShortAddress(a common.Address) string {
+	s := a.String()
+	return s[:6] + gocui.ICON_3DOTS + s[len(s)-4:]
+}
+
+func (t *Token) Value2Str(value *big.Int) string {
+	return Amount2Str(value, t.Decimals)
+}
+
+func AddressShortLinkTag(a common.Address) string {
+	sa := a.String()
+	sh := ShortAddress(a)
+	return fmt.Sprintf("<l text:'%s' action:'copy %s' tip:'Copy %s'>", sh, sa, sa)
+}
+
+func OpenBrowser(url string) error {
+	var cmd string
+	var args []string
+
+	switch runtime.GOOS {
+	case "windows":
+		cmd = "rundll32"
+		args = []string{"url.dll,FileProtocolHandler", url}
+	case "darwin":
+		cmd = "open"
+		args = []string{url}
+	case "linux":
+		cmd = "xdg-open"
+		args = []string{url}
+	default:
+		return fmt.Errorf("unsupported platform")
+	}
+
+	return exec.Command(cmd, args...).Start()
 }

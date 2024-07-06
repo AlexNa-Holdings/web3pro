@@ -2,22 +2,25 @@ package ui
 
 import (
 	"github.com/AlexNa-Holdings/web3pro/cmn"
+	"github.com/AlexNa-Holdings/web3pro/eth"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/rs/zerolog/log"
 )
 
 func DlgSend(b *cmn.Blockchain, t *cmn.Token, from, to string, amount string) *gocui.Popup {
-	tc := t.Address.String()
+	tc := cmn.AddressShortLinkTag(t.Address)
 	if t.Native {
 		tc = "Native"
 	}
 
 	template := `
      Blockchain: ` + b.Name + `
-          Token: ` + t.Symbol + `
+          Token: <b>` + t.Symbol + `/<b>
  Token Contract: ` + tc + ` 
            From: ` + from + `
-             To: <i id:to size:32> 
-         Amount: <i id:amount size:32> 
+             To: <i id:to size:43> 
+         Amount: <i id:amount size:24> 
  <c>
  <button text:Ok tip:"create wallet">  <button text:Cancel>`
 
@@ -35,20 +38,28 @@ func DlgSend(b *cmn.Blockchain, t *cmn.Token, from, to string, amount string) *g
 			if hs != nil {
 				switch hs.Value {
 				case "button Ok":
-					// pass := v.GetInput("pass")
+					to := v.GetInput("to")
+					amount := v.GetInput("amount")
 
-					// err := wallet.Open(name, pass)
+					if !common.IsHexAddress(from) {
+						Notification.ShowErrorf("Invalid address: %s", from)
+						return
+					}
 
-					// if err != nil {
-					// 	Notification.ShowErrorf("Error opening wallet: %s", err)
-					// 	v.SetInput("pass", "")
-					// 	v.SetFocus(0)
-					// 	break
-					// }
+					if !common.IsHexAddress(to) {
+						Notification.ShowErrorf("Invalid address: %s", to)
+						return
+					}
 
-					// Notification.Showf("Wallet %s open", name)
-					// Terminal.SetCommandPrefix(name)
-					// Gui.HidePopup()
+					val, err := t.Str2Value(amount)
+					if err != nil {
+						log.Error().Err(err).Msgf("Str2Value(%s) err: %v", amount, err)
+						Notification.ShowErrorf("Invalid amount: %s", amount)
+						return
+					}
+
+					eth.HailToSend(b, t, common.HexToAddress(from), common.HexToAddress(to), val)
+					Gui.HidePopup()
 
 				case "button Cancel":
 					Gui.HidePopup()

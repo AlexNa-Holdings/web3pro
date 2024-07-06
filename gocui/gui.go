@@ -1115,7 +1115,6 @@ func (g *Gui) onKey(ev *gocuiEvent) error {
 						title_length += len(v.Subtitle) + 3
 					}
 					if mx >= v.x0+2 && mx < v.x0+2+title_length {
-						log.Debug().Msgf("Click on title %s", v.Title)
 						if v.OnClickTitle != nil {
 							v.OnClickTitle(v)
 							return nil

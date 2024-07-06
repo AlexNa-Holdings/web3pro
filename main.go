@@ -51,11 +51,15 @@ func main() {
 		ui.Terminal.ProcessCommandFunc = command.Process
 
 		ui.Printf(ui.F(ui.Theme.EmFgColor) + WEB3_PRO + ui.F(ui.Terminal.Screen.FgColor) + "\n\n")
-		ui.Printf("by X:@AlexNa Telegram:@TheAlexNa\n")
+		ui.Printf("by X:")
+		ui.Terminal.Screen.AddLink("@AlexNa", "open https://x.com/AlexNa", "x.com/AlexNa", "")
+		ui.Printf(" Telegram:")
+		ui.Terminal.Screen.AddLink("@TheAlexNa", "open https://t.me/TheAlexNa", "t.me/TheAlexNa", "")
 
-		ui.Printf("Version: %s\n", cmn.VERSION)
+		ui.Printf("\nVersion: %s ", cmn.VERSION)
+		ui.Terminal.Screen.AddLink("GitHub", "open https://github.com/AlexNa-Holdings/web3pro", "github.com/AlexNa-Holdings/web3pro", "")
 
-		ui.Printf("Data folder: ")
+		ui.Printf("\nData folder: ")
 		ui.Terminal.Screen.AddLink(cmn.DataFolder, "copy "+cmn.DataFolder, "Copy data folder path to clipboard", "")
 		ui.Printf("\n")
 

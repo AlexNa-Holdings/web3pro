@@ -88,7 +88,7 @@ func Token_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 		for _, a := range w.Addresses {
 			if cmn.Contains(a.Name+a.Address.String(), adr) {
 				options = append(options, ui.ACOption{
-					Name:   ui.ShortAddress(a.Address) + " " + a.Name,
+					Name:   cmn.ShortAddress(a.Address) + " " + a.Name,
 					Result: command + " balance '" + b.Name + "' " + token + " " + a.Address.String()})
 			}
 		}

@@ -194,7 +194,7 @@ func Signer_Process(c *Command, input string) {
 
 		for i, s := range l {
 			ui.Printf("%2d: ", from+i)
-			ui.AddAddressLink(nil, &s.Address)
+			ui.AddAddressLink(nil, s.Address)
 			ui.Printf(" ")
 
 			if ea := wallet.CurrentWallet.GetAddress(s.Address.String()); ea == nil {

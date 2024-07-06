@@ -266,5 +266,14 @@ func (p *HailPaneType) SetView(g *gocui.Gui, x0, y0, x1, y1 int) {
 				}
 			}
 		}
+		p.View.OnOverHotspot = func(v *gocui.View, hs *gocui.Hotspot) {
+			if ActiveRequest == nil {
+				return
+			}
+
+			if ActiveRequest.OnOverHotspot != nil {
+				ActiveRequest.OnOverHotspot(ActiveRequest, v, hs)
+			}
+		}
 	}
 }

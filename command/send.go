@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/AlexNa-Holdings/web3pro/cmn"
+	"github.com/AlexNa-Holdings/web3pro/eth"
 	"github.com/AlexNa-Holdings/web3pro/ui"
 	"github.com/AlexNa-Holdings/web3pro/wallet"
 	"github.com/ethereum/go-ethereum/common"
@@ -70,7 +71,7 @@ func Send_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 		for _, a := range w.Addresses {
 			if cmn.Contains(a.Name+a.Address.String(), to) {
 				options = append(options, ui.ACOption{
-					Name: ui.ShortAddress(a.Address) + " " + a.Name,
+					Name: cmn.ShortAddress(a.Address) + " " + a.Name,
 					Result: command + " '" + b.Name + "' " + token + " " +
 						from + " " + a.Address.String() + " "})
 			}
@@ -82,7 +83,7 @@ func Send_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 		for _, a := range w.Addresses {
 			if cmn.Contains(a.Name+a.Address.String(), from) {
 				options = append(options, ui.ACOption{
-					Name:   ui.ShortAddress(a.Address) + " " + a.Name,
+					Name:   cmn.ShortAddress(a.Address) + " " + a.Name,
 					Result: command + " '" + b.Name + "' " + token + " " + a.Address.String() + " "})
 			}
 		}
@@ -126,16 +127,32 @@ func Send_Process(c *Command, input string) {
 		return
 	}
 
-	if from == "" || to == "" || amount == "" {
+	if !common.IsHexAddress(from) {
+		ui.PrintErrorf("\nInvalid address from: %s\n", from)
+		return
+	}
+
+	if to == "" || amount == "" {
 		ui.Gui.ShowPopup(ui.DlgSend(b, t, from, to, amount))
 		return
 	}
 
-	if !common.IsHexAddress(to) {
-		ui.PrintErrorf("\nInvalid address: %s\n", to)
+	if !common.IsHexAddress(from) {
+		ui.PrintErrorf("\nInvalid address from: %s\n", from)
 		return
 	}
 
-	// TODO: check amount
+	if !common.IsHexAddress(to) {
+		ui.PrintErrorf("\nInvalid address to: %s\n", to)
+		return
+	}
 
+	amt, err := t.Str2Value(amount)
+	if err != nil {
+		log.Error().Err(err).Msgf("Str2Value(%s) err: %v", amount, err)
+		ui.Notification.ShowErrorf("Invalid amount: %s", amount)
+		return
+	}
+
+	eth.HailToSend(b, t, common.HexToAddress(from), common.HexToAddress(to), amt)
 }

@@ -2,7 +2,6 @@ package core
 
 import (
 	"context"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
@@ -10,10 +9,8 @@ import (
 	"sort"
 	"strconv"
 	"sync"
-	"sync/atomic"
 	"time"
 
-	"github.com/AlexNa-Holdings/web3pro/wire"
 	"github.com/rs/zerolog/log"
 )
 
@@ -68,12 +65,10 @@ type USBDevice interface {
 }
 
 type session struct {
-	path       string
-	id         string
-	dev        USBDevice
-	call       int32 // atomic
-	readMutex  sync.Mutex
-	writeMutex sync.Mutex
+	path string
+	id   string
+	dev  USBDevice
+	call int32 // atomic
 }
 
 type EnumerateEntry struct {
@@ -549,175 +544,6 @@ const (
 	CallModeWrite     CallMode = 1
 	CallModeReadWrite CallMode = 2
 )
-
-func (c *Core) RawCall(
-	body []byte,
-	ssid string,
-	mode CallMode,
-	debug bool,
-	ctx context.Context,
-) ([]byte, error) {
-
-	c.callMutex.Lock()
-	c.callsInProgress++
-	c.callMutex.Unlock()
-
-	defer func() {
-		c.callMutex.Lock()
-		c.callsInProgress--
-		c.callMutex.Unlock()
-	}()
-
-	s := c.sessions(debug)
-	v, ok := s.Load(ssid)
-	if !ok {
-		return nil, ErrSessionNotFound
-	}
-
-	acquired := v.(*session)
-
-	if mode != CallModeWrite {
-		// This check is implemented only for /call and /read:
-		// - /call: Two /calls should not run concurrently. Otherwise the "message writes" and "message reads"
-		//   could interleave and the second caller would read the first response.
-		// - /read: Although this could be possible we do not have a use case for that at the moment.
-		// The check IS NOT implemented for /post, meaning /post can write even though some /call or /read
-		// is in progress (but there are some read/write locks later on).
-
-		Trace("checking other call on same session")
-		freeToCall := atomic.CompareAndSwapInt32(&acquired.call, 0, 1)
-		if !freeToCall {
-			return nil, ErrOtherCall
-		}
-
-		Trace("checking other call on same session done")
-		defer func() {
-			atomic.StoreInt32(&acquired.call, 0)
-		}()
-	}
-
-	finished := make(chan bool, 1)
-	defer func() {
-		finished <- true
-	}()
-
-	go func() {
-		select {
-		case <-finished:
-			return
-		case <-ctx.Done():
-			Tracef("detected request close %s, auto-release", ctx.Err().Error())
-			errRelease := c.release(ssid, false, debug)
-			if errRelease != nil {
-				// just log, since request is already closed
-				log.Error().Msgf("Error while releasing: %s", errRelease.Error())
-			}
-		}
-	}()
-
-	Trace("before actual logic")
-	bytes, err := c.readWriteDev(body, acquired, mode)
-	Trace("after actual logic")
-
-	return bytes, err
-}
-
-func (c *Core) writeDev(body []byte, device io.Writer) error {
-	Trace("decodeRaw")
-	msg, err := c.decodeRaw(body)
-	if err != nil {
-		return err
-	}
-
-	Trace("writeTo")
-	_, err = msg.WriteTo(device)
-	return err
-}
-
-func (c *Core) readDev(device io.Reader) ([]byte, error) {
-	Trace("readFrom")
-	msg, err := wire.ReadFrom(device)
-	if err != nil {
-		return nil, err
-	}
-
-	Trace("encoding back")
-	return c.encodeRaw(msg)
-}
-
-func (c *Core) readWriteDev(
-	body []byte,
-	acquired *session,
-	mode CallMode,
-) ([]byte, error) {
-
-	if mode == CallModeRead {
-		if len(body) != 0 {
-			return nil, errors.New("non-empty body on read mode")
-		}
-		Trace("skipping write")
-	} else {
-		acquired.writeMutex.Lock()
-		err := c.writeDev(body, acquired.dev)
-		acquired.writeMutex.Unlock()
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	if mode == CallModeWrite {
-		Trace("skipping read")
-		return []byte{0}, nil
-	}
-	acquired.readMutex.Lock()
-	defer acquired.readMutex.Unlock()
-	return c.readDev(acquired.dev)
-}
-
-func (c *Core) decodeRaw(body []byte) (*wire.Message, error) {
-	Trace("readAll")
-
-	Trace("decodeString")
-
-	if len(body) < 6 {
-		Trace("body too short")
-		return nil, ErrMalformedData
-	}
-
-	kind := binary.BigEndian.Uint16(body[0:2])
-	size := binary.BigEndian.Uint32(body[2:6])
-	data := body[6:]
-	if uint32(len(data)) != size {
-		Trace("wrong data length")
-		return nil, ErrMalformedData
-	}
-
-	if wire.Validate(data) != nil {
-		Trace("invalid data")
-		return nil, ErrMalformedData
-	}
-
-	Trace("returning")
-	return &wire.Message{
-		Kind: kind,
-		Data: data,
-	}, nil
-}
-
-func (c *Core) encodeRaw(msg *wire.Message) ([]byte, error) {
-	Trace("start")
-	var header [6]byte
-	data := msg.Data
-	kind := msg.Kind
-	size := uint32(len(msg.Data))
-
-	binary.BigEndian.PutUint16(header[0:2], kind)
-	binary.BigEndian.PutUint32(header[2:6], size)
-
-	res := append(header[:], data...)
-
-	return res, nil
-}
 
 func Tracef(format string, v ...interface{}) {
 	if USBLog {

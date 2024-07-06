@@ -6,8 +6,6 @@ package gocui
 
 import (
 	"errors"
-
-	"github.com/rs/zerolog/log"
 )
 
 // Editor interface must be satisfied by gocui editors.
@@ -201,7 +199,6 @@ func (v *View) MoveCursor(dx, dy int) {
 
 	maxX, maxY := v.Size()
 	newXOnScreen, newYOnScreen, _ := v.linesPosOnScreen(newX, newY)
-	log.Debug().Msgf("newXOnScreen: %d, newYOnScreen: %d", newXOnScreen, newYOnScreen)
 
 	// Set the view offset
 	if newYOnScreen > v.oy+maxY-1 {

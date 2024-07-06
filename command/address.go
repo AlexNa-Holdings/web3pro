@@ -56,7 +56,7 @@ func Address_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 		for _, a := range wallet.CurrentWallet.Addresses {
 			if cmn.Contains(a.Name+a.Address.String(), param) {
 				options = append(options, ui.ACOption{
-					Name:   ui.ShortAddress(a.Address) + " " + a.Name,
+					Name:   cmn.ShortAddress(a.Address) + " " + a.Name,
 					Result: command + " " + subcommand + " '" + a.Name + "'"})
 			}
 		}
@@ -139,7 +139,7 @@ func Address_Process(c *Command, input string) {
 	case "list", "":
 		ui.Printf("\nAddresses:\n")
 		for _, a := range wallet.CurrentWallet.Addresses {
-			ui.AddAddressLink(nil, &a.Address)
+			ui.AddAddressLink(nil, a.Address)
 			ui.Printf(" ")
 			ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command address edit '"+a.Name+"'", "Edit address", "")
 			ui.Printf(" ")

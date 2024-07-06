@@ -61,20 +61,8 @@ func (p *TerminalPane) SetView(g *gocui.Gui, x0, y0, x1, y1 int) {
 		p.Screen.Highlight = false
 		p.Screen.Editable = false
 		p.Screen.ScrollBar = true
-		p.Screen.OnOverHotspot = func(v *gocui.View, hs *gocui.Hotspot) {
-			if hs != nil {
-				Bottom.Printf(hs.Tip)
-			} else {
-				Bottom.Printf("")
-			}
-		}
-
-		p.Screen.OnClickHotspot = func(_ *gocui.View, hs *gocui.Hotspot) {
-
-			log.Trace().Msgf("Hotspot clicked: %s", hs.Value)
-
-			ProcessClicksOnScreen(hs)
-		}
+		p.Screen.OnOverHotspot = ProcessOnOverHotspot
+		p.Screen.OnClickHotspot = ProcessOnClickHotspot
 	}
 
 	prefix_len := len(p.CommandPrefix) + 1
@@ -89,6 +77,7 @@ func (p *TerminalPane) SetView(g *gocui.Gui, x0, y0, x1, y1 int) {
 			p.Input.Editable = true
 			p.Input.Highlight = false
 			p.Input.Editor = gocui.EditorFunc(terminalEditor)
+			p.Input.Autoscroll = true
 			g.SetCurrentView("terminal.input")
 		}
 

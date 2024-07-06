@@ -1196,8 +1196,11 @@ func AddCells(cells []cell, fg, bg Attribute, text string) []cell {
 	if cells == nil {
 		cells = []cell{}
 	}
-	for _, r := range text {
-		cells = append(cells, cell{r, bg, fg})
+
+	runes := []rune(text)
+
+	for i := 0; i < len(runes); i++ {
+		cells = append(cells, cell{runes[i], bg, fg})
 	}
 	return cells
 }
@@ -1576,7 +1579,7 @@ func (v *View) SetFocus(i int) {
 
 	v.ControlInFocus = i % len(v.Controls)
 
-	switch v.Controls[i].Type {
+	switch v.Controls[v.ControlInFocus].Type {
 	case C_INPUT, C_TEXT_INPUT:
 		v.gui.SetCurrentView(v.Controls[i].View.name)
 	default:
@@ -1674,6 +1677,12 @@ func (v *View) RenderTemplate(template string) error {
 	autowrap := false
 
 	for _, line := range lines {
+
+		if strings.Contains(line, "\t") {
+			log.Error().Msgf("tabs are not allowed in templates : %s", line)
+			return errors.New("tabs are not allowed in templates")
+		}
+
 		matches := re.FindAllStringIndex(line, -1)
 
 		splitted_lines := []string{}
