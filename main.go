@@ -29,8 +29,13 @@ ____/|__/  \___//_.___//____/ /_/     /_/    \____/ `
 func main() {
 	cmn.InitConfig()
 
+	// init globals
 	cmn.WalletTrezorDriver = signer_driver.NewTrezorDriver()
 	cmn.WalletMnemonicsDriver = signer_driver.NewMnemonicDriver()
+	cmn.Notify = ui.Notification.Show
+	cmn.Notifyf = ui.Notification.Showf
+	cmn.NotifyError = ui.Notification.ShowError
+	cmn.NotifyErrorf = ui.Notification.ShowErrorf
 
 	eth.LoadABIs()
 	command.Init()

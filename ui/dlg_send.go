@@ -43,14 +43,14 @@ func DlgSend(b *cmn.Blockchain, t *cmn.Token, from *cmn.Address, to string, amou
 					amount := v.GetInput("amount")
 
 					if !common.IsHexAddress(to) {
-						Notification.ShowErrorf("Invalid address: %s", to)
+						cmn.NotifyErrorf("Invalid address: %s", to)
 						return
 					}
 
 					val, err := t.Str2Value(amount)
 					if err != nil {
 						log.Error().Err(err).Msgf("Str2Value(%s) err: %v", amount, err)
-						Notification.ShowErrorf("Invalid amount: %s", amount)
+						cmn.NotifyErrorf("Invalid amount: %s", amount)
 						return
 					}
 

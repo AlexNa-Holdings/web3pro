@@ -2,6 +2,7 @@ package eth
 
 import (
 	"context"
+	"errors"
 	"math/big"
 
 	"github.com/AlexNa-Holdings/web3pro/cmn"
@@ -22,7 +23,7 @@ func GetERC20TokenInfo(b *cmn.Blockchain, address *common.Address) (string, stri
 		To: address,
 	}
 
-	msg.Data, err = ERC20.Pack("name")
+	msg.Data, err = ERC20_ABI.Pack("name")
 	if err != nil {
 		log.Error().Msgf("ConfigGetAddr: Cannot pack data. Error:(%v)", err)
 	}
@@ -33,13 +34,13 @@ func GetERC20TokenInfo(b *cmn.Blockchain, address *common.Address) (string, stri
 	var decodedResult struct {
 		Result string
 	}
-	err = ERC20.UnpackIntoInterface(&decodedResult, "name", output)
+	err = ERC20_ABI.UnpackIntoInterface(&decodedResult, "name", output)
 	if err != nil {
 		log.Error().Msgf("ConfigGetAddr:Cannot unpack data. Error:(%v)", err)
 	}
 	name := decodedResult.Result
 
-	msg.Data, err = ERC20.Pack("symbol")
+	msg.Data, err = ERC20_ABI.Pack("symbol")
 	if err != nil {
 		log.Error().Msgf("ConfigGetAddr: Cannot pack data. Error:(%v)", err)
 	}
@@ -47,13 +48,13 @@ func GetERC20TokenInfo(b *cmn.Blockchain, address *common.Address) (string, stri
 	if err != nil {
 		log.Error().Msgf("ConfigGetAddr: Cannot call contract. Error:(%v)", err)
 	}
-	err = ERC20.UnpackIntoInterface(&decodedResult, "symbol", output)
+	err = ERC20_ABI.UnpackIntoInterface(&decodedResult, "symbol", output)
 	if err != nil {
 		log.Error().Msgf("ConfigGetAddr:Cannot unpack data. Error:(%v)", err)
 	}
 	symbol := decodedResult.Result
 
-	msg.Data, err = ERC20.Pack("decimals")
+	msg.Data, err = ERC20_ABI.Pack("decimals")
 	if err != nil {
 		log.Error().Msgf("ConfigGetAddr: Cannot pack data. Error:(%v)", err)
 	}
@@ -64,7 +65,7 @@ func GetERC20TokenInfo(b *cmn.Blockchain, address *common.Address) (string, stri
 	var decodedResultD struct {
 		Result uint8
 	}
-	err = ERC20.UnpackIntoInterface(&decodedResultD, "decimals", output)
+	err = ERC20_ABI.UnpackIntoInterface(&decodedResultD, "decimals", output)
 	if err != nil {
 		log.Error().Msgf("ConfigGetAddr:Cannot unpack data. Error:(%v)", err)
 	}
@@ -90,7 +91,7 @@ func GetERC20Balance(b *cmn.Blockchain, t *cmn.Token, address common.Address) (*
 		To: &t.Address,
 	}
 
-	msg.Data, err = ERC20.Pack("balanceOf", address)
+	msg.Data, err = ERC20_ABI.Pack("balanceOf", address)
 	if err != nil {
 		log.Error().Msgf("GetERC20Balance: Cannot pack data. Error:(%v)", err)
 		return nil, err
@@ -106,7 +107,7 @@ func GetERC20Balance(b *cmn.Blockchain, t *cmn.Token, address common.Address) (*
 		Balance *big.Int
 	}
 
-	err = ERC20.UnpackIntoInterface(&decodedResult, "balanceOf", output)
+	err = ERC20_ABI.UnpackIntoInterface(&decodedResult, "balanceOf", output)
 	if err != nil {
 		log.Error().Msgf("GetERC20Balance: Cannot unpack data. Error:(%v)", err)
 		return nil, err
@@ -115,50 +116,31 @@ func GetERC20Balance(b *cmn.Blockchain, t *cmn.Token, address common.Address) (*
 	return decodedResult.Balance, nil
 }
 
-func GetERC20Transfer(b *cmn.Blockchain, t *cmn.Token, s *cmn.Signer, from *cmn.Address, to common.Address, amount *big.Int) ([]byte, error) {
+func ERC20Transfer(b *cmn.Blockchain, t *cmn.Token, s *cmn.Signer, from *cmn.Address, to common.Address, amount *big.Int) error {
+
+	log.Trace().Msgf("ERC20Transfer: Token:(%s) Blockchain:(%s) From:(%s) To:(%s) Amount:(%s)", t.Name, b.Name, from.Address.String(), to.String(), amount.String())
 
 	if t.Blockchain != b.Name {
-		log.Error().Msgf("GetERC20Balance: Token blockchain mismatch. Token:(%s) Blockchain:(%s)", t.Blockchain, b.Name)
-		return nil, nil
+		log.Error().Msgf("GetERC20Transfer: Token blockchain mismatch. Token:(%s) Blockchain:(%s)", t.Blockchain, b.Name)
+		return errors.New("token blockchain mismatch")
 	}
 
 	if from.Signer != s.Name {
 		log.Error().Msgf("GetERC20Transfer: Signer mismatch. Token:(%s) Blockchain:(%s)", from.Signer, s.Name)
-		return nil, nil
+		return errors.New("signer mismatch")
 	}
 
 	err := OpenClient(b)
 	if err != nil {
 		log.Error().Msgf("GetERC20Transfer: Failed to open client: %v", err)
-		return nil, err
+		return err
 	}
 
-	msg := ethereum.CallMsg{
-		From: from.Address,
-		To:   &t.Address,
-	}
-
-	msg.Data, err = ERC20.Pack("transfer", to, amount)
+	// Pack the transfer data
+	_, err = ERC20_ABI.Pack("transfer", to, amount)
 	if err != nil {
 		log.Error().Msgf("GetERC20Transfer: Cannot pack data. Error:(%v)", err)
-		return nil, err
 	}
 
-	output, err := b.Client.CallContract(context.Background(), msg, nil)
-	if err != nil {
-		log.Error().Msgf("GetERC20Transfer: Cannot call contract. Error:(%v)", err)
-		return nil, err
-	}
-
-	var decodedResult struct {
-		Result []byte
-	}
-
-	err = ERC20.UnpackIntoInterface(&decodedResult, "transfer", output)
-	if err != nil {
-		log.Error().Msgf("GetERC20Transfer: Cannot unpack data. Error:(%v)", err)
-		return nil, err
-	}
-
-	return decodedResult.Result, nil
+	return nil
 }

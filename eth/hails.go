@@ -56,6 +56,19 @@ Amount: ` + t.Value2Str(amount) + " " + t.Symbol + `
 			log.Debug().Msg("HailToSend closed")
 		},
 		OnOk: func(hr *cmn.HailRequest) {
+			if t.Native {
+				err := Transfer(b, s, from, to, amount)
+				if err != nil {
+					log.Error().Err(err).Msg("Error sending native tokens")
+					cmn.NotifyErrorf("Error sending native tokens: %v", err)
+				}
+			} else {
+				err := ERC20Transfer(b, t, s, from, to, amount)
+				if err != nil {
+					log.Error().Err(err).Msg("Error sending tokens")
+					cmn.NotifyErrorf("Error sending tokens: %v", err)
+				}
+			}
 		},
 		OnOverHotspot: func(hr *cmn.HailRequest, v *gocui.View, hs *gocui.Hotspot) {
 			cmn.StandardOnOverHotspot(v, hs)

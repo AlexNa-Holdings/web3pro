@@ -3,6 +3,7 @@ package cmn
 import (
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
@@ -18,6 +19,7 @@ type SignerDriver interface {
 	GetName(path string) (string, error) // only for HW wallets
 	GetAddresses(signer *Signer, path string, start_from int, count int) ([]Address, error)
 	PrintDetails(path string) string
+	SignTx(b *Blockchain, s *Signer, tx *types.Transaction, a *Address) (*types.Transaction, error)
 }
 
 var WalletTrezorDriver SignerDriver
@@ -25,6 +27,10 @@ var WalletMnemonicsDriver SignerDriver
 
 var StandardOnClickHotspot func(v *gocui.View, hs *gocui.Hotspot)
 var StandardOnOverHotspot func(v *gocui.View, hs *gocui.Hotspot)
+var Notify func(text string)
+var NotifyError func(text string)
+var Notifyf func(format string, args ...interface{})
+var NotifyErrorf func(format string, args ...interface{})
 
 type Address struct {
 	Name    string         `json:"name"`

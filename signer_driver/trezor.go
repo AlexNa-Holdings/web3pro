@@ -12,8 +12,9 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/core"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/signer_driver/trezorproto"
-	"github.com/ava-labs/coreth/accounts"
+	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/protobuf/proto"
 )
@@ -601,4 +602,7 @@ func (d TrezorDriver) PrintDetails(path string) string {
 	// r += fmt.Sprintf("  NoBackup: %t\n", SB(dev.NoBackup))
 
 	return r
+}
+func (d TrezorDriver) SignTx(b *cmn.Blockchain, s *cmn.Signer, tx *types.Transaction, a *cmn.Address) (*types.Transaction, error) {
+	return nil, nil // Not implemented
 }
