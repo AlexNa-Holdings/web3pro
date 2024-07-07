@@ -40,3 +40,18 @@ func BalanceOf(b *cmn.Blockchain, t *cmn.Token, address common.Address) (*big.In
 		return GetERC20Balance(b, t, address)
 	}
 }
+
+// // Create a call message for estimating gas
+// msg := ethereum.CallMsg{
+//     From:     fromAddress,
+//     To:       &toAddress,
+//     Value:    value,
+//     GasPrice: gasPrice,
+//     Data:     nil,
+// }
+
+// // Estimate the gas required
+// gasLimit, err := client.EstimateGas(context.Background(), msg)
+// if err != nil {
+//     log.Fatalf("Failed to estimate gas: %v", err)
+// }
