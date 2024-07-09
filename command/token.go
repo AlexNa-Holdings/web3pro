@@ -11,6 +11,7 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/ui"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/rs/zerolog/log"
 )
 
 var token_subcommands = []string{"remove", "add", "balance", "list"}
@@ -234,16 +235,23 @@ func Token_Process(c *Command, input string) {
 				price = cmn.FormatDollars(t.Price, true)
 			}
 
+			b := w.GetBlockchain(t.Blockchain)
+			if b == nil {
+				log.Error().Msgf("Blockchain not found: %s", t.Blockchain)
+				continue
+			}
+
 			ui.Printf("%-8s %s ", t.Symbol, price)
 
 			if t.Native {
-				ui.Printf("Native       ")
+				ui.Printf("Native          ")
 			} else {
 				ui.AddAddressShortLink(ui.Terminal.Screen, t.Address)
 				ui.Printf(" ")
+				ui.Terminal.Screen.AddLink(gocui.ICON_LINK, "open "+b.ExplorerLink(t.Address), b.ExplorerLink(t.Address), "")
 				ui.Terminal.Screen.AddLink(gocui.ICON_DELETE, "command token remove '"+t.Blockchain+"' '"+t.Address.String()+"'", "Remove token", "")
 			}
-			ui.Printf("  %s | %s", t.Blockchain, t.Name)
+			ui.Printf("%s | %s", t.Blockchain, t.Name)
 			ui.Printf("\n")
 		}
 

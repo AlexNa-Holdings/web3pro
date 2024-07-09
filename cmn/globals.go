@@ -59,7 +59,6 @@ type Blockchain struct {
 	ChainId       uint           `json:"chain_id"`
 	ExplorerUrl   string         `json:"explorer_url"`
 	Currency      string         `json:"currency"`
-	PriceFeedId   string         `json:"price_feed_id"`
 	WTokenAddress common.Address `json:"wrapped_native_token_address"`
 
 	Client *ethclient.Client `json:"-"`

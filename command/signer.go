@@ -139,7 +139,6 @@ func Signer_Process(c *Command, input string) {
 
 			if s.Type == "mnemonics" {
 				ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command s edit '"+s.Name+"'", "Edit signer '"+s.Name+"'", "")
-				ui.Printf(" ")
 			}
 			ui.Terminal.Screen.AddLink(gocui.ICON_DELETE, "command s remove '"+s.Name+"'", "Remove signer '"+s.Name+"'", "")
 			ui.Printf("\n")
@@ -151,7 +150,6 @@ func Signer_Process(c *Command, input string) {
 				}
 				ui.Printf("%-10s ", c)
 				ui.Terminal.Screen.AddLink(gocui.ICON_DELETE, "command s remove '"+c+"'", "Remove signer '"+c+"'", "")
-				ui.Printf(" ")
 				ui.Terminal.Screen.AddLink(gocui.ICON_PROMOTE, "command s promote '"+c+"'", "Promote copy to main signer", "")
 				ui.Printf("\n")
 			}
@@ -203,7 +201,6 @@ func Signer_Process(c *Command, input string) {
 			} else {
 				ui.Printf("%s ", ea.Name)
 				ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command address edit '"+ea.Name+"'", "Edit address", "")
-				ui.Printf(" ")
 				ui.Terminal.Screen.AddLink(gocui.ICON_DELETE, "command address remove '"+ea.Name+"'", "Remove address", "")
 			}
 			ui.Printf("\n")

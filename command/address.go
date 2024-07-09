@@ -110,9 +110,8 @@ func Address_Process(c *Command, input string) {
 			ui.AddAddressShortLink(nil, a.Address)
 			ui.Printf(" ")
 			ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command address edit '"+a.Name+"'", "Edit address", "")
-			ui.Printf(" ")
 			ui.Terminal.Screen.AddLink(gocui.ICON_DELETE, "command address remove '"+a.Name+"'", "Remove address", "")
-			ui.Printf("  %-14s (%s) \n", a.Name, a.Signer)
+			ui.Printf(" %-14s (%s) \n", a.Name, a.Signer)
 		}
 
 	case "edit":

@@ -161,7 +161,12 @@ func (p *HailPaneType) open(hail *cmn.HailRequest) {
 	}
 
 	if HailPane.View == nil {
-		HailPane.SetView(Gui, 0, 0, 10, 10)
+		maxX, _ := Gui.Size()
+		n_lines := gocui.EstimateTemplateLines(ActiveRequest.Template, maxX/2)
+
+		HailPane.MinHeight = n_lines + 2
+
+		HailPane.SetView(Gui, 0, 0, maxX/2, n_lines)
 		go HailPaneTimer()
 	}
 

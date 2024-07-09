@@ -63,7 +63,7 @@ func Price_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 			return "blockchain", &options, bchain
 		}
 
-		if b != nil {
+		if b != nil && (token == "" || !strings.HasSuffix(input, " ")) {
 			for _, t := range w.Tokens {
 				if t.Blockchain == bchain && cmn.Contains(t.Name+t.Symbol, token) {
 					tn := t.Address.String()
@@ -113,7 +113,6 @@ func Price_Process(c *Command, input string) {
 		}
 
 		ui.Printf("\nDiscovering trading pairs for token\n")
-		ui.Printf("Blockchain Price Feed ID: %s\n", b.PriceFeedId)
 		ui.Printf("Token name: %s\n", t.GetPrintName())
 		a := t.Address
 		if t.Native {
@@ -125,7 +124,7 @@ func Price_Process(c *Command, input string) {
 		ui.Printf("Feeder type: %s\n", t.PriceFeeder)
 		ui.Printf("Feeder Param: %s\n", t.PriceFeedParam)
 
-		pairs, err := price.GetPairs(b.PriceFeedId, a.Hex())
+		pairs, err := price.GetPairs(b.ChainId, a.Hex())
 		if err != nil {
 			ui.PrintErrorf("Error discovering trading pairs: %v\n", err)
 			return

@@ -27,17 +27,17 @@ const (
 )
 
 const (
-	ICON_DELETE   = "\U0000f057" //"\uf00d"
-	ICON_EDIT     = "\uf044"
-	ICON_COPY     = "\uf0c5"
-	ICON_DROPLIST = "\ueb6e"
-	ICON_PROMOTE  = "\ued65"
-	ICON_ADD      = "\ueadc"
+	ICON_DELETE   = "\U0000f057 " //"\uf00d"
+	ICON_EDIT     = "\uf044 "
+	ICON_COPY     = "\uf0c5 "
+	ICON_DROPLIST = "\ueb6e "
+	ICON_PROMOTE  = "\ued65 "
+	ICON_ADD      = "\ueadc "
 	ICON_3DOTS    = "\U000f01d8"
-	ICON_BACK     = "\U000f006e"
-	ICON_SEND     = "\U000f048a"
-	ICON_FEED     = "\uf09e"
-	ICON_LINK     = "\f08e"
+	ICON_BACK     = "\U000f006e "
+	ICON_SEND     = "\U000f048a "
+	ICON_LINK     = "\uf08e "
+	ICON_FEED     = "\uf09e "
 )
 
 const REGEX_TAGS = `<(/?\w+)((?:\s+\w+(?::(?:[^>\s]+|"[^"]*"|'[^']*'))?\s*)*)>`
@@ -1651,10 +1651,72 @@ func (v *View) SetList(id string, list []string) {
 	}
 }
 
+func EstimateTemplateLines(template string, width int) int {
+	n_lines := 0
+
+	if width < 3 {
+		return 0 // no space to render
+	}
+
+	lines := strings.Split(template, "\n")
+
+	if len(lines) == 0 {
+		return 0
+	}
+
+	autowrap := false
+
+	for _, line := range lines {
+		splitted_lines := []string{}
+
+		if autowrap {
+			spaces := []int{}
+			for calcLineWidth(line) > width && len(line) > 0 {
+				in_tag := false
+				for i, r := range line {
+					switch r {
+					case '<':
+						in_tag = true
+					case '>':
+						in_tag = false
+					case ' ':
+						if !in_tag {
+							spaces = append(spaces, i)
+						}
+					}
+				}
+
+				splited := false
+				for i := len(spaces) - 2; i > 0; i-- {
+					try := line[:spaces[i]]
+
+					if calcLineWidth(try) <= width {
+						splitted_lines = append(splitted_lines, try)
+						line = line[spaces[i]+1:]
+						splited = true
+						break
+					}
+				}
+
+				if !splited {
+					break
+				}
+			}
+		}
+
+		splitted_lines = append(splitted_lines, line)
+		n_lines += len(splitted_lines)
+	}
+
+	return n_lines
+}
+
 func (v *View) RenderTemplate(template string) error {
 	v.Clear()
 
-	if v.x1-v.x0 < 3 || v.y1-v.y0 < 3 {
+	width := v.x1 - v.x0 - 1
+
+	if width < 3 {
 		return nil // no space to render
 	}
 
@@ -1664,8 +1726,6 @@ func (v *View) RenderTemplate(template string) error {
 	if len(lines) == 0 {
 		return errors.New("empty template")
 	}
-
-	width := v.x1 - v.x0 - 1
 
 	centered := false
 	bold := false

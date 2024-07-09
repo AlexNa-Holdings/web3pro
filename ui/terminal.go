@@ -275,6 +275,8 @@ func terminalEditor(v *gocui.View, key gocui.Key, ch rune, mod gocui.Modifier) {
 
 				}
 			}
+		} else {
+			gocui.DefaultEditor.Edit(v, key, ch, mod)
 		}
 	default:
 		gocui.DefaultEditor.Edit(v, key, ch, mod)

@@ -1,11 +1,13 @@
 package eth
 
 import (
+	"context"
 	"fmt"
 	"math/big"
 
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/rs/zerolog/log"
 )
@@ -41,17 +43,26 @@ func BalanceOf(b *cmn.Blockchain, t *cmn.Token, address common.Address) (*big.In
 	}
 }
 
-// // Create a call message for estimating gas
-// msg := ethereum.CallMsg{
-//     From:     fromAddress,
-//     To:       &toAddress,
-//     Value:    value,
-//     GasPrice: gasPrice,
-//     Data:     nil,
-// }
+func SendTx(b *cmn.Blockchain, s *cmn.Signer, tx *types.Transaction, from *cmn.Address) error {
+	d, err := s.GetDriver()
+	if err != nil {
+		log.Error().Msgf("Transfer: Cannot get driver. Error:(%v)", err)
+		return err
+	}
 
-// // Estimate the gas required
-// gasLimit, err := client.EstimateGas(context.Background(), msg)
-// if err != nil {
-//     log.Fatalf("Failed to estimate gas: %v", err)
-// }
+	signedTx, err := d.SignTx(b, s, tx, from)
+	if err != nil {
+		log.Error().Msgf("Transfer: Cannot sign transaction. Error:(%v)", err)
+		return err
+	}
+
+	// Send the transaction
+	err = b.Client.SendTransaction(context.Background(), signedTx)
+	if err != nil {
+		log.Error().Msgf("Transfer: Cannot send transaction. Error:(%v)", err)
+		return err
+	}
+
+	cmn.Notifyf("Transaction sent: %s", signedTx.Hash().Hex())
+	return nil
+}

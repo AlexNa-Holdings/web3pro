@@ -15,6 +15,14 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+var chain_names = map[uint]string{
+	1:    "ethereum",
+	56:   "bsc",
+	137:  "polygon",
+	369:  "pulsechain",
+	8453: "base",
+}
+
 type DSResponse struct {
 	SchemaVersion string   `json:"schemaVersion"`
 	Pairs         []DSPair `json:"pairs"`
@@ -91,7 +99,7 @@ func extractBlockchainFromURL(pairURL string) (string, error) {
 	return "", fmt.Errorf("invalid URL format")
 }
 
-func DSListPairs(bchain string, tokenAddr string) ([]Pair, error) {
+func DSListPairs(chain_id uint, tokenAddr string) ([]Pair, error) {
 	url := fmt.Sprintf("https://api.dexscreener.com/latest/dex/tokens/%s", tokenAddr)
 	resp, err := http.Get(url)
 	if err != nil {
@@ -113,6 +121,11 @@ func DSListPairs(bchain string, tokenAddr string) ([]Pair, error) {
 		return nil, fmt.Errorf("failed to unmarshal JSON response: %w", err)
 	}
 
+	chain_name, ok := chain_names[chain_id]
+	if !ok {
+		return nil, fmt.Errorf("unknown chain id: %d", chain_id)
+	}
+
 	pairs := []Pair{}
 	for _, pair := range response.Pairs {
 
@@ -121,7 +134,7 @@ func DSListPairs(bchain string, tokenAddr string) ([]Pair, error) {
 			return nil, fmt.Errorf("failed to extract blockchain from URL: %w", err)
 		}
 
-		if chain != bchain {
+		if chain != chain_name {
 			continue
 		}
 
@@ -144,8 +157,14 @@ func DSListPairs(bchain string, tokenAddr string) ([]Pair, error) {
 	return pairs, nil
 }
 
-func DSGetPairs(bchain string, pairList string) ([]Pair, error) {
-	url := fmt.Sprintf("https://api.dexscreener.com/latest/dex/pairs/%s/%s", bchain, pairList)
+func DSGetPairs(chain_id uint, pairList string) ([]Pair, error) {
+
+	chain_name, ok := chain_names[chain_id]
+	if !ok {
+		return nil, fmt.Errorf("unknown chain id: %d", chain_id)
+	}
+
+	url := fmt.Sprintf("https://api.dexscreener.com/latest/dex/pairs/%s/%s", chain_name, pairList)
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to make GET request: %w", err)
@@ -174,7 +193,7 @@ func DSGetPairs(bchain string, pairList string) ([]Pair, error) {
 			return nil, fmt.Errorf("failed to extract blockchain from URL: %w", err)
 		}
 
-		if chain != bchain {
+		if chain != chain_name {
 			continue
 		}
 
@@ -202,7 +221,7 @@ func DSUpdate(w *cmn.Wallet) error {
 	for _, b := range w.Blockchains {
 		tokens_to_update := []*cmn.Token{}
 		for _, t := range w.Tokens {
-			if t.Blockchain == b.Name && t.PriceFeeder == "dexscreener" && t.PriceFeedParam != "" {
+			if t.Blockchain == b.Name && t.PriceFeeder == "dexscreener" && t.PriceFeedParam != "" && chain_names[b.ChainId] != "" {
 				tokens_to_update = append(tokens_to_update, t)
 			}
 		}
@@ -216,7 +235,7 @@ func DSUpdate(w *cmn.Wallet) error {
 		}
 
 		if len(pair_list) > 0 {
-			pairs, err := DSGetPairs(b.PriceFeedId, pair_list)
+			pairs, err := DSGetPairs(b.ChainId, pair_list)
 			if err != nil {
 				log.Error().Err(err).Msgf("DSUpdate: failed to get pairs from dexscreener: %v", err)
 				return fmt.Errorf("DSUpdate: failed to get pairs from dexscreener: %w", err)

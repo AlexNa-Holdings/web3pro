@@ -18,9 +18,9 @@ type Pair struct {
 
 var KNOWN_FEEDERS = []string{"dexscreener"}
 
-func GetPairs(bchain string, tokenAddr string) ([]Pair, error) {
+func GetPairs(chain_id uint, tokenAddr string) ([]Pair, error) {
 
-	list, err := DSListPairs(bchain, tokenAddr)
+	list, err := DSListPairs(chain_id, tokenAddr)
 	if err != nil {
 		return nil, err
 	}

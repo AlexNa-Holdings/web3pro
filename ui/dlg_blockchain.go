@@ -54,7 +54,6 @@ func DlgBlockchain(name string) *gocui.Popup {
 				v.SetInput("chainid", strconv.Itoa(int(bch.ChainId)))
 				v.SetInput("explorer", bch.ExplorerUrl)
 				v.SetInput("currency", bch.Currency)
-				v.SetInput("price_feed_id", bch.PriceFeedId)
 				if bch.WTokenAddress != (common.Address{}) {
 					v.SetInput("wtoken_address", bch.WTokenAddress.String())
 				}
@@ -125,7 +124,6 @@ func DlgBlockchain(name string) *gocui.Popup {
 						cmn.CurrentWallet.Blockchains[bch_index].ExplorerUrl = explorer
 						cmn.CurrentWallet.Blockchains[bch_index].Currency = currency
 						cmn.CurrentWallet.Blockchains[bch_index].WTokenAddress = wta
-						cmn.CurrentWallet.Blockchains[bch_index].PriceFeedId = v.GetInput("price_feed_id")
 					} else {
 						cmn.CurrentWallet.Blockchains = append(cmn.CurrentWallet.Blockchains, &cmn.Blockchain{
 							Name:          name,
@@ -134,7 +132,6 @@ func DlgBlockchain(name string) *gocui.Popup {
 							ExplorerUrl:   explorer,
 							Currency:      currency,
 							WTokenAddress: wta,
-							PriceFeedId:   v.GetInput("price_feed_id"),
 						})
 					}
 
@@ -160,7 +157,6 @@ func DlgBlockchain(name string) *gocui.Popup {
           Explorer: <i id:explorer size:32 value:"">
           Currency: <i id:currency size:32 value:"">
 Wrapped Token Addr: <i id:wtoken_address size:32 value:"">
- Price Feed ID: <i id:price_feed_id size:32 value:"">
 
  <c><button text:Ok tip:"create wallet">  <button text:Cancel>`,
 	}

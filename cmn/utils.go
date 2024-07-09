@@ -73,23 +73,59 @@ func IsInArray(slice []string, item string) bool {
 	return false
 }
 
+// func Amount2Str(amount *big.Int, decimals int) string {
+// 	str := amount.String()
+
+// 	if len(str) <= decimals {
+// 		str = strings.Repeat("0", decimals-len(str)) + str
+// 	}
+
+// 	str = str[:len(str)-decimals] + "." + str[len(str)-decimals:]
+
+// 	str = strings.TrimRight(str, "0")
+// 	str = strings.TrimRight(str, ".")
+// 	str = strings.TrimLeft(str, "0")
+// 	if str == "" || str[0] == '.' {
+// 		str = "0" + str
+// 	}
+
+// 	return str
+// }
+
 func Amount2Str(amount *big.Int, decimals int) string {
 	str := amount.String()
 
 	if len(str) <= decimals {
-		str = strings.Repeat("0", decimals-len(str)) + str
+		str = strings.Repeat("0", decimals-len(str)+1) + str
 	}
 
 	str = str[:len(str)-decimals] + "." + str[len(str)-decimals:]
 
+	// Trim trailing zeros and the decimal point if necessary
 	str = strings.TrimRight(str, "0")
 	str = strings.TrimRight(str, ".")
-	str = strings.TrimLeft(str, "0")
-	if str == "" || str[0] == '.' {
-		str = "0" + str
+
+	// Add commas to the integer part
+	parts := strings.Split(str, ".")
+	intPart := parts[0]
+	fracPart := ""
+	if len(parts) > 1 {
+		fracPart = parts[1]
 	}
 
-	return str
+	intPartWithCommas := ""
+	n := len(intPart)
+	for i, ch := range intPart {
+		if i > 0 && (n-i)%3 == 0 {
+			intPartWithCommas += ","
+		}
+		intPartWithCommas += string(ch)
+	}
+
+	if fracPart != "" {
+		return intPartWithCommas + "." + fracPart
+	}
+	return intPartWithCommas
 }
 
 func FormatDollars(a float64, fixed bool) string {
@@ -98,6 +134,41 @@ func FormatDollars(a float64, fixed bool) string {
 	bi, _ := bf.Int(nil)
 	r := FormatAmount(bi, 10, fixed, "$")
 	return r
+}
+
+func FormatDollarsNormal(num float64) string {
+	decimalPlaces := 4
+	// Format the number with the specified decimal places
+	format := fmt.Sprintf("%%.%df", decimalPlaces)
+	numberStr := fmt.Sprintf(format, num)
+
+	// Split the formatted number into integer and fractional parts
+	parts := strings.Split(numberStr, ".")
+	intPart := parts[0]
+	fracPart := ""
+	if len(parts) > 1 {
+		fracPart = parts[1]
+	}
+
+	// Insert commas as thousand separators in the integer part
+	intPartWithCommas := ""
+	n := len(intPart)
+	for i, ch := range intPart {
+		if i > 0 && (n-i)%3 == 0 {
+			intPartWithCommas += ","
+		}
+		intPartWithCommas += string(ch)
+	}
+
+	// Combine integer and fractional parts
+	if fracPart != "" {
+		return "$" + intPartWithCommas + "." + fracPart
+	}
+	return "$" + intPartWithCommas
+}
+
+func FormatUInt64(v uint64, fixed bool, prefix string) string {
+	return FormatAmount(new(big.Int).SetUint64(v), 0, fixed, prefix)
 }
 
 func FormatAmount(v *big.Int, decimals int, fixed bool, prefix string) string {
@@ -273,4 +344,27 @@ func (t *Token) GetPrintName() string {
 		return "(native)"
 	}
 	return t.Symbol
+}
+
+func (b *Blockchain) ExplorerLink(address common.Address) string {
+	if b.ExplorerUrl == "" {
+		return ""
+	}
+	if strings.HasSuffix(b.ExplorerUrl, "/") {
+		return b.ExplorerUrl + "address/" + address.Hex()
+	}
+
+	return b.ExplorerUrl + "/address/" + address.Hex()
+
+}
+
+func (t *Token) Float64(value *big.Int) float64 {
+	return Float64(value, t.Decimals)
+}
+
+func Float64(value *big.Int, decimals int) float64 {
+	f := new(big.Float).SetInt(value)
+	f = f.Quo(f, new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(decimals)), nil)))
+	r, _ := f.Float64()
+	return r
 }

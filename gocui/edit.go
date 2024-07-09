@@ -52,6 +52,10 @@ func simpleEditor(v *View, key Key, ch rune, mod Modifier) {
 		v.MoveCursor(-1, 0)
 	case KeyArrowRight:
 		v.MoveCursor(1, 0)
+	case KeyHome:
+		v.EditGotoToStartOfLine()
+	case KeyEnd:
+		v.EditGotoToEndOfLine()
 	case KeyTab:
 		v.EditWrite('\t')
 	case KeyEsc:
