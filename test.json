@@ -1,0 +1,236 @@
+{
+    "schemaVersion": "1.0.0",
+    "pairs": [
+        {
+            "chainId": "pulsechain",
+            "dexId": "9inch",
+            "url": "https://dexscreener.com/pulsechain/0x58304a2bc0aadd0eb541cf0c8333c85e8bf616a0",
+            "pairAddress": "0x58304a2Bc0AADd0eB541cF0C8333C85E8Bf616a0",
+            "labels": [
+                "v2"
+            ],
+            "baseToken": {
+                "address": "0xb528a9DB27A74dB802C74D0CCc40657efE5F0A45",
+                "name": "Content Reward Token",
+                "symbol": "SAVVA"
+            },
+            "quoteToken": {
+                "address": "0xefD766cCb38EaF1dfd701853BFCe31359239F305",
+                "name": "Dai Stablecoin from Ethereum",
+                "symbol": "DAI"
+            },
+            "priceNative": "0.0008955",
+            "priceUsd": "0.0008955",
+            "txns": {
+                "m5": {
+                    "buys": 0,
+                    "sells": 0
+                },
+                "h1": {
+                    "buys": 0,
+                    "sells": 0
+                },
+                "h6": {
+                    "buys": 1,
+                    "sells": 1
+                },
+                "h24": {
+                    "buys": 11,
+                    "sells": 18
+                }
+            },
+            "volume": {
+                "h24": 267.98,
+                "h6": 6.85,
+                "h1": 0,
+                "m5": 0
+            },
+            "priceChange": {
+                "m5": 0,
+                "h1": 0,
+                "h6": -0.02,
+                "h24": -1.53
+            },
+            "liquidity": {
+                "usd": 34488.04,
+                "base": 19255370,
+                "quote": 17244
+            },
+            "fdv": 223669,
+            "pairCreatedAt": 1718897695000,
+            "info": {
+                "imageUrl": "https://dd.dexscreener.com/ds-data/tokens/pulsechain/0xb528a9db27a74db802c74d0ccc40657efe5f0a45.png",
+                "websites": [
+                    {
+                        "label": "Website",
+                        "url": "https://savva.app"
+                    },
+                    {
+                        "label": "Docs",
+                        "url": "https://savva.app/docs/en/README"
+                    }
+                ],
+                "socials": [
+                    {
+                        "type": "telegram",
+                        "url": "https://t.me/savvaapp"
+                    }
+                ]
+            }
+        },
+        {
+            "chainId": "pulsechain",
+            "dexId": "9inch",
+            "url": "https://dexscreener.com/pulsechain/0xe506cebe71936ad3c8712d5ec5c84a47f5644e65",
+            "pairAddress": "0xE506cEbe71936Ad3C8712d5EC5C84a47f5644E65",
+            "labels": [
+                "v2"
+            ],
+            "baseToken": {
+                "address": "0xb528a9DB27A74dB802C74D0CCc40657efE5F0A45",
+                "name": "Content Reward Token",
+                "symbol": "SAVVA"
+            },
+            "quoteToken": {
+                "address": "0xA1077a294dDE1B09bB078844df40758a5D0f9a27",
+                "name": "Wrapped Pulse",
+                "symbol": "WPLS"
+            },
+            "priceNative": "22.8764",
+            "priceUsd": "0.0008989",
+            "txns": {
+                "m5": {
+                    "buys": 0,
+                    "sells": 0
+                },
+                "h1": {
+                    "buys": 0,
+                    "sells": 0
+                },
+                "h6": {
+                    "buys": 1,
+                    "sells": 1
+                },
+                "h24": {
+                    "buys": 20,
+                    "sells": 11
+                }
+            },
+            "volume": {
+                "h24": 286.04,
+                "h6": 6.84,
+                "h1": 0,
+                "m5": 0
+            },
+            "priceChange": {
+                "m5": 0,
+                "h1": 0,
+                "h6": 0.99,
+                "h24": -0.59
+            },
+            "liquidity": {
+                "usd": 30273.55,
+                "base": 16839177,
+                "quote": 385219910
+            },
+            "fdv": 224508,
+            "pairCreatedAt": 1718897395000,
+            "info": {
+                "imageUrl": "https://dd.dexscreener.com/ds-data/tokens/pulsechain/0xb528a9db27a74db802c74d0ccc40657efe5f0a45.png",
+                "websites": [
+                    {
+                        "label": "Website",
+                        "url": "https://savva.app"
+                    },
+                    {
+                        "label": "Docs",
+                        "url": "https://savva.app/docs/en/README"
+                    }
+                ],
+                "socials": [
+                    {
+                        "type": "telegram",
+                        "url": "https://t.me/savvaapp"
+                    }
+                ]
+            }
+        },
+        {
+            "chainId": "pulsechain",
+            "dexId": "9inch",
+            "url": "https://dexscreener.com/pulsechain/0xf34ed4dafbe561fc31c3e5a4e54170a0d6e86cff",
+            "pairAddress": "0xf34Ed4daFBE561fC31c3e5a4e54170a0d6E86CfF",
+            "labels": [
+                "v3"
+            ],
+            "baseToken": {
+                "address": "0xb528a9DB27A74dB802C74D0CCc40657efE5F0A45",
+                "name": "Content Reward Token",
+                "symbol": "SAVVA"
+            },
+            "quoteToken": {
+                "address": "0xefD766cCb38EaF1dfd701853BFCe31359239F305",
+                "name": "Dai Stablecoin from Ethereum",
+                "symbol": "DAI"
+            },
+            "priceNative": "0.0009115",
+            "priceUsd": "0.0009115",
+            "txns": {
+                "m5": {
+                    "buys": 0,
+                    "sells": 0
+                },
+                "h1": {
+                    "buys": 0,
+                    "sells": 0
+                },
+                "h6": {
+                    "buys": 0,
+                    "sells": 0
+                },
+                "h24": {
+                    "buys": 0,
+                    "sells": 2
+                }
+            },
+            "volume": {
+                "h24": 18.61,
+                "h6": 0,
+                "h1": 0,
+                "m5": 0
+            },
+            "priceChange": {
+                "m5": 0,
+                "h1": 0,
+                "h6": 0,
+                "h24": -0.39
+            },
+            "liquidity": {
+                "usd": 998.53,
+                "base": 200523,
+                "quote": 815.7512
+            },
+            "fdv": 227664,
+            "pairCreatedAt": 1718906755000,
+            "info": {
+                "imageUrl": "https://dd.dexscreener.com/ds-data/tokens/pulsechain/0xb528a9db27a74db802c74d0ccc40657efe5f0a45.png",
+                "websites": [
+                    {
+                        "label": "Website",
+                        "url": "https://savva.app"
+                    },
+                    {
+                        "label": "Docs",
+                        "url": "https://savva.app/docs/en/README"
+                    }
+                ],
+                "socials": [
+                    {
+                        "type": "telegram",
+                        "url": "https://t.me/savvaapp"
+                    }
+                ]
+            }
+        }
+    ]
+}

@@ -6,6 +6,7 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/wallet"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 // name == ""  mreans add new custom blockchain
@@ -54,6 +55,10 @@ func DlgBlockchain(name string) *gocui.Popup {
 				v.SetInput("chainid", strconv.Itoa(int(bch.ChainId)))
 				v.SetInput("explorer", bch.ExplorerUrl)
 				v.SetInput("currency", bch.Currency)
+				v.SetInput("price_feed_id", bch.PriceFeedId)
+				if bch.WTokenAddress != (common.Address{}) {
+					v.SetInput("wtoken_address", bch.WTokenAddress.String())
+				}
 			}
 		},
 		OnClose: func(v *gocui.View) {
@@ -104,19 +109,33 @@ func DlgBlockchain(name string) *gocui.Popup {
 						break
 					}
 
+					wtoken_address := v.GetInput("wtoken_address")
+					if wtoken_address != "" {
+						if !common.IsHexAddress(wtoken_address) {
+							Notification.ShowError("Invalid Wrapped Token Address")
+							break
+						}
+					}
+
+					wta := common.HexToAddress(wtoken_address)
+
 					if bch_index != -1 {
 						wallet.CurrentWallet.Blockchains[bch_index].Name = name
 						wallet.CurrentWallet.Blockchains[bch_index].Url = rpc
 						wallet.CurrentWallet.Blockchains[bch_index].ChainId = uint(chainid)
 						wallet.CurrentWallet.Blockchains[bch_index].ExplorerUrl = explorer
 						wallet.CurrentWallet.Blockchains[bch_index].Currency = currency
+						wallet.CurrentWallet.Blockchains[bch_index].WTokenAddress = wta
+						wallet.CurrentWallet.Blockchains[bch_index].PriceFeedId = v.GetInput("price_feed_id")
 					} else {
 						wallet.CurrentWallet.Blockchains = append(wallet.CurrentWallet.Blockchains, &cmn.Blockchain{
-							Name:        name,
-							Url:         rpc,
-							ChainId:     uint(chainid),
-							ExplorerUrl: explorer,
-							Currency:    currency,
+							Name:          name,
+							Url:           rpc,
+							ChainId:       uint(chainid),
+							ExplorerUrl:   explorer,
+							Currency:      currency,
+							WTokenAddress: wta,
+							PriceFeedId:   v.GetInput("price_feed_id"),
 						})
 					}
 
@@ -136,11 +155,13 @@ func DlgBlockchain(name string) *gocui.Popup {
 			}
 		},
 		Template: `
-          Name: <i id:name size:32 value:"">
-           RPC: <i id:rpc size:32 value:"">
-       ChainId: <i id:chainid size:32 value:"">
-      Explorer: <i id:explorer size:32 value:"">
-      Currency: <i id:currency size:32 value:"">
+              Name: <i id:name size:32 value:"">
+               RPC: <i id:rpc size:32 value:"">
+           ChainId: <i id:chainid size:32 value:"">
+          Explorer: <i id:explorer size:32 value:"">
+          Currency: <i id:currency size:32 value:"">
+Wrapped Token Addr: <i id:wtoken_address size:32 value:"">
+ Price Feed ID: <i id:price_feed_id size:32 value:"">
 
  <c><button text:Ok tip:"create wallet">  <button text:Cancel>`,
 	}

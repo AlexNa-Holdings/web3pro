@@ -1,19 +1,25 @@
 package cmn
 
+import "github.com/ethereum/go-ethereum/common"
+
 var PrefefinedBlockchains []Blockchain = []Blockchain{
 	{
-		Name:        "Ethereum",
-		Url:         "https://ethereum-rpc.publicnode.com",
-		ChainId:     1,
-		ExplorerUrl: "https://etherscan.io",
-		Currency:    "ETH",
+		Name:          "Ethereum",
+		Url:           "https://ethereum-rpc.publicnode.com",
+		ChainId:       1,
+		ExplorerUrl:   "https://etherscan.io",
+		PriceFeedId:   "ethereum",
+		WTokenAddress: common.HexToAddress("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"),
+		Currency:      "ETH",
 	},
 	{
-		Name:        "PulseChain",
-		Url:         "wss://rpc.pulsechain.com",
-		ChainId:     369,
-		ExplorerUrl: "https://pulsechain.com/explorer",
-		Currency:    "PLS",
+		Name:          "PulseChain",
+		Url:           "wss://rpc.pulsechain.com",
+		ChainId:       369,
+		ExplorerUrl:   "https://pulsechain.com/explorer",
+		Currency:      "PLS",
+		PriceFeedId:   "pulsechain",
+		WTokenAddress: common.HexToAddress("0xA1077a294dDE1B09bB078844df40758a5D0f9a27"),
 	},
 	{
 		Name:        "PulseChain Testnet v4",

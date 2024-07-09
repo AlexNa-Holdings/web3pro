@@ -92,7 +92,15 @@ func Amount2Str(amount *big.Int, decimals int) string {
 	return str
 }
 
-func FormatAmount(v *big.Int, decimals int, fixed bool) string {
+func FormatDollars(a float64, fixed bool) string {
+	bf := big.NewFloat(a)
+	bf = bf.Mul(bf, big.NewFloat(10000000000))
+	bi, _ := bf.Int(nil)
+	r := FormatAmount(bi, 10, fixed, "$")
+	return r
+}
+
+func FormatAmount(v *big.Int, decimals int, fixed bool, prefix string) string {
 	suffixes := []string{"", "K", "M", "B", "T", "Qa", "Qi", "^21", "^24", "^27", "^30", "^33", "^36", "^39",
 		"^42", "^45", "^48", "^51", "^54", "^57", "^60", "^63", "^66", "^69", "^72", "^75", "^76"}
 	negSuffixes := []string{"", "/K", "/M", "/B", "/T", "/Qa", "/Qi", "/^21", "/^24", "/^27", "/^30", "/^33",
@@ -158,11 +166,17 @@ func FormatAmount(v *big.Int, decimals int, fixed bool) string {
 	}
 
 	if fixed {
-		return fmt.Sprintf("%3s.%s%-3s", tree, two, suffix)
+		fixed_l := 3 + len(prefix)
+		s := prefix + tree
+		for len(s) < fixed_l {
+			s = " " + s
+		}
+
+		return fmt.Sprintf("%s.%s%-3s", s, two, suffix)
 
 	} else {
 
-		return fmt.Sprintf("%s.%s%s", tree, two, suffix)
+		return fmt.Sprintf("%s%s.%s%s", prefix, tree, two, suffix)
 	}
 
 }
@@ -252,4 +266,11 @@ func OpenBrowser(url string) error {
 	}
 
 	return exec.Command(cmd, args...).Start()
+}
+
+func (t *Token) GetPrintName() string {
+	if t.Native {
+		return "(native)"
+	}
+	return t.Symbol
 }

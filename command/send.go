@@ -1,6 +1,7 @@
 package command
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/AlexNa-Holdings/web3pro/cmn"
@@ -55,7 +56,7 @@ func Send_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 				}
 
 				options = append(options, ui.ACOption{
-					Name:   t.Symbol,
+					Name:   fmt.Sprintf("%-6s %s", t.Symbol, t.GetPrintName()),
 					Result: command + " '" + b.Name + "' " + id + " "})
 			}
 		}

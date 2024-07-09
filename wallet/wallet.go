@@ -275,16 +275,20 @@ func (w *Wallet) GetAddressByName(n string) *cmn.Address {
 }
 
 func (w *Wallet) GetToken(b string, a string) *cmn.Token {
-	t := w.GetTokenByAddress(b, common.HexToAddress(a))
-	if t == nil {
-		t = w.GetTokenBySymbol(b, a)
+	if common.IsHexAddress(a) {
+		t := w.GetTokenByAddress(b, common.HexToAddress(a))
+		if t != nil {
+			return t
+		}
 	}
-	return t
+
+	return w.GetTokenBySymbol(b, a)
 }
 
 func (w *Wallet) GetTokenByAddress(b string, a common.Address) *cmn.Token {
 	for _, t := range w.Tokens {
-		if t.Blockchain == b && !t.Native && t.Address == a {
+		if t.Blockchain == b && ((!t.Native && t.Address == a) ||
+			(t.Native && a == common.Address{})) {
 			return t
 		}
 	}

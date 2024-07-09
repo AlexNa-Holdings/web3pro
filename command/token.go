@@ -1,6 +1,7 @@
 package command
 
 import (
+	"fmt"
 	"math/big"
 	"sort"
 	"strings"
@@ -74,7 +75,7 @@ func Token_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 				}
 
 				options = append(options, ui.ACOption{
-					Name:   t.Symbol,
+					Name:   fmt.Sprintf("%-6s %s", t.Symbol, t.GetPrintName()),
 					Result: command + " balance '" + b.Name + "' " + id + " "})
 			}
 		}

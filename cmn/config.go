@@ -29,6 +29,7 @@ type SConfig struct {
 	Theme      string `yaml:"theme"`       // UI theme
 	TimeoutSec int    `yaml:"timeout_sec"` // default timeout for hail requests
 	USBLog     bool   `yaml:"usb_log"`     // log USB events
+	PriceFeed  string `yaml:"price_feed"`  // price feed
 }
 
 var Config *SConfig = &SConfig{ //Default config
@@ -37,6 +38,7 @@ var Config *SConfig = &SConfig{ //Default config
 	Theme:      "dark",
 	TimeoutSec: 60,
 	USBLog:     false,
+	PriceFeed:  "dexscreener",
 }
 
 func InitConfig() {

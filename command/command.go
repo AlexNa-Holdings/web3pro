@@ -35,6 +35,7 @@ func Init() {
 		NewAddressCommand(),
 		NewTokenCommand(),
 		NewSendCommand(),
+		NewPriceCommand(),
 	}
 }
 

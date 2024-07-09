@@ -41,21 +41,27 @@ type Address struct {
 }
 
 type Blockchain struct {
-	Name        string `json:"name"`
-	Url         string `json:"url"`
-	ChainId     uint   `json:"chain_id"`
-	ExplorerUrl string `json:"explorer_url"`
-	Currency    string `json:"currency"`
+	Name          string         `json:"name"`
+	Url           string         `json:"url"`
+	ChainId       uint           `json:"chain_id"`
+	ExplorerUrl   string         `json:"explorer_url"`
+	Currency      string         `json:"currency"`
+	PriceFeedId   string         `json:"price_feed_id"`
+	WTokenAddress common.Address `json:"wrapped_native_token_address"`
 
 	Client *ethclient.Client `json:"-"`
 }
 
 type Token struct {
-	Blockchain string         `json:"blockchain"`
-	Name       string         `json:"name"`
-	Symbol     string         `json:"symbol"`
-	Address    common.Address `json:"address"`
-	Decimals   int            `json:"decimals"`
-	Native     bool           `json:"native"`
-	Unique     bool           `json:"-"` // Unique name in the blockchain
+	Blockchain     string         `json:"blockchain"`
+	Name           string         `json:"name"`
+	Symbol         string         `json:"symbol"`
+	Address        common.Address `json:"address"`
+	Decimals       int            `json:"decimals"`
+	Native         bool           `json:"native"`
+	Unique         bool           `json:"-"` // Unique name in the blockchain
+	PriceFeeder    string         `json:"price_feeder"`
+	PriceFeedParam string         `json:"price_feed_id"`
+	Price          float64        `json:"price"`
+	PriceTimestamp int64          `json:"price_timestamp"` // Unix timestamp
 }
