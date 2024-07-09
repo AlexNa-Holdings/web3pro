@@ -1,8 +1,8 @@
 package ui
 
 import (
+	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
-	"github.com/AlexNa-Holdings/web3pro/wallet"
 )
 
 func DlgWaletOpen(name string) *gocui.Popup {
@@ -18,7 +18,7 @@ func DlgWaletOpen(name string) *gocui.Popup {
 				case "button Ok":
 					pass := v.GetInput("pass")
 
-					err := wallet.Open(name, pass)
+					err := cmn.Open(name, pass)
 
 					if err != nil {
 						Notification.ShowErrorf("Error opening wallet: %s", err)

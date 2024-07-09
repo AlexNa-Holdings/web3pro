@@ -7,7 +7,6 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/eth"
 	"github.com/AlexNa-Holdings/web3pro/ui"
-	"github.com/AlexNa-Holdings/web3pro/wallet"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog/log"
 )
@@ -27,11 +26,11 @@ Usage: send [BLOCKCHAIN] [TOKEN/ADDRESS] [FROM] [TO] amount
 
 func Send_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 
-	if wallet.CurrentWallet == nil {
+	if cmn.CurrentWallet == nil {
 		return "", nil, ""
 	}
 
-	w := wallet.CurrentWallet
+	w := cmn.CurrentWallet
 
 	options := []ui.ACOption{}
 	p := cmn.SplitN(input, 6)
@@ -102,12 +101,12 @@ func Send_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 }
 
 func Send_Process(c *Command, input string) {
-	if wallet.CurrentWallet == nil {
+	if cmn.CurrentWallet == nil {
 		ui.PrintErrorf("\nNo wallet open\n")
 		return
 	}
 
-	w := wallet.CurrentWallet
+	w := cmn.CurrentWallet
 
 	//parse command subcommand parameters
 	p := cmn.SplitN(input, 6)

@@ -1,6 +1,8 @@
 package cmn
 
 import (
+	"sync"
+
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -31,6 +33,17 @@ var Notify func(text string)
 var NotifyError func(text string)
 var Notifyf func(format string, args ...interface{})
 var NotifyErrorf func(format string, args ...interface{})
+
+type Wallet struct {
+	Name        string        `json:"name"`
+	Blockchains []*Blockchain `json:"blockchains"`
+	Signers     []*Signer     `json:"signers"`
+	Addresses   []*Address    `json:"addresses"`
+	Tokens      []*Token      `json:"tokens"`
+	FilePath    string        `json:"-"`
+	Password    string        `json:"-"`
+	WriteMutex  sync.Mutex    `json:"-"`
+}
 
 type Address struct {
 	Name    string         `json:"name"`

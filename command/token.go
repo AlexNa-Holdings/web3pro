@@ -10,7 +10,6 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/eth"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/ui"
-	"github.com/AlexNa-Holdings/web3pro/wallet"
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -39,11 +38,11 @@ Commands:
 
 func Token_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 
-	if wallet.CurrentWallet == nil {
+	if cmn.CurrentWallet == nil {
 		return "", nil, ""
 	}
 
-	w := wallet.CurrentWallet
+	w := cmn.CurrentWallet
 
 	options := []ui.ACOption{}
 	p := cmn.SplitN(input, 5)
@@ -110,12 +109,12 @@ func Token_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 }
 
 func Token_Process(c *Command, input string) {
-	if wallet.CurrentWallet == nil {
+	if cmn.CurrentWallet == nil {
 		ui.PrintErrorf("\nNo wallet open\n")
 		return
 	}
 
-	w := wallet.CurrentWallet
+	w := cmn.CurrentWallet
 
 	//parse command subcommand parameters
 	p := cmn.SplitN(input, 5)
@@ -229,16 +228,22 @@ func Token_Process(c *Command, input string) {
 			if chain != "" && t.Blockchain != chain {
 				continue
 			}
-			ui.Printf("  %-8s %-10s ", t.Symbol, t.Blockchain)
+
+			price := "          "
+			if t.Price != 0. {
+				price = cmn.FormatDollars(t.Price, true)
+			}
+
+			ui.Printf("%-8s %s ", t.Symbol, price)
 
 			if t.Native {
-				ui.Printf("Native")
+				ui.Printf("Native       ")
 			} else {
 				ui.AddAddressShortLink(ui.Terminal.Screen, t.Address)
 				ui.Printf(" ")
 				ui.Terminal.Screen.AddLink(gocui.ICON_DELETE, "command token remove '"+t.Blockchain+"' '"+t.Address.String()+"'", "Remove token", "")
-				ui.Printf(" %s", t.Name)
 			}
+			ui.Printf("  %s | %s", t.Blockchain, t.Name)
 			ui.Printf("\n")
 		}
 

@@ -3,17 +3,17 @@ package ui
 import (
 	"fmt"
 
+	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
-	"github.com/AlexNa-Holdings/web3pro/wallet"
 )
 
 func DlgAddressEdit(name string) *gocui.Popup {
 
-	if wallet.CurrentWallet == nil {
+	if cmn.CurrentWallet == nil {
 		return nil
 	}
 
-	currect_a := wallet.CurrentWallet.GetAddressByName(name)
+	currect_a := cmn.CurrentWallet.GetAddressByName(name)
 	if currect_a == nil {
 		return nil
 	}
@@ -55,7 +55,7 @@ Address: %s
 						break
 					}
 
-					for _, a := range wallet.CurrentWallet.Addresses {
+					for _, a := range cmn.CurrentWallet.Addresses {
 						if a != currect_a && a.Name == name {
 							Notification.ShowError("Name already exists")
 							break
@@ -65,7 +65,7 @@ Address: %s
 					currect_a.Name = name
 					currect_a.Tag = v.GetInput("tag")
 
-					err := wallet.CurrentWallet.Save()
+					err := cmn.CurrentWallet.Save()
 					if err != nil {
 						Notification.ShowErrorf("Error creating signer: %s", err)
 						break

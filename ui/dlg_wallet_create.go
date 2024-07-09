@@ -1,8 +1,8 @@
 package ui
 
 import (
+	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
-	"github.com/AlexNa-Holdings/web3pro/wallet"
 )
 
 func DlgWaletCreate() *gocui.Popup {
@@ -31,7 +31,7 @@ func DlgWaletCreate() *gocui.Popup {
 						break
 					}
 
-					if wallet.Exists(name) {
+					if cmn.Exists(name) {
 						Notification.ShowErrorf("Wallet %s already exists", name)
 						break
 					}
@@ -44,7 +44,7 @@ func DlgWaletCreate() *gocui.Popup {
 						break
 					}
 
-					err := wallet.Create(name, pass)
+					err := cmn.Create(name, pass)
 
 					if err != nil {
 						Notification.ShowErrorf("Error creating wallet: %s", err)

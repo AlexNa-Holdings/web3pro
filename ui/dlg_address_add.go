@@ -7,7 +7,6 @@ import (
 
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
-	"github.com/AlexNa-Holdings/web3pro/wallet"
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -65,23 +64,23 @@ Address: %s
 
 					a := common.HexToAddress(addr)
 
-					if wallet.CurrentWallet.GetAddress(a.String()) != nil {
+					if cmn.CurrentWallet.GetAddress(a.String()) != nil {
 						Notification.ShowError("Address already exists")
 						break
 					}
 
-					if wallet.CurrentWallet.GetAddressByName(name) != nil {
+					if cmn.CurrentWallet.GetAddressByName(name) != nil {
 						Notification.ShowError("Name already exists")
 						break
 					}
 
-					s := wallet.CurrentWallet.GetSigner(signer)
+					s := cmn.CurrentWallet.GetSigner(signer)
 					if s == nil {
 						Notification.ShowErrorf("Signer %s not found", signer)
 						break
 					}
 
-					wallet.CurrentWallet.Addresses = append(wallet.CurrentWallet.Addresses, &cmn.Address{
+					cmn.CurrentWallet.Addresses = append(cmn.CurrentWallet.Addresses, &cmn.Address{
 						Name:    name,
 						Address: a,
 						Signer:  s.Name,
@@ -89,7 +88,7 @@ Address: %s
 						Path:    path,
 					})
 
-					err := wallet.CurrentWallet.Save()
+					err := cmn.CurrentWallet.Save()
 					if err != nil {
 						Notification.ShowErrorf("Error creating signer: %s", err)
 						break

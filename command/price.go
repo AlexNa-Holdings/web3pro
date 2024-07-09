@@ -8,11 +8,10 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/price"
 	"github.com/AlexNa-Holdings/web3pro/ui"
-	"github.com/AlexNa-Holdings/web3pro/wallet"
 	"github.com/ethereum/go-ethereum/common"
 )
 
-var price_subcommands = []string{"set_feeder", "discover"}
+var price_subcommands = []string{"set_feeder", "discover", "update"}
 
 func NewPriceCommand() *Command {
 	return &Command{
@@ -32,11 +31,11 @@ Usage:
 }
 
 func Price_AutoComplete(input string) (string, *[]ui.ACOption, string) {
-	if wallet.CurrentWallet == nil {
+	if cmn.CurrentWallet == nil {
 		return "", nil, ""
 	}
 
-	w := wallet.CurrentWallet
+	w := cmn.CurrentWallet
 
 	options := []ui.ACOption{}
 	p := cmn.SplitN(input, 5)
@@ -85,11 +84,11 @@ func Price_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 }
 
 func Price_Process(c *Command, input string) {
-	if wallet.CurrentWallet == nil {
+	if cmn.CurrentWallet == nil {
 		return
 	}
 
-	w := wallet.CurrentWallet
+	w := cmn.CurrentWallet
 
 	p := cmn.SplitN(input, 6)
 	subcommand, bchain, token := p[1], p[2], p[3]
@@ -187,6 +186,15 @@ func Price_Process(c *Command, input string) {
 		}
 
 		ui.Printf("Price feeder set for trading pair\n")
+
+	case "update":
+		err := price.Update(w)
+		if err != nil {
+			ui.PrintErrorf("Error updating price feeders: %v\n", err)
+			return
+		}
+
+		cmn.Notify("Price feeders updated")
 
 	default:
 		ui.PrintErrorf("Invalid subcommand: %s\n", subcommand)

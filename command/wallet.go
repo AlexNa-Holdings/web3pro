@@ -6,7 +6,6 @@ import (
 
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/ui"
-	"github.com/AlexNa-Holdings/web3pro/wallet"
 )
 
 var wallet_subcommands = []string{"close", "create", "list", "open"}
@@ -53,7 +52,7 @@ func Wallet_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 			return "", nil, param
 		}
 
-		files := wallet.List()
+		files := cmn.WalletList()
 
 		for _, file := range files {
 			if param == "" || strings.Contains(file, param) {
@@ -88,15 +87,15 @@ func Wallet_Process(c *Command, input string) {
 	case "create":
 		ui.Gui.ShowPopup(ui.DlgWaletCreate())
 	case "close":
-		if wallet.CurrentWallet != nil {
-			wallet.CurrentWallet = nil
+		if cmn.CurrentWallet != nil {
+			cmn.CurrentWallet = nil
 			ui.Terminal.SetCommandPrefix(ui.DEFAULT_COMMAND_PREFIX)
 			ui.Notification.Show("Wallet closed")
 		} else {
 			ui.PrintErrorf("No wallet open")
 		}
 	case "list":
-		files := wallet.List()
+		files := cmn.WalletList()
 		if files == nil {
 			ui.PrintErrorf("Error reading directory")
 			return

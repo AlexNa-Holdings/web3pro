@@ -5,14 +5,13 @@ import (
 
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
-	"github.com/AlexNa-Holdings/web3pro/wallet"
 	"github.com/ethereum/go-ethereum/common"
 )
 
 // name == ""  mreans add new custom blockchain
 func DlgBlockchain(name string) *gocui.Popup {
 
-	if wallet.CurrentWallet == nil {
+	if cmn.CurrentWallet == nil {
 		Notification.ShowError("No wallet open")
 		return nil
 	}
@@ -20,7 +19,7 @@ func DlgBlockchain(name string) *gocui.Popup {
 	bch_index := -1
 
 	if name != "" {
-		for i, bch := range wallet.CurrentWallet.Blockchains {
+		for i, bch := range cmn.CurrentWallet.Blockchains {
 			if bch.Name == name {
 				bch_index = i
 				break
@@ -49,7 +48,7 @@ func DlgBlockchain(name string) *gocui.Popup {
 		},
 		OnOpen: func(v *gocui.View) {
 			if bch_index != -1 {
-				bch := wallet.CurrentWallet.Blockchains[bch_index]
+				bch := cmn.CurrentWallet.Blockchains[bch_index]
 				v.SetInput("name", bch.Name)
 				v.SetInput("rpc", bch.Url)
 				v.SetInput("chainid", strconv.Itoa(int(bch.ChainId)))
@@ -76,7 +75,7 @@ func DlgBlockchain(name string) *gocui.Popup {
 						break
 					}
 
-					for i, bch := range wallet.CurrentWallet.Blockchains {
+					for i, bch := range cmn.CurrentWallet.Blockchains {
 						if bch.Name == name && (i == -1 || i != bch_index) {
 							Notification.ShowErrorf("Blockchain %s already exists", name)
 							break
@@ -120,15 +119,15 @@ func DlgBlockchain(name string) *gocui.Popup {
 					wta := common.HexToAddress(wtoken_address)
 
 					if bch_index != -1 {
-						wallet.CurrentWallet.Blockchains[bch_index].Name = name
-						wallet.CurrentWallet.Blockchains[bch_index].Url = rpc
-						wallet.CurrentWallet.Blockchains[bch_index].ChainId = uint(chainid)
-						wallet.CurrentWallet.Blockchains[bch_index].ExplorerUrl = explorer
-						wallet.CurrentWallet.Blockchains[bch_index].Currency = currency
-						wallet.CurrentWallet.Blockchains[bch_index].WTokenAddress = wta
-						wallet.CurrentWallet.Blockchains[bch_index].PriceFeedId = v.GetInput("price_feed_id")
+						cmn.CurrentWallet.Blockchains[bch_index].Name = name
+						cmn.CurrentWallet.Blockchains[bch_index].Url = rpc
+						cmn.CurrentWallet.Blockchains[bch_index].ChainId = uint(chainid)
+						cmn.CurrentWallet.Blockchains[bch_index].ExplorerUrl = explorer
+						cmn.CurrentWallet.Blockchains[bch_index].Currency = currency
+						cmn.CurrentWallet.Blockchains[bch_index].WTokenAddress = wta
+						cmn.CurrentWallet.Blockchains[bch_index].PriceFeedId = v.GetInput("price_feed_id")
 					} else {
-						wallet.CurrentWallet.Blockchains = append(wallet.CurrentWallet.Blockchains, &cmn.Blockchain{
+						cmn.CurrentWallet.Blockchains = append(cmn.CurrentWallet.Blockchains, &cmn.Blockchain{
 							Name:          name,
 							Url:           rpc,
 							ChainId:       uint(chainid),
@@ -139,8 +138,8 @@ func DlgBlockchain(name string) *gocui.Popup {
 						})
 					}
 
-					wallet.CurrentWallet.AuditNativeTokens()
-					err = wallet.CurrentWallet.Save()
+					cmn.CurrentWallet.AuditNativeTokens()
+					err = cmn.CurrentWallet.Save()
 					if err != nil {
 						Notification.ShowErrorf("Failed to save wallet: %s", err)
 						return

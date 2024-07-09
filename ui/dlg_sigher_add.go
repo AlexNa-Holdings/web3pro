@@ -6,7 +6,6 @@ import (
 
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
-	"github.com/AlexNa-Holdings/web3pro/wallet"
 	"github.com/tyler-smith/go-bip39"
 )
 
@@ -55,7 +54,7 @@ cancel and verify the device.
 			v.SetInput("name", name)
 
 			names := []string{""}
-			for _, s := range wallet.CurrentWallet.Signers {
+			for _, s := range cmn.CurrentWallet.Signers {
 				if s.Type == t {
 					names = append(names, s.Name)
 				}
@@ -71,7 +70,7 @@ cancel and verify the device.
 			if hs != nil {
 				switch hs.Value {
 				case "button Ok":
-					if wallet.CurrentWallet == nil {
+					if cmn.CurrentWallet == nil {
 						Notification.ShowError("No wallet open")
 						break
 					}
@@ -85,7 +84,7 @@ cancel and verify the device.
 							break
 						}
 
-						if wallet.CurrentWallet.GetSigner(name) != nil {
+						if cmn.CurrentWallet.GetSigner(name) != nil {
 							Notification.ShowErrorf("Signer %s already exists", name)
 							break
 						}
@@ -102,7 +101,7 @@ cancel and verify the device.
 							break
 						}
 
-						wallet.CurrentWallet.Signers = append(wallet.CurrentWallet.Signers, &cmn.Signer{
+						cmn.CurrentWallet.Signers = append(cmn.CurrentWallet.Signers, &cmn.Signer{
 							Name: name,
 							Type: t,
 							SN:   hex.EncodeToString(m[:]),
@@ -110,13 +109,13 @@ cancel and verify the device.
 
 					} else { // not mnemonics
 
-						if wallet.CurrentWallet.GetSigner(name) != nil {
+						if cmn.CurrentWallet.GetSigner(name) != nil {
 							Notification.ShowErrorf("Signer %s already exists", name)
 							break
 						}
 
 						if copyof != "" {
-							ms := wallet.CurrentWallet.GetSigner(copyof)
+							ms := cmn.CurrentWallet.GetSigner(copyof)
 							if ms != nil {
 								ms.Copies = append(ms.Copies, name)
 							} else {
@@ -124,14 +123,14 @@ cancel and verify the device.
 								break
 							}
 						} else {
-							wallet.CurrentWallet.Signers = append(wallet.CurrentWallet.Signers, &cmn.Signer{
+							cmn.CurrentWallet.Signers = append(cmn.CurrentWallet.Signers, &cmn.Signer{
 								Name: name,
 								Type: t,
 							})
 						}
 					}
 
-					err := wallet.CurrentWallet.Save()
+					err := cmn.CurrentWallet.Save()
 					if err != nil {
 						Notification.ShowErrorf("Error creating signer: %s", err)
 						break

@@ -6,7 +6,6 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/ui"
-	"github.com/AlexNa-Holdings/web3pro/wallet"
 )
 
 var usb_subcommands = []string{"list"}
@@ -75,8 +74,8 @@ func Usb_Process(c *Command, input string) {
 			ui.Printf("%02d %-7s %s ", n, t, device_name)
 			n++
 
-			if wallet.CurrentWallet != nil {
-				es := wallet.CurrentWallet.GetSigner(device_name)
+			if cmn.CurrentWallet != nil {
+				es := cmn.CurrentWallet.GetSigner(device_name)
 				if es != nil {
 					ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command s edit '"+device_name+"'", "Edit signer", "")
 				} else {

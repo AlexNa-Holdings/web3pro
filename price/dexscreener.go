@@ -8,7 +8,10 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/AlexNa-Holdings/web3pro/cmn"
+	"github.com/AlexNa-Holdings/web3pro/ui"
 	"github.com/rs/zerolog/log"
 )
 
@@ -88,7 +91,7 @@ func extractBlockchainFromURL(pairURL string) (string, error) {
 	return "", fmt.Errorf("invalid URL format")
 }
 
-func DSGetPairs(bchain string, tokenAddr string) ([]Pair, error) {
+func DSListPairs(bchain string, tokenAddr string) ([]Pair, error) {
 	url := fmt.Sprintf("https://api.dexscreener.com/latest/dex/tokens/%s", tokenAddr)
 	resp, err := http.Get(url)
 	if err != nil {
@@ -139,4 +142,100 @@ func DSGetPairs(bchain string, tokenAddr string) ([]Pair, error) {
 	}
 
 	return pairs, nil
+}
+
+func DSGetPairs(bchain string, pairList string) ([]Pair, error) {
+	url := fmt.Sprintf("https://api.dexscreener.com/latest/dex/pairs/%s/%s", bchain, pairList)
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("failed to make GET request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("received non-OK HTTP status: %s", resp.Status)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	var response DSResponse
+	if err := json.Unmarshal(body, &response); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal JSON response: %w", err)
+	}
+
+	pairs := []Pair{}
+	for _, pair := range response.Pairs {
+
+		chain, err := extractBlockchainFromURL(pair.URL)
+		if err != nil {
+			return nil, fmt.Errorf("failed to extract blockchain from URL: %w", err)
+		}
+
+		if chain != bchain {
+			continue
+		}
+
+		price, err := strconv.ParseFloat(pair.PriceUsd, 64)
+		if err != nil {
+			log.Error().Err(err).Msgf("ParseFloat(%s) err: %v", pair.PriceUsd, err)
+		}
+
+		pairs = append(pairs,
+			Pair{
+				PriceFeeder: "dexscreener",
+				PairAddress: pair.PairAddress,
+				BaseToken:   pair.BaseToken.Symbol,
+				QuoteToken:  pair.QuoteToken.Symbol,
+				PriceUsd:    price,
+				Liquidity:   pair.Liquidity.USD,
+			})
+	}
+
+	return pairs, nil
+}
+
+func DSUpdate(w *cmn.Wallet) error {
+
+	for _, b := range w.Blockchains {
+		tokens_to_update := []*cmn.Token{}
+		for _, t := range w.Tokens {
+			if t.Blockchain == b.Name && t.PriceFeeder == "dexscreener" && t.PriceFeedParam != "" {
+				tokens_to_update = append(tokens_to_update, t)
+			}
+		}
+
+		pair_list := ""
+		for _, t := range tokens_to_update {
+			if pair_list != "" {
+				pair_list += ","
+			}
+			pair_list += t.PriceFeedParam
+		}
+
+		if len(pair_list) > 0 {
+			pairs, err := DSGetPairs(b.PriceFeedId, pair_list)
+			if err != nil {
+				log.Error().Err(err).Msgf("DSUpdate: failed to get pairs from dexscreener: %v", err)
+				return fmt.Errorf("DSUpdate: failed to get pairs from dexscreener: %w", err)
+			}
+
+			if len(pairs) != len(tokens_to_update) {
+				log.Error().Msg("DSUpdate: number of pairs does not match number of tokens")
+				return fmt.Errorf("DSUpdate: number of pairs does not match number of tokens")
+			}
+
+			for i, t := range tokens_to_update {
+				t.Price = pairs[i].PriceUsd
+				t.PriceTimestamp = time.Now().Unix()
+			}
+		}
+
+	}
+
+	ui.Printf("Price feed updated\n")
+
+	return nil
 }

@@ -6,7 +6,6 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/ui"
-	"github.com/AlexNa-Holdings/web3pro/wallet"
 	"github.com/rs/zerolog/log"
 )
 
@@ -48,8 +47,8 @@ func Blockchain_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 	}
 
 	if subcommand == "use" || subcommand == "remove" || subcommand == "edit" {
-		if wallet.CurrentWallet != nil {
-			for _, chain := range wallet.CurrentWallet.Blockchains {
+		if cmn.CurrentWallet != nil {
+			for _, chain := range cmn.CurrentWallet.Blockchains {
 				if cmn.Contains(chain.Name, param) {
 					options = append(options, ui.ACOption{
 						Name: chain.Name, Result: command + " " + subcommand + " '" + chain.Name + "'"})
@@ -82,7 +81,7 @@ func Blockchain_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 
 func Blockchain_Process(c *Command, input string) {
 
-	if wallet.CurrentWallet == nil {
+	if cmn.CurrentWallet == nil {
 		ui.PrintErrorf("\nNo wallet open\n")
 		return
 	}
@@ -104,7 +103,7 @@ func Blockchain_Process(c *Command, input string) {
 			ui.Gui.ShowPopup(ui.DlgBlockchain(""))
 		} else {
 			// check if such blockchain already added
-			for _, b := range wallet.CurrentWallet.Blockchains {
+			for _, b := range cmn.CurrentWallet.Blockchains {
 				if b.Name == b_name {
 					ui.PrintErrorf("\nBlockchain %s already added\n", b_name)
 					return
@@ -115,10 +114,10 @@ func Blockchain_Process(c *Command, input string) {
 				if b.Name == b_name {
 
 					bch := b
-					wallet.CurrentWallet.Blockchains = append(wallet.CurrentWallet.Blockchains, &bch)
+					cmn.CurrentWallet.Blockchains = append(cmn.CurrentWallet.Blockchains, &bch)
 
-					wallet.CurrentWallet.AuditNativeTokens()
-					err := wallet.CurrentWallet.Save()
+					cmn.CurrentWallet.AuditNativeTokens()
+					err := cmn.CurrentWallet.Save()
 					if err != nil {
 						ui.PrintErrorf("\nFailed to save wallet: %s\n", err)
 						return
@@ -147,7 +146,7 @@ func Blockchain_Process(c *Command, input string) {
 			return
 		}
 
-		for i, b := range wallet.CurrentWallet.Blockchains {
+		for i, b := range cmn.CurrentWallet.Blockchains {
 			if b.Name == b_name {
 
 				ui.Gui.ShowPopup(ui.DlgConfirm(
@@ -156,10 +155,10 @@ func Blockchain_Process(c *Command, input string) {
 <c>Are you sure you want to remove 
 <c>blockchain '`+b_name+"' ?\n",
 					func() {
-						wallet.CurrentWallet.Blockchains = append(wallet.CurrentWallet.Blockchains[:i], wallet.CurrentWallet.Blockchains[i+1:]...)
+						cmn.CurrentWallet.Blockchains = append(cmn.CurrentWallet.Blockchains[:i], cmn.CurrentWallet.Blockchains[i+1:]...)
 
-						wallet.CurrentWallet.AuditNativeTokens()
-						err := wallet.CurrentWallet.Save()
+						cmn.CurrentWallet.AuditNativeTokens()
+						err := cmn.CurrentWallet.Save()
 						if err != nil {
 							ui.PrintErrorf("\nFailed to save wallet: %s\n", err)
 							return
@@ -176,7 +175,7 @@ func Blockchain_Process(c *Command, input string) {
 	case "list", "":
 		ui.Printf("\nBlockchains:\n")
 
-		for _, b := range wallet.CurrentWallet.Blockchains {
+		for _, b := range cmn.CurrentWallet.Blockchains {
 			ui.Terminal.Screen.AddLink(b.Name, "command b use '"+b.Name+"'", "Use blockchain '"+b.Name+"'", "")
 			ui.Printf(" ")
 			ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command b edit '"+b.Name+"'", "Edit blockchain '"+b.Name+"'", "")
@@ -192,7 +191,7 @@ func Blockchain_Process(c *Command, input string) {
 			return
 		}
 
-		for _, b := range wallet.CurrentWallet.Blockchains {
+		for _, b := range cmn.CurrentWallet.Blockchains {
 			if b.Name == b_name {
 				ui.Gui.ShowPopup(ui.DlgBlockchain(b_name))
 				return

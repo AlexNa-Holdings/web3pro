@@ -2,6 +2,9 @@ package price
 
 import (
 	"sort"
+
+	"github.com/AlexNa-Holdings/web3pro/cmn"
+	"github.com/rs/zerolog/log"
 )
 
 type Pair struct {
@@ -17,7 +20,7 @@ var KNOWN_FEEDERS = []string{"dexscreener"}
 
 func GetPairs(bchain string, tokenAddr string) ([]Pair, error) {
 
-	list, err := DSGetPairs(bchain, tokenAddr)
+	list, err := DSListPairs(bchain, tokenAddr)
 	if err != nil {
 		return nil, err
 	}
@@ -30,4 +33,19 @@ func GetPairs(bchain string, tokenAddr string) ([]Pair, error) {
 	)
 
 	return list, nil
+}
+
+func Update(w *cmn.Wallet) error {
+	err := DSUpdate(w)
+	if err != nil {
+		log.Error().Msgf("Update: failed to update from dexscreener: %v", err)
+		return err
+	}
+
+	err = w.Save()
+	if err != nil {
+		log.Error().Msgf("Update: failed to save wallet: %v", err)
+	}
+
+	return err
 }

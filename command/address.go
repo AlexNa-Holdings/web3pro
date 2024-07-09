@@ -7,7 +7,6 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/ui"
-	"github.com/AlexNa-Holdings/web3pro/wallet"
 )
 
 var address_subcommands = []string{"remove", "edit", "list", "use"}
@@ -35,7 +34,7 @@ Commands:
 func Address_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 	options := []ui.ACOption{}
 
-	if wallet.CurrentWallet == nil {
+	if cmn.CurrentWallet == nil {
 		return "", &options, ""
 	}
 
@@ -52,7 +51,7 @@ func Address_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 	}
 
 	if subcommand == "use" || subcommand == "remove" || subcommand == "edit" {
-		for _, a := range wallet.CurrentWallet.Addresses {
+		for _, a := range cmn.CurrentWallet.Addresses {
 			if cmn.Contains(a.Name+a.Address.String(), param) {
 				options = append(options, ui.ACOption{
 					Name:   cmn.ShortAddress(a.Address) + " " + a.Name,
@@ -67,7 +66,7 @@ func Address_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 
 func Address_Process(c *Command, input string) {
 
-	if wallet.CurrentWallet == nil {
+	if cmn.CurrentWallet == nil {
 		ui.PrintErrorf("\nNo wallet open\n")
 		return
 	}
@@ -78,7 +77,7 @@ func Address_Process(c *Command, input string) {
 
 	switch subcommand {
 	case "remove":
-		for i, a := range wallet.CurrentWallet.Addresses {
+		for i, a := range cmn.CurrentWallet.Addresses {
 			if a.Name == p0 {
 				ui.Gui.ShowPopup(ui.DlgConfirm(
 					"Remove address",
@@ -87,9 +86,9 @@ func Address_Process(c *Command, input string) {
 <c> `+a.Name+`
 <c> `+a.Address.String()+"? \n",
 					func() {
-						wallet.CurrentWallet.Addresses = append(wallet.CurrentWallet.Addresses[:i], wallet.CurrentWallet.Addresses[i+1:]...)
+						cmn.CurrentWallet.Addresses = append(cmn.CurrentWallet.Addresses[:i], cmn.CurrentWallet.Addresses[i+1:]...)
 
-						err := wallet.CurrentWallet.Save()
+						err := cmn.CurrentWallet.Save()
 						if err != nil {
 							ui.PrintErrorf("\nError saving wallet: %v\n", err)
 							return
@@ -103,11 +102,11 @@ func Address_Process(c *Command, input string) {
 		ui.PrintErrorf("\nAddress not found: %s\n", p0)
 	case "list", "":
 
-		sort.Slice(wallet.CurrentWallet.Addresses, func(i, j int) bool {
-			return wallet.CurrentWallet.Addresses[i].Name < wallet.CurrentWallet.Addresses[j].Name
+		sort.Slice(cmn.CurrentWallet.Addresses, func(i, j int) bool {
+			return cmn.CurrentWallet.Addresses[i].Name < cmn.CurrentWallet.Addresses[j].Name
 		})
 		ui.Printf("\nAddresses:\n")
-		for _, a := range wallet.CurrentWallet.Addresses {
+		for _, a := range cmn.CurrentWallet.Addresses {
 			ui.AddAddressShortLink(nil, a.Address)
 			ui.Printf(" ")
 			ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command address edit '"+a.Name+"'", "Edit address", "")
@@ -117,7 +116,7 @@ func Address_Process(c *Command, input string) {
 		}
 
 	case "edit":
-		if wallet.CurrentWallet.GetAddressByName(p0) == nil {
+		if cmn.CurrentWallet.GetAddressByName(p0) == nil {
 			ui.PrintErrorf("\nAddress not found: %s\n", p0)
 			return
 		}

@@ -37,6 +37,7 @@ const (
 	ICON_BACK     = "\U000f006e"
 	ICON_SEND     = "\U000f048a"
 	ICON_FEED     = "\uf09e"
+	ICON_LINK     = "\f08e"
 )
 
 const REGEX_TAGS = `<(/?\w+)((?:\s+\w+(?::(?:[^>\s]+|"[^"]*"|'[^']*'))?\s*)*)>`

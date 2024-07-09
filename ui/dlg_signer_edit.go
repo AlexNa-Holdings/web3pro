@@ -1,19 +1,19 @@
 package ui
 
 import (
+	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
-	"github.com/AlexNa-Holdings/web3pro/wallet"
 )
 
 func DlgSignerEdit(name string) *gocui.Popup {
 
-	if wallet.CurrentWallet == nil {
+	if cmn.CurrentWallet == nil {
 		Notification.ShowError("No wallet open")
 		return nil
 	}
 
 	signer_index := -1
-	for i, s := range wallet.CurrentWallet.Signers {
+	for i, s := range cmn.CurrentWallet.Signers {
 		if s.Name == name {
 			signer_index = i
 			break
@@ -47,16 +47,16 @@ func DlgSignerEdit(name string) *gocui.Popup {
 
 					new_name := v.GetInput("name")
 
-					for i, signer := range wallet.CurrentWallet.Signers {
+					for i, signer := range cmn.CurrentWallet.Signers {
 						if i != signer_index && signer.Name == new_name {
 							Notification.ShowErrorf("Signer %s already exists", new_name)
 							break
 						}
 					}
 
-					wallet.CurrentWallet.Signers[signer_index].Name = new_name
+					cmn.CurrentWallet.Signers[signer_index].Name = new_name
 
-					err := wallet.CurrentWallet.Save()
+					err := cmn.CurrentWallet.Save()
 					if err != nil {
 						Notification.ShowErrorf("Error renaming signer: %s", err)
 						break
@@ -72,7 +72,7 @@ func DlgSignerEdit(name string) *gocui.Popup {
 		},
 		Template: `
  Name: <i id:name size:32 value:"">
- Type: ` + wallet.CurrentWallet.Signers[signer_index].Type + `
+ Type: ` + cmn.CurrentWallet.Signers[signer_index].Type + `
  <c>
  <button text:Ok tip:"create wallet">  <button text:Cancel>`,
 	}

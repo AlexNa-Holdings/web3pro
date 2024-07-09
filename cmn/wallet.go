@@ -1,4 +1,4 @@
-package wallet
+package cmn
 
 import (
 	"crypto/aes"
@@ -8,8 +8,8 @@ import (
 	"encoding/json"
 	"io"
 	"os"
+	"sync"
 
-	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/pbkdf2"
@@ -17,25 +17,16 @@ import (
 
 const SOLT_SIZE = 32
 
-type Wallet struct {
-	Name        string            `json:"name"`
-	Blockchains []*cmn.Blockchain `json:"blockchains"`
-	Signers     []*cmn.Signer     `json:"signers"`
-	Addresses   []*cmn.Address    `json:"addresses"`
-	Tokens      []*cmn.Token      `json:"tokens"`
-	FilePath    string            `json:"-"`
-	Password    string            `json:"-"`
-}
-
 var CurrentWallet *Wallet
 
 func Open(name string, pass string) error {
 
-	w, err := openFromFile(cmn.DataFolder+"/wallets/"+name, pass)
+	w, err := openFromFile(DataFolder+"/wallets/"+name, pass)
 
 	if err == nil {
-		w.FilePath = cmn.DataFolder + "/wallets/" + name
+		w.FilePath = DataFolder + "/wallets/" + name
 		w.Password = pass
+		w.WriteMutex = sync.Mutex{}
 
 		w.AuditNativeTokens()
 		w.MarkUniqueTokens()
@@ -58,7 +49,7 @@ func (w *Wallet) AuditNativeTokens() {
 			}
 		}
 		if !found {
-			w.Tokens = append(w.Tokens, &cmn.Token{
+			w.Tokens = append(w.Tokens, &Token{
 				Blockchain: b.Name,
 				Name:       b.Currency,
 				Symbol:     b.Currency,
@@ -87,7 +78,7 @@ func (w *Wallet) AuditNativeTokens() {
 	}
 }
 
-func (w *Wallet) GetBlockchain(n string) *cmn.Blockchain {
+func (w *Wallet) GetBlockchain(n string) *Blockchain {
 	for _, b := range w.Blockchains {
 		if b.Name == n {
 			return b
@@ -101,18 +92,18 @@ func (w *Wallet) Save() error {
 }
 
 func Exists(name string) bool {
-	_, err := os.Stat(cmn.DataFolder + "/wallets/" + name)
+	_, err := os.Stat(DataFolder + "/wallets/" + name)
 	return !os.IsNotExist(err)
 }
 
 func Create(name, pass string) error {
 	w := &Wallet{}
 
-	return SaveToFile(w, cmn.DataFolder+"/wallets/"+name, pass)
+	return SaveToFile(w, DataFolder+"/wallets/"+name, pass)
 }
 
-func List() []string {
-	files, err := os.ReadDir(cmn.DataFolder + "/wallets")
+func WalletList() []string {
+	files, err := os.ReadDir(DataFolder + "/wallets")
 	if err != nil {
 		log.Error().Msgf("Error reading directory: %v\n", err)
 		return nil
@@ -177,6 +168,9 @@ func generateKey(password string, salt []byte) []byte {
 }
 
 func SaveToFile(w *Wallet, file, pass string) error {
+	w.WriteMutex.Lock()
+	defer w.WriteMutex.Unlock()
+
 	jsonData, err := json.Marshal(w)
 	if err != nil {
 		log.Error().Msgf("Error marshaling JSON: %v\n", err)
@@ -236,7 +230,7 @@ func openFromFile(file string, pass string) (*Wallet, error) {
 	return w, nil
 }
 
-func (w *Wallet) GetSigner(n string) *cmn.Signer {
+func (w *Wallet) GetSigner(n string) *Signer {
 	for _, s := range w.Signers {
 		if s.Name == n {
 			return s
@@ -245,7 +239,7 @@ func (w *Wallet) GetSigner(n string) *cmn.Signer {
 	return nil
 }
 
-func (w *Wallet) GetSignerWithCopy(name string) (*cmn.Signer, int) {
+func (w *Wallet) GetSignerWithCopy(name string) (*Signer, int) {
 	for _, s := range w.Signers {
 		for j, c := range s.Copies {
 			if c == name {
@@ -256,7 +250,7 @@ func (w *Wallet) GetSignerWithCopy(name string) (*cmn.Signer, int) {
 	return nil, -1
 }
 
-func (w *Wallet) GetAddress(a string) *cmn.Address {
+func (w *Wallet) GetAddress(a string) *Address {
 	for _, s := range w.Addresses {
 		if s.Address.String() == a {
 			return s
@@ -265,7 +259,7 @@ func (w *Wallet) GetAddress(a string) *cmn.Address {
 	return nil
 }
 
-func (w *Wallet) GetAddressByName(n string) *cmn.Address {
+func (w *Wallet) GetAddressByName(n string) *Address {
 	for _, s := range w.Addresses {
 		if s.Name == n {
 			return s
@@ -274,7 +268,7 @@ func (w *Wallet) GetAddressByName(n string) *cmn.Address {
 	return nil
 }
 
-func (w *Wallet) GetToken(b string, a string) *cmn.Token {
+func (w *Wallet) GetToken(b string, a string) *Token {
 	if common.IsHexAddress(a) {
 		t := w.GetTokenByAddress(b, common.HexToAddress(a))
 		if t != nil {
@@ -285,7 +279,7 @@ func (w *Wallet) GetToken(b string, a string) *cmn.Token {
 	return w.GetTokenBySymbol(b, a)
 }
 
-func (w *Wallet) GetTokenByAddress(b string, a common.Address) *cmn.Token {
+func (w *Wallet) GetTokenByAddress(b string, a common.Address) *Token {
 	for _, t := range w.Tokens {
 		if t.Blockchain == b && ((!t.Native && t.Address == a) ||
 			(t.Native && a == common.Address{})) {
@@ -295,7 +289,7 @@ func (w *Wallet) GetTokenByAddress(b string, a common.Address) *cmn.Token {
 	return nil
 }
 
-func (w *Wallet) GetTokenBySymbol(b string, s string) *cmn.Token {
+func (w *Wallet) GetTokenBySymbol(b string, s string) *Token {
 	for _, t := range w.Tokens {
 		if t.Blockchain == b && t.Symbol == s {
 			if !t.Unique {

@@ -5,19 +5,18 @@ import (
 
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
-	"github.com/AlexNa-Holdings/web3pro/wallet"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog/log"
 )
 
 func HailToSend(b *cmn.Blockchain, t *cmn.Token, from *cmn.Address, to common.Address, amount *big.Int) {
 
-	if wallet.CurrentWallet == nil {
+	if cmn.CurrentWallet == nil {
 		log.Error().Msg("No wallet")
 		return
 	}
 
-	w := wallet.CurrentWallet
+	w := cmn.CurrentWallet
 
 	s := w.GetSigner(from.Signer)
 	if s == nil {
