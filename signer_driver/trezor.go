@@ -79,7 +79,6 @@ func (d *TrezorDriver) Open(s *cmn.Signer) (core.USBDevice, error) {
 			delete(d.KnownDevices, usb_path)
 			usb_path = ""
 		} else {
-			log.Debug().Msgf("Opened trezor: %s", s.Name)
 			return dev, nil
 		}
 	}
@@ -381,8 +380,10 @@ Password: <i id:password size:16 masked:true>
 									}
 								}
 							},
+							OnClose: func(v *gocui.View) {
+								h.TimerPaused = false
+							},
 						})
-						h.TimerPaused = false
 					}
 				}
 			}
@@ -396,14 +397,10 @@ Password: <i id:password size:16 masked:true>
 		return "", errors.New("password request canceled")
 	}
 
-	log.Debug().Msgf("Password: %s", password)
-
 	return password, nil
 }
 
 func (d TrezorDriver) Call(dev core.USBDevice, req proto.Message, result proto.Message) error {
-	log.Debug().Msgf("Call: %s", MessageName(MessageType(req)))
-	log.Debug().Msgf("Call: %v", req)
 
 	kind, reply, err := d.RawCall(dev, req)
 	if err != nil {

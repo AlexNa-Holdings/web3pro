@@ -12,7 +12,6 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/usb"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/rs/zerolog/log"
 )
 
 var Bus *usb.USB
@@ -253,9 +252,6 @@ func FormatAmount(v *big.Int, decimals int, fixed bool, prefix string) string {
 }
 
 func (t *Token) Str2Value(str string) (*big.Int, error) {
-
-	log.Debug().Msgf("Str2Value: %s", str)
-
 	s := strings.TrimSpace(str)
 	if s == "" {
 		return nil, fmt.Errorf("empty string")
@@ -284,16 +280,12 @@ func (t *Token) Str2Value(str string) (*big.Int, error) {
 		dot_index = len(s)
 	}
 
-	log.Debug().Msgf("Removed dot: %s", s)
-
 	n_after_dot := len(s) - dot_index
 	if n_after_dot < t.Decimals {
 		s += strings.Repeat("0", t.Decimals-n_after_dot)
 	} else {
 		s = s[dot_index+t.Decimals:]
 	}
-
-	log.Debug().Msgf("Added zeros: %s", s)
 
 	value, ok := new(big.Int).SetString(s, 10)
 	if !ok {

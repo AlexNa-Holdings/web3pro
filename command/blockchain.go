@@ -6,7 +6,6 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/ui"
-	"github.com/rs/zerolog/log"
 )
 
 var blockchain_subcommands = []string{"remove", "add", "edit", "list", "use"}
@@ -89,8 +88,6 @@ func Blockchain_Process(c *Command, input string) {
 	//parse command subcommand parameters
 	t := cmn.Split(input)
 	subcommand, b_name := t[1], t[2]
-
-	log.Debug().Msgf("Blockchain_Process: %s %s", subcommand, b_name)
 
 	switch subcommand {
 	case "add":

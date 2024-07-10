@@ -38,9 +38,6 @@ func add(hail *cmn.HailRequest) bool { // returns if on top
 	} else {
 		HailQueue = append(HailQueue, hail)
 	}
-
-	log.Debug().Msgf("Hail added signal sent: %s on top: %b", hail.Title, hail == HailQueue[0])
-
 	return hail == HailQueue[0]
 }
 
@@ -55,15 +52,11 @@ func remove(hail *cmn.HailRequest) {
 	}
 	Mutex.Unlock()
 
-	log.Debug().Msgf("Hail removed: %s  n_left: %d", hail.Title, len(HailQueue))
-
 	if hail.OnClose != nil {
 		hail.OnClose(hail)
 	}
 
-	log.Debug().Msgf("Hail removed signal sent: %s", hail.Title)
 	hail.Done <- true
-	log.Debug().Msgf("After hail removed signal sent: %s", hail.Title)
 
 	if ActiveRequest == hail { // we closed the active request
 		if len(HailQueue) > 0 {
@@ -81,7 +74,6 @@ func remove(hail *cmn.HailRequest) {
 }
 
 func cancel(hail *cmn.HailRequest) {
-	log.Debug().Msgf("Cancel: hail: %s", hail.Title)
 	if hail.OnCancel != nil {
 		hail.OnCancel(hail)
 	}

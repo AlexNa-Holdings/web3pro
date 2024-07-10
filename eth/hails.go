@@ -80,7 +80,7 @@ func HailToSend(b *cmn.Blockchain, t *cmn.Token, from *cmn.Address, to common.Ad
 ------------- FEE -------------- 
    Gas Limit: ` + cmn.FormatUInt64(tx.Gas(), false, "") + ` 
    Gas Price: ` + cmn.FormatAmount(tx.GasPrice(), 18, false, "") + " " +
-			b.Currency + ` <l text:` + gocui.ICON_EDIT + ` action:button edit_gas_price tip:"edit fee">
+			b.Currency + ` <l text:` + gocui.ICON_EDIT + ` action:'button edit_gas_price' tip:"edit fee">
    Total Fee: ` + cmn.FormatAmount(total_gas, 18, false, "") + " " + b.Currency + `
 Total Fee($): ` + total_fee_s + `
 <c>
@@ -92,7 +92,6 @@ Total Fee($): ` + total_fee_s + `
 			v.SetInput("amount", amount.String())
 		},
 		OnClose: func(hr *cmn.HailRequest) {
-			log.Debug().Msg("HailToSend closed")
 		},
 		OnOk: func(hr *cmn.HailRequest) {
 			if t.Native {
@@ -113,6 +112,49 @@ Total Fee($): ` + total_fee_s + `
 			cmn.StandardOnOverHotspot(v, hs)
 		},
 		OnClickHotspot: func(hr *cmn.HailRequest, v *gocui.View, hs *gocui.Hotspot) {
+			if hs != nil {
+				switch hs.Value {
+				case "button edit_gas_price":
+					hr.TimerPaused = true
+
+					low := new(big.Int).Div(new(big.Int).Mul(tx.GasPrice(), big.NewInt(9)), big.NewInt(10))
+					market := tx.GasPrice()
+					high := new(big.Int).Div(new(big.Int).Mul(tx.GasPrice(), big.NewInt(11)), big.NewInt(10))
+
+					var p_low, p_market, p_high string
+					if t.Price > 0 {
+						p_low = cmn.FormatDollarsNormal(t.Price * cmn.Float64(high, 18) * float64(tx.Gas()))
+						p_market = cmn.FormatDollarsNormal(t.Price * cmn.Float64(market, 18) * float64(tx.Gas()))
+						p_high = cmn.FormatDollarsNormal(t.Price * cmn.Float64(high, 18) * float64(tx.Gas()))
+					}
+
+					v.GetGui().ShowPopup(&gocui.Popup{
+						Title: "Edit Gas Price",
+						Template: `<c><w>
+ <button text:' Low  '> ` + cmn.FormatAmount(low, 18, true, "") + p_low + `
+ <button text:'Market'> ` + cmn.FormatAmount(market, 18, true, "") + p_market + `
+ <button text:' High '> ` + cmn.FormatAmount(high, 18, true, "") + p_high + `
+
+<button text:Cancel>`,
+						OnClickHotspot: func(v *gocui.View, hs *gocui.Hotspot) {
+							if hs != nil {
+								switch hs.Value {
+								case "button OK":
+									v.GetGui().HidePopup()
+									hr.Close()
+								case "button Cancel":
+									v.GetGui().HidePopup()
+								}
+							}
+						},
+						OnClose: func(v *gocui.View) {
+							hr.ResetTimer()
+							hr.TimerPaused = false
+						},
+					})
+				}
+			}
+
 			cmn.StandardOnClickHotspot(v, hs)
 		},
 	})

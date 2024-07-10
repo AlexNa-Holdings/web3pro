@@ -45,3 +45,7 @@ func HailAndWait(hail *HailRequest) {
 func (hail *HailRequest) Close() {
 	RemoveHailChannel <- hail
 }
+
+func (hail *HailRequest) ResetTimer() {
+	hail.Expiration = time.Now().Add(time.Duration(hail.TimeoutSec) * time.Second)
+}

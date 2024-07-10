@@ -113,8 +113,6 @@ func Send_Process(c *Command, input string) {
 	//execute command
 	bchain, token, from, to, amount := p[1], p[2], p[3], p[4], p[5]
 
-	log.Debug().Msgf("Send_Process: %s %s %s %s", bchain, token, to, amount)
-
 	b := w.GetBlockchain(bchain)
 	if b == nil {
 		ui.PrintErrorf("\nBlockchain not found: %s\n", bchain)
