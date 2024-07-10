@@ -1,6 +1,7 @@
 package eth
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/AlexNa-Holdings/web3pro/cmn"
@@ -40,7 +41,8 @@ func HailToSend(b *cmn.Blockchain, t *cmn.Token, from *cmn.Address, to common.Ad
 
 	dollars := ""
 	if t.Price > 0 {
-		dollars = "(" + cmn.FormatDollarsNormal(t.Price*t.Float64(amount)) + ")"
+		//		dollars = cmn.FormatDollarsNormal(t.Price*t.Float64(amount))
+		dollars = cmn.FormatDollars(t.Price*t.Float64(amount), false)
 	} else {
 		dollars = "(unknown)"
 	}
@@ -64,7 +66,8 @@ func HailToSend(b *cmn.Blockchain, t *cmn.Token, from *cmn.Address, to common.Ad
 	total_fee_s := "(unknown)"
 	if t.Price > 0 {
 		total_fee_dollars := t.Price * cmn.Float64(total_gas, 18)
-		total_fee_s = cmn.FormatDollarsNormal(total_fee_dollars)
+		// total_fee_s = cmn.FormatDollarsNormal(total_fee_dollars)
+		total_fee_s = cmn.FormatDollars(total_fee_dollars, false)
 	}
 
 	cmn.Hail(&cmn.HailRequest{
@@ -76,8 +79,7 @@ func HailToSend(b *cmn.Blockchain, t *cmn.Token, from *cmn.Address, to common.Ad
       Amount: ` + t.Value2Str(amount) + " " + t.Symbol + `
    Amount($): ` + dollars + ` 
       Signer: ` + s.Name + " (" + s.Type + ")" + `
-
-------------- FEE -------------- 
+<line text:Fee> 
    Gas Limit: ` + cmn.FormatUInt64(tx.Gas(), false, "") + ` 
    Gas Price: ` + cmn.FormatAmount(tx.GasPrice(), 18, false, "") + " " +
 			b.Currency + ` <l text:` + gocui.ICON_EDIT + ` action:'button edit_gas_price' tip:"edit fee">
@@ -123,9 +125,12 @@ Total Fee($): ` + total_fee_s + `
 
 					var p_low, p_market, p_high string
 					if t.Price > 0 {
-						p_low = cmn.FormatDollarsNormal(t.Price * cmn.Float64(high, 18) * float64(tx.Gas()))
-						p_market = cmn.FormatDollarsNormal(t.Price * cmn.Float64(market, 18) * float64(tx.Gas()))
-						p_high = cmn.FormatDollarsNormal(t.Price * cmn.Float64(high, 18) * float64(tx.Gas()))
+						// p_low = cmn.FormatDollarsNormal(t.Price * cmn.Float64(high, 18) * float64(tx.Gas()))
+						// p_market = cmn.FormatDollarsNormal(t.Price * cmn.Float64(market, 18) * float64(tx.Gas()))
+						// p_high = cmn.FormatDollarsNormal(t.Price * cmn.Float64(high, 18) * float64(tx.Gas()))
+						p_low = cmn.FormatDollars(t.Price*cmn.Float64(high, 18)*float64(tx.Gas()), true)
+						p_market = cmn.FormatDollars(t.Price*cmn.Float64(market, 18)*float64(tx.Gas()), true)
+						p_high = cmn.FormatDollars(t.Price*cmn.Float64(high, 18)*float64(tx.Gas()), true)
 					}
 
 					v.GetGui().ShowPopup(&gocui.Popup{
@@ -134,6 +139,14 @@ Total Fee($): ` + total_fee_s + `
  <button text:' Low  '> ` + cmn.FormatAmount(low, 18, true, "") + p_low + `
  <button text:'Market'> ` + cmn.FormatAmount(market, 18, true, "") + p_market + `
  <button text:' High '> ` + cmn.FormatAmount(high, 18, true, "") + p_high + `
+
+ <line text:Advanced>
+Fee price: <input id:gas_price size:14 value:"` + cmn.FormatAmount(market, 18, false, "") + `"> 
+ Total($): <input id:gas_price_dollars size:14 value:"` +
+							fmt.Sprintf("%f", t.Price*cmn.Float64(market, 18)*float64(tx.Gas())) + `"> 
+
+ <button text:'Use custom price'>
+<line>
 
 <button text:Cancel>`,
 						OnClickHotspot: func(v *gocui.View, hs *gocui.Hotspot) {
@@ -150,6 +163,9 @@ Total Fee($): ` + total_fee_s + `
 						OnClose: func(v *gocui.View) {
 							hr.ResetTimer()
 							hr.TimerPaused = false
+						},
+						OnOpen: func(v *gocui.View) {
+							v.SetFocus(1) // market
 						},
 					})
 				}

@@ -365,7 +365,7 @@ func (d TrezorDriver) RequsetPassword() (string, error) {
 						v.GetGui().ShowPopup(&gocui.Popup{
 							Title: "Enter Trezor Password",
 							Template: `<c><w>
-Password: <i id:password size:16 masked:true>
+Password: <input id:password size:16 masked:true>
 
 <button text:OK> <button text:Cancel>`,
 							OnClickHotspot: func(v *gocui.View, hs *gocui.Hotspot) {

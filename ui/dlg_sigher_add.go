@@ -26,9 +26,9 @@ cancel and verify the device.
 <button text:Ok tip:"create wallet">  <button text:Cancel>`
 	} else {
 		template = `
-     Name: <i id:name size:32 value:""> 
+     Name: <input id:name size:32 value:""> 
      Type: ` + t + `
- Mnemonic: <t id:mnemonics width:32 height:8> 
+ Mnemonic: <tnput id:mnemonics width:32 height:8> 
 
  
 

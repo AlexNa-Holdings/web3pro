@@ -136,7 +136,8 @@ type Gui struct {
 		start_oy, start_my int
 	}
 
-	popup *Popup
+	popup              *Popup
+	OnPopupCloseGlobal func()
 }
 
 // NewGui returns a new Gui object with a given output mode.

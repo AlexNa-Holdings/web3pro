@@ -151,12 +151,12 @@ func DlgBlockchain(name string) *gocui.Popup {
 			}
 		},
 		Template: `
-              Name: <i id:name size:32 value:"">
-               RPC: <i id:rpc size:32 value:"">
-           ChainId: <i id:chainid size:32 value:"">
-          Explorer: <i id:explorer size:32 value:"">
-          Currency: <i id:currency size:32 value:"">
-Wrapped Token Addr: <i id:wtoken_address size:32 value:"">
+              Name: <input id:name size:32 value:"">
+               RPC: <input id:rpc size:32 value:"">
+           ChainId: <input id:chainid size:32 value:"">
+          Explorer: <input id:explorer size:32 value:"">
+          Currency: <input id:currency size:32 value:"">
+Wrapped Token Addr: <input id:wtoken_address size:32 value:"">
 
  <c><button text:Ok tip:"create wallet">  <button text:Cancel>`,
 	}

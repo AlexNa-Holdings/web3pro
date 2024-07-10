@@ -20,8 +20,8 @@ func DlgSend(b *cmn.Blockchain, t *cmn.Token, from *cmn.Address, to string, amou
           Token: <b>` + t.Symbol + `</b>
  Token Contract: ` + tc + ` 
            From: ` + from.Name + `
-             To: <i id:to size:43> 
-         Amount: <i id:amount size:24> 
+             To: <input id:to size:43> 
+         Amount: <input id:amount size:24> 
  <c>
  <button text:Ok tip:"create wallet">  <button text:Cancel>`
 

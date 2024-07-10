@@ -1156,7 +1156,7 @@ func (v *View) AddTagEx(tagName string, tagParams map[string]string) error {
 			tagParams["id"] = tagParams["text"]
 		}
 		v.AddButton(tagParams["text"], "button "+tagParams["id"], tagParams["id"], tagParams["tip"], tagParams["color"], tagParams["bgcolor"])
-	case "i": // input
+	case "input": // input
 		v.AddInput(tagParams)
 	case "t": // text input
 		v.AddTextInput(tagParams)
@@ -1181,7 +1181,7 @@ func GetTagLength(tagName string, tagParams map[string]string) int {
 		return utf8.RuneCountInString(tagParams["text"])
 	case "button": // button
 		return utf8.RuneCountInString(tagParams["text"]) + 2
-	case "i": // input
+	case "input": // input
 		size, _ := strconv.Atoi(tagParams["size"])
 		return size
 	case "t": // text input
@@ -1392,11 +1392,13 @@ func (v *View) AddSelect(tagParams map[string]string) error {
 func (v *View) AddInput(tagParams map[string]string) error {
 	name := v.name + "." + tagParams["id"]
 	if _, err := v.gui.View(name); err == nil {
+		log.Error().Msg("input with id " + name + " already exists")
 		return errors.New("input with id " + name + " already exists")
 	}
 
 	size, _ := strconv.Atoi(tagParams["size"])
 	if size == 0 {
+		log.Error().Msg("input tag must have a size attribute")
 		return errors.New("input tag must have a size attribute")
 	}
 
@@ -1411,6 +1413,7 @@ func (v *View) AddInput(tagParams map[string]string) error {
 
 	if v, err := v.gui.SetView(name, v.x0+v.wx, v.y0+v.wy, v.x0+v.wx+size+1, v.y0+v.wy+2, 0); err != nil {
 		if !errors.Is(err, ErrUnknownView) {
+			log.Error().Err(err).Msg("SetView error")
 			return err
 		}
 		v.Frame = false
@@ -1433,7 +1436,7 @@ func (v *View) AddInput(tagParams map[string]string) error {
 	v.Controls = append(v.Controls, &c)
 
 	// write placeholder
-	v.Write([]byte(strings.Repeat(" ", size-1)))
+	v.Write([]byte(strings.Repeat(" ", size)))
 
 	return nil
 }
@@ -1537,31 +1540,37 @@ func PopupNavigation(v *View, key Key, ch rune, mod Modifier) {
 			v.Controls[v.ControlInFocus].Type != C_INPUT {
 			v.FocusNext()
 		} else {
-			DefaultEditor.Edit(v, key, ch, mod)
+			//DefaultEditor.Edit(v, key, ch, mod)
 		}
 	case KeyArrowLeft:
 		if v.ControlInFocus != -1 &&
 			v.Controls[v.ControlInFocus].Type != C_INPUT {
 			v.gui.popup.View.FocusPrev()
 		} else {
-			DefaultEditor.Edit(v, key, ch, mod)
+			//DefaultEditor.Edit(v, key, ch, mod)
 		}
 	case KeyArrowUp:
 		if v.gui.popup.View.ControlInFocus != -1 &&
 			v.gui.popup.View.Controls[v.gui.popup.View.ControlInFocus].Type != C_TEXT_INPUT {
 			v.gui.popup.View.FocusPrev()
 		} else {
-			DefaultEditor.Edit(v, key, ch, mod)
+			//DefaultEditor.Edit(v, key, ch, mod)
 		}
 	case KeyArrowDown:
 		if v.gui.popup.View.ControlInFocus != -1 &&
 			v.gui.popup.View.Controls[v.gui.popup.View.ControlInFocus].Type != C_TEXT_INPUT {
 			v.gui.popup.View.FocusNext()
 		} else {
-			DefaultEditor.Edit(v, key, ch, mod)
+			//DefaultEditor.Edit(v, key, ch, mod)
 		}
 	default:
-		DefaultEditor.Edit(v, key, ch, mod)
+		if v.gui.popup.View.ControlInFocus != -1 {
+			c := v.gui.popup.View.Controls[v.gui.popup.View.ControlInFocus]
+			switch c.Type {
+			case C_INPUT, C_TEXT_INPUT:
+				DefaultEditor.Edit(v, key, ch, mod)
+			}
+		}
 	}
 }
 
@@ -1708,7 +1717,7 @@ func EstimateTemplateLines(template string, width int) int {
 		n_lines += len(splitted_lines)
 	}
 
-	return n_lines
+	return n_lines + 1
 }
 
 func (v *View) RenderTemplate(template string) error {
@@ -1790,6 +1799,7 @@ func (v *View) RenderTemplate(template string) error {
 		for _, l := range splitted_lines {
 			left := 0
 
+		m:
 			for _, match := range matches {
 
 				if v.wx == 0 && centered {
@@ -1828,44 +1838,67 @@ func (v *View) RenderTemplate(template string) error {
 				v.wx += len(cells)
 
 				tag := l[match[0]:match[1]]
+				tagName, tagParams := ParseTag(tag)
 
-				switch tag {
-				case "<c>":
+				switch tagName {
+				case "c":
 					centered = true
-				case "</c>":
+				case "/c":
 					centered = false
-				case "<w>":
+				case "w":
 					autowrap = true
-				case "</w>":
+				case "/w":
 					autowrap = false
-				case "<b>":
+				case "b":
 					bold = true
-				case "</b>":
+				case "/b":
 					bold = false
-				case "<u>":
+				case "u":
 					underline = true
-				case "</u>":
+				case "/u":
 					underline = false
-				case "<r>":
+				case "r":
 					reverse = true
-				case "</r>":
+				case "/r":
 					reverse = false
-				case "<dim>":
+				case "dim":
 					dim = true
-				case "</dim>":
+				case "/dim":
 					dim = false
-				case "<i>":
+				case "i":
 					italic = true
-				case "</i>":
+				case "/i":
 					italic = false
-				case "<s>":
+				case "s":
 					strikethrough = true
-				case "</s>":
+				case "/s":
 					strikethrough = false
-				case "<blink>":
+				case "blink":
 					blink = true
-				case "</blink>":
+				case "/blink":
 					blink = false
+				case "line":
+					v.wx = 0
+					text := tagParams["text"]
+					left = 0
+					if text == "" {
+						l = strings.Repeat("━", width)
+					} else {
+						tl := utf8.RuneCountInString(text)
+						if tl >= width-4 {
+							l = text[:width]
+						} else {
+							if (width-tl-2)/2 > 0 {
+								l = strings.Repeat("━", (width-tl-2)/2)
+							}
+							l = l + " " + text + " "
+							left := width - utf8.RuneCountInString(l)
+							if left > 0 {
+								l = l + strings.Repeat("━", left)
+							}
+						}
+					}
+					break m
 
 				default:
 					v.AddTag(tag)

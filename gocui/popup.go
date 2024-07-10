@@ -74,6 +74,10 @@ func (g *Gui) HidePopup() {
 			close(g.popup.Closed)
 		}
 		g.popup = nil
+
+		if g.OnPopupCloseGlobal != nil {
+			g.OnPopupCloseGlobal()
+		}
 	}
 }
 

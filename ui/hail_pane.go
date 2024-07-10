@@ -26,7 +26,7 @@ var HailPane *HailPaneType = &HailPaneType{
 var ActiveRequest *cmn.HailRequest
 var HailQueue []*cmn.HailRequest
 var Mutex = &sync.Mutex{}
-var TimerQuit = make(chan bool)
+var TimerQuit = make(chan bool, 1)
 
 func add(hail *cmn.HailRequest) bool { // returns if on top
 	log.Trace().Msgf("Adding hail: %s", hail.Title)
@@ -58,17 +58,17 @@ func remove(hail *cmn.HailRequest) {
 
 	hail.Done <- true
 
-	if ActiveRequest == hail { // we closed the active request
+	if ActiveRequest == hail {
+		ActiveRequest = nil
+
 		if len(HailQueue) > 0 {
 			HailPane.open(HailQueue[0])
 		} else {
-			Gui.UpdateAsync(func(g *gocui.Gui) error {
-				Gui.DeleteView("hail")
-				HailPane.View = nil
-				// stop timer
-				TimerQuit <- true
-				return nil
-			})
+			Gui.DeleteView("hail")
+			HailPane.View = nil
+			// stop timer
+			TimerQuit <- true
+			Flush()
 		}
 	}
 }
@@ -152,14 +152,18 @@ func (p *HailPaneType) open(hail *cmn.HailRequest) {
 		hail.Suspended = false
 	}
 
+	maxX, _ := Gui.Size()
+	n_lines := gocui.EstimateTemplateLines(ActiveRequest.Template, maxX/2)
+	HailPane.MinHeight = n_lines + 2
+
 	if HailPane.View == nil {
-		maxX, _ := Gui.Size()
-		n_lines := gocui.EstimateTemplateLines(ActiveRequest.Template, maxX/2)
-
-		HailPane.MinHeight = n_lines + 2
-
 		HailPane.SetView(Gui, 0, 0, maxX/2, n_lines)
 		go HailPaneTimer()
+	} else {
+		if ActiveRequest.Template != "" {
+			HailPane.View.RenderTemplate(ActiveRequest.Template)
+			Flush()
+		}
 	}
 
 	hail.Expiration = time.Now().Add(time.Duration(hail.TimeoutSec) * time.Second)

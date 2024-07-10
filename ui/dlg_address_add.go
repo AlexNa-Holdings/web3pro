@@ -13,8 +13,8 @@ import (
 func DlgAddressAdd(addr string, signer string, path string) *gocui.Popup {
 	template := fmt.Sprintf(`
 Address: %s	
-   Name: <i id:name size:32 value:""> 
-    Tag: <i id:tag size:32 value:"">
+   Name: <input id:name size:32 value:""> 
+    Tag: <input id:tag size:32 value:"">
  Signer: %s
    Path: %s
 
