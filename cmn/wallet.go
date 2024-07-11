@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/json"
+	"errors"
 	"io"
 	"os"
 	"sync"
@@ -277,6 +278,17 @@ func (w *Wallet) GetToken(b string, a string) *Token {
 	}
 
 	return w.GetTokenBySymbol(b, a)
+}
+
+func (w *Wallet) GetNativeToken(b *Blockchain) (*Token, error) {
+	for _, t := range w.Tokens {
+		if t.Blockchain == b.Name && t.Native {
+			return t, nil
+		}
+	}
+
+	log.Error().Msgf("Native token not found for blockchain %s", b.Name)
+	return nil, errors.New("native token not found")
 }
 
 func (w *Wallet) GetTokenByAddress(b string, a common.Address) *Token {

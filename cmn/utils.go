@@ -17,6 +17,11 @@ import (
 var Bus *usb.USB
 var Core *core.Core
 
+var FMT_SUFFIXES = []string{"", "K", "M", "B", "T", "Qa", "Qi", "^21", "^24", "^27", "^30", "^33", "^36", "^39",
+	"^42", "^45", "^48", "^51", "^54", "^57", "^60", "^63", "^66", "^69", "^72", "^75", "^76"}
+var FMT_NEG_SUFFIXES = []string{"", "/K", "/M", "/B", "/T", "/Qa", "/Qi", "/^21", "/^24", "/^27", "/^30", "/^33",
+	"/^36", "/^39", "/^42", "/^45", "/^48", "/^51", "/^54", "/^57", "/^60", "/^63", "/^66", "/^69", "/^72", "/^75", "/^76"}
+
 func GetID(info core.EnumerateEntry) (string, error) {
 
 	// switch info.Vendor {
@@ -71,25 +76,6 @@ func IsInArray(slice []string, item string) bool {
 	}
 	return false
 }
-
-// func Amount2Str(amount *big.Int, decimals int) string {
-// 	str := amount.String()
-
-// 	if len(str) <= decimals {
-// 		str = strings.Repeat("0", decimals-len(str)) + str
-// 	}
-
-// 	str = str[:len(str)-decimals] + "." + str[len(str)-decimals:]
-
-// 	str = strings.TrimRight(str, "0")
-// 	str = strings.TrimRight(str, ".")
-// 	str = strings.TrimLeft(str, "0")
-// 	if str == "" || str[0] == '.' {
-// 		str = "0" + str
-// 	}
-
-// 	return str
-// }
 
 func Amount2Str(amount *big.Int, decimals int) string {
 	str := amount.String()
@@ -170,12 +156,17 @@ func FormatUInt64(v uint64, fixed bool, prefix string) string {
 	return FormatAmount(new(big.Int).SetUint64(v), 0, fixed, prefix)
 }
 
-func FormatAmount(v *big.Int, decimals int, fixed bool, prefix string) string {
-	suffixes := []string{"", "K", "M", "B", "T", "Qa", "Qi", "^21", "^24", "^27", "^30", "^33", "^36", "^39",
-		"^42", "^45", "^48", "^51", "^54", "^57", "^60", "^63", "^66", "^69", "^72", "^75", "^76"}
-	negSuffixes := []string{"", "/K", "/M", "/B", "/T", "/Qa", "/Qi", "/^21", "/^24", "/^27", "/^30", "/^33",
-		"/^36", "/^39", "/^42", "/^45", "/^48", "/^51", "/^54", "/^57", "/^60", "/^63", "/^66", "/^69", "/^72", "/^75", "/^76"}
+func FormatFloat64(v float64, fixed bool, prefix string) string {
+	return FormatFloatAmount(big.NewFloat(v), fixed, prefix)
+}
 
+func FormatFloatAmount(v *big.Float, fixed bool, prefix string) string {
+	v = v.Mul(v, Pow10(18))
+	i, _ := v.Int(nil)
+	return FormatAmount(i, 18, fixed, prefix)
+}
+
+func FormatAmount(v *big.Int, decimals int, fixed bool, prefix string) string {
 	//if v == 0
 	if v.Cmp(big.NewInt(0)) == 0 || decimals < 0 || decimals > 75 {
 		if fixed {
@@ -205,7 +196,7 @@ func FormatAmount(v *big.Int, decimals int, fixed bool, prefix string) string {
 	}
 
 	exp := 0
-	for exp = len(suffixes) - 1; exp >= -(len(suffixes) - 1); exp-- {
+	for exp = len(FMT_SUFFIXES) - 1; exp >= -(len(FMT_SUFFIXES) - 1); exp-- {
 
 		if decPos-exp*3-3 < 0 {
 			continue
@@ -224,9 +215,9 @@ func FormatAmount(v *big.Int, decimals int, fixed bool, prefix string) string {
 	two := strValue[decPos-exp*3 : decPos-exp*3+2]
 	suffix := ""
 	if exp < 0 {
-		suffix = negSuffixes[-exp]
+		suffix = FMT_NEG_SUFFIXES[-exp]
 	} else {
-		suffix = suffixes[exp]
+		suffix = FMT_SUFFIXES[exp]
 	}
 
 	if tree[0] == '0' && tree[1] == '0' {
@@ -251,48 +242,93 @@ func FormatAmount(v *big.Int, decimals int, fixed bool, prefix string) string {
 
 }
 
-func (t *Token) Str2Value(str string) (*big.Int, error) {
-	s := strings.TrimSpace(str)
-	if s == "" {
-		return nil, fmt.Errorf("empty string")
+func Pow10(N int64) *big.Float {
+	result := big.NewFloat(1.0)
+	base := big.NewFloat(10.0)
+
+	if N == 0 {
+		return result // 10^0 = 1
 	}
 
-	//check that only digits and max one dot
-	dot_index := -1
-	for i, c := range s {
-		if c == '.' {
-			if dot_index != -1 {
-				return nil, fmt.Errorf("Two dots in the string")
-			} else {
-				dot_index = i
-				continue
+	if N > 0 {
+		for i := int64(0); i < N; i++ {
+			result.Mul(result, base)
+		}
+	} else {
+		// For negative N, compute the positive exponent first
+		for i := int64(0); i < -N; i++ {
+			result.Mul(result, base)
+		}
+		// Then take the reciprocal
+		result.Quo(big.NewFloat(1.0), result)
+	}
+
+	return result
+}
+
+func Str2Float(s string) (*big.Float, error) {
+	s = strings.TrimSpace(s)
+	suffix_found := false
+	m := big.NewFloat(1)
+
+	for i := 1; i < len(FMT_NEG_SUFFIXES); i++ {
+		if strings.HasSuffix(s, FMT_NEG_SUFFIXES[i]) {
+			m = Pow10(int64(-i * 3))
+			s = strings.TrimSuffix(s, FMT_NEG_SUFFIXES[i])
+			suffix_found = true
+			break
+		}
+	}
+
+	if !suffix_found {
+		for i := 1; i < len(FMT_SUFFIXES); i++ {
+			if strings.HasSuffix(s, FMT_SUFFIXES[i]) {
+				m = Pow10(int64(i * 3))
+				s = strings.TrimSuffix(s, FMT_SUFFIXES[i])
+				break
 			}
 		}
-		if c < '0' || c > '9' {
-			return nil, fmt.Errorf("invalid character: %c", c)
-		}
 	}
 
-	// remove dot
-	if dot_index != -1 {
-		s = s[:dot_index] + s[dot_index+1:]
-	} else {
-		dot_index = len(s)
+	f, _, err := big.ParseFloat(s, 10, 18, big.ToNearestEven)
+	if err != nil {
+		return nil, err
 	}
 
-	n_after_dot := len(s) - dot_index
-	if n_after_dot < t.Decimals {
-		s += strings.Repeat("0", t.Decimals-n_after_dot)
-	} else {
-		s = s[dot_index+t.Decimals:]
+	f.Mul(f, m)
+	return f, nil
+}
+
+func Str2Int(s string) (*big.Int, error) {
+	f, err := Str2Float(s)
+	if err != nil {
+		return nil, err
+	}
+	i, _ := f.Int(nil)
+	return i, nil
+}
+
+func Str2Wei(s string, decimals int) (*big.Int, error) {
+	f, err := Str2Float(s)
+	if err != nil {
+		return nil, err
 	}
 
-	value, ok := new(big.Int).SetString(s, 10)
-	if !ok {
-		return nil, fmt.Errorf("invalid number: %s", s)
+	f = f.Mul(f, Pow10(int64(decimals)))
+	i, _ := f.Int(nil)
+	return i, nil
+}
+
+func (t *Token) Str2Value(str string) (*big.Int, error) {
+
+	fl, err := Str2Float(str)
+	if err != nil {
+		return nil, err
 	}
 
-	return value, nil
+	fl = fl.Mul(fl, Pow10(int64(t.Decimals)))
+	i, _ := fl.Int(nil)
+	return i, nil
 }
 
 func ShortAddress(a common.Address) string {
@@ -359,4 +395,10 @@ func Float64(value *big.Int, decimals int) float64 {
 	f = f.Quo(f, new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(decimals)), nil)))
 	r, _ := f.Float64()
 	return r
+}
+
+func Float(value *big.Int, decimals int) *big.Float {
+	f := new(big.Float).SetInt(value)
+	f = f.Quo(f, new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(decimals)), nil)))
+	return f
 }

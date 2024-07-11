@@ -41,7 +41,7 @@ const (
 )
 
 const REGEX_TAGS = `<(/?\w+)((?:\s+\w+(?::(?:[^>\s]+|"[^"]*"|'[^']*'))?\s*)*)>`
-const REGEX_SINGLE_TAG = `(\w+)(?::(".*?"|'.*?'|[^>\s]+))`
+const REGEX_SINGLE_TAG = `(/?\w+)(?::(".*?"|'.*?'|[^>\s]+))`
 
 var (
 	// ErrInvalidPoint is returned when client passed invalid coordinates of a cell.
@@ -1540,28 +1540,28 @@ func PopupNavigation(v *View, key Key, ch rune, mod Modifier) {
 			v.Controls[v.ControlInFocus].Type != C_INPUT {
 			v.FocusNext()
 		} else {
-			//DefaultEditor.Edit(v, key, ch, mod)
+			DefaultEditor.Edit(v, key, ch, mod)
 		}
 	case KeyArrowLeft:
 		if v.ControlInFocus != -1 &&
 			v.Controls[v.ControlInFocus].Type != C_INPUT {
 			v.gui.popup.View.FocusPrev()
 		} else {
-			//DefaultEditor.Edit(v, key, ch, mod)
+			DefaultEditor.Edit(v, key, ch, mod)
 		}
 	case KeyArrowUp:
 		if v.gui.popup.View.ControlInFocus != -1 &&
 			v.gui.popup.View.Controls[v.gui.popup.View.ControlInFocus].Type != C_TEXT_INPUT {
 			v.gui.popup.View.FocusPrev()
 		} else {
-			//DefaultEditor.Edit(v, key, ch, mod)
+			DefaultEditor.Edit(v, key, ch, mod)
 		}
 	case KeyArrowDown:
 		if v.gui.popup.View.ControlInFocus != -1 &&
 			v.gui.popup.View.Controls[v.gui.popup.View.ControlInFocus].Type != C_TEXT_INPUT {
 			v.gui.popup.View.FocusNext()
 		} else {
-			//DefaultEditor.Edit(v, key, ch, mod)
+			DefaultEditor.Edit(v, key, ch, mod)
 		}
 	default:
 		if v.gui.popup.View.ControlInFocus != -1 {
@@ -1569,6 +1569,9 @@ func PopupNavigation(v *View, key Key, ch rune, mod Modifier) {
 			switch c.Type {
 			case C_INPUT, C_TEXT_INPUT:
 				DefaultEditor.Edit(v, key, ch, mod)
+				if v.gui.popup.OnChange != nil {
+					v.gui.popup.OnChange(v.gui.popup, c)
+				}
 			}
 		}
 	}
@@ -1754,8 +1757,6 @@ func (v *View) RenderTemplate(template string) error {
 			line = strings.ReplaceAll(line, "\t", " ")
 		}
 
-		matches := re.FindAllStringIndex(line, -1)
-
 		splitted_lines := []string{}
 
 		if autowrap {
@@ -1798,8 +1799,9 @@ func (v *View) RenderTemplate(template string) error {
 		var cells []cell
 		for _, l := range splitted_lines {
 			left := 0
-
-		m:
+			matches := re.FindAllStringIndex(l, -1)
+			draw_line := false
+			draw_line_text := ""
 			for _, match := range matches {
 
 				if v.wx == 0 && centered {
@@ -1878,28 +1880,8 @@ func (v *View) RenderTemplate(template string) error {
 				case "/blink":
 					blink = false
 				case "line":
-					v.wx = 0
-					text := tagParams["text"]
-					left = 0
-					if text == "" {
-						l = strings.Repeat("━", width)
-					} else {
-						tl := utf8.RuneCountInString(text)
-						if tl >= width-4 {
-							l = text[:width]
-						} else {
-							if (width-tl-2)/2 > 0 {
-								l = strings.Repeat("━", (width-tl-2)/2)
-							}
-							l = l + " " + text + " "
-							left := width - utf8.RuneCountInString(l)
-							if left > 0 {
-								l = l + strings.Repeat("━", left)
-							}
-						}
-					}
-					break m
-
+					draw_line = true
+					draw_line_text = tagParams["text"]
 				default:
 					v.AddTag(tag)
 				}
@@ -1936,8 +1918,30 @@ func (v *View) RenderTemplate(template string) error {
 			if blink {
 				color |= AttrBlink
 			}
-			cells = AddCells(nil, color, v.BgColor, l[left:])
 
+			if draw_line {
+				v.wx = 0
+				left = 0
+				if draw_line_text == "" {
+					l = strings.Repeat("━", width)
+				} else {
+					tl := utf8.RuneCountInString(draw_line_text)
+					if tl >= width-4 {
+						l = draw_line_text[:width]
+					} else {
+						if (width-tl-2)/2 > 0 {
+							l = strings.Repeat("━", (width-tl-2)/2)
+						}
+						l = l + " " + draw_line_text + " "
+						left := width - utf8.RuneCountInString(l)
+						if left > 0 {
+							l = l + strings.Repeat("━", left)
+						}
+					}
+				}
+			}
+
+			cells = AddCells(nil, color, v.BgColor, l[left:])
 			v.makeWriteable(v.wx, v.wy)
 			v.writeCells(v.wx, v.wy, cells)
 			v.wx += len(cells)

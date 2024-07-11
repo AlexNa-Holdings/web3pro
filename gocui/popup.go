@@ -18,6 +18,7 @@ type Popup struct {
 	OnClickHotspot  func(v *View, hs *Hotspot)
 	OnClose         func(v *View)
 	OnOpen          func(v *View)
+	OnChange        func(p *Popup, c *PopoupControl)
 	Template        string
 	Closed          chan bool
 }
