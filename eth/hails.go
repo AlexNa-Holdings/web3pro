@@ -59,7 +59,16 @@ func BuildHailToSendTemplate(b *cmn.Blockchain, t *cmn.Token,
 		return "", err
 	}
 
-	total_gas := new(big.Int).Mul(new(big.Int).SetUint64(tx.Gas()), tx.GasPrice())
+	gas_price := tx.GasPrice()
+	gp_change := ""
+	if suggested_gas_price != nil {
+		gas_price = suggested_gas_price
+		gp_change = `
+	<c>	
+	` //TODO
+	}
+
+	total_gas := new(big.Int).Mul(new(big.Int).SetUint64(tx.Gas()), gas_price)
 
 	total_fee_s := "(unknown)"
 	if nt.Price > 0 {
@@ -77,8 +86,8 @@ func BuildHailToSendTemplate(b *cmn.Blockchain, t *cmn.Token,
       Signer: ` + s.Name + " (" + s.Type + ")" + `
 <line text:Fee> 
    Gas Limit: ` + cmn.FormatUInt64(tx.Gas(), false) + ` 
-   Gas Price: ` + cmn.FmtAmount(tx.GasPrice(), 18, false) + " " +
-		b.Currency + ` <l text:` + gocui.ICON_EDIT + ` action:'button edit_gas_price' tip:"edit fee">
+   Gas Price: ` + cmn.FmtAmount(gas_price, 18, false) + " " +
+		b.Currency + ` <l text:` + gocui.ICON_EDIT + ` action:'button edit_gas_price' tip:"edit fee">` + gp_change + `
    Total Fee: ` + cmn.FmtAmount(total_gas, 18, false) + " " + b.Currency + `
 Total Fee($): ` + total_fee_s + `
 <c>
@@ -163,9 +172,9 @@ func HailToSend(b *cmn.Blockchain, t *cmn.Token, from *cmn.Address, to common.Ad
 					v.GetGui().ShowPopup(&gocui.Popup{
 						Title: "Edit Gas Price",
 						Template: `<c><w>
- <button text:' Low  '> ` + cmn.FmtAmount(low, 18, true) + p_low + `
- <button text:'Market'> ` + cmn.FmtAmount(market, 18, true) + p_market + `
- <button text:' High '> ` + cmn.FmtAmount(high, 18, true) + p_high + `
+ <button text:' Low  '    id:Low> ` + cmn.FmtAmount(low, 18, true) + p_low + `
+ <button text:'Market' id:Market> ` + cmn.FmtAmount(market, 18, true) + p_market + `
+ <button text:' High '   id:High> ` + cmn.FmtAmount(high, 18, true) + p_high + `
 
  <line text:Advanced></c>
  
@@ -237,6 +246,24 @@ func HailToSend(b *cmn.Blockchain, t *cmn.Token, from *cmn.Address, to common.Ad
 							}
 						},
 						OnClose: func(v *gocui.View) {
+
+							if newGasPrice.Cmp(tx.GasPrice()) != 0 {
+
+								template, err := BuildHailToSendTemplate(b, t, from, to, amount, newGasPrice)
+								if err != nil {
+									log.Error().Err(err).Msg("Error building hail template")
+									cmn.NotifyErrorf("Error: %v", err)
+									return
+								}
+
+								hr.Template = template
+								v.GetGui().Update(func(g *gocui.Gui) error {
+									v.RenderTemplate(template)
+									return nil
+								})
+
+							}
+
 							hr.ResetTimer()
 							hr.TimerPaused = false
 						},
@@ -244,10 +271,6 @@ func HailToSend(b *cmn.Blockchain, t *cmn.Token, from *cmn.Address, to common.Ad
 							v.SetFocus(1) // market
 						},
 					})
-					if newGasPrice.Cmp(tx.GasPrice()) != 0 {
-						// New suggested price
-
-					}
 				}
 			}
 

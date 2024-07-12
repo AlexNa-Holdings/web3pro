@@ -2,6 +2,7 @@ package command
 
 import (
 	"fmt"
+	"math/big"
 	"strings"
 
 	"github.com/AlexNa-Holdings/web3pro/cmn"
@@ -152,7 +153,7 @@ func Send_Process(c *Command, input string) {
 	}
 
 	amt, err := t.Str2Wei(amount)
-	if err != nil {
+	if err != nil || amt.Cmp(big.NewInt(0)) <= 0 {
 		log.Error().Err(err).Msgf("Str2Value(%s)", amount)
 		ui.Notification.ShowErrorf("Invalid amount: %s", amount)
 		return

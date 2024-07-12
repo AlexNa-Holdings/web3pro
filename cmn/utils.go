@@ -131,30 +131,17 @@ func FmtAmount(amount *big.Int, decimals int, fixed bool) string {
 
 // convert string to the "weis" value
 func (t *Token) Str2Wei(str string) (*big.Int, error) {
-	log.Debug().Msgf("Str2Wei t.Name: %s t.Decimals: %d", t.Name, t.Decimals)
-
 	return Str2Wei(str, t.Decimals)
 }
 
 // convert string to the "weis" value
 func Str2Wei(str string, decimals int) (*big.Int, error) {
-
-	log.Debug().Msgf("Str2Wei str: %s decimals: %d", str, decimals)
-
 	val, err := ParseXF(str)
 	if err != nil {
-		log.Debug().Err(err).Msg("Str2Value parse error")
+		log.Error().Err(err).Msg("Str2Value parse error")
 		return nil, err
 	}
-
-	log.Debug().Msgf("Str2Wei val: %s", val.Dump())
-
-	val.Div(Pow10(decimals))
-
-	log.Debug().Msgf("Str2Wei val: %s", val.Dump())
-
-	log.Debug().Msgf("Str2Wei val: %s -> %s", str, val.BigInt().String())
-
+	val.Mul(Pow10(decimals))
 	return val.BigInt(), nil
 }
 

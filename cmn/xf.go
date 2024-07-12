@@ -41,7 +41,7 @@ func NewXF_Float64(v float64) *XF {
 func NewXF_BigFloat(v *big.Float) *XF {
 	n, err := ParseXF(v.Text('f', 100))
 	if err != nil {
-		log.Debug().Err(err).Msg("NewXF_BigFloat")
+		log.Error().Err(err).Msg("NewXF_BigFloat")
 		return XF_NaN
 	}
 
@@ -88,8 +88,6 @@ func (n *XF) IsZero() bool {
 var PD []XF
 
 func Pow10(N int) *XF {
-	log.Debug().Msgf("Pow10: N: %d", N)
-
 	if PD == nil {
 		n := NewXF_UInt64(1)
 		d10 := NewXF_UInt64(10)
@@ -142,8 +140,6 @@ func (n *XF) Dump() string {
 }
 
 func ParseXF(s string) (*XF, error) {
-	log.Debug().Msgf("ParseXF: %s", s)
-
 	s = strings.TrimSpace(s)
 	suffix_found := false
 	m := NewXF_UInt64(1)
@@ -152,11 +148,6 @@ func ParseXF(s string) (*XF, error) {
 		if strings.HasSuffix(s, FMT_NEG_SUFFIXES[i]) {
 			m = Pow10(-i * 3)
 			s = strings.TrimSuffix(s, FMT_NEG_SUFFIXES[i])
-
-			log.Debug().Msgf("Suggix: %s", FMT_NEG_SUFFIXES[i])
-			log.Debug().Msgf("S: %s", s)
-			log.Debug().Msgf("M: %s", m.Dump())
-
 			suffix_found = true
 			break
 		}
@@ -267,8 +258,6 @@ func (n *XF) Div(x *XF) *XF {
 		return n
 	}
 
-	log.Debug().Msgf("Div: %s / %s", n.Dump(), x.Dump())
-
 	nm := n.OrderOfMagnitude()
 	xm := x.OrderOfMagnitude() //TODO?????
 
@@ -282,9 +271,6 @@ func (n *XF) Div(x *XF) *XF {
 
 	n.decimals = n.decimals - x.decimals + factor
 	n.Norm()
-
-	log.Debug().Msgf("Div res: %s ", n.Dump())
-
 	return n
 }
 
@@ -305,6 +291,8 @@ func (n *XF) Format(fixed bool, prefix string) string {
 		}
 	}
 
+	n.Norm()
+
 	//if v == 0
 	if n.Int.Cmp(big.NewInt(0)) == 0 || n.decimals < 0 || n.decimals > MAX_DECIMALS {
 		if fixed {
@@ -320,7 +308,7 @@ func (n *XF) Format(fixed bool, prefix string) string {
 	decPos := len(strValue) - n.decimals
 
 	//Also add 000 to the end
-	strValue += "000"
+	strValue += "00000"
 
 	// Adjust the string to frame the first significant three digits
 	if decPos < 0 {

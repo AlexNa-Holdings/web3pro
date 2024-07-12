@@ -484,9 +484,6 @@ func (d TrezorDriver) Call(dev core.USBDevice, req proto.Message, result proto.M
 }
 
 func (d TrezorDriver) RawCall(dev core.USBDevice, req proto.Message) (trezorproto.MessageType, []byte, error) {
-
-	log.Debug().Msgf("RawCall: %s", MessageName(MessageType(req)))
-
 	data, err := proto.Marshal(req)
 	if err != nil {
 		log.Error().Msgf("RawCall: Error marshalling request: %s", err)

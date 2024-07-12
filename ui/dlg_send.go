@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"math/big"
+
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/eth"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
@@ -48,7 +50,7 @@ func DlgSend(b *cmn.Blockchain, t *cmn.Token, from *cmn.Address, to string, amou
 					}
 
 					val, err := t.Str2Wei(amount)
-					if err != nil {
+					if err != nil || val.Cmp(big.NewInt(0)) <= 0 {
 						log.Error().Err(err).Msgf("Str2Value(%s) err: %v", amount, err)
 						cmn.NotifyErrorf("Invalid amount: %s", amount)
 						return
