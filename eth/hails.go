@@ -43,7 +43,7 @@ func BuildHailToSendTemplate(b *cmn.Blockchain, t *cmn.Token,
 	dollars := ""
 	if t.Price > 0 {
 		//		dollars = cmn.FormatDollarsNormal(t.Price*t.Float64(amount))
-		dollars = cmn.FormatDollars(t.Price*t.Float64(amount), false)
+		dollars = cmn.FmtFloat64D(t.Price*t.Float64(amount), false)
 	} else {
 		dollars = "(unknown)"
 	}
@@ -65,7 +65,7 @@ func BuildHailToSendTemplate(b *cmn.Blockchain, t *cmn.Token,
 	if nt.Price > 0 {
 		total_fee_dollars := nt.Price * cmn.Float64(total_gas, 18)
 		// total_fee_s = cmn.FormatDollarsNormal(total_fee_dollars)
-		total_fee_s = cmn.FormatDollars(total_fee_dollars, false)
+		total_fee_s = cmn.FmtFloat64D(total_fee_dollars, false)
 	}
 
 	return `  Blockchain: ` + b.Name + `
@@ -76,10 +76,10 @@ func BuildHailToSendTemplate(b *cmn.Blockchain, t *cmn.Token,
    Amount($): ` + dollars + ` 
       Signer: ` + s.Name + " (" + s.Type + ")" + `
 <line text:Fee> 
-   Gas Limit: ` + cmn.FormatUInt64(tx.Gas(), false, "") + ` 
-   Gas Price: ` + cmn.FormatAmount(tx.GasPrice(), 18, false, "") + " " +
+   Gas Limit: ` + cmn.FormatUInt64(tx.Gas(), false) + ` 
+   Gas Price: ` + cmn.FmtAmount(tx.GasPrice(), 18, false) + " " +
 		b.Currency + ` <l text:` + gocui.ICON_EDIT + ` action:'button edit_gas_price' tip:"edit fee">
-   Total Fee: ` + cmn.FormatAmount(total_gas, 18, false, "") + " " + b.Currency + `
+   Total Fee: ` + cmn.FmtAmount(total_gas, 18, false) + " " + b.Currency + `
 Total Fee($): ` + total_fee_s + `
 <c>
 ` +
@@ -149,13 +149,13 @@ func HailToSend(b *cmn.Blockchain, t *cmn.Token, from *cmn.Address, to common.Ad
 						// p_low = cmn.FormatDollarsNormal(nt.Price * cmn.Float64(high, 18) * float64(tx.Gas()))
 						// p_market = cmn.FormatDollarsNormal(nt.Price * cmn.Float64(market, 18) * float64(tx.Gas()))
 						// p_high = cmn.FormatDollarsNormal(nt.Price * cmn.Float64(high, 18) * float64(tx.Gas()))
-						p_low = cmn.FormatDollars(nt.Price*cmn.Float64(high, 18)*float64(tx.Gas()), true)
-						p_market = cmn.FormatDollars(nt.Price*cmn.Float64(market, 18)*float64(tx.Gas()), true)
-						p_high = cmn.FormatDollars(nt.Price*cmn.Float64(high, 18)*float64(tx.Gas()), true)
+						p_low = cmn.FmtFloat64D(nt.Price*cmn.Float64(high, 18)*float64(tx.Gas()), true)
+						p_market = cmn.FmtFloat64D(nt.Price*cmn.Float64(market, 18)*float64(tx.Gas()), true)
+						p_high = cmn.FmtFloat64D(nt.Price*cmn.Float64(high, 18)*float64(tx.Gas()), true)
 
 						cp = `
   Total($): <input id:gas_price_dollars size:14 value:"` +
-							cmn.FormatFloat64(nt.Price*cmn.Float64(market, 18)*float64(tx.Gas()), false, "") + `">`
+							cmn.FmtFloat64(nt.Price*cmn.Float64(market, 18)*float64(tx.Gas()), false) + `">`
 					}
 
 					newGasPrice := tx.GasPrice()
@@ -163,13 +163,13 @@ func HailToSend(b *cmn.Blockchain, t *cmn.Token, from *cmn.Address, to common.Ad
 					v.GetGui().ShowPopup(&gocui.Popup{
 						Title: "Edit Gas Price",
 						Template: `<c><w>
- <button text:' Low  '> ` + cmn.FormatAmount(low, 18, true, "") + p_low + `
- <button text:'Market'> ` + cmn.FormatAmount(market, 18, true, "") + p_market + `
- <button text:' High '> ` + cmn.FormatAmount(high, 18, true, "") + p_high + `
+ <button text:' Low  '> ` + cmn.FmtAmount(low, 18, true) + p_low + `
+ <button text:'Market'> ` + cmn.FmtAmount(market, 18, true) + p_market + `
+ <button text:' High '> ` + cmn.FmtAmount(high, 18, true) + p_high + `
 
  <line text:Advanced></c>
  
- Gas price: <input id:gas_price size:14 value:"` + cmn.FormatAmount(market, 18, false, "") + `"> ` + b.Currency + cp + ` 
+ Gas price: <input id:gas_price size:14 value:"` + cmn.FmtAmount(market, 18, false) + `"> ` + b.Currency + cp + ` 
 <c>
  <button text:'Use custom price' id:Custom>
 <line>
@@ -221,21 +221,19 @@ func HailToSend(b *cmn.Blockchain, t *cmn.Token, from *cmn.Address, to common.Ad
 								total_gas := new(big.Int).Mul(new(big.Int).SetUint64(tx.Gas()), val)
 								total_fee_dollars := nt.Price * cmn.Float64(total_gas, 18)
 
-								p.SetInput("gas_price_dollars", cmn.FormatFloat64(total_fee_dollars, false, ""))
+								p.SetInput("gas_price_dollars", cmn.FmtFloat64(total_fee_dollars, false))
 							case "gas_price_dollars":
 								gpd := p.GetInput("gas_price_dollars")
 
-								val, err := cmn.Str2Float(gpd)
-								if err != nil || val.Cmp(big.NewFloat(0.0)) <= 0 {
+								val, err := cmn.ParseXF(gpd)
+								if err != nil || val.IsZero() {
 									cmn.NotifyErrorf("Invalid dollar price: %v", err)
 									return
 								}
 
-								gp := new(big.Float).Quo(val, big.NewFloat(nt.Price))
-								gp.Mul(gp, cmn.Pow10(18))
-								gp.Quo(gp, big.NewFloat(float64(tx.Gas())))
-								qpi, _ := gp.Int(nil)
-								p.SetInput("gas_price", cmn.FormatAmount(qpi, 18, false, ""))
+								val = val.Div(cmn.NewXF_Float64(nt.Price))
+								val = val.Div(cmn.NewXF_UInt64(tx.Gas()))
+								p.SetInput("gas_price", val.Format(false, ""))
 							}
 						},
 						OnClose: func(v *gocui.View) {

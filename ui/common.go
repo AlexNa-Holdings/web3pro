@@ -155,7 +155,7 @@ func AddValueLink(v *gocui.View, val *big.Int, t *cmn.Token) {
 		return
 	}
 
-	text := cmn.FormatAmount(val, t.Decimals, true, "")
+	text := cmn.FmtAmount(val, t.Decimals, true)
 	n := cmn.Amount2Str(val, t.Decimals)
 
 	v.AddLink(text, "copy "+n, "Copy "+n, "")
@@ -170,7 +170,7 @@ func AddValueSymbolLink(v *gocui.View, val *big.Int, t *cmn.Token) {
 		return
 	}
 
-	text := cmn.FormatAmount(val, t.Decimals, true, "") + t.Symbol
+	text := cmn.FmtAmount(val, t.Decimals, true) + t.Symbol
 	n := cmn.Amount2Str(val, t.Decimals)
 
 	v.AddLink(text, "copy "+n, "Copy "+n, "")

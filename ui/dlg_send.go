@@ -47,7 +47,7 @@ func DlgSend(b *cmn.Blockchain, t *cmn.Token, from *cmn.Address, to string, amou
 						return
 					}
 
-					val, err := t.Str2Value(amount)
+					val, err := t.Str2Wei(amount)
 					if err != nil {
 						log.Error().Err(err).Msgf("Str2Value(%s) err: %v", amount, err)
 						cmn.NotifyErrorf("Invalid amount: %s", amount)

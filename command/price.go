@@ -135,8 +135,8 @@ func Price_Process(c *Command, input string) {
 		for i, p := range pairs {
 			ui.Printf("%2d %10s ", i+1, p.PriceFeeder)
 			ui.AddAddressShortLink(ui.Terminal.Screen, common.Address(common.FromHex(p.PairAddress)))
-			ui.Printf(" %s", cmn.FormatDollars(p.Liquidity, true))
-			ui.Printf(" %s", cmn.FormatDollars(p.PriceUsd, true))
+			ui.Printf(" %s", cmn.FmtFloat64D(p.Liquidity, true))
+			ui.Printf(" %s", cmn.FmtFloat64D(p.PriceUsd, true))
 			ui.Printf(" %s/%s ", p.BaseToken, p.QuoteToken)
 
 			tn := t.Address.String()

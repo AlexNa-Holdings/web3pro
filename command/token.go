@@ -232,7 +232,7 @@ func Token_Process(c *Command, input string) {
 
 			price := "          "
 			if t.Price != 0. {
-				price = cmn.FormatDollars(t.Price, true)
+				price = cmn.FmtFloat64D(t.Price, true)
 			}
 
 			b := w.GetBlockchain(t.Blockchain)

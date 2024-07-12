@@ -151,12 +151,11 @@ func Send_Process(c *Command, input string) {
 		return
 	}
 
-	amt, err := t.Str2Value(amount)
+	amt, err := t.Str2Wei(amount)
 	if err != nil {
-		log.Error().Err(err).Msgf("Str2Value(%s) err: %v", amount, err)
+		log.Error().Err(err).Msgf("Str2Value(%s)", amount)
 		ui.Notification.ShowErrorf("Invalid amount: %s", amount)
 		return
 	}
-
 	eth.HailToSend(b, t, a_from, common.HexToAddress(to), amt)
 }
