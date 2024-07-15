@@ -2,6 +2,7 @@ package eth
 
 import (
 	"errors"
+	"fmt"
 	"math/big"
 
 	"github.com/AlexNa-Holdings/web3pro/cmn"
@@ -56,18 +57,35 @@ func BuildHailToSendTemplate(b *cmn.Blockchain, t *cmn.Token,
 	}
 
 	if err != nil {
+		log.Error().Err(err).Msg("Error building transaction")
 		return "", err
 	}
 
 	gas_price := tx.GasPrice()
 	gp_change := ""
-	if suggested_gas_price != nil {
-		gas_price = suggested_gas_price
-		gp_change = `
-	<c>	
-	` //TODO
-	}
+	if suggested_gas_price != nil && suggested_gas_price.Cmp(gas_price) != 0 {
+		if suggested_gas_price.Cmp(gas_price) < 0 {
+			percents := new(big.Int).Div(new(big.Int).Mul(new(big.Int).Sub(gas_price, suggested_gas_price), big.NewInt(100)), gas_price)
+			f := float64(percents.Int64())
+			gp_change = fmt.Sprintf(` <color fg:green>↓%2.2f%%`, f)
+			if f > 10 {
+				gp_change += "\n<c><blink>TOO LOW</blink></c>"
+			}
+			gp_change += `</color>`
+		} else {
+			percents := new(big.Int).Div(new(big.Int).Mul(new(big.Int).Sub(suggested_gas_price, gas_price), big.NewInt(100)), gas_price)
+			f := float64(percents.Int64())
+			gp_change = fmt.Sprintf(` <color fg:red>↑%2.2f%%`, f)
+			if f > 10 {
+				gp_change += "\n<c><blink>TOO HIGH</blink></c>"
+			}
+			gp_change += `</color>`
+		}
 
+		log.Debug().Msgf("go_change: %v", gp_change)
+
+		gas_price = suggested_gas_price
+	}
 	total_gas := new(big.Int).Mul(new(big.Int).SetUint64(tx.Gas()), gas_price)
 
 	total_fee_s := "(unknown)"
@@ -245,10 +263,8 @@ func HailToSend(b *cmn.Blockchain, t *cmn.Token, from *cmn.Address, to common.Ad
 								p.SetInput("gas_price", val.Format(false, ""))
 							}
 						},
-						OnClose: func(v *gocui.View) {
-
+						OnClose: func(dv *gocui.View) {
 							if newGasPrice.Cmp(tx.GasPrice()) != 0 {
-
 								template, err := BuildHailToSendTemplate(b, t, from, to, amount, newGasPrice)
 								if err != nil {
 									log.Error().Err(err).Msg("Error building hail template")
@@ -256,12 +272,11 @@ func HailToSend(b *cmn.Blockchain, t *cmn.Token, from *cmn.Address, to common.Ad
 									return
 								}
 
-								hr.Template = template
-								v.GetGui().Update(func(g *gocui.Gui) error {
+								dv.GetGui().UpdateAsync(func(*gocui.Gui) error {
+									hr.Template = template
 									v.RenderTemplate(template)
 									return nil
 								})
-
 							}
 
 							hr.ResetTimer()

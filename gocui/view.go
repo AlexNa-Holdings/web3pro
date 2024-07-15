@@ -1747,6 +1747,7 @@ func (v *View) RenderTemplate(template string) error {
 	dim := false
 	italic := false
 	strikethrough := false
+	var FGColor, BGColor *Attribute
 
 	autowrap := false
 
@@ -1812,6 +1813,10 @@ func (v *View) RenderTemplate(template string) error {
 				}
 
 				color := v.FgColor
+				if FGColor != nil {
+					color = *FGColor
+				}
+
 				if bold {
 					color |= AttrBold
 				}
@@ -1833,7 +1838,11 @@ func (v *View) RenderTemplate(template string) error {
 				if blink {
 					color |= AttrBlink
 				}
-				cells = AddCells(nil, color, v.BgColor, l[left:match[0]])
+				bgcolor := v.BgColor
+				if BGColor != nil {
+					bgcolor = *BGColor
+				}
+				cells = AddCells(nil, color, bgcolor, l[left:match[0]])
 
 				v.makeWriteable(v.wx, v.wy)
 				v.writeCells(v.wx, v.wy, cells)
@@ -1879,6 +1888,19 @@ func (v *View) RenderTemplate(template string) error {
 					blink = true
 				case "/blink":
 					blink = false
+				case "color":
+					if tagParams["fg"] != "" {
+						c := v.ParseColor(tagParams["fg"])
+						FGColor = &c
+					}
+					if tagParams["bg"] != "" {
+						c := v.ParseColor(tagParams["bg"])
+						BGColor = &c
+					}
+
+				case "/color":
+					FGColor = nil
+					BGColor = nil
 				case "line":
 					draw_line = true
 					draw_line_text = tagParams["text"]
@@ -1897,6 +1919,10 @@ func (v *View) RenderTemplate(template string) error {
 			}
 
 			color := v.FgColor
+			if FGColor != nil {
+				color = *FGColor
+			}
+
 			if bold {
 				color |= AttrBold
 			}
@@ -1941,7 +1967,12 @@ func (v *View) RenderTemplate(template string) error {
 				}
 			}
 
-			cells = AddCells(nil, color, v.BgColor, l[left:])
+			bgcolor := v.BgColor
+			if BGColor != nil {
+				bgcolor = *BGColor
+			}
+
+			cells = AddCells(nil, color, bgcolor, l[left:])
 			v.makeWriteable(v.wx, v.wy)
 			v.writeCells(v.wx, v.wy, cells)
 			v.wx += len(cells)
