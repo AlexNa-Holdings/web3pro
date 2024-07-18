@@ -97,10 +97,12 @@ func Token_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 	}
 
 	if subcommand == "list" || subcommand == "add" || subcommand == "remove" || subcommand == "balance" {
-		for _, chain := range w.Blockchains {
-			if cmn.Contains(chain.Name, param) {
-				options = append(options, ui.ACOption{
-					Name: chain.Name, Result: command + " " + subcommand + " '" + chain.Name + "' "})
+		if param == "" || !strings.HasSuffix(input, " ") {
+			for _, chain := range w.Blockchains {
+				if cmn.Contains(chain.Name, param) {
+					options = append(options, ui.ACOption{
+						Name: chain.Name, Result: command + " " + subcommand + " '" + chain.Name + "' "})
+				}
 			}
 		}
 		return "blockchain", &options, param
@@ -170,6 +172,7 @@ func Token_Process(c *Command, input string) {
 		}
 
 		w.Tokens = append(w.Tokens, t)
+		w.MarkUniqueTokens()
 		w.Save()
 
 		ui.Printf("\nToken added: %s %s\n", symbol, addr.String())
@@ -208,6 +211,7 @@ func Token_Process(c *Command, input string) {
 <c> `+t.Symbol+"? \n",
 			func() {
 				w.DeleteToken(chain, addr)
+				w.MarkUniqueTokens()
 				w.Save()
 				ui.Notification.Show("Token removed")
 			}))
