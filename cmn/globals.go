@@ -2,6 +2,7 @@ package cmn
 
 import (
 	"sync"
+	"time"
 
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/ethereum/go-ethereum/common"
@@ -75,5 +76,5 @@ type Token struct {
 	PriceFeeder    string         `json:"price_feeder"`
 	PriceFeedParam string         `json:"price_feed_id"`
 	Price          float64        `json:"price"`
-	PriceTimestamp int64          `json:"price_timestamp"` // Unix timestamp
+	PriceTimestamp time.Time      `json:"price_timestamp"` // Unix timestamp
 }

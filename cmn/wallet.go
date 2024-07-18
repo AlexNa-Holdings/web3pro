@@ -74,6 +74,8 @@ func (w *Wallet) AuditNativeTokens() {
 		eddited = true
 	}
 
+	w.MarkUniqueTokens()
+
 	if eddited {
 		w.Save()
 	}

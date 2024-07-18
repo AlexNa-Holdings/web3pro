@@ -24,21 +24,23 @@ var ConfPath = CONFIG_NAME
 var ConfigChanged = false
 
 type SConfig struct {
-	WalletName string `yaml:"wallet_name"` // last wallet used
-	Verbosity  string `yaml:"verbosity"`   // log verbosity
-	Theme      string `yaml:"theme"`       // UI theme
-	TimeoutSec int    `yaml:"timeout_sec"` // default timeout for hail requests
-	USBLog     bool   `yaml:"usb_log"`     // log USB events
-	PriceFeed  string `yaml:"price_feed"`  // price feed
+	WalletName        string `yaml:"wallet_name"`         // last wallet used
+	Verbosity         string `yaml:"verbosity"`           // log verbosity
+	Theme             string `yaml:"theme"`               // UI theme
+	TimeoutSec        int    `yaml:"timeout_sec"`         // default timeout for hail requests
+	USBLog            bool   `yaml:"usb_log"`             // log USB events
+	PriceFeed         string `yaml:"price_feed"`          // price feed
+	PriceUpdatePeriod string `yaml:"price_update_period"` // price update period
 }
 
 var Config *SConfig = &SConfig{ //Default config
-	WalletName: "default",
-	Verbosity:  "debug",
-	Theme:      "dark",
-	TimeoutSec: 60,
-	USBLog:     false,
-	PriceFeed:  "dexscreener",
+	WalletName:        "default",
+	Verbosity:         "debug",
+	Theme:             "dark",
+	TimeoutSec:        60,
+	USBLog:            false,
+	PriceFeed:         "dexscreener",
+	PriceUpdatePeriod: "15m",
 }
 
 func InitConfig() {

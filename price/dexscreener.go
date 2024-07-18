@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/AlexNa-Holdings/web3pro/cmn"
-	"github.com/AlexNa-Holdings/web3pro/ui"
 	"github.com/rs/zerolog/log"
 )
 
@@ -216,12 +215,15 @@ func DSGetPairs(chain_id uint, pairList string) ([]Pair, error) {
 	return pairs, nil
 }
 
-func DSUpdate(w *cmn.Wallet) error {
+func DSUpdate(w *cmn.Wallet) (int, error) { // number of pairs updated
+	n_updated := 0
 
 	for _, b := range w.Blockchains {
 		tokens_to_update := []*cmn.Token{}
 		for _, t := range w.Tokens {
-			if t.Blockchain == b.Name && t.PriceFeeder == "dexscreener" && t.PriceFeedParam != "" && chain_names[b.ChainId] != "" {
+			if t.Blockchain == b.Name && t.PriceFeeder == "dexscreener" &&
+				t.PriceFeedParam != "" && chain_names[b.ChainId] != "" &&
+				t.PriceTimestamp.Add(PRICE_UPDATE_PERIOD).Before(time.Now()) {
 				tokens_to_update = append(tokens_to_update, t)
 			}
 		}
@@ -238,23 +240,23 @@ func DSUpdate(w *cmn.Wallet) error {
 			pairs, err := DSGetPairs(b.ChainId, pair_list)
 			if err != nil {
 				log.Error().Err(err).Msgf("DSUpdate: failed to get pairs from dexscreener: %v", err)
-				return fmt.Errorf("DSUpdate: failed to get pairs from dexscreener: %w", err)
+				return 0, fmt.Errorf("DSUpdate: failed to get pairs from dexscreener: %w", err)
 			}
 
 			if len(pairs) != len(tokens_to_update) {
 				log.Error().Msg("DSUpdate: number of pairs does not match number of tokens")
-				return fmt.Errorf("DSUpdate: number of pairs does not match number of tokens")
+				return 0, fmt.Errorf("DSUpdate: number of pairs does not match number of tokens")
 			}
 
 			for i, t := range tokens_to_update {
 				t.Price = pairs[i].PriceUsd
-				t.PriceTimestamp = time.Now().Unix()
+				t.PriceTimestamp = time.Now()
 			}
+
+			n_updated += len(pairs)
 		}
 
 	}
 
-	ui.Printf("Price feed updated\n")
-
-	return nil
+	return n_updated, nil
 }

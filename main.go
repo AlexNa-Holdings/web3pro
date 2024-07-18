@@ -13,6 +13,7 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/core"
 	"github.com/AlexNa-Holdings/web3pro/eth"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
+	"github.com/AlexNa-Holdings/web3pro/price"
 	"github.com/AlexNa-Holdings/web3pro/signer_driver"
 	"github.com/AlexNa-Holdings/web3pro/ui"
 	"github.com/AlexNa-Holdings/web3pro/usb"
@@ -40,6 +41,7 @@ func main() {
 	eth.LoadABIs()
 	command.Init()
 	ui.Init()
+	price.Init()
 	defer ui.Gui.Close()
 
 	bus := initUsb()
