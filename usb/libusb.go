@@ -396,10 +396,7 @@ func IsTrezor(vid uint16, pid uint16) bool {
 }
 
 func IsLedger(vid uint16, pid uint16) bool {
-
-	//	log.Debug().Msg(fmt.Sprintf("isLedger: vid: %x, pid: %x", vid, pid))
-
-	return false
+	return vid == core.LedgerVID
 }
 
 func (b *LibUSB) matchVidPid(vid uint16, pid uint16) bool {

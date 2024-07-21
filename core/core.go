@@ -142,6 +142,10 @@ const (
 	VendorT2            = 0x1209
 	ProductT2Bootloader = 0x53C0
 	ProductT2Firmware   = 0x53C1
+	LedgerVID           = 0x2c97
+	LedgerNanoS         = 0x0001
+	LedgerNanoX         = 0x0004
+	LedgerBlue          = 0x0000
 )
 
 func New(bus USBBus, allowStealing, reset bool) *Core {
@@ -419,7 +423,7 @@ func (c *Core) GetDevice(path string) (USBDevice, error) {
 	if s == "" {
 		s, err = c.Acquire(path, "", false)
 		if err != nil {
-			log.Error().Err(err).Msg("GetTrezorName: Error acquiring device")
+			log.Error().Err(err).Msg("GetDevice: Error acquiring device")
 			return nil, err
 		}
 	}
