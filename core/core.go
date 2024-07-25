@@ -551,12 +551,12 @@ const (
 
 func Tracef(format string, v ...interface{}) {
 	if USBLog {
-		Tracef(format, v...)
+		log.Trace().Msgf(format, v...)
 	}
 }
 
 func Trace(format string, v ...interface{}) {
 	if USBLog {
-		Trace(format)
+		log.Trace().Msgf(format, v...)
 	}
 }

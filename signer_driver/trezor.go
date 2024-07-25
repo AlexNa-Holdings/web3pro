@@ -14,6 +14,7 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/signer_driver/trezorproto"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/protobuf/proto"
@@ -511,7 +512,7 @@ func (d TrezorDriver) RawCall(dev core.USBDevice, req proto.Message) (trezorprot
 			payload = nil
 		}
 		// Send over to the dev
-		// log.Trace().Msgf("Data chunk sent to the Trezor: %v\n", hexutil.Bytes(chunk))
+		log.Trace().Msgf("Data chunk sent to the Trezor: %v\n", hexutil.Bytes(chunk))
 		if _, err := dev.Write(chunk); err != nil {
 			log.Error().Msgf("RawCall: Error writing to device: %s", err)
 			return 0, nil, err
