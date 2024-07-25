@@ -6,6 +6,7 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/ui"
+	"github.com/rs/zerolog/log"
 )
 
 var usb_subcommands = []string{"list"}
@@ -65,6 +66,9 @@ func Usb_Process(c *Command, input string) {
 		for _, u := range l {
 
 			t := cmn.GetDeviceType(u.Vendor, u.Product)
+
+			log.Trace().Msgf("Device type: %s", t)
+
 			device_name, err := cmn.GetDeviceName(u)
 			if err != nil {
 				ui.PrintErrorf("\nError getting device name: %v\n", err)

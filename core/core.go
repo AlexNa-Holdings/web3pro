@@ -27,6 +27,7 @@ import (
 // USB* interfaces are implemented in usb package
 
 var USBLog = false
+var USBBackgroundEnumerate = false
 
 type USBBus interface {
 	Enumerate() ([]USBInfo, error)
@@ -41,15 +42,6 @@ type USBBus interface {
 }
 
 type DeviceType int
-
-const (
-	TypeT1Hid        DeviceType = 0
-	TypeT1Webusb     DeviceType = 1
-	TypeT1WebusbBoot DeviceType = 2
-	TypeT2           DeviceType = 3
-	TypeT2Boot       DeviceType = 4
-	TypeEmulator     DeviceType = 5
-)
 
 type USBInfo struct {
 	Path      string
@@ -136,18 +128,6 @@ var (
 	ErrOtherCall        = errors.New("other call in progress")
 )
 
-const (
-	VendorT1            = 0x534c
-	ProductT1Firmware   = 0x0001
-	VendorT2            = 0x1209
-	ProductT2Bootloader = 0x53C0
-	ProductT2Firmware   = 0x53C1
-	LedgerVID           = 0x2c97
-	LedgerNanoS         = 0x0001
-	LedgerNanoX         = 0x0004
-	LedgerBlue          = 0x0000
-)
-
 func New(bus USBBus, allowStealing, reset bool) *Core {
 	c := &Core{
 		bus:           bus,
@@ -155,7 +135,9 @@ func New(bus USBBus, allowStealing, reset bool) *Core {
 		reset:         reset,
 		usbPaths:      make(map[int]string),
 	}
-	go c.backgroundListen()
+	if USBBackgroundEnumerate {
+		go c.backgroundListen()
+	}
 	return c
 }
 

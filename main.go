@@ -33,6 +33,7 @@ func main() {
 	// init globals
 	cmn.WalletTrezorDriver = signer_driver.NewTrezorDriver()
 	cmn.WalletMnemonicsDriver = signer_driver.NewMnemonicDriver()
+	cmn.WalletLedgerDriver = signer_driver.NewLedgerDriver()
 	cmn.Notify = ui.Notification.Show
 	cmn.Notifyf = ui.Notification.Showf
 	cmn.NotifyError = ui.Notification.ShowError

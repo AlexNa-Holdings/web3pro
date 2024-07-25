@@ -20,17 +20,17 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-type ConnectedDevice struct {
+type ConnectedTrezor struct {
 	*trezorproto.Features
 }
 
 type TrezorDriver struct {
-	KnownDevices map[string]*ConnectedDevice
+	KnownDevices map[string]*ConnectedLedger
 }
 
 func NewTrezorDriver() TrezorDriver {
 	return TrezorDriver{
-		KnownDevices: make(map[string]*ConnectedDevice), // usb path -> dev
+		KnownDevices: make(map[string]*ConnectedLedger), // usb path -> dev
 	}
 }
 
@@ -254,7 +254,7 @@ func SB(s *bool) bool { // Safe bool
 	return *s
 }
 
-func (d TrezorDriver) Init(path string) (*ConnectedDevice, error) {
+func (d TrezorDriver) Init(path string) (*ConnectedLedger, error) {
 	dev, err := cmn.Core.GetDevice(path)
 	if err != nil {
 		log.Error().Err(err).Msgf("Init: Error getting device: %s", path)
@@ -284,7 +284,7 @@ func (d TrezorDriver) Init(path string) (*ConnectedDevice, error) {
 		}
 	}
 
-	cd := ConnectedDevice{
+	cd := ConnectedLedger{
 		Features: features,
 	}
 

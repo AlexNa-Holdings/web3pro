@@ -137,7 +137,7 @@ func (udp *UDP) Enumerate() ([]core.USBInfo, error) {
 				Path:      emulatorPrefix + strconv.Itoa(port.Normal) + "D" + strconv.Itoa(port.Debug),
 				VendorID:  0,
 				ProductID: 0,
-				Type:      core.TypeEmulator,
+				Type:      TypeEmulator,
 			}
 			if presentD {
 				info.Debug = true

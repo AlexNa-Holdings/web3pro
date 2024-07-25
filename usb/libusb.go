@@ -57,6 +57,43 @@ type LibUSB struct {
 	detach bool
 }
 
+// Vendor and Product IDs
+const (
+	VID_Trezor1 = 0x534c
+	VID_Trezor2 = 0x1209
+	VID_Ledger  = 0x2c97
+)
+
+const (
+	TypeT1Hid           = 0
+	TypeT1Webusb        = 1
+	TypeT1WebusbBoot    = 2
+	TypeT2              = 3
+	TypeT2Boot          = 4
+	TypeEmulator        = 5
+	ProductT2Bootloader = 0x53C0
+	ProductT2Firmware   = 0x53C1
+	LedgerNanoS         = 0x0001
+	LedgerNanoX         = 0x0004
+	LedgerBlue          = 0x0000
+	ProductT1Firmware   = 0x0001
+)
+
+func IsTrezor1(vid uint16, pid uint16) bool {
+	return vid == VID_Trezor1 && pid == ProductT1Firmware
+}
+
+func IsTrezor2(vid uint16, pid uint16) bool {
+	return vid == VID_Trezor2 && (pid == ProductT2Firmware || pid == ProductT2Bootloader)
+}
+
+func IsTrezor(vid uint16, pid uint16) bool {
+	return IsTrezor1(vid, pid) || IsTrezor2(vid, pid)
+}
+
+func IsLedger(vid uint16, pid uint16) bool {
+	return vid == VID_Ledger
+}
 func InitLibUSB(onlyLibusb, allowCancel, detach bool) (*LibUSB, error) {
 	var usb lowlevel.Context
 	core.Trace("init")
@@ -321,26 +358,6 @@ func (b *LibUSB) connect(dev lowlevel.Device, debug bool, reset bool) (*LibUSBDe
 	}, nil
 }
 
-func matchType(dd *lowlevel.Device_Descriptor) core.DeviceType {
-	if dd.IDProduct == core.ProductT1Firmware {
-		// this is HID, in platforms where we don't use hidapi (linux, bsd)
-		return core.TypeT1Hid
-	}
-
-	if dd.IDProduct == core.ProductT2Bootloader {
-		if int(dd.BcdDevice>>8) == 1 {
-			return core.TypeT1WebusbBoot
-		}
-		return core.TypeT2Boot
-	}
-
-	if int(dd.BcdDevice>>8) == 1 {
-		return core.TypeT1Webusb
-	}
-
-	return core.TypeT2
-}
-
 func (b *LibUSB) match(dev lowlevel.Device) (bool, core.DeviceType) {
 	dd, err := lowlevel.Get_Device_Descriptor(dev)
 	if err != nil {
@@ -383,23 +400,31 @@ func (b *LibUSB) match(dev lowlevel.Device) (bool, core.DeviceType) {
 	return true, matchType(dd)
 
 }
-func IsTrezor1(vid uint16, pid uint16) bool {
-	return vid == core.VendorT1 && pid == core.ProductT1Firmware
-}
 
-func IsTrezor2(vid uint16, pid uint16) bool {
-	return vid == core.VendorT2 && (pid == core.ProductT2Firmware || pid == core.ProductT2Bootloader)
-}
+func matchType(dd *lowlevel.Device_Descriptor) core.DeviceType {
+	if dd.IDProduct == ProductT1Firmware {
+		// this is HID, in platforms where we don't use hidapi (linux, bsd)
+		return TypeT1Hid
+	}
 
-func IsTrezor(vid uint16, pid uint16) bool {
-	return IsTrezor1(vid, pid) || IsTrezor2(vid, pid)
-}
+	if dd.IDProduct == ProductT2Bootloader {
+		if int(dd.BcdDevice>>8) == 1 {
+			return TypeT1WebusbBoot
+		}
+		return TypeT2Boot
+	}
 
-func IsLedger(vid uint16, pid uint16) bool {
-	return vid == core.LedgerVID
+	if int(dd.BcdDevice>>8) == 1 {
+		return TypeT1Webusb
+	}
+
+	return TypeT2
 }
 
 func (b *LibUSB) matchVidPid(vid uint16, pid uint16) bool {
+
+	log.Trace().Msgf("matching vid %x pid %x", vid, pid)
+
 	return IsTrezor(vid, pid) || IsLedger(vid, pid)
 
 	// // Note: Trezor1 libusb will actually have the T2 vid/pid

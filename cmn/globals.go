@@ -27,6 +27,7 @@ type SignerDriver interface {
 
 var WalletTrezorDriver SignerDriver
 var WalletMnemonicsDriver SignerDriver
+var WalletLedgerDriver SignerDriver
 
 var StandardOnClickHotspot func(v *gocui.View, hs *gocui.Hotspot)
 var StandardOnOverHotspot func(v *gocui.View, hs *gocui.Hotspot)
