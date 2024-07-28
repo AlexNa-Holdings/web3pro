@@ -9,9 +9,9 @@ import (
 	"strings"
 
 	"github.com/AlexNa-Holdings/web3pro/cmn"
-	"github.com/AlexNa-Holdings/web3pro/core"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/signer_driver/trezorproto"
+	"github.com/AlexNa-Holdings/web3pro/usb"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -25,16 +25,16 @@ type ConnectedTrezor struct {
 }
 
 type TrezorDriver struct {
-	KnownDevices map[string]*ConnectedLedger
+	KnownDevices map[string]*ConnectedTrezor
 }
 
 func NewTrezorDriver() TrezorDriver {
 	return TrezorDriver{
-		KnownDevices: make(map[string]*ConnectedLedger), // usb path -> dev
+		KnownDevices: make(map[string]*ConnectedTrezor), // usb path -> dev
 	}
 }
 
-func (d *TrezorDriver) Open(s *cmn.Signer) (core.USBDevice, error) {
+func (d *TrezorDriver) Open(s *cmn.Signer) (usb.USBDevice, error) {
 
 	log.Trace().Msgf("Opening trezor: %s", s.Name)
 
@@ -254,7 +254,7 @@ func SB(s *bool) bool { // Safe bool
 	return *s
 }
 
-func (d TrezorDriver) Init(path string) (*ConnectedLedger, error) {
+func (d TrezorDriver) Init(path string) (*ConnectedTrezor, error) {
 	dev, err := cmn.Core.GetDevice(path)
 	if err != nil {
 		log.Error().Err(err).Msgf("Init: Error getting device: %s", path)
@@ -284,7 +284,7 @@ func (d TrezorDriver) Init(path string) (*ConnectedLedger, error) {
 		}
 	}
 
-	cd := ConnectedLedger{
+	cd := ConnectedTrezor{
 		Features: features,
 	}
 
@@ -401,7 +401,7 @@ Password: <input id:password size:16 masked:true>
 	return password, nil
 }
 
-func (d TrezorDriver) Call(dev core.USBDevice, req proto.Message, result proto.Message) error {
+func (d TrezorDriver) Call(dev usb.USBDevice, req proto.Message, result proto.Message) error {
 
 	kind, reply, err := d.RawCall(dev, req)
 	if err != nil {
@@ -484,7 +484,7 @@ func (d TrezorDriver) Call(dev core.USBDevice, req proto.Message, result proto.M
 	}
 }
 
-func (d TrezorDriver) RawCall(dev core.USBDevice, req proto.Message) (trezorproto.MessageType, []byte, error) {
+func (d TrezorDriver) RawCall(dev usb.USBDevice, req proto.Message) (trezorproto.MessageType, []byte, error) {
 	data, err := proto.Marshal(req)
 	if err != nil {
 		log.Error().Msgf("RawCall: Error marshalling request: %s", err)
@@ -500,6 +500,8 @@ func (d TrezorDriver) RawCall(dev core.USBDevice, req proto.Message) (trezorprot
 	// Stream all the chunks to the dev
 	chunk := make([]byte, 64)
 	chunk[0] = 0x3f // Report ID magic number
+
+	// ???? usb.FlushBuffer(dev, 64*time.Millisecond)
 
 	for len(payload) > 0 {
 		// Construct the new message to stream, padding with zeroes if needed

@@ -14,7 +14,6 @@ import (
 
 	lowlevel "github.com/trezor/trezord-go/usb/lowlevel/hidapi"
 
-	"github.com/trezor/trezord-go/core"
 	"github.com/trezor/trezord-go/memorywriter"
 )
 
@@ -36,8 +35,8 @@ func InitHIDAPI(mw *memorywriter.MemoryWriter) (*HIDAPI, error) {
 	}, nil
 }
 
-func (b *HIDAPI) Enumerate() ([]core.USBInfo, error) {
-	var infos []core.USBInfo
+func (b *HIDAPI) Enumerate() ([]usb.USBInfo, error) {
+	var infos []usb.USBInfo
 
 	b.mw.Log("low level")
 	devs := lowlevel.HidEnumerate(0, 0)
@@ -47,11 +46,11 @@ func (b *HIDAPI) Enumerate() ([]core.USBInfo, error) {
 	for _, dev := range devs { // enumerate all devices
 		dev := dev
 		if b.match(&dev) {
-			infos = append(infos, core.USBInfo{
+			infos = append(infos, usb.USBInfo{
 				Path:      b.identify(&dev),
 				VendorID:  int(dev.VendorID),
 				ProductID: int(dev.ProductID),
-				Type:      core.TypeT1Hid,
+				Type:      usb.TypeT1Hid,
 				Debug:     false,
 			})
 		}
@@ -63,7 +62,7 @@ func (b *HIDAPI) Has(path string) bool {
 	return strings.HasPrefix(path, hidapiPrefix)
 }
 
-func (b *HIDAPI) Connect(path string, debug bool, reset bool) (core.USBDevice, error) {
+func (b *HIDAPI) Connect(path string, debug bool, reset bool) (usb.USBDevice, error) {
 	if debug {
 		return nil, errNotDebug
 	}
@@ -99,7 +98,7 @@ func (b *HIDAPI) match(d *lowlevel.HidDeviceInfo) bool {
 	vid := d.VendorID
 	pid := d.ProductID
 	// note that "trezor1" is just the old hidapi one; t2 has the new vid/pid
-	trezor1 := vid == core.VendorT1 && (pid == core.ProductT1Firmware)
+	trezor1 := vid == usb.VendorT1 && (pid == usb.ProductT1Firmware)
 	if trezor1 {
 		var dCopy lowlevel.HidDeviceInfo = *d
 		// sanitize potentially sensitive info

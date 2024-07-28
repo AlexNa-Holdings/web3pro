@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/AlexNa-Holdings/web3pro/core"
+	"github.com/AlexNa-Holdings/web3pro/usb"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v2"
@@ -93,8 +93,8 @@ func InitConfig() {
 
 	log.Info().Msgf("Log level: %s", Config.Verbosity)
 
-	core.USBLog = Config.USBLog
-	core.USBBackgroundEnumerate = Config.USBBackgroundEnumerate
+	usb.USBLog = Config.USBLog
+	usb.USBBackgroundEnumerate = Config.USBBackgroundEnumerate
 
 	//create wallets folder if needed
 	err = os.MkdirAll(filepath.Join(DataFolder, "wallets"), os.ModePerm)

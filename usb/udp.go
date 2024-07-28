@@ -10,7 +10,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/AlexNa-Holdings/web3pro/core"
 	"github.com/rs/zerolog/log"
 )
 
@@ -112,8 +111,8 @@ func checkPort(ping chan []byte, w io.Writer) (bool, error) {
 	}
 }
 
-func (udp *UDP) Enumerate() ([]core.USBInfo, error) {
-	var infos []core.USBInfo
+func (udp *UDP) Enumerate() ([]USBInfo, error) {
+	var infos []USBInfo
 
 	log.Trace().Msg("checking ports")
 	for _, port := range udp.ports {
@@ -133,7 +132,7 @@ func (udp *UDP) Enumerate() ([]core.USBInfo, error) {
 					return nil, err
 				}
 			}
-			info := core.USBInfo{
+			info := USBInfo{
 				Path:      emulatorPrefix + strconv.Itoa(port.Normal) + "D" + strconv.Itoa(port.Debug),
 				VendorID:  0,
 				ProductID: 0,
@@ -152,7 +151,7 @@ func (udp *UDP) Has(path string) bool {
 	return strings.HasPrefix(path, emulatorPrefix)
 }
 
-func (udp *UDP) Connect(path string, debug bool, reset bool) (core.USBDevice, error) {
+func (udp *UDP) Connect(path string, debug bool, reset bool) (USBDevice, error) {
 	ports := strings.Split(strings.TrimPrefix(path, emulatorPrefix), "D")
 
 	var port int

@@ -4,7 +4,6 @@ import (
 	"crypto/ecdsa"
 	"errors"
 
-	"github.com/AlexNa-Holdings/web3pro/core"
 	"github.com/AlexNa-Holdings/web3pro/usb"
 	"github.com/ava-labs/coreth/accounts"
 	"github.com/ethereum/go-ethereum/common"
@@ -57,7 +56,7 @@ func (s *Signer) GetDriver() (SignerDriver, error) {
 	return nil, errors.New("unknown signer type")
 }
 
-func GetDeviceName(e core.EnumerateEntry) (string, error) {
+func GetDeviceName(e usb.EnumerateEntry) (string, error) {
 	log.Trace().Msgf("GetDeviceName: %x %x", e.Vendor, e.Product)
 	t := GetDeviceType(e.Vendor, e.Product)
 	switch t {

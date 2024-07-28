@@ -8,7 +8,6 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/AlexNa-Holdings/web3pro/core"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/usb"
 	"github.com/ethereum/go-ethereum/common"
@@ -16,9 +15,9 @@ import (
 )
 
 var Bus *usb.USB
-var Core *core.Core
+var Core *usb.Core
 
-func GetID(info core.EnumerateEntry) (string, error) {
+func GetID(info usb.EnumerateEntry) (string, error) {
 
 	// switch info.Vendor {
 	// case "Ledger":

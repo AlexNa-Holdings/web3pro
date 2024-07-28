@@ -2,18 +2,17 @@ package signer_driver
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/AlexNa-Holdings/web3pro/cmn"
-	"github.com/AlexNa-Holdings/web3pro/core"
 	"github.com/AlexNa-Holdings/web3pro/signer_driver/trezorproto"
+	"github.com/AlexNa-Holdings/web3pro/usb"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/protobuf/proto"
 )
 
 type ConnectedLedger struct {
-	*trezorproto.Features
+	Label string
 }
 
 type LedgerDriver struct {
@@ -26,14 +25,14 @@ func NewLedgerDriver() LedgerDriver {
 	}
 }
 
-func (d *LedgerDriver) Open(s *cmn.Signer) (core.USBDevice, error) {
+func (d *LedgerDriver) Open(s *cmn.Signer) (usb.USBDevice, error) {
 
 	log.Trace().Msgf("Opening ledger: %s", s.Name)
 
 	usb_path := ""
 
 	for path, kd := range d.KnownDevices {
-		if kd.Label != nil && *kd.Label == s.Name {
+		if kd.Label == s.Name {
 			usb_path = path
 			break
 		}
@@ -135,7 +134,7 @@ Please connect your Ledger device:
 
 func (d LedgerDriver) IsConnected(s *cmn.Signer) bool {
 	for _, kd := range d.KnownDevices {
-		if kd.Label != nil && *kd.Label == s.Name {
+		if kd.Label == s.Name {
 			return true
 		}
 	}
@@ -189,18 +188,17 @@ func (d LedgerDriver) GetName(path string) (string, error) {
 
 	kd, ok := d.KnownDevices[path]
 	if ok {
-		return *kd.Label, nil
+		return kd.Label, nil
 	}
 
 	cd, err := d.Init(path)
 	if err != nil {
 		return "", err
 	} else {
-		if cd.Label == nil {
+		if cd.Label == "" {
 			return "My Trezor", nil
 		}
-
-		return *cd.Label, nil
+		return cd.Label, nil
 	}
 }
 
@@ -229,13 +227,13 @@ func (d LedgerDriver) Init(path string) (*ConnectedLedger, error) {
 
 	// remove from tge KnownDevices all with the same lab label
 	for k, v := range d.KnownDevices {
-		if v.Label != nil && *v.Label == *features.Label {
+		if v.Label == *features.Label {
 			delete(d.KnownDevices, k)
 		}
 	}
 
 	cd := ConnectedLedger{
-		Features: features,
+		//Features: features,
 	}
 
 	d.KnownDevices[path] = &cd
@@ -243,45 +241,45 @@ func (d LedgerDriver) Init(path string) (*ConnectedLedger, error) {
 	return &cd, nil
 }
 
-func (d LedgerDriver) Call(dev core.USBDevice, req proto.Message, result proto.Message) error {
+func (d LedgerDriver) Call(dev usb.USBDevice, req proto.Message, result proto.Message) error {
 	return nil // Not implemented
 }
 
-func (d LedgerDriver) RawCall(dev core.USBDevice, req proto.Message) (trezorproto.MessageType, []byte, error) {
+func (d LedgerDriver) RawCall(dev usb.USBDevice, req proto.Message) (trezorproto.MessageType, []byte, error) {
 	return 0, nil, nil // Not implemented
 }
 
 func (d LedgerDriver) PrintDetails(path string) string {
-	dev, ok := d.KnownDevices[path]
+	_, ok := d.KnownDevices[path]
 	if !ok {
 		log.Error().Msgf("PrintDetails: Device not found: %s", path)
 		return ""
 	}
 
 	r := ""
-	r += fmt.Sprintf("  Vendor: %s\n", SS(dev.Vendor))
-	r += fmt.Sprintf("  MajorVersion: %d\n", SU32(dev.MajorVersion))
-	r += fmt.Sprintf("  MinorVersion: %d\n", SU32(dev.MinorVersion))
-	r += fmt.Sprintf("  PatchVersion: %d\n", SU32(dev.PatchVersion))
+	// r += fmt.Sprintf("  Vendor: %s\n", SS(dev.Vendor))
+	// r += fmt.Sprintf("  MajorVersion: %d\n", SU32(dev.MajorVersion))
+	// r += fmt.Sprintf("  MinorVersion: %d\n", SU32(dev.MinorVersion))
+	// r += fmt.Sprintf("  PatchVersion: %d\n", SU32(dev.PatchVersion))
 	// r += fmt.Sprintf("  BootloaderMode: %t\n", SB(dev.BootloaderMode))
-	r += fmt.Sprintf("  DeviceId: %s\n", SS(dev.DeviceId))
-	r += fmt.Sprintf("  PinProtection: %t\n", SB(dev.PinProtection))
-	r += fmt.Sprintf("  PassphraseProtection: %t\n", SB(dev.PassphraseProtection))
-	r += fmt.Sprintf("  Language: %s\n", SS(dev.Language))
-	r += fmt.Sprintf("  Label: %s\n", SS(dev.Label))
-	r += fmt.Sprintf("  Initialized: %t\n", SB(dev.Initialized))
+	// r += fmt.Sprintf("  DeviceId: %s\n", SS(dev.DeviceId))
+	// r += fmt.Sprintf("  PinProtection: %t\n", SB(dev.PinProtection))
+	// r += fmt.Sprintf("  PassphraseProtection: %t\n", SB(dev.PassphraseProtection))
+	// r += fmt.Sprintf("  Language: %s\n", SS(dev.Language))
+	// r += fmt.Sprintf("  Label: %s\n", SS(dev.Label))
+	// r += fmt.Sprintf("  Initialized: %t\n", SB(dev.Initialized))
 	// r += fmt.Sprintf("  Revision: %v\n", dev.Revision)
 	// r += fmt.Sprintf("  BootloaderHash: %v\n", dev.BootloaderHash)
-	r += fmt.Sprintf("  Imported: %t\n", SB(dev.Imported))
-	r += fmt.Sprintf("  FirmwarePresent: %t\n", SB(dev.FirmwarePresent))
-	r += fmt.Sprintf("  NeedsBackup: %t\n", SB(dev.NeedsBackup))
-	r += fmt.Sprintf("  Flags: %d\n", SU32(dev.Flags))
-	r += fmt.Sprintf("  Model: %s\n", SS(dev.Model))
+	// r += fmt.Sprintf("  Imported: %t\n", SB(dev.Imported))
+	// r += fmt.Sprintf("  FirmwarePresent: %t\n", SB(dev.FirmwarePresent))
+	// r += fmt.Sprintf("  NeedsBackup: %t\n", SB(dev.NeedsBackup))
+	// r += fmt.Sprintf("  Flags: %d\n", SU32(dev.Flags))
+	// r += fmt.Sprintf("  Model: %s\n", SS(dev.Model))
 	// r += fmt.Sprintf("  FwMajor: %d\n", SU32(dev.FwMajor))
 	// r += fmt.Sprintf("  FwMinor: %d\n", SU32(dev.FwMinor))
 	// r += fmt.Sprintf("  FwPatch: %d\n", SU32(dev.FwPatch))
-	r += fmt.Sprintf("  FwVendor: %s\n", SS(dev.FwVendor))
-	r += fmt.Sprintf("  FwVendorKeys: %v\n", dev.FwVendorKeys)
+	// r += fmt.Sprintf("  FwVendor: %s\n", SS(dev.FwVendor))
+	// r += fmt.Sprintf("  FwVendorKeys: %v\n", dev.FwVendorKeys)
 	// r += fmt.Sprintf("  UnfinishedBackup: %t\n", SB(dev.UnfinishedBackup))
 	// r += fmt.Sprintf("  NoBackup: %t\n", SB(dev.NoBackup))
 

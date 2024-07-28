@@ -1,4 +1,4 @@
-package core
+package usb
 
 import (
 	"context"
@@ -9,7 +9,9 @@ import (
 	"sort"
 	"strconv"
 	"sync"
+	"syscall"
 	"time"
+	"unsafe"
 
 	"github.com/rs/zerolog/log"
 )
@@ -541,4 +543,14 @@ func Trace(format string, v ...interface{}) {
 	if USBLog {
 		log.Trace().Msgf(format, v...)
 	}
+}
+
+// ioctlAvailableBytes checks the number of available bytes for reading from the device.
+func ioctlAvailableBytes(fd uintptr) (int, error) {
+	var n int
+	_, _, errno := syscall.Syscall(syscall.SYS_IOCTL, fd, syscall.FIONREAD, uintptr(unsafe.Pointer(&n)))
+	if errno != 0 {
+		return 0, errno
+	}
+	return n, nil
 }

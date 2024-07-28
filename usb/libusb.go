@@ -9,7 +9,6 @@ import (
 
 	lowlevel "github.com/AlexNa-Holdings/web3pro/usb/lowlevel/libusb"
 
-	"github.com/AlexNa-Holdings/web3pro/core"
 	"github.com/rs/zerolog/log"
 )
 
@@ -96,7 +95,7 @@ func IsLedger(vid uint16, pid uint16) bool {
 }
 func InitLibUSB(onlyLibusb, allowCancel, detach bool) (*LibUSB, error) {
 	var usb lowlevel.Context
-	core.Trace("init")
+	Trace("init")
 
 	err := lowlevel.Init(&usb)
 	if err != nil {
@@ -106,7 +105,7 @@ If you run trezord in an environment without USB (for example, docker or travis)
 Original error: %v`, err)
 	}
 
-	core.Trace("init done")
+	Trace("init done")
 
 	return &LibUSB{
 		usb:    usb,
@@ -117,7 +116,7 @@ Original error: %v`, err)
 }
 
 func (b *LibUSB) Close() {
-	core.Trace("all close (should happen only on exit)")
+	Trace("all close (should happen only on exit)")
 	lowlevel.Exit(b.usb)
 }
 
@@ -152,22 +151,22 @@ func detectOldBL(dev lowlevel.Device) (bool, error) {
 	return hasIface(dev, oldBLIface, uint8(lowlevel.CLASS_HID))
 }
 
-func (b *LibUSB) Enumerate() ([]core.USBInfo, error) {
-	core.Trace("low level enumerating")
+func (b *LibUSB) Enumerate() ([]USBInfo, error) {
+	Trace("low level enumerating")
 	list, err := lowlevel.Get_Device_List(b.usb)
 
 	if err != nil {
 		return nil, err
 	}
-	core.Trace("low level enumerating done")
+	Trace("low level enumerating done")
 
 	defer func() {
-		core.Trace("freeing device list")
+		Trace("freeing device list")
 		lowlevel.Free_Device_List(list, 1) // unlink devices
-		core.Trace("freeing device list done")
+		Trace("freeing device list done")
 	}()
 
-	var infos []core.USBInfo
+	var infos []USBInfo
 
 	// There is a bug in libusb that makes
 	// device appear twice with the same path.
@@ -179,15 +178,15 @@ func (b *LibUSB) Enumerate() ([]core.USBInfo, error) {
 	for _, dev := range list {
 		m, t := b.match(dev)
 		if m {
-			core.Trace("getting device descriptor")
+			Trace("getting device descriptor")
 			dd, err := lowlevel.Get_Device_Descriptor(dev)
 			if err != nil {
 				log.Error().Msg("error getting device descriptor " + err.Error())
 				continue
 			}
-			core.Tracef("device vendor: %x product: %x", dd.IDVendor, dd.IDProduct)
+			Tracef("device vendor: %x product: %x", dd.IDVendor, dd.IDProduct)
 			path := b.identify(dev)
-			core.Trace("path: " + path)
+			Trace("path: " + path)
 			inset := paths[path]
 			if !inset {
 				debug, err := detectDebug(dev)
@@ -195,7 +194,7 @@ func (b *LibUSB) Enumerate() ([]core.USBInfo, error) {
 					log.Error().Msg("error detecting debug " + err.Error())
 					continue
 				}
-				infos = append(infos, core.USBInfo{
+				infos = append(infos, USBInfo{
 					Path:      path,
 					VendorID:  int(dd.IDVendor),
 					ProductID: int(dd.IDProduct),
@@ -213,19 +212,19 @@ func (b *LibUSB) Has(path string) bool {
 	return strings.HasPrefix(path, libusbPrefix)
 }
 
-func (b *LibUSB) Connect(path string, debug bool, reset bool) (core.USBDevice, error) {
-	core.Trace("low level enumerating")
+func (b *LibUSB) Connect(path string, debug bool, reset bool) (USBDevice, error) {
+	Trace("low level enumerating")
 	list, err := lowlevel.Get_Device_List(b.usb)
 
 	if err != nil {
 		return nil, err
 	}
-	core.Trace("low level enumerating done")
+	Trace("low level enumerating done")
 
 	defer func() {
-		core.Trace("freeing device list")
+		Trace("freeing device list")
 		lowlevel.Free_Device_List(list, 1) // unlink devices
-		core.Trace("freeing device list done")
+		Trace("freeing device list done")
 	}()
 
 	// There is a bug in libusb that makes
@@ -255,27 +254,27 @@ func (b *LibUSB) Connect(path string, debug bool, reset bool) (core.USBDevice, e
 func (b *LibUSB) setConfiguration(d lowlevel.Device_Handle) {
 	currConf, err := lowlevel.Get_Configuration(d)
 	if err != nil {
-		core.Trace(fmt.Sprintf("current configuration err %s", err.Error()))
+		Trace(fmt.Sprintf("current configuration err %s", err.Error()))
 	} else {
-		core.Trace(fmt.Sprintf("current configuration %d", currConf))
+		Trace(fmt.Sprintf("current configuration %d", currConf))
 	}
 	if currConf == usbConfigNum {
-		core.Trace("not setting config, same")
+		Trace("not setting config, same")
 	} else {
-		core.Trace("set_configuration")
+		Trace("set_configuration")
 		err = lowlevel.Set_Configuration(d, usbConfigNum)
 		if err != nil {
 			// don't abort if set configuration fails
 			// lowlevel.Close(d)
 			// return nil, err
-			core.Trace(fmt.Sprintf("Warning: error at configuration set: %s", err))
+			Trace(fmt.Sprintf("Warning: error at configuration set: %s", err))
 		}
 
 		currConf, err = lowlevel.Get_Configuration(d)
 		if err != nil {
-			core.Trace(fmt.Sprintf("current configuration err %s", err.Error()))
+			Trace(fmt.Sprintf("current configuration err %s", err.Error()))
 		} else {
-			core.Trace(fmt.Sprintf("current configuration %d", currConf))
+			Trace(fmt.Sprintf("current configuration %d", currConf))
 		}
 	}
 }
@@ -287,58 +286,58 @@ func (b *LibUSB) claimInterface(d lowlevel.Device_Handle, debug bool) (bool, err
 		usbIfaceNum = int(debugIface.number)
 	}
 	if b.detach {
-		core.Trace("detecting kernel driver")
+		Trace("detecting kernel driver")
 		kernel, errD := lowlevel.Kernel_Driver_Active(d, usbIfaceNum)
 		if errD != nil {
-			core.Trace("detecting kernel driver failed")
+			Trace("detecting kernel driver failed")
 			lowlevel.Close(d)
 			return false, errD
 		}
 		if kernel {
 			attach = true
-			core.Trace("kernel driver active, detach")
+			Trace("kernel driver active, detach")
 			errD = lowlevel.Detach_Kernel_Driver(d, usbIfaceNum)
 			if errD != nil {
-				core.Trace("detaching kernel driver failed")
+				Trace("detaching kernel driver failed")
 				lowlevel.Close(d)
 				return false, errD
 			}
 		}
 	}
-	core.Trace("claiming interface")
+	Trace("claiming interface")
 	err := lowlevel.Claim_Interface(d, usbIfaceNum)
 	if err != nil {
-		core.Trace("claiming interface failed")
+		Trace("claiming interface failed")
 		lowlevel.Close(d)
 		return false, err
 	}
 
-	core.Trace("claiming interface done")
+	Trace("claiming interface done")
 
 	return attach, nil
 }
 
 func (b *LibUSB) connect(dev lowlevel.Device, debug bool, reset bool) (*LibUSBDevice, error) {
 
-	core.Trace("detect old BL")
+	Trace("detect old BL")
 	oldBL, err := detectOldBL(dev)
 	if err != nil {
 		return nil, err
 	}
 
-	core.Trace("low level")
+	Trace("low level")
 	d, err := lowlevel.Open(dev)
 	if err != nil {
 		return nil, err
 	}
-	core.Trace("reset")
+	Trace("reset")
 	if reset {
 		err = lowlevel.Reset_Device(d)
 		if err != nil {
 			// don't abort if reset fails
 			// lowlevel.Close(d)
 			// return nil, err
-			core.Trace(fmt.Sprintf("Warning: error at device reset: %s", err))
+			Trace(fmt.Sprintf("Warning: error at device reset: %s", err))
 		}
 	}
 
@@ -358,10 +357,10 @@ func (b *LibUSB) connect(dev lowlevel.Device, debug bool, reset bool) (*LibUSBDe
 	}, nil
 }
 
-func (b *LibUSB) match(dev lowlevel.Device) (bool, core.DeviceType) {
+func (b *LibUSB) match(dev lowlevel.Device) (bool, DeviceType) {
 	dd, err := lowlevel.Get_Device_Descriptor(dev)
 	if err != nil {
-		core.Trace("error getting descriptor -" + err.Error())
+		Trace("error getting descriptor -" + err.Error())
 		return false, 0
 	}
 
@@ -401,7 +400,7 @@ func (b *LibUSB) match(dev lowlevel.Device) (bool, core.DeviceType) {
 
 }
 
-func matchType(dd *lowlevel.Device_Descriptor) core.DeviceType {
+func matchType(dd *lowlevel.Device_Descriptor) DeviceType {
 	if dd.IDProduct == ProductT1Firmware {
 		// this is HID, in platforms where we don't use hidapi (linux, bsd)
 		return TypeT1Hid
@@ -428,10 +427,10 @@ func (b *LibUSB) matchVidPid(vid uint16, pid uint16) bool {
 	return IsTrezor(vid, pid) || IsLedger(vid, pid)
 
 	// // Note: Trezor1 libusb will actually have the T2 vid/pid
-	// trezor2 := vid == core.VendorT2 && (pid == core.ProductT2Firmware || pid == core.ProductT2Bootloader)
+	// trezor2 := vid == VendorT2 && (pid == ProductT2Firmware || pid == ProductT2Bootloader)
 
 	// if b.only {
-	// 	trezor1 := vid == core.VendorT1 && (pid == core.ProductT1Firmware)
+	// 	trezor1 := vid == VendorT1 && (pid == ProductT1Firmware)
 	// 	return trezor1 || trezor2
 	// }
 
@@ -442,7 +441,7 @@ func (b *LibUSB) identify(dev lowlevel.Device) string {
 	var ports [8]byte
 	p, err := lowlevel.Get_Port_Numbers(dev, ports[:])
 	if err != nil {
-		core.Trace(fmt.Sprintf("error getting port numbers %s", err.Error()))
+		Trace(fmt.Sprintf("error getting port numbers %s", err.Error()))
 		return ""
 	}
 	return libusbPrefix + hex.EncodeToString(p)
@@ -466,7 +465,7 @@ type LibUSBDevice struct {
 }
 
 func (d *LibUSBDevice) Close(disconnected bool) error {
-	core.Trace("storing d.closed")
+	Trace("storing d.closed")
 	atomic.StoreInt32(&d.closed, 1)
 
 	if d.cancel {
@@ -474,7 +473,7 @@ func (d *LibUSBDevice) Close(disconnected bool) error {
 		// => we are using our own function that we added to libusb/sync.c
 		// this "unblocks" Interrupt_Transfer in readWrite
 
-		core.Trace("canceling previous transfers")
+		Trace("canceling previous transfers")
 		lowlevel.Cancel_Sync_Transfers_On_Device(d.dev)
 
 		// reading recently disconnected device sometimes causes weird issues
@@ -483,12 +482,12 @@ func (d *LibUSBDevice) Close(disconnected bool) error {
 		// Finishing read queue is not necessary when we don't allow cancelling
 		// (since when we don't allow cancelling, we don't allow session stealing)
 		if !disconnected {
-			core.Trace("finishing read queue")
+			Trace("finishing read queue")
 			d.finishReadQueue(d.debug)
 		}
 	}
 
-	core.Trace("releasing interface")
+	Trace("releasing interface")
 	iface := int(normalIface.number)
 	if d.debug {
 		iface = int(debugIface.number)
@@ -496,20 +495,20 @@ func (d *LibUSBDevice) Close(disconnected bool) error {
 	err := lowlevel.Release_Interface(d.dev, iface)
 	if err != nil {
 		// do not throw error, it is just release anyway
-		core.Trace(fmt.Sprintf("Warning: error at releasing interface: %s", err))
+		Trace(fmt.Sprintf("Warning: error at releasing interface: %s", err))
 	}
 
 	if d.attach {
 		err = lowlevel.Attach_Kernel_Driver(d.dev, iface)
 		if err != nil {
 			// do not throw error, it is just re-attach anyway
-			core.Trace(fmt.Sprintf("Warning: error at re-attaching driver: %s", err))
+			Trace(fmt.Sprintf("Warning: error at re-attaching driver: %s", err))
 		}
 	}
 
-	core.Trace("low level close")
+	Trace("low level close")
 	lowlevel.Close(d.dev)
-	core.Trace("done")
+	Trace("done")
 
 	return nil
 }
@@ -528,47 +527,47 @@ func (d *LibUSBDevice) finishReadQueue(debug bool) {
 	for err == nil {
 		// these transfers have timeouts => should not interfer with
 		// cancel_sync_transfers_on_device
-		core.Trace("transfer")
+		Trace("transfer")
 		_, err = lowlevel.Interrupt_Transfer(d.dev, usbEpIn, buf[:], 50)
 	}
 	mutex.Unlock()
 }
 
 func (d *LibUSBDevice) readWrite(buf []byte, endpoint uint8, mutex sync.Locker) (int, error) {
-	core.Trace("start")
+	Trace("start")
 	for {
-		core.Trace("checking closed")
+		Trace("checking closed")
 		closed := (atomic.LoadInt32(&d.closed)) == 1
 		if closed {
-			core.Trace("closed, skip")
+			Trace("closed, skip")
 			return 0, errClosedDevice
 		}
 
 		mutex.Lock()
-		core.Trace("actual interrupt transport")
+		Trace("actual interrupt transport")
 		// This has no timeout, but is stopped by Cancel_Sync_Transfers_On_Device
 		p, err := lowlevel.Interrupt_Transfer(d.dev, endpoint, buf, 0)
 		mutex.Unlock()
-		core.Trace("single transfer done")
+		Trace("single transfer done")
 
 		if err != nil {
-			core.Trace(fmt.Sprintf("error seen - %s", err.Error()))
+			Trace(fmt.Sprintf("error seen - %s", err.Error()))
 			if isErrorDisconnect(err) {
-				core.Trace("device probably disconnected")
+				Trace("device probably disconnected")
 				return 0, errDisconnect
 			}
 
-			core.Trace("other error")
+			Trace("other error")
 			return 0, err
 		}
 
 		// sometimes, empty report is read, skip it
 		// TODO: is this still needed with 0 timeouts?
 		if len(p) > 0 {
-			core.Trace("single transfer successful")
+			Trace("single transfer successful")
 			return len(p), err
 		}
-		core.Trace("skipping empty transfer, go again")
+		Trace("skipping empty transfer, go again")
 		// continue the for cycle if empty transfer
 	}
 }
@@ -585,7 +584,7 @@ func isErrorDisconnect(err error) bool {
 }
 
 func (d *LibUSBDevice) Write(buf []byte) (int, error) {
-	core.Trace("write start")
+	Trace("write start")
 	usbEpOut := normalIface.epOut
 	mutex := &d.normalWriteMutex
 	if d.oldBL {
@@ -599,7 +598,7 @@ func (d *LibUSBDevice) Write(buf []byte) (int, error) {
 }
 
 func (d *LibUSBDevice) Read(buf []byte) (int, error) {
-	core.Trace("read start")
+	Trace("read start")
 	usbEpIn := normalIface.epIn
 	mutex := &d.normalReadMutex
 	if d.debug {

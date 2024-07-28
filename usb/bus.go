@@ -2,15 +2,13 @@ package usb
 
 import (
 	"errors"
-
-	"github.com/AlexNa-Holdings/web3pro/core"
 )
 
 type USB struct {
-	buses []core.USBBus
+	buses []USBBus
 }
 
-func Init(buses ...core.USBBus) *USB {
+func Init(buses ...USBBus) *USB {
 	return &USB{
 		buses: buses,
 	}
@@ -25,8 +23,8 @@ func (b *USB) Has(path string) bool {
 	return false
 }
 
-func (b *USB) Enumerate() ([]core.USBInfo, error) {
-	infos := make([]core.USBInfo, 0, len(b.buses))
+func (b *USB) Enumerate() ([]USBInfo, error) {
+	infos := make([]USBInfo, 0, len(b.buses))
 
 	for _, b := range b.buses {
 		l, err := b.Enumerate()
@@ -38,7 +36,7 @@ func (b *USB) Enumerate() ([]core.USBInfo, error) {
 	return infos, nil
 }
 
-func (b *USB) Connect(path string, debug bool, reset bool) (core.USBDevice, error) {
+func (b *USB) Connect(path string, debug bool, reset bool) (USBDevice, error) {
 	for _, b := range b.buses {
 		if b.Has(path) {
 			return b.Connect(path, debug, reset)

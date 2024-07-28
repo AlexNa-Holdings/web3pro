@@ -5,10 +5,6 @@
 
 package usb
 
-import (
-	"github.com/AlexNa-Holdings/web3pro/core"
-)
-
 const HIDUse = false
 
 type HIDAPI struct {
@@ -18,7 +14,7 @@ func InitHIDAPI() (*HIDAPI, error) {
 	return &HIDAPI{}, nil
 }
 
-func (b *HIDAPI) Enumerate() ([]core.USBInfo, error) {
+func (b *HIDAPI) Enumerate() ([]USBInfo, error) {
 	panic("not implemented for linux and freebsd")
 }
 
@@ -26,7 +22,7 @@ func (b *HIDAPI) Has(path string) bool {
 	panic("not implemented for linux and freebsd")
 }
 
-func (b *HIDAPI) Connect(path string, debug bool, reset bool) (core.USBDevice, error) {
+func (b *HIDAPI) Connect(path string, debug bool, reset bool) (USBDevice, error) {
 	return &HID{}, nil
 }
 
