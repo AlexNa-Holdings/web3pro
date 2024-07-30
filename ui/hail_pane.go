@@ -26,7 +26,6 @@ var HailPane *HailPaneType = &HailPaneType{
 var ActiveRequest *bus.Message
 var HailQueue []*bus.Message
 var Mutex = &sync.Mutex{}
-var TimerQuit = make(chan bool, 1)
 
 func add(m *bus.Message) bool { // returns if on top
 
@@ -49,9 +48,7 @@ func add(m *bus.Message) bool { // returns if on top
 }
 
 func remove(m *bus.Message) {
-
 	hail := m.Data.(*cmn.HailRequest)
-
 	log.Trace().Msgf("Removing hail %s", hail.Title)
 
 	Mutex.Lock()
@@ -66,7 +63,8 @@ func remove(m *bus.Message) {
 		hail.OnClose(hail)
 	}
 
-	hail.Done <- true
+	bus.Send("timer", "remove", &bus.BM_TimerDone{ID: m.TimerID})
+	m.Respond("OK", nil)
 
 	if ActiveRequest != nil && ActiveRequest.Data == hail {
 		ActiveRequest = nil
@@ -76,8 +74,6 @@ func remove(m *bus.Message) {
 		} else {
 			Gui.DeleteView("hail")
 			HailPane.View = nil
-			// stop timer
-			TimerQuit <- true
 			Flush()
 		}
 	}
@@ -117,7 +113,20 @@ func ProcessHails() {
 		case "remove_hail":
 			if hail, ok := msg.Data.(*cmn.HailRequest); ok {
 				log.Trace().Msgf("ProcessHails: Remove hail received: %s", hail.Title)
-				remove(msg)
+
+				var m *bus.Message
+				Mutex.Lock()
+				for i, h := range HailQueue {
+					if h.Data == hail {
+						m = HailQueue[i]
+						break
+					}
+				}
+				Mutex.Unlock()
+
+				if m != nil {
+					remove(m)
+				}
 			}
 		case "tick":
 			if _, ok := msg.Data.(*bus.BM_TimerTick); ok {
@@ -128,9 +137,14 @@ func ProcessHails() {
 					})
 				}
 			}
-		case "alert":
-			if alert, ok := msg.Data.(*bus.BM_TimerAlert); ok {
-				log.Trace().Msgf("Alert: %v", alert)
+		case "done":
+			if d, ok := msg.Data.(*bus.BM_TimerDone); ok {
+				log.Trace().Msgf("Alert: %v", d.ID)
+				if ActiveRequest != nil {
+					if ActiveRequest.TimerID == d.ID {
+						cancel(ActiveRequest)
+					}
+				}
 			}
 		}
 	}
@@ -140,8 +154,8 @@ func (p *HailPaneType) open(m *bus.Message) {
 	hail := m.Data.(*cmn.HailRequest)
 	log.Trace().Msgf("HailPane: open: %s", hail.Title)
 
-	if ActiveRequest.Data != hail {
-		if ActiveRequest != nil {
+	if ActiveRequest != nil {
+		if ActiveRequest.Data != hail {
 			active_hail := ActiveRequest.Data.(*cmn.HailRequest)
 			if active_hail.OnSuspend != nil {
 				active_hail.OnSuspend(hail)

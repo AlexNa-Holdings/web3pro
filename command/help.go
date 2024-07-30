@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/ui"
+	"github.com/rs/zerolog/log"
 )
 
 func NewHelpCommand() *Command {
@@ -53,6 +55,10 @@ func Help_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 }
 
 func Help_Process(cmd *Command, input string) {
+
+	test()
+	return
+
 	//parse command subcommand parameters
 	tokens := strings.Fields(input)
 	if len(tokens) < 2 {
@@ -76,4 +82,20 @@ func Help_Process(cmd *Command, input string) {
 			return
 		}
 	}
+}
+
+func test() {
+
+	log.Debug().Msg("test start--------------------------")
+
+	bus.Fetch("ui", "hail", &cmn.HailRequest{
+		Title: "TEST HAIL",
+		Template: `<c><w>
+Test
+
+<button text:OK> <button text:Cancel>`,
+	})
+
+	log.Debug().Msg("test done")
+
 }

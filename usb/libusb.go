@@ -422,7 +422,7 @@ func matchType(dd *lowlevel.Device_Descriptor) DeviceType {
 
 func (b *LibUSB) matchVidPid(vid uint16, pid uint16) bool {
 
-	log.Trace().Msgf("matching vid %x pid %x", vid, pid)
+	Tracef("matching vid %x pid %x", vid, pid)
 
 	return IsTrezor(vid, pid) || IsLedger(vid, pid)
 

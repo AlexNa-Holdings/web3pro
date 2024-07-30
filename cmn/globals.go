@@ -93,7 +93,6 @@ type HailRequest struct {
 	OnTick         func(hr *HailRequest, tick int)
 	OnClickHotspot func(hr *HailRequest, v *gocui.View, hs *gocui.Hotspot)
 	OnOverHotspot  func(hr *HailRequest, v *gocui.View, hs *gocui.Hotspot)
-	Done           chan bool
 	Suspended      bool
 	TimeoutSec     int // in seconds
 	TimerPaused    bool

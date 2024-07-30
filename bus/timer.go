@@ -36,7 +36,7 @@ type BM_TimerReset struct {
 	ID int
 }
 
-type BM_TimerAlert struct {
+type BM_TimerDone struct {
 	ID int
 }
 
@@ -134,7 +134,13 @@ func updateTimers() {
 	mu.Lock()
 	defer mu.Unlock()
 
+	// reset the timer
+	if timer != nil {
+		timer.Stop()
+	}
+
 	earliest_time_to_update := time.Now().Add(time.Hour)
+	timer_needed := false
 
 	for id, t := range timers {
 		if t.paused {
@@ -142,8 +148,11 @@ func updateTimers() {
 		}
 
 		lapsed := t.lapsedSeconds + int(time.Since(t.starTime).Seconds())
+
+		log.Debug().Msgf("Timer %d lapsed %d", id, lapsed)
+
 		if lapsed >= t.LimitSeconds {
-			Send("timer", "alert", &BM_TimerAlert{
+			Send("timer", "done", &BM_TimerDone{
 				ID: id,
 			})
 			delete(timers, id) // remove timer
@@ -155,15 +164,15 @@ func updateTimers() {
 			earliest_time_to_update = time_to_update
 		}
 
-		// reset the timer
-		if timer != nil {
-			timer.Stop()
-		}
+		timer_needed = true
+	}
 
-		timer = time.AfterFunc(time.Until(time_to_update), func() {
+	if !timer_needed {
+		timer = time.AfterFunc(time.Until(earliest_time_to_update), func() {
 			updateTimers()
 		})
 	}
+
 }
 
 func timer_init(id int, d *BM_TimerInit) {
@@ -178,11 +187,13 @@ func timer_init(id int, d *BM_TimerInit) {
 	}
 
 	timers[id] = &BusTimer{
-		paused:           false,
+		paused:           true,
 		LimitSeconds:     d.LimitSeconds,
 		HardLimitSeconds: d.HardLimitSeconds,
 		lapsedSeconds:    0,
 	}
+
+	log.Debug().Msgf("Timer %d initialized %v", id, timers[id])
 
 	mu.Unlock()
 

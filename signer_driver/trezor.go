@@ -333,6 +333,8 @@ func (d TrezorDriver) RequsetPin() (string, error) {
 		},
 	})
 
+	log.Debug().Msgf("PIN: %s", pin)
+
 	if pin == "" {
 		return "", errors.New("pin request canceled")
 	}
@@ -413,7 +415,7 @@ func (d TrezorDriver) Call(dev usb.USBDevice, req proto.Message, result proto.Me
 		switch kind {
 		case trezorproto.MessageType_MessageType_PinMatrixRequest:
 			{
-				log.Trace().Msg("*** NB! Enter PIN (not echoed)...")
+				log.Trace().Msg("*** Enter PIN ...")
 				pin, err := d.RequsetPin()
 				if err != nil {
 					log.Error().Msgf("Call: Error getting pin: %s", err)
@@ -439,7 +441,7 @@ func (d TrezorDriver) Call(dev usb.USBDevice, req proto.Message, result proto.Me
 			}
 		case trezorproto.MessageType_MessageType_PassphraseRequest:
 			{
-				log.Trace().Msg("*** NB! Enter Pass	phrase ...")
+				log.Trace().Msg("Enter Pass	phrase")
 				pass, err := d.RequsetPassword()
 				if err != nil {
 					d.RawCall(dev, &trezorproto.Cancel{})

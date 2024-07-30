@@ -3,7 +3,6 @@ package bus
 import (
 	"errors"
 	"sync"
-	"time"
 
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/rs/zerolog/log"
@@ -33,47 +32,32 @@ type Bus struct {
 	NextID      int
 }
 
-var cb *Bus // common bus
+var cb *Bus = &Bus{
+	Subscribers: make(map[string][]chan *Message),
+	In:          make(chan *Message, 1000),
+	NextID:      0,
+}
 
 func Init() {
-	cb = NewBus()
+	go ProcessMessages()
 	go ProcessTimers()
 }
 
-func NewBus() *Bus {
-	b := &Bus{
-		Subscribers: make(map[string][]chan *Message),
-		In:          make(chan *Message),
-		NextID:      0,
-	}
+func ProcessMessages() {
+	for msg := range cb.In {
 
-	go func() {
-		for msg := range b.In {
+		log.Trace().Msgf("bus.Dispatching to %s: %s", msg.Topic, msg.Type)
 
-			log.Trace().Msgf("bus.Dispatching to %s: %s", msg.Topic, msg.Type)
-
-			b.M.Lock()
-
-			subs, ok := b.Subscribers[msg.Topic]
-			if ok {
-				log.Trace().Msgf("Total subscribers for %s: %d", msg.Topic, len(subs))
-				for _, subscriber := range subs {
-
-					log.Debug().Msgf("channel len: %d, cap: %d", len(subscriber), cap(subscriber))
-
-					if len(subscriber) <= cap(subscriber) {
-						subscriber <- msg
-					} else {
-						log.Error().Msg("subscriber channel full")
-					}
-				}
+		cb.M.Lock()
+		subs, ok := cb.Subscribers[msg.Topic]
+		if ok {
+			log.Trace().Msgf("Total subscribers for %s: %d", msg.Topic, len(subs))
+			for _, subscriber := range subs {
+				subscriber <- msg
 			}
-
-			b.M.Unlock()
 		}
-	}()
-
-	return b
+		cb.M.Unlock()
+	}
 }
 
 func Subscribe(topic ...string) chan *Message {
@@ -82,7 +66,7 @@ func Subscribe(topic ...string) chan *Message {
 	cb.M.Lock()
 	defer cb.M.Unlock()
 
-	ch := make(chan *Message)
+	ch := make(chan *Message, 1000)
 
 	added := make(map[string]bool)
 
@@ -124,7 +108,7 @@ func Unsubscribe(ch chan *Message) {
 	close(ch)
 }
 
-func SendEx(topic, t string, data interface{}, timer_id int) int {
+func SendEx(topic, t string, data interface{}, timer_id int, respond_to int, err error) int {
 	log.Trace().Msgf("bus.Sending to %s: %s", topic, t)
 
 	cb.M.Lock()
@@ -132,59 +116,70 @@ func SendEx(topic, t string, data interface{}, timer_id int) int {
 
 	cb.NextID++
 	cb.In <- &Message{
-		ID:      cb.NextID,
-		Topic:   topic,
-		Type:    t,
-		TimerID: timer_id,
-		Data:    data}
+		ID:        cb.NextID,
+		Topic:     topic,
+		Type:      t,
+		TimerID:   timer_id,
+		Data:      data,
+		Error:     err,
+		RespondTo: respond_to}
+
 	return cb.NextID
 }
 
 func Send(topic, t string, data interface{}) int {
-	return SendEx(topic, t, data, 0)
+	return SendEx(topic, t, data, 0, 0, nil)
 }
 
 func (m *Message) Respond(data interface{}, err error) int {
-	log.Trace().Msgf("bus.Responding to %d: %s", m.ID, data)
-
-	cb.M.Lock()
-	defer cb.M.Unlock()
-
-	cb.NextID++
-	cb.In <- &Message{
-		ID:        cb.NextID,
-		Topic:     m.Topic,
-		RespondTo: m.ID,
-		Data:      data,
-		Error:     err}
-	return cb.NextID
+	return SendEx(m.Topic, m.Type+"_response", data, 0, m.ID, err)
 }
 
 func Fetch(topic, t string, data interface{}) *Message {
 	return FetchEx(topic, t, data,
-		time.Duration(cmn.Config.BusTimeout),
-		time.Duration(cmn.Config.BusHardTimeout))
+		cmn.Config.BusTimeout,
+		cmn.Config.BusHardTimeout)
 }
 
-func FetchEx(topic, t string, data interface{}, limit time.Duration, hardlimit time.Duration) *Message {
-	timer_id := Send("timer", "init", &BM_TimerInit{
-		LimitSeconds:     int(limit.Seconds()),
-		HardLimitSeconds: int(hardlimit.Seconds()),
-	})
+func FetchEx(topic, t string, data interface{}, limit int, hardlimit int) *Message {
 
-	id := SendEx(topic, t, data, timer_id)
-
-	ch := Subscribe(topic, "time")
-	defer Unsubscribe(ch)
-
-	select {
-	case response := <-ch:
-		if response.RespondTo != id {
-			return response
-		}
-	case <-time.After(limit):
-		break
+	if topic == "timer" {
+		return &Message{Error: errors.New("invalid topic to fetch")}
 	}
 
-	return &Message{Error: errors.New("timeout")}
+	ch := Subscribe(topic, "timer")
+	defer Unsubscribe(ch)
+
+	timer_id := Send("timer", "init", &BM_TimerInit{
+		LimitSeconds:     limit,
+		HardLimitSeconds: hardlimit,
+		Start:            true,
+	})
+
+	id := SendEx(topic, t, data, timer_id, 0, nil)
+
+	log.Debug().Msgf("bus.Fetch: sent %s/%s (id: %d)", topic, t, id)
+
+	for msg := range ch {
+
+		log.Debug().Msgf("bus.Fetch: received %s/%s (RespondTo: %d)", msg.Topic, msg.Type, msg.RespondTo)
+
+		switch msg.Topic {
+		case topic:
+			if msg.RespondTo == id {
+				log.Trace().Msgf("bus.Fetch: received response for %s", t)
+				return msg
+
+			}
+		case "timer":
+			if d, ok := msg.Data.(*BM_TimerDone); ok {
+				if d.ID == timer_id {
+					return &Message{Error: errors.New("timeout")}
+				}
+			}
+
+		}
+	}
+
+	return &Message{Error: errors.New("fetch error")}
 }
