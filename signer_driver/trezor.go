@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/signer_driver/trezorproto"
@@ -98,7 +99,7 @@ func (d *TrezorDriver) Open(s *cmn.Signer) (usb.USBDevice, error) {
 		copies += "</b></u>"
 	}
 
-	cmn.HailAndWait(&cmn.HailRequest{
+	bus.Fetch("ui", "hail", &cmn.HailRequest{
 		Title: "Connect Trezor",
 		Template: `<c><w>
 Please connect your Trezor device:
@@ -124,7 +125,7 @@ Please connect your Trezor device:
 						}
 						if cmn.IsInArray(s.GetFamilyNames(), n) {
 							usb_path = info.Path
-							h.Close()
+							bus.Send("ui", "remove_hail", h)
 							return
 						}
 					}
@@ -307,7 +308,7 @@ func (d TrezorDriver) RequsetPin() (string, error) {
 	template += "<button text:OK> <button text:Cancel>"
 	pin := ""
 
-	cmn.HailAndWait(&cmn.HailRequest{
+	bus.Fetch("ui", "hail", &cmn.HailRequest{
 		Title:    "Enter Trezor PIN",
 		Template: template,
 		OnClickHotspot: func(h *cmn.HailRequest, v *gocui.View, hs *gocui.Hotspot) {
@@ -344,7 +345,7 @@ func (d TrezorDriver) RequsetPassword() (string, error) {
 	password := ""
 	canceled := false
 
-	cmn.HailAndWait(&cmn.HailRequest{
+	bus.Fetch("ui", "hail", &cmn.HailRequest{
 		Title: "Select Wallet Type",
 		Template: `<c><w>
 <button text:Standard color:g.HelpFgColor bgcolor:g.HelpBgColor id:standard> <button text:Hidden color:g.HelpFgColor bgcolor:g.HelpBgColor id:hidden> 
@@ -360,7 +361,7 @@ func (d TrezorDriver) RequsetPassword() (string, error) {
 				case "button":
 					switch value {
 					case "standard":
-						h.Close()
+						bus.Send("ui", "remove_hail", h)
 					case "hidden":
 						h.TimerPaused = true
 						v.GetGui().ShowPopup(&gocui.Popup{
@@ -375,7 +376,7 @@ Password: <input id:password size:16 masked:true>
 									case "button OK":
 										password = v.GetInput("password")
 										v.GetGui().HidePopup()
-										h.Close()
+										bus.Send("ui", "remove_hail", h)
 									case "button Cancel":
 										v.GetGui().HidePopup()
 									}

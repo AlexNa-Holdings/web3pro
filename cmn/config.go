@@ -27,7 +27,8 @@ type SConfig struct {
 	WalletName             string `yaml:"wallet_name"`              // last wallet used
 	Verbosity              string `yaml:"verbosity"`                // log verbosity
 	Theme                  string `yaml:"theme"`                    // UI theme
-	TimeoutSec             int    `yaml:"timeout_sec"`              // default timeout for hail requests
+	BusTimeout             int    `yaml:"bus_timeout"`              // timeout for bus requests
+	BusHardTimeout         int    `yaml:"bus_hard_timeout"`         // hard timeout for bus requests
 	USBLog                 bool   `yaml:"usb_log"`                  // log USB events
 	USBBackgroundEnumerate bool   `yaml:"usb_background_enumerate"` // enumerate USB devices in background
 	PriceFeed              string `yaml:"price_feed"`               // price feed
@@ -38,7 +39,8 @@ var Config *SConfig = &SConfig{ //Default config
 	WalletName:             "default",
 	Verbosity:              "debug",
 	Theme:                  "dark",
-	TimeoutSec:             60,
+	BusTimeout:             60,
+	BusHardTimeout:         300,
 	USBLog:                 false,
 	USBBackgroundEnumerate: true,
 	PriceFeed:              "dexscreener",

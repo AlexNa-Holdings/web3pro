@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog/log"
 
+	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/atotto/clipboard"
@@ -115,7 +116,7 @@ func ProcessOnClickHotspot(v *gocui.View, hs *gocui.Hotspot) {
 		clipboard.WriteAll(param)
 		Notification.Show("Copied: " + param)
 	case "command":
-		Terminal.ProcessCommandFunc(param)
+		bus.Send("ui", "command", param)
 	case "open":
 		cmn.OpenBrowser(param)
 	}

@@ -3,6 +3,7 @@ package signer_driver
 import (
 	"errors"
 
+	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/signer_driver/trezorproto"
 	"github.com/AlexNa-Holdings/web3pro/usb"
@@ -89,7 +90,7 @@ func (d *LedgerDriver) Open(s *cmn.Signer) (usb.USBDevice, error) {
 		copies += "</b></u>"
 	}
 
-	cmn.HailAndWait(&cmn.HailRequest{
+	bus.Fetch("ui", "hail", &cmn.HailRequest{
 		Title: "Connect Ledger",
 		Template: `<c><w>
 Please connect your Ledger device:
@@ -115,7 +116,7 @@ Please connect your Ledger device:
 						}
 						if cmn.IsInArray(s.GetFamilyNames(), n) {
 							usb_path = info.Path
-							h.Close()
+							bus.Send("ui", "remove_hail", h)
 							return
 						}
 					}
@@ -126,7 +127,7 @@ Please connect your Ledger device:
 
 	if usb_path == "" {
 		log.Error().Msg("Open: Ledger not found")
-		return nil, errors.New("Ledger not found")
+		return nil, errors.New("ledger not found")
 	}
 
 	return cmn.Core.GetDevice(usb_path)

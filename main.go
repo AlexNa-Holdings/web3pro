@@ -8,6 +8,7 @@ import (
 	"errors"
 	"runtime"
 
+	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/command"
 	"github.com/AlexNa-Holdings/web3pro/eth"
@@ -38,6 +39,7 @@ func main() {
 	cmn.NotifyError = ui.Notification.ShowError
 	cmn.NotifyErrorf = ui.Notification.ShowErrorf
 
+	bus.Init()
 	eth.LoadABIs()
 	command.Init()
 	ui.Init()
@@ -55,7 +57,6 @@ func main() {
 		ui.Is_ready_wg.Wait()
 
 		ui.Terminal.AutoCompleteFunc = command.AutoComplete
-		ui.Terminal.ProcessCommandFunc = command.Process
 
 		ui.Printf(ui.F(ui.Theme.EmFgColor) + WEB3_PRO + ui.F(ui.Terminal.Screen.FgColor) + "\n\n")
 		ui.Printf("by X:")

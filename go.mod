@@ -7,6 +7,7 @@ require (
 	github.com/ava-labs/coreth v0.13.5
 	github.com/ethereum/go-ethereum v1.14.6
 	github.com/gdamore/tcell/v2 v2.4.0
+	github.com/google/gousb v1.1.3
 	github.com/mattn/go-runewidth v0.0.13
 	github.com/rs/zerolog v1.33.0
 	github.com/trezor/trezord-go v2.0.29+incompatible

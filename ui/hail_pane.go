@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 	"sync"
-	"time"
 
+	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/rs/zerolog/log"
@@ -23,30 +23,40 @@ var HailPane *HailPaneType = &HailPaneType{
 	MinHeight: 9,
 }
 
-var ActiveRequest *cmn.HailRequest
-var HailQueue []*cmn.HailRequest
+var ActiveRequest *bus.Message
+var HailQueue []*bus.Message
 var Mutex = &sync.Mutex{}
 var TimerQuit = make(chan bool, 1)
 
-func add(hail *cmn.HailRequest) bool { // returns if on top
+func add(m *bus.Message) bool { // returns if on top
+
+	hail, ok := m.Data.(*cmn.HailRequest)
+	if !ok {
+		log.Error().Msg("Hail data is not of type HailRequest")
+		return false
+	}
+
 	log.Trace().Msgf("Adding hail: %s", hail.Title)
 	Mutex.Lock()
 	defer Mutex.Unlock()
 
 	if hail.Priorized {
-		HailQueue = append([]*cmn.HailRequest{hail}, HailQueue...)
+		HailQueue = append([]*bus.Message{m}, HailQueue...)
 	} else {
-		HailQueue = append(HailQueue, hail)
+		HailQueue = append(HailQueue, m)
 	}
-	return hail == HailQueue[0]
+	return m == HailQueue[0]
 }
 
-func remove(hail *cmn.HailRequest) {
-	log.Trace().Msgf("Removing hail: %s", hail.Title)
+func remove(m *bus.Message) {
+
+	hail := m.Data.(*cmn.HailRequest)
+
+	log.Trace().Msgf("Removing hail %s", hail.Title)
 
 	Mutex.Lock()
 	for i, h := range HailQueue {
-		if h == hail {
+		if h.Data == hail {
 			HailQueue = append(HailQueue[:i], HailQueue[i+1:]...)
 		}
 	}
@@ -58,7 +68,7 @@ func remove(hail *cmn.HailRequest) {
 
 	hail.Done <- true
 
-	if ActiveRequest == hail {
+	if ActiveRequest != nil && ActiveRequest.Data == hail {
 		ActiveRequest = nil
 
 		if len(HailQueue) > 0 {
@@ -73,78 +83,74 @@ func remove(hail *cmn.HailRequest) {
 	}
 }
 
-func cancel(hail *cmn.HailRequest) {
+func cancel(m *bus.Message) {
+	hail := m.Data.(*cmn.HailRequest)
+
 	if hail.OnCancel != nil {
 		hail.OnCancel(hail)
 	}
-	remove(hail)
+
+	remove(m)
 }
 
-func HailPaneTimer() {
-	tick := 0
+func ProcessHails() {
 
-	for {
-		select {
-		case <-TimerQuit:
-			return
-		case <-time.After(1 * time.Second):
-			tick++
-			if ActiveRequest != nil && !ActiveRequest.TimerPaused {
-				if time.Until(ActiveRequest.Expiration) <= 0 {
-					cancel(ActiveRequest)
-				} else {
+	log.Debug().Msg("ProcessHails")
 
-					if ActiveRequest.OnTick != nil {
-						ActiveRequest.OnTick(ActiveRequest, tick)
-					}
+	ch := bus.Subscribe("ui", "timer")
+	defer bus.Unsubscribe(ch)
 
+	for msg := range ch {
+		switch msg.Type {
+		case "hail":
+			log.Trace().Msg("ProcessHails: Hail received")
+			if hail, ok := msg.Data.(*cmn.HailRequest); ok {
+				log.Trace().Msgf("Hail received: %s", hail.Title)
+
+				if hail.TimeoutSec == 0 {
+					hail.TimeoutSec = cmn.Config.BusTimeout
+				}
+				if on_top := add(msg); on_top {
+					HailPane.open(msg)
+				}
+			}
+		case "remove_hail":
+			if hail, ok := msg.Data.(*cmn.HailRequest); ok {
+				log.Trace().Msgf("ProcessHails: Remove hail received: %s", hail.Title)
+				remove(msg)
+			}
+		case "tick":
+			if _, ok := msg.Data.(*bus.BM_TimerTick); ok {
+				if ActiveRequest != nil {
 					Gui.UpdateAsync(func(g *gocui.Gui) error {
 						HailPane.UpdateSubtitle()
 						return nil
 					})
 				}
 			}
+		case "alert":
+			if alert, ok := msg.Data.(*bus.BM_TimerAlert); ok {
+				log.Trace().Msgf("Alert: %v", alert)
+			}
 		}
 	}
 }
 
-func ProcessHails() {
-	for {
-		select {
-		case hail := <-cmn.HailChannel:
-
-			log.Trace().Msgf("Hail received: %s", hail.Title)
-
-			if hail.TimeoutSec == 0 {
-				hail.TimeoutSec = cmn.Config.TimeoutSec
-			}
-			on_top := add(hail)
-			if on_top {
-				HailPane.open(hail)
-			}
-
-		case hail := <-cmn.RemoveHailChannel:
-			log.Trace().Msgf("ProcessHails: Remove hail received: %s", hail.Title)
-			remove(hail)
-		}
-	}
-}
-
-func (p *HailPaneType) open(hail *cmn.HailRequest) {
-
+func (p *HailPaneType) open(m *bus.Message) {
+	hail := m.Data.(*cmn.HailRequest)
 	log.Trace().Msgf("HailPane: open: %s", hail.Title)
 
-	if ActiveRequest != hail {
+	if ActiveRequest.Data != hail {
 		if ActiveRequest != nil {
-			if ActiveRequest.OnSuspend != nil {
-				ActiveRequest.OnSuspend(hail)
+			active_hail := ActiveRequest.Data.(*cmn.HailRequest)
+			if active_hail.OnSuspend != nil {
+				active_hail.OnSuspend(hail)
 			}
-			ActiveRequest.Suspended = true
+			active_hail.Suspended = true
 		}
 	}
 
-	ActiveRequest = hail
-
+	ActiveRequest = m
 	if hail.Suspended {
 		if hail.OnResume != nil {
 			hail.OnResume(hail)
@@ -153,20 +159,17 @@ func (p *HailPaneType) open(hail *cmn.HailRequest) {
 	}
 
 	maxX, _ := Gui.Size()
-	n_lines := gocui.EstimateTemplateLines(ActiveRequest.Template, maxX/2)
+	n_lines := gocui.EstimateTemplateLines(hail.Template, maxX/2)
 	HailPane.MinHeight = n_lines + 2
 
 	if HailPane.View == nil {
 		HailPane.SetView(Gui, 0, 0, maxX/2, n_lines)
-		go HailPaneTimer()
 	} else {
-		if ActiveRequest.Template != "" {
-			HailPane.View.RenderTemplate(ActiveRequest.Template)
+		if hail.Template != "" {
+			HailPane.View.RenderTemplate(hail.Template)
 			Flush()
 		}
 	}
-
-	hail.Expiration = time.Now().Add(time.Duration(hail.TimeoutSec) * time.Second)
 
 	Gui.UpdateAsync(func(g *gocui.Gui) error {
 		HailPane.UpdateSubtitle()
@@ -181,20 +184,18 @@ func (p *HailPaneType) open(hail *cmn.HailRequest) {
 func (p *HailPaneType) UpdateSubtitle() {
 	if HailPane.View != nil && ActiveRequest != nil {
 
-		left := time.Until(ActiveRequest.Expiration)
+		left := bus.GetTimerSecondsLeft(ActiveRequest.TimerID)
 
-		if left.Seconds() < 10 {
+		if left < 10 {
 			p.SubTitleBgColor = Theme.ErrorFgColor
 		} else {
 			p.SubTitleBgColor = Theme.HelpBgColor
 		}
 
-		left = left.Round(time.Second)
-
 		if len(HailQueue) > 1 {
-			p.Subtitle = fmt.Sprintf("(%d) %s", len(HailQueue), left.String())
+			p.Subtitle = fmt.Sprintf("(%d) %d", len(HailQueue), left)
 		} else {
-			p.Subtitle = left.String()
+			p.Subtitle = fmt.Sprintf("%d", left)
 		}
 
 		HailPane.View.Subtitle = p.Subtitle
@@ -208,14 +209,16 @@ func (p *HailPaneType) SetView(g *gocui.Gui, x0, y0, x1, y1 int) {
 		return
 	}
 
+	active_hail := ActiveRequest.Data.(*cmn.HailRequest)
+
 	if p.View, err = g.SetView("hail", x0, y0, x1, y1, 0); err != nil {
 		if !errors.Is(err, gocui.ErrUnknownView) {
 			log.Error().Err(err).Msgf("SetView error: %s", err)
 		}
 
 		p.View.Title = "Hail"
-		if ActiveRequest.Title != "" {
-			p.View.Title = ActiveRequest.Title
+		if active_hail.Title != "" {
+			p.View.Title = active_hail.Title
 		}
 		p.View.SubTitleFgColor = Theme.HelpFgColor
 		p.View.SubTitleBgColor = Theme.HelpBgColor
@@ -225,16 +228,13 @@ func (p *HailPaneType) SetView(g *gocui.Gui, x0, y0, x1, y1 int) {
 		p.View.ScrollBar = true
 		p.View.OnResize = func(v *gocui.View) {
 			if ActiveRequest != nil {
-				if ActiveRequest.Template != "" {
-					v.RenderTemplate(ActiveRequest.Template)
+				if active_hail.Template != "" {
+					v.RenderTemplate(active_hail.Template)
 				}
 			}
 		}
 		p.View.OnClickTitle = func(v *gocui.View) { // reset timer
-			if ActiveRequest != nil {
-				ActiveRequest.Expiration = ActiveRequest.Expiration.Add(time.Duration(ActiveRequest.TimeoutSec) * time.Second)
-			}
-
+			bus.Send("timer", "reset", &bus.BM_TimerReset{ID: ActiveRequest.TimerID})
 			Gui.UpdateAsync(func(g *gocui.Gui) error {
 				HailPane.UpdateSubtitle()
 				return nil
@@ -246,23 +246,25 @@ func (p *HailPaneType) SetView(g *gocui.Gui, x0, y0, x1, y1 int) {
 				return
 			}
 
+			active_hail := ActiveRequest.Data.(*cmn.HailRequest)
+
 			if hs != nil {
 				switch strings.ToLower(hs.Value) {
 				case "button ok":
 					log.Trace().Msgf("HailPane: button Ok")
-					if ActiveRequest.OnOk != nil {
-						ActiveRequest.OnOk(ActiveRequest)
+					if active_hail.OnOk != nil {
+						active_hail.OnOk(active_hail)
 					}
 					remove(ActiveRequest)
 				case "button cancel":
 					log.Trace().Msgf("HailPane: button Cancel")
-					if ActiveRequest.OnCancel != nil {
-						ActiveRequest.OnCancel(ActiveRequest)
+					if active_hail.OnCancel != nil {
+						active_hail.OnCancel(active_hail)
 					}
 					remove(ActiveRequest)
 				default:
-					if ActiveRequest.OnClickHotspot != nil {
-						ActiveRequest.OnClickHotspot(ActiveRequest, v, hs)
+					if active_hail.OnClickHotspot != nil {
+						active_hail.OnClickHotspot(active_hail, v, hs)
 					}
 				}
 			}
@@ -272,8 +274,10 @@ func (p *HailPaneType) SetView(g *gocui.Gui, x0, y0, x1, y1 int) {
 				return
 			}
 
-			if ActiveRequest.OnOverHotspot != nil {
-				ActiveRequest.OnOverHotspot(ActiveRequest, v, hs)
+			active_hail := ActiveRequest.Data.(*cmn.HailRequest)
+
+			if active_hail.OnOverHotspot != nil {
+				active_hail.OnOverHotspot(active_hail, v, hs)
 			}
 		}
 	}

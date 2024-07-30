@@ -3,6 +3,7 @@ package command
 import (
 	"strings"
 
+	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/ui"
 	"github.com/rs/zerolog/log"
@@ -37,25 +38,37 @@ func Init() {
 		NewSendCommand(),
 		NewPriceCommand(),
 	}
-}
 
-func Process(input string) {
-	log.Trace().Msgf("Processing command: %s", input)
+	go func() {
+		ch := bus.Subscribe("ui")
+		defer bus.Unsubscribe(ch)
+		for {
 
-	command := strings.Split(input, " ")[0]
+			msg := <-ch
+			if msg.Type == "command" {
+				switch msg.Data.(type) {
+				case string:
+					input := strings.TrimSpace(msg.Data.(string))
+					command := strings.Split(input, " ")[0]
+					log.Trace().Msgf("Processing command: %s", command)
 
-	for _, cmd := range Commands {
-		if cmd.Command == command || cmd.ShortCommand == command {
-			go func() {
-				cmd.Process(cmd, input)
-				ui.Flush()
-				ui.Gui.SetCurrentView("terminal.input")
-			}()
-			return
+					found := false
+					for _, cmd := range Commands {
+						if cmd.Command == command || cmd.ShortCommand == command {
+							found = true
+							cmd.Process(cmd, input)
+							ui.Flush()
+							ui.Gui.SetCurrentView("terminal.input")
+						}
+					}
+
+					if !found {
+						ui.PrintErrorf("\nUnknown command: %s\n\n", command)
+					}
+				}
+			}
 		}
-	}
-
-	ui.PrintErrorf("\nUnknown command: %s\n\n", command)
+	}()
 }
 
 func AutoComplete(input string) (string, *[]ui.ACOption, string) {

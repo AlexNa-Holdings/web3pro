@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/rs/zerolog/log"
 )
@@ -12,19 +13,18 @@ import (
 type TerminalPane struct {
 	*gocui.View
 
-	Screen             *gocui.View
-	Input              *gocui.View
-	Prefix             *gocui.View
-	AutoComplete       *gocui.View
-	AutoCompleteOn     bool
-	ACOptions          *[]ACOption // autocomplete options
-	ACTitle            string      //autocomplete title
-	ACHighlite         string      //autocomplete highlite
-	CommandPrefix      string
-	FormattedPrefix    string
-	ProcessCommandFunc func(string)
-	AutoCompleteFunc   func(string) (string, *[]ACOption, string)
-	History            []string
+	Screen           *gocui.View
+	Input            *gocui.View
+	Prefix           *gocui.View
+	AutoComplete     *gocui.View
+	AutoCompleteOn   bool
+	ACOptions        *[]ACOption // autocomplete options
+	ACTitle          string      //autocomplete title
+	ACHighlite       string      //autocomplete highlite
+	CommandPrefix    string
+	FormattedPrefix  string
+	AutoCompleteFunc func(string) (string, *[]ACOption, string)
+	History          []string
 }
 
 type ACOption struct {
@@ -222,7 +222,7 @@ func terminalEditor(v *gocui.View, key gocui.Key, ch rune, mod gocui.Modifier) {
 					Terminal.History[len(Terminal.History)-1] != i) {
 				Terminal.History = append(Terminal.History, i)
 			}
-			Terminal.ProcessCommandFunc(v.Buffer())
+			bus.Send("ui", "command", v.Buffer())
 		}
 		Terminal.Screen.ScrollBottom()
 		Terminal.Input.Clear()

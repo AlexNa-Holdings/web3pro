@@ -79,3 +79,22 @@ type Token struct {
 	Price          float64        `json:"price"`
 	PriceTimestamp time.Time      `json:"price_timestamp"` // Unix timestamp
 }
+
+type HailRequest struct {
+	Priorized      bool
+	Title          string
+	Template       string
+	OnOpen         func(hr *HailRequest, g *gocui.Gui, v *gocui.View)
+	OnClose        func(hr *HailRequest)
+	OnCancel       func(hr *HailRequest)
+	OnOk           func(hr *HailRequest)
+	OnSuspend      func(hr *HailRequest)
+	OnResume       func(hr *HailRequest)
+	OnTick         func(hr *HailRequest, tick int)
+	OnClickHotspot func(hr *HailRequest, v *gocui.View, hs *gocui.Hotspot)
+	OnOverHotspot  func(hr *HailRequest, v *gocui.View, hs *gocui.Hotspot)
+	Done           chan bool
+	Suspended      bool
+	TimeoutSec     int // in seconds
+	TimerPaused    bool
+}

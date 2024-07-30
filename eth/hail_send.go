@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/ethereum/go-ethereum/common"
@@ -134,7 +135,7 @@ func HailToSend(b *cmn.Blockchain, t *cmn.Token, from *cmn.Address, to common.Ad
 		tx, _ = BuildTxERC20Transfer(b, t, s, from, to, amount)
 	}
 
-	cmn.Hail(&cmn.HailRequest{
+	bus.Send("ui", "hail", &cmn.HailRequest{
 		Title:    "Send Tokens",
 		Template: template,
 		OnOpen: func(hr *cmn.HailRequest, g *gocui.Gui, v *gocui.View) {
@@ -279,7 +280,7 @@ func HailToSend(b *cmn.Blockchain, t *cmn.Token, from *cmn.Address, to common.Ad
 								})
 							}
 
-							hr.ResetTimer()
+							//hr.ResetTimer()  TODO
 							hr.TimerPaused = false
 						},
 						OnOpen: func(v *gocui.View) {
