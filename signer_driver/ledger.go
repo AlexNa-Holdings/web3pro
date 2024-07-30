@@ -90,7 +90,7 @@ func (d *LedgerDriver) Open(s *cmn.Signer) (usb.USBDevice, error) {
 		copies += "</b></u>"
 	}
 
-	bus.Fetch("ui", "hail", &cmn.HailRequest{
+	bus.Fetch("ui", "hail", &bus.B_Hail{
 		Title: "Connect Ledger",
 		Template: `<c><w>
 Please connect your Ledger device:
@@ -98,7 +98,7 @@ Please connect your Ledger device:
 <u><b>` + s.Name + `</b></u>` + copies + `
 
 <button text:Cancel>`,
-		OnTick: func(h *cmn.HailRequest, tick int) {
+		OnTick: func(h *bus.B_Hail, tick int) {
 			if tick%3 == 0 {
 				log.Trace().Msg("Connect Ledger: Tick...")
 				l, err := cmn.Core.Enumerate()

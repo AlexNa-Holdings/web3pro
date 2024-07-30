@@ -88,7 +88,7 @@ func test() {
 
 	log.Debug().Msg("test start--------------------------")
 
-	bus.Fetch("ui", "hail", &cmn.HailRequest{
+	bus.Fetch("ui", "hail", &bus.B_Hail{
 		Title: "TEST HAIL",
 		Template: `<c><w>
 Test

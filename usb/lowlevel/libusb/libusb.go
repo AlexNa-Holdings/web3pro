@@ -295,12 +295,12 @@ const (
 
 // Bitmasks for USB_2_0_Extension_Descriptor.BmAttributes.
 const (
-	BM_LPM_SUPPORT = C.LIBUSB_BM_LPM_SUPPORT
+	B_LPM_SUPPORT = C.LIBUSB_B_LPM_SUPPORT
 )
 
 // Bitmasks for SS_USB_Device_Capability_Descriptor.BmAttributes.
 const (
-	BM_LTM_SUPPORT = C.LIBUSB_BM_LTM_SUPPORT
+	B_LTM_SUPPORT = C.LIBUSB_B_LTM_SUPPORT
 )
 
 // USB capability types.

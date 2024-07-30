@@ -135,16 +135,16 @@ func HailToSend(b *cmn.Blockchain, t *cmn.Token, from *cmn.Address, to common.Ad
 		tx, _ = BuildTxERC20Transfer(b, t, s, from, to, amount)
 	}
 
-	bus.Send("ui", "hail", &cmn.HailRequest{
+	bus.Send("ui", "hail", &bus.B_Hail{
 		Title:    "Send Tokens",
 		Template: template,
-		OnOpen: func(hr *cmn.HailRequest, g *gocui.Gui, v *gocui.View) {
+		OnOpen: func(hr *bus.B_Hail, g *gocui.Gui, v *gocui.View) {
 			v.SetInput("to", to.String())
 			v.SetInput("amount", amount.String())
 		},
-		OnClose: func(hr *cmn.HailRequest) {
+		OnClose: func(hr *bus.B_Hail) {
 		},
-		OnOk: func(hr *cmn.HailRequest) {
+		OnOk: func(hr *bus.B_Hail) {
 			if t.Native {
 				err := Transfer(b, s, from, to, amount)
 				if err != nil {
@@ -159,10 +159,10 @@ func HailToSend(b *cmn.Blockchain, t *cmn.Token, from *cmn.Address, to common.Ad
 				}
 			}
 		},
-		OnOverHotspot: func(hr *cmn.HailRequest, v *gocui.View, hs *gocui.Hotspot) {
+		OnOverHotspot: func(hr *bus.B_Hail, v *gocui.View, hs *gocui.Hotspot) {
 			cmn.StandardOnOverHotspot(v, hs)
 		},
-		OnClickHotspot: func(hr *cmn.HailRequest, v *gocui.View, hs *gocui.Hotspot) {
+		OnClickHotspot: func(hr *bus.B_Hail, v *gocui.View, hs *gocui.Hotspot) {
 			if hs != nil {
 				switch hs.Value {
 				case "button edit_gas_price":

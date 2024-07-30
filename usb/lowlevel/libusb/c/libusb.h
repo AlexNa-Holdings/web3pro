@@ -496,7 +496,7 @@ enum libusb_supported_speed {
  */
 enum libusb_usb_2_0_extension_attributes {
 	/** Supports Link Power Management (LPM) */
-	LIBUSB_BM_LPM_SUPPORT = (1 << 1)
+	LIBUSB_B_LPM_SUPPORT = (1 << 1)
 };
 
 /** \ingroup libusb_desc
@@ -506,7 +506,7 @@ enum libusb_usb_2_0_extension_attributes {
  */
 enum libusb_ss_usb_device_capability_attributes {
 	/** Supports Latency Tolerance Messages (LTM) */
-	LIBUSB_BM_LTM_SUPPORT = (1 << 1)
+	LIBUSB_B_LTM_SUPPORT = (1 << 1)
 };
 
 /** \ingroup libusb_desc

@@ -148,15 +148,13 @@ func FetchEx(topic, t string, data interface{}, limit int, hardlimit int) *Messa
 	ch := Subscribe(topic, "timer")
 	defer Unsubscribe(ch)
 
-	timer_id := Send("timer", "init", &BM_TimerInit{
+	timer_id := Send("timer", "init", &B_TimerInit{
 		LimitSeconds:     limit,
 		HardLimitSeconds: hardlimit,
 		Start:            true,
 	})
 
 	id := SendEx(topic, t, data, timer_id, 0, nil)
-
-	log.Debug().Msgf("bus.Fetch: sent %s/%s (id: %d)", topic, t, id)
 
 	for msg := range ch {
 
@@ -166,11 +164,12 @@ func FetchEx(topic, t string, data interface{}, limit int, hardlimit int) *Messa
 		case topic:
 			if msg.RespondTo == id {
 				log.Trace().Msgf("bus.Fetch: received response for %s", t)
-				return msg
 
+				Send("timer", "delete", &B_TimerDelete{ID: timer_id})
+				return msg
 			}
 		case "timer":
-			if d, ok := msg.Data.(*BM_TimerDone); ok {
+			if d, ok := msg.Data.(*B_TimerDone); ok {
 				if d.ID == timer_id {
 					return &Message{Error: errors.New("timeout")}
 				}

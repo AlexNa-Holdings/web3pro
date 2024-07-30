@@ -1,6 +1,7 @@
 package bus
 
 import (
+	"errors"
 	"sync"
 	"time"
 
@@ -21,33 +22,6 @@ var mu = &sync.Mutex{}
 var timer *time.Timer = time.NewTimer(0)
 var tick_timer *time.Ticker = time.NewTicker(1 * time.Second)
 var tick = 0
-
-type BM_TimerInit struct {
-	LimitSeconds     int
-	HardLimitSeconds int
-	Start            bool
-}
-
-type BM_TimerStart struct {
-	ID int
-}
-
-type BM_TimerReset struct {
-	ID int
-}
-
-type BM_TimerDone struct {
-	ID int
-}
-
-type BM_TimerTick struct {
-	Tick int
-	Left map[int]int // id -> seconds left
-}
-
-type BM_TimerPause struct {
-	ID int
-}
 
 func GetTimerSecondsLeft(id int) int {
 	mu.Lock()
@@ -73,35 +47,63 @@ func ProcessTimers() {
 	for {
 		select {
 		case msg := <-ch:
+			if msg.RespondTo != 0 {
+				continue // ignore responses
+			}
 			switch msg.Type {
 			case "init":
-				d, ok := msg.Data.(*BM_TimerInit)
+				d, ok := msg.Data.(*B_TimerInit)
 				if ok {
 					timer_init(msg.ID, d)
+					msg.Respond("OK", nil)
 				} else {
 					log.Error().Msg("Invalid timer init data")
+					msg.Respond("ERROR", errors.New("invalid timer init data"))
 				}
 			case "start":
-				d, ok := msg.Data.(*BM_TimerStart)
+				d, ok := msg.Data.(*B_TimerStart)
 				if ok {
 					timer_start(d.ID)
+					msg.Respond("OK", nil)
 				} else {
 					log.Error().Msg("Invalid timer start data")
+					msg.Respond("ERROR", errors.New("invalid timer start data"))
 				}
 			case "reset":
-				d, ok := msg.Data.(*BM_TimerReset)
+				d, ok := msg.Data.(*B_TimerReset)
 				if ok {
 					timer_reset(d.ID)
+					msg.Respond("OK", nil)
 				} else {
 					log.Error().Msg("Invalid timer reset data")
+					msg.Respond("ERROR", errors.New("invalid timer reset data"))
 				}
 			case "pause":
-				d, ok := msg.Data.(*BM_TimerPause)
+				d, ok := msg.Data.(*B_TimerPause)
 				if ok {
 					timer_pause(d.ID)
+					msg.Respond("OK", nil)
 				} else {
 					log.Error().Msg("Invalid timer pause data")
+					msg.Respond("ERROR", errors.New("invalid timer pause data"))
 				}
+			case "delete":
+				d, ok := msg.Data.(*B_TimerDelete)
+				if ok {
+					mu.Lock()
+					delete(timers, d.ID)
+					log.Debug().Msgf("Timer %d deleted", d.ID)
+					mu.Unlock()
+					msg.Respond("OK", nil)
+				} else {
+					log.Error().Msg("Invalid timer delete data")
+					msg.Respond("ERROR", errors.New("invalid timer delete data"))
+				}
+			case "tick":
+				// ignore
+			default:
+				log.Error().Msgf("Invalid timer message type %s", msg.Type)
+				msg.Respond("ERROR", errors.New("invalid timer message type"))
 			}
 			updateTimers()
 		case <-timer.C:
@@ -120,7 +122,7 @@ func ProcessTimers() {
 				left[id] = t.LimitSeconds - lapsed
 			}
 			mu.Unlock()
-			Send("timer", "tick", &BM_TimerTick{
+			Send("timer", "tick", &B_TimerTick{
 				Tick: tick,
 				Left: left,
 			})
@@ -152,7 +154,7 @@ func updateTimers() {
 		log.Debug().Msgf("Timer %d lapsed %d", id, lapsed)
 
 		if lapsed >= t.LimitSeconds {
-			Send("timer", "done", &BM_TimerDone{
+			Send("timer", "done", &B_TimerDone{
 				ID: id,
 			})
 			delete(timers, id) // remove timer
@@ -175,7 +177,7 @@ func updateTimers() {
 
 }
 
-func timer_init(id int, d *BM_TimerInit) {
+func timer_init(id int, d *B_TimerInit) {
 	mu.Lock()
 
 	if _, ok := timers[id]; ok {

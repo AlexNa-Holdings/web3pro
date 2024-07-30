@@ -29,7 +29,7 @@ var Mutex = &sync.Mutex{}
 
 func add(m *bus.Message) bool { // returns if on top
 
-	hail, ok := m.Data.(*cmn.HailRequest)
+	hail, ok := m.Data.(*bus.B_Hail)
 	if !ok {
 		log.Error().Msg("Hail data is not of type HailRequest")
 		return false
@@ -48,7 +48,7 @@ func add(m *bus.Message) bool { // returns if on top
 }
 
 func remove(m *bus.Message) {
-	hail := m.Data.(*cmn.HailRequest)
+	hail := m.Data.(*bus.B_Hail)
 	log.Trace().Msgf("Removing hail %s", hail.Title)
 
 	Mutex.Lock()
@@ -63,7 +63,7 @@ func remove(m *bus.Message) {
 		hail.OnClose(hail)
 	}
 
-	bus.Send("timer", "remove", &bus.BM_TimerDone{ID: m.TimerID})
+	bus.Send("timer", "delete", &bus.B_TimerDelete{ID: m.TimerID})
 	m.Respond("OK", nil)
 
 	if ActiveRequest != nil && ActiveRequest.Data == hail {
@@ -80,7 +80,7 @@ func remove(m *bus.Message) {
 }
 
 func cancel(m *bus.Message) {
-	hail := m.Data.(*cmn.HailRequest)
+	hail := m.Data.(*bus.B_Hail)
 
 	if hail.OnCancel != nil {
 		hail.OnCancel(hail)
@@ -100,7 +100,7 @@ func ProcessHails() {
 		switch msg.Type {
 		case "hail":
 			log.Trace().Msg("ProcessHails: Hail received")
-			if hail, ok := msg.Data.(*cmn.HailRequest); ok {
+			if hail, ok := msg.Data.(*bus.B_Hail); ok {
 				log.Trace().Msgf("Hail received: %s", hail.Title)
 
 				if hail.TimeoutSec == 0 {
@@ -111,7 +111,7 @@ func ProcessHails() {
 				}
 			}
 		case "remove_hail":
-			if hail, ok := msg.Data.(*cmn.HailRequest); ok {
+			if hail, ok := msg.Data.(*bus.B_Hail); ok {
 				log.Trace().Msgf("ProcessHails: Remove hail received: %s", hail.Title)
 
 				var m *bus.Message
@@ -129,7 +129,7 @@ func ProcessHails() {
 				}
 			}
 		case "tick":
-			if _, ok := msg.Data.(*bus.BM_TimerTick); ok {
+			if _, ok := msg.Data.(*bus.B_TimerTick); ok {
 				if ActiveRequest != nil {
 					Gui.UpdateAsync(func(g *gocui.Gui) error {
 						HailPane.UpdateSubtitle()
@@ -138,7 +138,7 @@ func ProcessHails() {
 				}
 			}
 		case "done":
-			if d, ok := msg.Data.(*bus.BM_TimerDone); ok {
+			if d, ok := msg.Data.(*bus.B_TimerDone); ok {
 				log.Trace().Msgf("Alert: %v", d.ID)
 				if ActiveRequest != nil {
 					if ActiveRequest.TimerID == d.ID {
@@ -151,12 +151,12 @@ func ProcessHails() {
 }
 
 func (p *HailPaneType) open(m *bus.Message) {
-	hail := m.Data.(*cmn.HailRequest)
+	hail := m.Data.(*bus.B_Hail)
 	log.Trace().Msgf("HailPane: open: %s", hail.Title)
 
 	if ActiveRequest != nil {
 		if ActiveRequest.Data != hail {
-			active_hail := ActiveRequest.Data.(*cmn.HailRequest)
+			active_hail := ActiveRequest.Data.(*bus.B_Hail)
 			if active_hail.OnSuspend != nil {
 				active_hail.OnSuspend(hail)
 			}
@@ -223,7 +223,7 @@ func (p *HailPaneType) SetView(g *gocui.Gui, x0, y0, x1, y1 int) {
 		return
 	}
 
-	active_hail := ActiveRequest.Data.(*cmn.HailRequest)
+	active_hail := ActiveRequest.Data.(*bus.B_Hail)
 
 	if p.View, err = g.SetView("hail", x0, y0, x1, y1, 0); err != nil {
 		if !errors.Is(err, gocui.ErrUnknownView) {
@@ -248,7 +248,7 @@ func (p *HailPaneType) SetView(g *gocui.Gui, x0, y0, x1, y1 int) {
 			}
 		}
 		p.View.OnClickTitle = func(v *gocui.View) { // reset timer
-			bus.Send("timer", "reset", &bus.BM_TimerReset{ID: ActiveRequest.TimerID})
+			bus.Send("timer", "reset", &bus.B_TimerReset{ID: ActiveRequest.TimerID})
 			Gui.UpdateAsync(func(g *gocui.Gui) error {
 				HailPane.UpdateSubtitle()
 				return nil
@@ -260,7 +260,7 @@ func (p *HailPaneType) SetView(g *gocui.Gui, x0, y0, x1, y1 int) {
 				return
 			}
 
-			active_hail := ActiveRequest.Data.(*cmn.HailRequest)
+			active_hail := ActiveRequest.Data.(*bus.B_Hail)
 
 			if hs != nil {
 				switch strings.ToLower(hs.Value) {
@@ -288,7 +288,7 @@ func (p *HailPaneType) SetView(g *gocui.Gui, x0, y0, x1, y1 int) {
 				return
 			}
 
-			active_hail := ActiveRequest.Data.(*cmn.HailRequest)
+			active_hail := ActiveRequest.Data.(*bus.B_Hail)
 
 			if active_hail.OnOverHotspot != nil {
 				active_hail.OnOverHotspot(active_hail, v, hs)

@@ -99,7 +99,7 @@ func (d *TrezorDriver) Open(s *cmn.Signer) (usb.USBDevice, error) {
 		copies += "</b></u>"
 	}
 
-	bus.Fetch("ui", "hail", &cmn.HailRequest{
+	bus.Fetch("ui", "hail", &bus.B_Hail{
 		Title: "Connect Trezor",
 		Template: `<c><w>
 Please connect your Trezor device:
@@ -107,7 +107,7 @@ Please connect your Trezor device:
 <u><b>` + s.Name + `</b></u>` + copies + `
 
 <button text:Cancel>`,
-		OnTick: func(h *cmn.HailRequest, tick int) {
+		OnTick: func(h *bus.B_Hail, tick int) {
 			if tick%3 == 0 {
 				log.Trace().Msg("Connect Trezor: Tick...")
 				l, err := cmn.Core.Enumerate()
@@ -308,10 +308,10 @@ func (d TrezorDriver) RequsetPin() (string, error) {
 	template += "<button text:OK> <button text:Cancel>"
 	pin := ""
 
-	bus.Fetch("ui", "hail", &cmn.HailRequest{
+	bus.Fetch("ui", "hail", &bus.B_Hail{
 		Title:    "Enter Trezor PIN",
 		Template: template,
-		OnClickHotspot: func(h *cmn.HailRequest, v *gocui.View, hs *gocui.Hotspot) {
+		OnClickHotspot: func(h *bus.B_Hail, v *gocui.View, hs *gocui.Hotspot) {
 			if hs != nil {
 				s := cmn.Split(hs.Value)
 				command, value := s[0], s[1]
@@ -347,14 +347,14 @@ func (d TrezorDriver) RequsetPassword() (string, error) {
 	password := ""
 	canceled := false
 
-	bus.Fetch("ui", "hail", &cmn.HailRequest{
+	bus.Fetch("ui", "hail", &bus.B_Hail{
 		Title: "Select Wallet Type",
 		Template: `<c><w>
 <button text:Standard color:g.HelpFgColor bgcolor:g.HelpBgColor id:standard> <button text:Hidden color:g.HelpFgColor bgcolor:g.HelpBgColor id:hidden> 
 
 <button text:Cancel>`,
 
-		OnClickHotspot: func(h *cmn.HailRequest, v *gocui.View, hs *gocui.Hotspot) {
+		OnClickHotspot: func(h *bus.B_Hail, v *gocui.View, hs *gocui.Hotspot) {
 			if hs != nil {
 				s := cmn.Split(hs.Value)
 				command, value := s[0], s[1]
@@ -392,7 +392,7 @@ Password: <input id:password size:16 masked:true>
 				}
 			}
 		},
-		OnCancel: func(h *cmn.HailRequest) {
+		OnCancel: func(h *bus.B_Hail) {
 			canceled = true
 		},
 	})
