@@ -45,13 +45,9 @@ func Init() {
 
 func ProcessMessages() {
 	for msg := range cb.In {
-
-		log.Trace().Msgf("bus.Dispatching to %s: %s", msg.Topic, msg.Type)
-
 		cb.M.Lock()
 		subs, ok := cb.Subscribers[msg.Topic]
 		if ok {
-			log.Trace().Msgf("Total subscribers for %s: %d", msg.Topic, len(subs))
 			for _, subscriber := range subs {
 				subscriber <- msg
 			}
@@ -109,7 +105,9 @@ func Unsubscribe(ch chan *Message) {
 }
 
 func SendEx(topic, t string, data interface{}, timer_id int, respond_to int, err error) int {
-	log.Trace().Msgf("bus.Sending to %s: %s", topic, t)
+	if topic != "timer" {
+		log.Trace().Msgf("bus.Sending to %s: %s", topic, t)
+	}
 
 	cb.M.Lock()
 	defer cb.M.Unlock()
