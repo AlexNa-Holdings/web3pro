@@ -54,3 +54,13 @@ type B_Hail struct { // hail
 	TimeoutSec     int // in seconds
 	TimerPaused    bool
 }
+
+// ---------- usb ----------
+
+type B_UsbList_Device struct { // device
+	Path string
+	Name string
+	Type string
+}
+
+type B_UsbList_Response []B_UsbList_Device

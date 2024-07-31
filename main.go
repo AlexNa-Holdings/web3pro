@@ -17,6 +17,7 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/signer_driver"
 	"github.com/AlexNa-Holdings/web3pro/ui"
 	"github.com/AlexNa-Holdings/web3pro/usb"
+	"github.com/AlexNa-Holdings/web3pro/usb_server"
 	"github.com/rs/zerolog/log"
 )
 
@@ -40,6 +41,7 @@ func main() {
 	cmn.NotifyErrorf = ui.Notification.ShowErrorf
 
 	bus.Init()
+	usb_server.Init()
 	eth.LoadABIs()
 	command.Init()
 	ui.Init()
