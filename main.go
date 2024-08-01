@@ -13,6 +13,7 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/command"
 	"github.com/AlexNa-Holdings/web3pro/eth"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
+	"github.com/AlexNa-Holdings/web3pro/hw"
 	"github.com/AlexNa-Holdings/web3pro/price"
 	"github.com/AlexNa-Holdings/web3pro/signer"
 	"github.com/AlexNa-Holdings/web3pro/ui"
@@ -32,15 +33,13 @@ func main() {
 	cmn.InitConfig()
 
 	// init globals
-	cmn.WalletTrezorDriver = signer.NewTrezorDriver()
-	cmn.WalletMnemonicsDriver = signer.NewMnemonicDriver()
-	cmn.WalletLedgerDriver = signer.NewLedgerDriver()
 	cmn.Notify = ui.Notification.Show
 	cmn.Notifyf = ui.Notification.Showf
 	cmn.NotifyError = ui.Notification.ShowError
 	cmn.NotifyErrorf = ui.Notification.ShowErrorf
 
 	bus.Init()
+	hw.Init()
 	signer.Init()
 	usb_server.Init()
 	eth.LoadABIs()

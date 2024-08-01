@@ -257,28 +257,29 @@ func SB(s *bool) bool { // Safe bool
 
 func (d TrezorDriver) InitSigner(usb_id string) (string, any, error) {
 
-	kind, reply, err := d.RawCall(dev, &trezorproto.Initialize{})
-	if err != nil {
-		log.Error().Err(err).Msgf("Init: Error initializing device: %s", path)
-		return "", nil, err
-	}
-	if kind != trezorproto.MessageType_MessageType_Features {
-		log.Error().Msgf("Init: Expected reply type %s, got %s", MessageName(trezorproto.MessageType_MessageType_Features), MessageName(kind))
-		return "", nil, errors.New("trezor: expected reply type " + MessageName(trezorproto.MessageType_MessageType_Features) + ", got " + MessageName(kind))
-	}
-	features := new(trezorproto.Features)
-	err = proto.Unmarshal(reply, features)
-	if err != nil {
-		log.Error().Err(err).Msgf("Init: Error unmarshalling features: %s", path)
-		return "", nil, err
-	}
+	// kind, reply, err := d.RawCall(dev, &trezorproto.Initialize{})
+	// if err != nil {
+	// 	log.Error().Err(err).Msgf("Init: Error initializing device: %s", path)
+	// 	return "", nil, err
+	// }
+	// if kind != trezorproto.MessageType_MessageType_Features {
+	// 	log.Error().Msgf("Init: Expected reply type %s, got %s", MessageName(trezorproto.MessageType_MessageType_Features), MessageName(kind))
+	// 	return "", nil, errors.New("trezor: expected reply type " + MessageName(trezorproto.MessageType_MessageType_Features) + ", got " + MessageName(kind))
+	// }
+	// features := new(trezorproto.Features)
+	// err = proto.Unmarshal(reply, features)
+	// if err != nil {
+	// 	log.Error().Err(err).Msgf("Init: Error unmarshalling features: %s", path)
+	// 	return "", nil, err
+	// }
 
-	name := "My Trezor"
-	if features.Label != nil {
-		name = *features.Label
-	}
+	// name := "My Trezor"
+	// if features.Label != nil {
+	// 	name = *features.Label
+	// }
 
-	return name, features, nil
+	// return name, features, nil
+	return "", nil, nil // 	TODO
 }
 
 func (d TrezorDriver) Init(path string) (*ConnectedTrezor, error) {
@@ -624,10 +625,10 @@ func (d TrezorDriver) NewRawCall(usb_id string, req proto.Message) (trezorproto.
 		}
 		// Send over to the dev
 		log.Trace().Msgf("Data chunk sent to the Trezor: %v\n", hexutil.Bytes(chunk))
-		if _, err := dev.Write(chunk); err != nil {
-			log.Error().Msgf("RawCall: Error writing to device: %s", err)
-			return 0, nil, err
-		}
+		// if _, err := dev.Write(chunk); err != nil { TODO
+		// 	log.Error().Msgf("RawCall: Error writing to device: %s", err)
+		// 	return 0, nil, err
+		// }
 	}
 
 	// Stream the reply back from the wallet in 64 byte chunks
@@ -638,10 +639,10 @@ func (d TrezorDriver) NewRawCall(usb_id string, req proto.Message) (trezorproto.
 	for {
 
 		// Read the next chunk from the Trezor wallet
-		if _, err := io.ReadFull(dev, chunk); err != nil {
-			log.Error().Msgf("RawCall: Error reading from device: %s", err)
-			return 0, nil, err
-		}
+		// if _, err := io.ReadFull(dev, chunk); err != nil { //TODO
+		// 	log.Error().Msgf("RawCall: Error reading from device: %s", err)
+		// 	return 0, nil, err
+		// }
 
 		// Make sure the transport header matches
 		if chunk[0] != 0x3f || (len(reply) == 0 && (chunk[1] != 0x23 || chunk[2] != 0x23)) {

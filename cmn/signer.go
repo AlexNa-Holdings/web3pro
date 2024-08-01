@@ -61,7 +61,7 @@ func GetDeviceName(e usb.EnumerateEntry) (string, error) {
 	t := GetDeviceType(e.Vendor, e.Product)
 	switch t {
 	case "trezor":
-		return WalletTrezorDriver.GetName(e.Path)
+		return "TODO", nil //WalletTrezorDriver.GetName(e.Path)
 	case "ledger":
 		return "Ledger ID", nil //TODO
 	}

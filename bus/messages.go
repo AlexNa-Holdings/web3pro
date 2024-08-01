@@ -57,9 +57,13 @@ type B_Hail struct { // hail
 
 // ---------- usb ----------
 type B_UsbList_Device struct { // device
-	USB_ID string
-	Name   string
-	Type   string
+	USB_ID    string
+	Path      string
+	Vendor    string
+	VendorID  uint16
+	Product   string
+	ProductID uint16
+	Connected bool
 }
 
 type B_UsbList_Response []B_UsbList_Device
@@ -74,6 +78,16 @@ type B_UsbRead struct { // read
 
 type B_UsbRead_Response struct { // read_response
 	Data []byte
+}
+
+type B_UsbConnected struct { // connected
+	USB_ID  string
+	Vendor  string
+	Product string
+}
+
+type B_UsbDisconnected struct { // disconnected
+	USB_ID string
 }
 
 // ---------- signer ----------

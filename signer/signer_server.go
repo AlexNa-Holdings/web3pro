@@ -12,10 +12,10 @@ var mnemonicsDriver = NewMnemonicDriver()
 var ledgerDriver = NewLedgerDriver()
 
 func Init() {
-	go MessageLoop()
+	go Loop()
 }
 
-func MessageLoop() {
+func Loop() {
 	ch := bus.Subscribe("signer")
 	for {
 		select {
@@ -53,7 +53,7 @@ func InitSigner(id string, t string) (string, any, error) {
 	case "trezor":
 		return trezorDriver.InitSigner(id)
 	case "ledger":
-		return ledgerDriver.InitSigner(id)
+		//	return ledgerDriver.InitSigner(id)
 	}
-	return "", errors.New("unknown hardware wallet type")
+	return "", nil, errors.New("unknown hardware wallet type")
 }

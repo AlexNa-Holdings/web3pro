@@ -110,8 +110,6 @@ func Usb_Process(c *Command, input string) {
 	p := cmn.Split(input)
 	_, subcommand := p[0], p[1]
 
-	n := 1
-
 	switch subcommand {
 	case "list", "":
 		ui.Printf("\nUsb Devices:\n")
@@ -128,10 +126,18 @@ func Usb_Process(c *Command, input string) {
 			return
 		}
 
+		n := 1
 		for _, u := range l {
-			ui.Printf("%02d %-7s %s ", n, u.Type, u.Name)
+			cs := "  "
+			if u.Connected {
+				cs = "\000Uf1616 "
+			}
+
+			ui.Printf("%02d %s (%04x/%04x) %s (%s) path: %s\n", n, cs, u.VendorID, u.ProductID, u.Vendor, u.Product, u.Path)
 			n++
 		}
+
+		ui.Printf("\n")
 
 		if len(l) == 0 {
 			ui.PrintErrorf("\nNo usb devices found\n")
