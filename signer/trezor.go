@@ -1,4 +1,4 @@
-package signer_driver
+package signer
 
 import (
 	"encoding/binary"
@@ -11,7 +11,7 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
-	"github.com/AlexNa-Holdings/web3pro/signer_driver/trezorproto"
+	"github.com/AlexNa-Holdings/web3pro/signer/trezorproto"
 	"github.com/AlexNa-Holdings/web3pro/usb"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
@@ -215,14 +215,14 @@ func MessageName(kind trezorproto.MessageType) string {
 // is in browser mode.
 var errTrezorReplyInvalidHeader = errors.New("trezor: invalid reply header")
 
-func (d TrezorDriver) GetName(path string) (string, error) {
+func (d TrezorDriver) GetName(usb_id string) (string, error) {
 
-	kd, ok := d.KnownDevices[path]
+	kd, ok := d.KnownDevices[usb_id]
 	if ok {
 		return *kd.Label, nil
 	}
 
-	cd, err := d.Init(path)
+	cd, err := d.Init(usb_id)
 	if err != nil {
 		return "", err
 	} else {
@@ -253,6 +253,32 @@ func SB(s *bool) bool { // Safe bool
 		return false
 	}
 	return *s
+}
+
+func (d TrezorDriver) InitSigner(usb_id string) (string, any, error) {
+
+	kind, reply, err := d.RawCall(dev, &trezorproto.Initialize{})
+	if err != nil {
+		log.Error().Err(err).Msgf("Init: Error initializing device: %s", path)
+		return "", nil, err
+	}
+	if kind != trezorproto.MessageType_MessageType_Features {
+		log.Error().Msgf("Init: Expected reply type %s, got %s", MessageName(trezorproto.MessageType_MessageType_Features), MessageName(kind))
+		return "", nil, errors.New("trezor: expected reply type " + MessageName(trezorproto.MessageType_MessageType_Features) + ", got " + MessageName(kind))
+	}
+	features := new(trezorproto.Features)
+	err = proto.Unmarshal(reply, features)
+	if err != nil {
+		log.Error().Err(err).Msgf("Init: Error unmarshalling features: %s", path)
+		return "", nil, err
+	}
+
+	name := "My Trezor"
+	if features.Label != nil {
+		name = *features.Label
+	}
+
+	return name, features, nil
 }
 
 func (d TrezorDriver) Init(path string) (*ConnectedTrezor, error) {
@@ -488,6 +514,86 @@ func (d TrezorDriver) Call(dev usb.USBDevice, req proto.Message, result proto.Me
 }
 
 func (d TrezorDriver) RawCall(dev usb.USBDevice, req proto.Message) (trezorproto.MessageType, []byte, error) {
+	data, err := proto.Marshal(req)
+	if err != nil {
+		log.Error().Msgf("RawCall: Error marshalling request: %s", err)
+		return 0, nil, err
+	}
+
+	payload := make([]byte, 8+len(data))
+	copy(payload, []byte{0x23, 0x23})
+	binary.BigEndian.PutUint16(payload[2:], uint16(MessageType(req)))
+	binary.BigEndian.PutUint32(payload[4:], uint32(len(data)))
+	copy(payload[8:], data)
+
+	// Stream all the chunks to the dev
+	chunk := make([]byte, 64)
+	chunk[0] = 0x3f // Report ID magic number
+
+	// ???? usb.FlushBuffer(dev, 64*time.Millisecond)
+
+	for len(payload) > 0 {
+		// Construct the new message to stream, padding with zeroes if needed
+		if len(payload) > 63 {
+			copy(chunk[1:], payload[:63])
+			payload = payload[63:]
+		} else {
+			copy(chunk[1:], payload)
+			copy(chunk[1+len(payload):], make([]byte, 63-len(payload)))
+			payload = nil
+		}
+		// Send over to the dev
+		log.Trace().Msgf("Data chunk sent to the Trezor: %v\n", hexutil.Bytes(chunk))
+		if _, err := dev.Write(chunk); err != nil {
+			log.Error().Msgf("RawCall: Error writing to device: %s", err)
+			return 0, nil, err
+		}
+	}
+
+	// Stream the reply back from the wallet in 64 byte chunks
+	var (
+		kind  uint16
+		reply []byte
+	)
+	for {
+
+		// Read the next chunk from the Trezor wallet
+		if _, err := io.ReadFull(dev, chunk); err != nil {
+			log.Error().Msgf("RawCall: Error reading from device: %s", err)
+			return 0, nil, err
+		}
+
+		// Make sure the transport header matches
+		if chunk[0] != 0x3f || (len(reply) == 0 && (chunk[1] != 0x23 || chunk[2] != 0x23)) {
+			log.Error().Msgf("RawCall: Invalid reply header: %v", chunk)
+			return 0, nil, errTrezorReplyInvalidHeader
+		}
+		// If it's the first chunk, retrieve the reply message type and total message length
+		var payload []byte
+
+		if len(reply) == 0 {
+			kind = binary.BigEndian.Uint16(chunk[3:5])
+			reply = make([]byte, 0, int(binary.BigEndian.Uint32(chunk[5:9])))
+			payload = chunk[9:]
+		} else {
+			payload = chunk[1:]
+		}
+		// Append to the reply and stop when filled up
+		if left := cap(reply) - len(reply); left > len(payload) {
+			reply = append(reply, payload...)
+		} else {
+			reply = append(reply, payload[:left]...)
+			break
+		}
+
+		log.Trace().Msg("3")
+
+	}
+
+	return trezorproto.MessageType(kind), reply, nil
+}
+
+func (d TrezorDriver) NewRawCall(usb_id string, req proto.Message) (trezorproto.MessageType, []byte, error) {
 	data, err := proto.Marshal(req)
 	if err != nil {
 		log.Error().Msgf("RawCall: Error marshalling request: %s", err)

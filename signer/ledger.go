@@ -1,11 +1,11 @@
-package signer_driver
+package signer
 
 import (
 	"errors"
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
-	"github.com/AlexNa-Holdings/web3pro/signer_driver/trezorproto"
+	"github.com/AlexNa-Holdings/web3pro/signer/trezorproto"
 	"github.com/AlexNa-Holdings/web3pro/usb"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/rs/zerolog/log"

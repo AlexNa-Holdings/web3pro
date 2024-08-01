@@ -64,7 +64,7 @@ func remove(m *bus.Message) {
 	}
 
 	bus.Send("timer", "delete", &bus.B_TimerDelete{ID: m.TimerID})
-	m.Respond("OK", nil)
+	m.Respond(nil, nil)
 
 	if ActiveRequest != nil && ActiveRequest.Data == hail {
 		ActiveRequest = nil

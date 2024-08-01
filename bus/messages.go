@@ -56,11 +56,33 @@ type B_Hail struct { // hail
 }
 
 // ---------- usb ----------
-
 type B_UsbList_Device struct { // device
-	Path string
-	Name string
-	Type string
+	USB_ID string
+	Name   string
+	Type   string
 }
 
 type B_UsbList_Response []B_UsbList_Device
+type B_UsbWrite struct { // write
+	USB_ID string
+	Data   []byte
+}
+
+type B_UsbRead struct { // read
+	USB_ID string
+}
+
+type B_UsbRead_Response struct { // read_response
+	Data []byte
+}
+
+// ---------- signer ----------
+type B_SignerInit struct { // get_name
+	USB_ID string
+	Type   string
+}
+
+type B_SignerInit_Response struct { // get-name_response
+	Name      string
+	HW_Params interface{}
+}

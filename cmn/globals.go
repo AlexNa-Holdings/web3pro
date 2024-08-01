@@ -19,7 +19,7 @@ type Signer struct {
 
 type SignerDriver interface {
 	IsConnected(signer *Signer) bool
-	GetName(path string) (string, error) // only for HW wallets
+	InitSigner(usb_id string) (string, any, error) // only for HW wallets
 	GetAddresses(signer *Signer, path string, start_from int, count int) ([]Address, error)
 	PrintDetails(path string) string
 	SignTx(b *Blockchain, s *Signer, tx *types.Transaction, a *Address) (*types.Transaction, error)

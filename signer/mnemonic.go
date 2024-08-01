@@ -1,4 +1,4 @@
-package signer_driver
+package signer
 
 import (
 	"encoding/hex"

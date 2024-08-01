@@ -21,6 +21,8 @@ type Message struct {
 	RespondTo int
 }
 
+var ErrInvalidMessageData = errors.New("invalid message data")
+
 type Subscriber interface {
 	Notify(msg Message)
 }
