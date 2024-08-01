@@ -59,12 +59,10 @@ func Loop() {
 						return false // skip
 					}
 
+					conn := GetUSBDevice(GetUSB_ID(desc))
 					connected := false
-					for _, conn := range usb_devices {
-						if conn.USB_ID == GetUSB_ID(desc) {
-							connected = true
-							break
-						}
+					if conn != nil {
+						connected = conn.Device != nil
 					}
 
 					v, p := ResolveVendorProduct(uint16(desc.Vendor), uint16(desc.Product))
@@ -82,20 +80,21 @@ func Loop() {
 
 				msg.Respond(list, nil)
 			case "write":
-				req, ok := msg.Data.(bus.B_UsbWrite)
+				req, ok := msg.Data.(*bus.B_UsbWrite)
 				if !ok {
 					log.Error().Msg("Invalid message data")
 					msg.Respond(nil, bus.ErrInvalidMessageData)
 					continue
 				}
-				conn := GetUSBDevice(req.USB_ID)
-				if conn == nil {
+
+				conn, err := OpenDevice(req.USB_ID)
+				if err != nil {
 					log.Error().Msg("Device not found")
 					msg.Respond(nil, errors.New("device not found"))
 					continue
 				}
 
-				_, err := conn.EndpointOut.Write(req.Data)
+				_, err = conn.EndpointOut.Write(req.Data)
 				if err != nil {
 					log.Error().Err(err).Msg("Error writing to device")
 					msg.Respond(nil, err)
@@ -103,14 +102,14 @@ func Loop() {
 				}
 				msg.Respond(nil, nil)
 			case "read":
-				req, ok := msg.Data.(bus.B_UsbRead)
+				req, ok := msg.Data.(*bus.B_UsbRead)
 				if !ok {
 					log.Error().Msg("Invalid message data")
 					msg.Respond(nil, bus.ErrInvalidMessageData)
 					continue
 				}
-				conn := GetUSBDevice(req.USB_ID)
-				if conn == nil {
+				conn, err := OpenDevice(req.USB_ID)
+				if err != nil {
 					log.Error().Msg("Device not found")
 					msg.Respond(nil, errors.New("device not found"))
 					continue
@@ -172,11 +171,80 @@ func GetUSBDevice(id string) *USB_DEV {
 	defer usb_devices_mutex.Unlock()
 
 	for _, conn := range usb_devices {
-		if conn.Device.String() == id {
+		if conn.USB_ID == id {
 			return conn
 		}
 	}
 	return nil
+}
+
+func OpenDevice(id string) (*USB_DEV, error) {
+	t := GetUSBDevice(id)
+	if t == nil {
+		return nil, errors.New("device not found")
+	}
+
+	if t.Device != nil {
+		return t, nil // already opened
+	}
+
+	d, err := ctx.OpenDevices(func(desc *gousb.DeviceDesc) bool {
+		if desc.Path == nil || len(desc.Path) == 0 {
+			return false // skip
+		}
+
+		if GetUSB_ID(desc) == id {
+			return true
+		}
+
+		return false
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	if len(d) == 0 {
+		return nil, errors.New("device not found")
+	}
+
+	t.Device = d[0]
+
+	cfg, err := t.Device.Config(1)
+	if err != nil {
+		log.Error().Msgf("%s.Config(1): %v", t.Device, err)
+		return nil, err
+	}
+
+	intf, err := cfg.Interface(0, 0)
+	if err != nil {
+		cfg.Close()
+		log.Error().Msgf("%s.DefaultInterface(): %v", t.Device, err)
+		return nil, err
+	}
+
+	ep_out, err := intf.OutEndpoint(1)
+	if err != nil {
+		cfg.Close()
+		intf.Close()
+		log.Fatal().Msgf("%s.OutEndpoint(1): %v", intf, err)
+		return nil, err
+	}
+
+	ep_in, err := intf.InEndpoint(1)
+	if err != nil {
+		cfg.Close()
+		intf.Close()
+		log.Fatal().Msgf("%s.InEndpoint(1): %v", intf, err)
+		return nil, err
+	}
+
+	t.Config = cfg
+	t.Interface = intf
+	t.EndpointOut = ep_out
+	t.EndpointIn = ep_in
+
+	return t, nil
 }
 
 func (c *USB_DEV) Close() {
@@ -225,7 +293,7 @@ func enumerate() {
 
 			v, p := ResolveVendorProduct(uint16(desc.Vendor), uint16(desc.Product))
 
-			bus.Send("usb", "connected", bus.B_UsbConnected{
+			bus.Send("usb", "connected", &bus.B_UsbConnected{
 				USB_ID:  sid,
 				Vendor:  v,
 				Product: p,
@@ -235,41 +303,11 @@ func enumerate() {
 		return false
 	})
 
-	//		if !found {
-	// cfg, err := dev.Config(1)
-	// if err != nil {
-	// 	log.Fatal().Msgf("%s.Config(1): %v", dev, err)
-	// 	continue
-	// }
-
-	// intf, err := cfg.Interface(0, 0)
-	// if err != nil {
-	// 	cfg.Close()
-	// 	log.Fatal().Msgf("%s.DefaultInterface(): %v", dev, err)
-	// 	continue
-	// }
-
-	// ep_out, err := intf.OutEndpoint(1)
-	// if err != nil {
-	// 	cfg.Close()
-	// 	intf.Close()
-	// 	log.Fatal().Msgf("%s.OutEndpoint(1): %v", intf, err)
-	// 	continue
-	// }
-
-	// ep_in, err := intf.InEndpoint(1)
-	// if err != nil {
-	// 	cfg.Close()
-	// 	intf.Close()
-	// 	log.Fatal().Msgf("%s.InEndpoint(1): %v", intf, err)
-	// 	continue
-	// }
-
 	// Close all devices that are not found
 	for i := 0; i < len(usb_devices); i++ {
-		if !all_found[usb_devices[i].Device.String()] {
+		if !all_found[usb_devices[i].USB_ID] {
 			usb_devices[i].Close()
-			bus.Send("usb", "disconnected", bus.B_UsbDisconnected{
+			bus.Send("usb", "disconnected", &bus.B_UsbDisconnected{
 				USB_ID: usb_devices[i].Device.String(),
 			})
 			usb_devices = append(usb_devices[:i], usb_devices[i+1:]...)

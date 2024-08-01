@@ -4,12 +4,15 @@ import (
 	"sync"
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
+	"github.com/AlexNa-Holdings/web3pro/signer/trezorproto"
 	"github.com/rs/zerolog/log"
 )
 
 // connected Trezor
 type Trezor struct {
 	USB_ID string
+	Name   string
+	*trezorproto.Features
 }
 
 var trezors = []*Trezor{}
@@ -72,8 +75,10 @@ func connected(m *bus.B_UsbConnected) {
 		return
 	}
 
-	t := &Trezor{
-		USB_ID: m.USB_ID,
+	t, err := init_trezor(m.USB_ID)
+	if err != nil {
+		log.Error().Err(err).Msg("Error initializing trezor")
+		return
 	}
 
 	add(t)

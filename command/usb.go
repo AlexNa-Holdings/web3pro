@@ -128,9 +128,9 @@ func Usb_Process(c *Command, input string) {
 
 		n := 1
 		for _, u := range l {
-			cs := "  "
+			cs := " "
 			if u.Connected {
-				cs = "\000Uf1616 "
+				cs = "\U000f1616"
 			}
 
 			ui.Printf("%02d %s (%04x/%04x) %s (%s) path: %s\n", n, cs, u.VendorID, u.ProductID, u.Vendor, u.Product, u.Path)
