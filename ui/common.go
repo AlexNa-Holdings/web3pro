@@ -26,7 +26,7 @@ func Init() {
 	cmn.StandardOnClickHotspot = ProcessOnClickHotspot
 	cmn.StandardOnOverHotspot = ProcessOnOverHotspot
 
-	go ProcessHails()
+	go Loop()
 
 	Gui, err = gocui.NewGui(gocui.OutputTrue, true)
 	if err != nil {

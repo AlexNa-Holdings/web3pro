@@ -6,7 +6,7 @@ import (
 	"reflect"
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
-	"github.com/AlexNa-Holdings/web3pro/signer/trezorproto"
+	"github.com/AlexNa-Holdings/web3pro/hw/trezor/trezorproto"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/protobuf/proto"

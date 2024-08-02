@@ -10,13 +10,6 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-type Signer struct {
-	Name   string   `json:"name"`
-	Type   string   `json:"type"`
-	SN     string   `json:"sn"`
-	Copies []string `json:"copies"`
-}
-
 type SignerDriver interface {
 	IsConnected(signer *Signer) bool
 	InitSigner(usb_id string) (string, any, error) // only for HW wallets

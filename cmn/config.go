@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"runtime"
 
+	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/usb"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -97,6 +98,9 @@ func InitConfig() {
 
 	usb.USBLog = Config.USBLog
 	usb.USBBackgroundEnumerate = Config.USBBackgroundEnumerate
+
+	bus.BusTimeout = Config.BusTimeout
+	bus.BusHardTimeout = Config.BusHardTimeout
 
 	//create wallets folder if needed
 	err = os.MkdirAll(filepath.Join(DataFolder, "wallets"), os.ModePerm)

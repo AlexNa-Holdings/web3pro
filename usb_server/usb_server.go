@@ -48,87 +48,90 @@ func Loop() {
 			if msg.RespondTo != 0 {
 				continue // ignore responses
 			}
+			go process(msg)
 
-			switch msg.Type {
-			case "list": // list all devices
-				list := bus.B_UsbList_Response{}
-
-				ctx.OpenDevices(func(desc *gousb.DeviceDesc) bool {
-
-					if desc.Path == nil || len(desc.Path) == 0 {
-						return false // skip
-					}
-
-					conn := GetUSBDevice(GetUSB_ID(desc))
-					connected := false
-					if conn != nil {
-						connected = conn.Device != nil
-					}
-
-					v, p := ResolveVendorProduct(uint16(desc.Vendor), uint16(desc.Product))
-					list = append(list, bus.B_UsbList_Device{
-						USB_ID:    GetUSB_ID(desc),
-						Path:      GetPath(desc),
-						Vendor:    v,
-						VendorID:  uint16(desc.Vendor),
-						Product:   p,
-						ProductID: uint16(desc.Product),
-						Connected: connected,
-					})
-					return false
-				})
-
-				msg.Respond(list, nil)
-			case "write":
-				req, ok := msg.Data.(*bus.B_UsbWrite)
-				if !ok {
-					log.Error().Msg("Invalid message data")
-					msg.Respond(nil, bus.ErrInvalidMessageData)
-					continue
-				}
-
-				conn, err := OpenDevice(req.USB_ID)
-				if err != nil {
-					log.Error().Msg("Device not found")
-					msg.Respond(nil, errors.New("device not found"))
-					continue
-				}
-
-				_, err = conn.EndpointOut.Write(req.Data)
-				if err != nil {
-					log.Error().Err(err).Msg("Error writing to device")
-					msg.Respond(nil, err)
-					continue
-				}
-				msg.Respond(nil, nil)
-			case "read":
-				req, ok := msg.Data.(*bus.B_UsbRead)
-				if !ok {
-					log.Error().Msg("Invalid message data")
-					msg.Respond(nil, bus.ErrInvalidMessageData)
-					continue
-				}
-				conn, err := OpenDevice(req.USB_ID)
-				if err != nil {
-					log.Error().Msg("Device not found")
-					msg.Respond(nil, errors.New("device not found"))
-					continue
-				}
-
-				data := make([]byte, conn.EndpointIn.Desc.MaxPacketSize)
-				n, err := conn.EndpointIn.Read(data)
-				if err != nil {
-					log.Error().Err(err).Msg("Error reading from device")
-					msg.Respond(nil, err)
-					continue
-				}
-
-				msg.Respond(bus.B_UsbRead_Response{Data: data[:n]}, nil)
-
-			}
 		case <-enum_ticker.C:
 			enumerate()
 		}
+	}
+}
+
+func process(msg *bus.Message) {
+	switch msg.Type {
+	case "list": // list all devices
+		list := bus.B_UsbList_Response{}
+
+		ctx.OpenDevices(func(desc *gousb.DeviceDesc) bool {
+
+			if desc.Path == nil || len(desc.Path) == 0 {
+				return false // skip
+			}
+
+			conn := GetUSBDevice(GetUSB_ID(desc))
+			connected := false
+			if conn != nil {
+				connected = conn.Device != nil
+			}
+
+			v, p := ResolveVendorProduct(uint16(desc.Vendor), uint16(desc.Product))
+			list = append(list, bus.B_UsbList_Device{
+				USB_ID:    GetUSB_ID(desc),
+				Path:      GetPath(desc),
+				Vendor:    v,
+				VendorID:  uint16(desc.Vendor),
+				Product:   p,
+				ProductID: uint16(desc.Product),
+				Connected: connected,
+			})
+			return false
+		})
+
+		msg.Respond(list, nil)
+	case "write":
+		req, ok := msg.Data.(*bus.B_UsbWrite)
+		if !ok {
+			log.Error().Msg("Invalid message data")
+			msg.Respond(nil, bus.ErrInvalidMessageData)
+			return
+		}
+
+		conn, err := OpenDevice(req.USB_ID)
+		if err != nil {
+			log.Error().Msg("Device not found")
+			msg.Respond(nil, errors.New("device not found"))
+			return
+		}
+
+		_, err = conn.EndpointOut.Write(req.Data)
+		if err != nil {
+			log.Error().Err(err).Msg("Error writing to device")
+			msg.Respond(nil, err)
+			return
+		}
+		msg.Respond(nil, nil)
+	case "read":
+		req, ok := msg.Data.(*bus.B_UsbRead)
+		if !ok {
+			log.Error().Msg("Invalid message data")
+			msg.Respond(nil, bus.ErrInvalidMessageData)
+			return
+		}
+		conn, err := OpenDevice(req.USB_ID)
+		if err != nil {
+			log.Error().Msg("Device not found")
+			msg.Respond(nil, errors.New("device not found"))
+			return
+		}
+
+		data := make([]byte, conn.EndpointIn.Desc.MaxPacketSize)
+		n, err := conn.EndpointIn.Read(data)
+		if err != nil {
+			log.Error().Err(err).Msg("Error reading from device")
+			msg.Respond(nil, err)
+			return
+		}
+
+		msg.Respond(bus.B_UsbRead_Response{Data: data[:n]}, nil)
 	}
 }
 
@@ -284,15 +287,12 @@ func enumerate() {
 			usb_devices = append(usb_devices, &USB_DEV{
 				USB_ID: sid,
 				Device: nil,
-				// Config:      cfg,
-				// Interface:   intf,
-				// EndpointOut: ep_out,
-				// EndpointIn:  ep_in,
 			})
 			all_found[sid] = true
 
 			v, p := ResolveVendorProduct(uint16(desc.Vendor), uint16(desc.Product))
 
+			log.Debug().Msgf("New device connected: %s %s %s", sid, v, p)
 			bus.Send("usb", "connected", &bus.B_UsbConnected{
 				USB_ID:  sid,
 				Vendor:  v,

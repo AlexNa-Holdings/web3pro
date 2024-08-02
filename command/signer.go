@@ -183,21 +183,21 @@ func Signer_Process(c *Command, input string) {
 			return
 		}
 
-		l, err := s.GetAddresses(path_format, from, 10)
+		l, p, err := s.GetAddresses(path_format, from, 10)
 		if err != nil {
 			ui.PrintErrorf("\nError getting addresses: %v\n", err)
 			return
 		}
 
-		for i, s := range l {
+		for i, a := range l {
 			ui.Printf("%2d: ", from+i)
-			ui.AddAddressLink(nil, s.Address)
+			ui.AddAddressLink(nil, a)
 			ui.Printf(" ")
 
-			if ea := cmn.CurrentWallet.GetAddress(s.Address.String()); ea == nil {
+			if ea := cmn.CurrentWallet.GetAddress(a.Hex()); ea == nil {
 				ui.Terminal.Screen.AddLink(gocui.ICON_ADD, "command address add "+
-					s.Address.String()+
-					" '"+p1+"' \""+s.Path+"\"", "Add address to wallet", "")
+					a.Hex()+
+					" '"+p1+"' \""+p[i]+"\"", "Add address to wallet", "")
 			} else {
 				ui.Printf("%s ", ea.Name)
 				ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command address edit '"+ea.Name+"'", "Edit address", "")

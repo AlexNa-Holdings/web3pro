@@ -1,6 +1,9 @@
 package bus
 
-import "github.com/AlexNa-Holdings/web3pro/gocui"
+import (
+	"github.com/AlexNa-Holdings/web3pro/gocui"
+	"github.com/ethereum/go-ethereum/common"
+)
 
 // ---------- timer ----------
 type B_TimerInit struct { // init
@@ -88,6 +91,29 @@ type B_UsbConnected struct { // connected
 
 type B_UsbDisconnected struct { // disconnected
 	USB_ID string
+}
+
+// ---------- hw ----------
+type B_HwGetAddresses struct { // get-addresses
+	Type      string
+	Name      []string
+	Path      string
+	StartFrom int
+	Count     int
+}
+
+type B_HwGetAddresses_Response struct { // get-addresses_response
+	Addresses []common.Address
+	Paths     []string
+}
+
+type B_HwIsConnected struct { // is-connected
+	Type string
+	Name []string
+}
+
+type B_HwIsConnected_Response struct { // is-connected_response
+	Connected bool
 }
 
 // ---------- signer ----------

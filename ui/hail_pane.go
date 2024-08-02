@@ -89,61 +89,67 @@ func cancel(m *bus.Message) {
 	remove(m)
 }
 
-func ProcessHails() {
-
-	log.Debug().Msg("ProcessHails")
-
+func Loop() {
 	ch := bus.Subscribe("ui", "timer")
 	defer bus.Unsubscribe(ch)
 
 	for msg := range ch {
-		switch msg.Type {
-		case "hail":
-			log.Trace().Msg("ProcessHails: Hail received")
-			if hail, ok := msg.Data.(*bus.B_Hail); ok {
-				log.Trace().Msgf("Hail received: %s", hail.Title)
+		go process(msg)
+	}
+}
 
-				if hail.TimeoutSec == 0 {
-					hail.TimeoutSec = cmn.Config.BusTimeout
-				}
-				if on_top := add(msg); on_top {
-					HailPane.open(msg)
+func process(msg *bus.Message) {
+	switch msg.Type {
+	case "hail":
+		log.Trace().Msg("ProcessHails: Hail received")
+		if hail, ok := msg.Data.(*bus.B_Hail); ok {
+			log.Trace().Msgf("Hail received: %s", hail.Title)
+
+			if hail.TimeoutSec == 0 {
+				hail.TimeoutSec = cmn.Config.BusTimeout
+			}
+			if on_top := add(msg); on_top {
+				HailPane.open(msg)
+			}
+		}
+	case "remove_hail":
+		if hail, ok := msg.Data.(*bus.B_Hail); ok {
+			log.Trace().Msgf("ProcessHails: Remove hail received: %s", hail.Title)
+
+			var m *bus.Message
+			Mutex.Lock()
+			for i, h := range HailQueue {
+				if h.Data == hail {
+					m = HailQueue[i]
+					break
 				}
 			}
-		case "remove_hail":
-			if hail, ok := msg.Data.(*bus.B_Hail); ok {
-				log.Trace().Msgf("ProcessHails: Remove hail received: %s", hail.Title)
+			Mutex.Unlock()
 
-				var m *bus.Message
-				Mutex.Lock()
-				for i, h := range HailQueue {
-					if h.Data == hail {
-						m = HailQueue[i]
-						break
-					}
-				}
-				Mutex.Unlock()
+			if m != nil {
+				remove(m)
+			}
+		}
+	case "tick":
+		if msg, ok := msg.Data.(*bus.B_TimerTick); ok {
+			if ActiveRequest != nil {
+				Gui.UpdateAsync(func(g *gocui.Gui) error {
+					HailPane.UpdateSubtitle()
+					return nil
+				})
 
-				if m != nil {
-					remove(m)
+				hail := ActiveRequest.Data.(*bus.B_Hail)
+				if hail.OnTick != nil {
+					hail.OnTick(hail, msg.Tick)
 				}
 			}
-		case "tick":
-			if _, ok := msg.Data.(*bus.B_TimerTick); ok {
-				if ActiveRequest != nil {
-					Gui.UpdateAsync(func(g *gocui.Gui) error {
-						HailPane.UpdateSubtitle()
-						return nil
-					})
-				}
-			}
-		case "done":
-			if d, ok := msg.Data.(*bus.B_TimerDone); ok {
-				log.Trace().Msgf("Alert: %v", d.ID)
-				if ActiveRequest != nil {
-					if ActiveRequest.TimerID == d.ID {
-						cancel(ActiveRequest)
-					}
+		}
+	case "done":
+		if d, ok := msg.Data.(*bus.B_TimerDone); ok {
+			log.Trace().Msgf("Alert: %v", d.ID)
+			if ActiveRequest != nil {
+				if ActiveRequest.TimerID == d.ID {
+					cancel(ActiveRequest)
 				}
 			}
 		}

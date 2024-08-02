@@ -1,17 +1,22 @@
 package cmn
 
 import (
-	"crypto/ecdsa"
 	"errors"
 
+	"github.com/AlexNa-Holdings/web3pro/bus"
+	"github.com/AlexNa-Holdings/web3pro/mnemonics"
 	"github.com/AlexNa-Holdings/web3pro/usb"
-	"github.com/ava-labs/coreth/accounts"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
+
 	"github.com/rs/zerolog/log"
-	"github.com/tyler-smith/go-bip32"
-	"google.golang.org/protobuf/protoadapt"
 )
+
+type Signer struct {
+	Name   string   `json:"name"`
+	Type   string   `json:"type"`
+	SN     string   `json:"sn"`
+	Copies []string `json:"copies"`
+}
 
 var STANDARD_DERIVATIONS = map[string]struct {
 	Name   string
@@ -69,81 +74,65 @@ func GetDeviceName(e usb.EnumerateEntry) (string, error) {
 
 }
 
-func (s *Signer) GetAddresses(path string, start_from int, count int) ([]Address, error) {
+func (s *Signer) GetAddresses(path string, start_from int, count int) ([]common.Address, []string, error) {
+	if s.Type == "mnemonics" {
+		m, err := mnemonics.NewFromSN(s.SN)
+		if err != nil {
+			log.Error().Err(err).Msgf("GetAddresses: Error getting addresses: %s (%s)", s.Name, s.Type)
+			return []common.Address{}, []string{}, err
+		}
 
-	driver, err := s.GetDriver()
-	if err != nil {
-		log.Error().Err(err).Msgf("GetAddresses: Error getting driver: %s (%s)", s.Name, s.Type)
-		return []Address{}, err
+		addresses, paths, err := m.GetAddresses(path, start_from, count)
+		if err != nil {
+			log.Error().Err(err).Msgf("GetAddresses: Error getting addresses: %s (%s)", s.Name, s.Type)
+			return []common.Address{}, []string{}, err
+		}
+		return addresses, paths, nil
 	}
 
-	addresses, err := driver.GetAddresses(s, path, start_from, count)
-	if err != nil {
-		log.Error().Err(err).Msgf("GetAddresses: Error getting addresses: %s (%s)", s.Name, s.Type)
-		return []Address{}, err
+	m := bus.Fetch("hw", "get-addresses", &bus.B_HwGetAddresses{
+		Type:      s.Type,
+		Name:      s.GetFamilyNames(),
+		Path:      path,
+		StartFrom: start_from,
+		Count:     count})
+	if m.Error != nil {
+		log.Error().Err(m.Error).Msgf("GetAddresses: Error getting addresses: %s (%s)", s.Name, s.Type)
+		return []common.Address{}, []string{}, m.Error
 	}
 
-	return addresses, nil
+	r, ok := m.Data.(*bus.B_HwGetAddresses_Response)
+	if !ok {
+		log.Error().Msgf("GetAddresses: Error getting addresses: %s (%s)", s.Name, s.Type)
+		return []common.Address{}, []string{}, errors.New("error getting addresses")
+	}
 
+	return r.Addresses, r.Paths, nil
 }
 
 func (s *Signer) IsConnected() bool {
-	driver, err := s.GetDriver()
-	if err != nil {
-		log.Error().Err(err).Msgf("Error getting driver: %s (%s)", s.Name, s.Type)
+
+	if s.Type == "mnemonics" {
+		return true
+	}
+
+	r := bus.Fetch("hw", "is-connected", &bus.B_HwIsConnected{Type: s.Type, Name: s.GetFamilyNames()})
+	if r.Error != nil {
+		log.Error().Err(r.Error).Msgf("Error checking connection: %s (%s)", s.Name, s.Type)
 		return false
 	}
 
-	return driver.IsConnected(s)
-}
-
-// deriveKey derives a key from the master key using the specified path
-func DeriveKey(masterKey *bip32.Key, path string) (*ecdsa.PrivateKey, error) {
-	// Parse the derivation path
-	derivationPath, err := accounts.ParseDerivationPath(path)
-	if err != nil {
-		return nil, err
-	}
-
-	// Derive the key
-	key := masterKey
-	for _, n := range derivationPath {
-		key, err = key.NewChildKey(n)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	// Convert to ecdsa.PrivateKey
-	privateKey, err := crypto.ToECDSA(key.Key)
-	if err != nil {
-		return nil, err
-	}
-
-	return privateKey, nil
-}
-
-// getAddressFromKey generates an Ethereum address from the private key
-func GetAddressFromKey(key *ecdsa.PrivateKey) common.Address {
-	publicKey := key.Public()
-	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
+	m, ok := r.Data.(*bus.B_HwIsConnected_Response)
 	if !ok {
-		log.Fatal().Msg("error casting public key to ECDSA")
+		log.Error().Msgf("Error checking connection: %s (%s)", s.Name, s.Type)
+		return false
 	}
 
-	return crypto.PubkeyToAddress(*publicKeyECDSA)
+	return m.Connected
 }
 
 func (s *Signer) GetFamilyNames() []string {
 	r := []string{s.Name}
 	r = append(r, s.Copies...)
 	return r
-}
-
-func V2Of(m protoadapt.MessageV1) protoadapt.MessageV2 {
-	return protoadapt.MessageV2Of(m)
-}
-
-func V1Of(m protoadapt.MessageV2) protoadapt.MessageV1 {
-	return protoadapt.MessageV1Of(m)
 }

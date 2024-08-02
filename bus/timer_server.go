@@ -151,8 +151,6 @@ func updateTimers() {
 
 		lapsed := t.lapsedSeconds + int(time.Since(t.starTime).Seconds())
 
-		log.Debug().Msgf("Timer %d lapsed %d", id, lapsed)
-
 		if lapsed >= t.LimitSeconds {
 			Send("timer", "done", &B_TimerDone{
 				ID: id,

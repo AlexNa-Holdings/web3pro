@@ -4,7 +4,6 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/rs/zerolog/log"
 )
 
@@ -20,6 +19,9 @@ type Message struct {
 	Error     error
 	RespondTo int
 }
+
+var BusTimeout = 60
+var BusHardTimeout = 120
 
 var ErrInvalidMessageData = errors.New("invalid message data")
 
@@ -137,8 +139,8 @@ func (m *Message) Respond(data interface{}, err error) int {
 
 func Fetch(topic, t string, data interface{}) *Message {
 	return FetchEx(topic, t, data,
-		cmn.Config.BusTimeout,
-		cmn.Config.BusHardTimeout)
+		BusTimeout,
+		BusHardTimeout)
 }
 
 func FetchEx(topic, t string, data interface{}, limit int, hardlimit int) *Message {
@@ -159,14 +161,9 @@ func FetchEx(topic, t string, data interface{}, limit int, hardlimit int) *Messa
 	id := SendEx(topic, t, data, timer_id, 0, nil)
 
 	for msg := range ch {
-
-		log.Debug().Msgf("bus.Fetch: received %s/%s (RespondTo: %d)", msg.Topic, msg.Type, msg.RespondTo)
-
 		switch msg.Topic {
 		case topic:
 			if msg.RespondTo == id {
-				log.Trace().Msgf("bus.Fetch: received response for %s", t)
-
 				Send("timer", "delete", &B_TimerDelete{ID: timer_id})
 				return msg
 			}
