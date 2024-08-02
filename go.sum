@@ -217,8 +217,6 @@ github.com/tklauser/go-sysconf v0.3.12 h1:0QaGUFOdQaIVdPgfITYzaTegZvdCjmYO52cSFA
 github.com/tklauser/go-sysconf v0.3.12/go.mod h1:Ho14jnntGE1fpdOqQEEaiKRpvIavV0hSfmBq8nJbHYI=
 github.com/tklauser/numcpus v0.6.1 h1:ng9scYS7az0Bk4OZLvrNXNSAO2Pxr1XXRAPyjhIx+Fk=
 github.com/tklauser/numcpus v0.6.1/go.mod h1:1XfjsgE2zo8GVw7POkMbHENHzVg3GzmoZ9fESEdAacY=
-github.com/trezor/trezord-go v2.0.29+incompatible h1:LInr/qeF+sY/2DdcT396ZYnKdaxFboHvBUN94lzW3OM=
-github.com/trezor/trezord-go v2.0.29+incompatible/go.mod h1:zoHzGaMdFU8PlDEEZsLolIkq7GeyjqB+b3rrnJLHOk4=
 github.com/tyler-smith/go-bip32 v1.0.0 h1:sDR9juArbUgX+bO/iblgZnMPeWY1KZMUC2AFUJdv5KE=
 github.com/tyler-smith/go-bip32 v1.0.0/go.mod h1:onot+eHknzV4BVPwrzqY5OoVpyCvnwD7lMawL5aQupE=
 github.com/tyler-smith/go-bip39 v1.1.0 h1:5eUemwrMargf3BSLRRCalXT93Ns6pQJIjYQN2nyfOP8=

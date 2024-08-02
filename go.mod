@@ -10,7 +10,6 @@ require (
 	github.com/google/gousb v1.1.3
 	github.com/mattn/go-runewidth v0.0.13
 	github.com/rs/zerolog v1.33.0
-	github.com/trezor/trezord-go v2.0.29+incompatible
 	github.com/tyler-smith/go-bip32 v1.0.0
 	github.com/tyler-smith/go-bip39 v1.1.0
 	golang.org/x/crypto v0.24.0

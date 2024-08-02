@@ -102,9 +102,9 @@ cancel and verify the device.
 						}
 
 						cmn.CurrentWallet.Signers = append(cmn.CurrentWallet.Signers, &cmn.Signer{
-							Name: name,
-							Type: t,
-							SN:   hex.EncodeToString(m[:]),
+							Name:      name,
+							Type:      t,
+							MasterKey: hex.EncodeToString(m[:]),
 						})
 
 					} else { // not mnemonics

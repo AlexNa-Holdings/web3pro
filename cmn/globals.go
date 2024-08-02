@@ -11,10 +11,6 @@ import (
 
 var StandardOnClickHotspot func(v *gocui.View, hs *gocui.Hotspot)
 var StandardOnOverHotspot func(v *gocui.View, hs *gocui.Hotspot)
-var Notify func(text string)
-var NotifyError func(text string)
-var Notifyf func(format string, args ...interface{})
-var NotifyErrorf func(format string, args ...interface{})
 
 type Wallet struct {
 	Name        string        `json:"name"`

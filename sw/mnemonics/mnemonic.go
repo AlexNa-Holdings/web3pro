@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/ava-labs/coreth/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -19,6 +20,62 @@ import (
 
 type Mnemonic struct {
 	MasterKey *bip32.Key
+}
+
+func Loop() {
+	ch := bus.Subscribe("hw", "usb")
+	for msg := range ch {
+		if msg.RespondTo != 0 {
+			continue // ignore responses
+		}
+		go process(msg)
+	}
+}
+
+func process(msg *bus.Message) {
+	switch msg.Topic {
+	case "sw":
+		switch msg.Type {
+		case "is-connected":
+			m, ok := msg.Data.(*bus.B_HwIsConnected)
+			if !ok {
+				log.Error().Msg("Loop: Invalid hw is-connected data")
+				return
+			}
+
+			if m.Type == "mnemonics" {
+				msg.Respond(&bus.B_HwIsConnected_Response{Connected: true}, nil)
+			}
+
+		case "get-addresses":
+			m, ok := msg.Data.(*bus.B_HwGetAddresses)
+			if !ok {
+				log.Error().Msg("Loop: Invalid hw get-addresses data")
+				return
+			}
+
+			if m.Type == "mnemonics" {
+				mnemonics, err := NewFromSN(m.MasterKey)
+				if err != nil {
+					log.Error().Msgf("Error creating mnemonics: %v", err)
+					msg.Respond(&bus.B_HwGetAddresses_Response{}, err)
+					return
+				}
+
+				a, p, err := mnemonics.GetAddresses(m.Path, m.StartFrom, m.Count)
+				if err != nil {
+					log.Error().Msgf("Error getting addresses: %v", err)
+					msg.Respond(&bus.B_HwGetAddresses_Response{}, err)
+					return
+				}
+				msg.Respond(&bus.B_HwGetAddresses_Response{
+					Addresses: a,
+					Paths:     p,
+				}, nil)
+
+			}
+		}
+	}
 }
 
 func NewFromSN(SN string) (*Mnemonic, error) {

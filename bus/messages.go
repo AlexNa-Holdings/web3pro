@@ -97,6 +97,7 @@ type B_UsbDisconnected struct { // disconnected
 type B_HwGetAddresses struct { // get-addresses
 	Type      string
 	Name      []string
+	MasterKey string
 	Path      string
 	StartFrom int
 	Count     int

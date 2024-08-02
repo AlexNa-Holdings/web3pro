@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog/log"
@@ -232,4 +233,20 @@ func Float(value *big.Int, decimals int) *big.Float {
 	f := new(big.Float).SetInt(value)
 	f = f.Quo(f, new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(decimals)), nil)))
 	return f
+}
+
+func Notify(text string) {
+	bus.Send("ui", "notify", text)
+}
+
+func Notifyf(format string, args ...interface{}) {
+	Notify(fmt.Sprintf(format, args...))
+}
+
+func NotifyError(text string) {
+	bus.Send("ui", "notify-error", text)
+}
+
+func NotifyErrorf(format string, args ...interface{}) {
+	NotifyError(fmt.Sprintf(format, args...))
 }

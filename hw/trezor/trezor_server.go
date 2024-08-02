@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
+	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/hw/trezor/trezorproto"
 	"github.com/rs/zerolog/log"
 )
@@ -81,6 +82,7 @@ func remove(usb_id string) {
 
 	for i, t := range trezors {
 		if t.USB_ID == usb_id {
+			cmn.Notifyf("Trezor disconnected: %s", t.Name)
 			trezors = append(trezors[:i], trezors[i+1:]...)
 			return
 		}
@@ -111,6 +113,7 @@ func connected(m *bus.B_UsbConnected) {
 	}
 
 	add(t)
+	cmn.Notifyf("Trezor connected: %s", t.Name)
 }
 
 func disconnected(m *bus.B_UsbDisconnected) {
@@ -128,6 +131,7 @@ func find_by_name(name []string) *Trezor {
 			}
 		}
 	}
+
 	return nil
 }
 

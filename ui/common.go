@@ -3,7 +3,6 @@ package ui
 import (
 	"math/big"
 	"strings"
-	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog/log"
@@ -13,36 +12,6 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/atotto/clipboard"
 )
-
-var Gui *gocui.Gui
-var Is_ready = false
-var Is_ready_wg sync.WaitGroup
-
-func Init() {
-	var err error
-
-	Is_ready = false
-
-	cmn.StandardOnClickHotspot = ProcessOnClickHotspot
-	cmn.StandardOnOverHotspot = ProcessOnOverHotspot
-
-	go Loop()
-
-	Gui, err = gocui.NewGui(gocui.OutputTrue, true)
-	if err != nil {
-		log.Fatal().Msgf("error creating gocui: %v", err)
-	}
-	Gui.Mouse = true
-	Gui.Cursor = true
-	Gui.Highlight = true
-	SetTheme(cmn.Config.Theme)
-	Gui.SetManagerFunc(Layout)
-	SetKeybindings()
-
-	Gui.OnPopupCloseGlobal = func() {
-		Gui.SetCurrentView("terminal.input")
-	}
-}
 
 func SetKeybindings() error {
 	if err := Gui.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, quit); err != nil {

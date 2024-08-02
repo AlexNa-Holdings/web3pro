@@ -6,7 +6,6 @@ package main
 
 import (
 	"errors"
-	"runtime"
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
@@ -15,6 +14,7 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/hw"
 	"github.com/AlexNa-Holdings/web3pro/price"
+	"github.com/AlexNa-Holdings/web3pro/sw"
 	"github.com/AlexNa-Holdings/web3pro/ui"
 	"github.com/AlexNa-Holdings/web3pro/usb"
 	"github.com/rs/zerolog/log"
@@ -30,14 +30,9 @@ ____/|__/  \___//_.___//____/ /_/     /_/    \____/ `
 func main() {
 	cmn.InitConfig()
 
-	// init globals
-	cmn.Notify = ui.Notification.Show
-	cmn.Notifyf = ui.Notification.Showf
-	cmn.NotifyError = ui.Notification.ShowError
-	cmn.NotifyErrorf = ui.Notification.ShowErrorf
-
 	bus.Init()
-	hw.Init()
+	sw.Init() // software wallets
+	hw.Init() // hardware wallets
 	usb.Init()
 	eth.LoadABIs()
 	command.Init()
@@ -80,14 +75,4 @@ func main() {
 	}
 
 	cmn.SaveConfig()
-}
-
-// Does OS allow sync canceling via our custom libusb patches?
-func allowCancel() bool {
-	return runtime.GOOS != "freebsd" && runtime.GOOS != "openbsd"
-}
-
-// Does OS detach kernel driver in libusb?
-func detachKernelDriver() bool {
-	return runtime.GOOS == "linux"
 }

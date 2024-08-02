@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
-	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/rs/zerolog/log"
 )
@@ -87,73 +86,6 @@ func cancel(m *bus.Message) {
 	}
 
 	remove(m)
-}
-
-func Loop() {
-	ch := bus.Subscribe("ui", "timer")
-	defer bus.Unsubscribe(ch)
-
-	for msg := range ch {
-		go process(msg)
-	}
-}
-
-func process(msg *bus.Message) {
-	switch msg.Type {
-	case "hail":
-		log.Trace().Msg("ProcessHails: Hail received")
-		if hail, ok := msg.Data.(*bus.B_Hail); ok {
-			log.Trace().Msgf("Hail received: %s", hail.Title)
-
-			if hail.TimeoutSec == 0 {
-				hail.TimeoutSec = cmn.Config.BusTimeout
-			}
-			if on_top := add(msg); on_top {
-				HailPane.open(msg)
-			}
-		}
-	case "remove_hail":
-		if hail, ok := msg.Data.(*bus.B_Hail); ok {
-			log.Trace().Msgf("ProcessHails: Remove hail received: %s", hail.Title)
-
-			var m *bus.Message
-			Mutex.Lock()
-			for i, h := range HailQueue {
-				if h.Data == hail {
-					m = HailQueue[i]
-					break
-				}
-			}
-			Mutex.Unlock()
-
-			if m != nil {
-				remove(m)
-			}
-		}
-	case "tick":
-		if msg, ok := msg.Data.(*bus.B_TimerTick); ok {
-			if ActiveRequest != nil {
-				Gui.UpdateAsync(func(g *gocui.Gui) error {
-					HailPane.UpdateSubtitle()
-					return nil
-				})
-
-				hail := ActiveRequest.Data.(*bus.B_Hail)
-				if hail.OnTick != nil {
-					hail.OnTick(hail, msg.Tick)
-				}
-			}
-		}
-	case "done":
-		if d, ok := msg.Data.(*bus.B_TimerDone); ok {
-			log.Trace().Msgf("Alert: %v", d.ID)
-			if ActiveRequest != nil {
-				if ActiveRequest.TimerID == d.ID {
-					cancel(ActiveRequest)
-				}
-			}
-		}
-	}
 }
 
 func (p *HailPaneType) open(m *bus.Message) {

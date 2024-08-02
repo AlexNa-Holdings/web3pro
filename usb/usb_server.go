@@ -41,7 +41,7 @@ func Loop() {
 	defer ctx.Close()
 
 	ch := bus.Subscribe("usb")
-	enum_ticker := time.NewTicker(5 * time.Second)
+	enum_ticker := time.NewTicker(3 * time.Second)
 	for {
 		select {
 		case msg := <-ch:
