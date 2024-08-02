@@ -110,7 +110,7 @@ func Unsubscribe(ch chan *Message) {
 
 func SendEx(topic, t string, data interface{}, timer_id int, respond_to int, err error) int {
 	if topic != "timer" {
-		log.Trace().Msgf("bus.Sending to %s: %s", topic, t)
+		log.Trace().Msgf("bus.Sending to %s: %s error: %v", topic, t, err)
 	}
 
 	cb.M.Lock()
@@ -165,6 +165,10 @@ func FetchEx(topic, t string, data interface{}, limit int, hardlimit int) *Messa
 		case topic:
 			if msg.RespondTo == id {
 				Send("timer", "delete", &B_TimerDelete{ID: timer_id})
+
+				log.Debug().Msgf("bus.FetchEx: %s %s response: %v", topic, t, msg.Error)
+				log.Debug().Msgf("bus.FetchEx:response data: %v", msg.Data)
+
 				return msg
 			}
 		case "timer":

@@ -5,7 +5,6 @@ import (
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/mnemonics"
-	"github.com/AlexNa-Holdings/web3pro/usb"
 	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/rs/zerolog/log"
@@ -36,44 +35,6 @@ var STANDARD_DERIVATIONS = map[string]struct {
 	},
 }
 
-var KNOWN_SIGNER_TYPES = []string{"trezor", "ledger", "mnemonics"}
-
-func GetDeviceType(vid int, pid int) string {
-
-	if usb.IsTrezor(uint16(vid), uint16(pid)) {
-		return "trezor"
-	}
-
-	if usb.IsLedger(uint16(vid), uint16(pid)) {
-		return "ledger"
-	}
-	return ""
-}
-
-func (s *Signer) GetDriver() (SignerDriver, error) {
-	switch s.Type {
-	case "trezor":
-		return WalletTrezorDriver, nil
-	case "mnemonics":
-		return WalletMnemonicsDriver, nil
-	}
-
-	return nil, errors.New("unknown signer type")
-}
-
-func GetDeviceName(e usb.EnumerateEntry) (string, error) {
-	log.Trace().Msgf("GetDeviceName: %x %x", e.Vendor, e.Product)
-	t := GetDeviceType(e.Vendor, e.Product)
-	switch t {
-	case "trezor":
-		return "TODO", nil //WalletTrezorDriver.GetName(e.Path)
-	case "ledger":
-		return "Ledger ID", nil //TODO
-	}
-	return "", errors.New("unknown signer type")
-
-}
-
 func (s *Signer) GetAddresses(path string, start_from int, count int) ([]common.Address, []string, error) {
 	if s.Type == "mnemonics" {
 		m, err := mnemonics.NewFromSN(s.SN)
@@ -96,14 +57,15 @@ func (s *Signer) GetAddresses(path string, start_from int, count int) ([]common.
 		Path:      path,
 		StartFrom: start_from,
 		Count:     count})
+
 	if m.Error != nil {
-		log.Error().Err(m.Error).Msgf("GetAddresses: Error getting addresses: %s (%s)", s.Name, s.Type)
+		log.Error().Err(m.Error).Msgf("GetAddresses: Error getting addresses: %s (%s) err: %s", s.Name, s.Type, m.Error)
 		return []common.Address{}, []string{}, m.Error
 	}
 
 	r, ok := m.Data.(*bus.B_HwGetAddresses_Response)
 	if !ok {
-		log.Error().Msgf("GetAddresses: Error getting addresses: %s (%s)", s.Name, s.Type)
+		log.Error().Msgf("GetAddresses: Error getting addresses: %s (%s) %v", s.Name, r)
 		return []common.Address{}, []string{}, errors.New("error getting addresses")
 	}
 

@@ -99,22 +99,23 @@ func Signer_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 			return "type", &options, param
 		}
 
-		l, err := cmn.Core.Enumerate()
-		if err != nil {
-			ui.PrintErrorf("\nError listing usb devices: %v\n", err)
-			return "", &options, ""
-		}
-		for _, u := range l {
-			if param == cmn.GetDeviceType(u.Vendor, u.Product) {
-				dn, err := cmn.GetDeviceName(u)
-				if err == nil {
-					if cmn.Contains(dn, p3) && p3 != dn {
-						options = append(options, ui.ACOption{Name: dn, Result: command + " add " + param + " '" + dn + "'"})
-					}
-				}
-			}
-		}
-		return "Serial number", &options, ""
+		//TODO: implement
+		// l, err := cmn.Core.Enumerate()
+		// if err != nil {
+		// 	ui.PrintErrorf("\nError listing usb devices: %v\n", err)
+		// 	return "", &options, ""
+		// }
+		// for _, u := range l {
+		// 	if param == cmn.GetDeviceType(u.Vendor, u.Product) {
+		// 		dn, err := cmn.GetDeviceName(u)
+		// 		if err == nil {
+		// 			if cmn.Contains(dn, p3) && p3 != dn {
+		// 				options = append(options, ui.ACOption{Name: dn, Result: command + " add " + param + " '" + dn + "'"})
+		// 			}
+		// 		}
+		// 	}
+		// }
+		// return "Serial number", &options, ""
 	}
 
 	return "", &options, ""
@@ -186,6 +187,11 @@ func Signer_Process(c *Command, input string) {
 		l, p, err := s.GetAddresses(path_format, from, 10)
 		if err != nil {
 			ui.PrintErrorf("\nError getting addresses: %v\n", err)
+			return
+		}
+
+		if len(l) != len(p) {
+			ui.PrintErrorf("\nError getting addresses: length mismatch\n")
 			return
 		}
 

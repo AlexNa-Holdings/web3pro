@@ -15,10 +15,8 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/hw"
 	"github.com/AlexNa-Holdings/web3pro/price"
-	"github.com/AlexNa-Holdings/web3pro/signer"
 	"github.com/AlexNa-Holdings/web3pro/ui"
 	"github.com/AlexNa-Holdings/web3pro/usb"
-	"github.com/AlexNa-Holdings/web3pro/usb_server"
 	"github.com/rs/zerolog/log"
 )
 
@@ -40,19 +38,12 @@ func main() {
 
 	bus.Init()
 	hw.Init()
-	signer.Init()
-	usb_server.Init()
+	usb.Init()
 	eth.LoadABIs()
 	command.Init()
 	ui.Init()
 	price.Init()
 	defer ui.Gui.Close()
-
-	bus := initUsb()
-	cmn.Bus = usb.Init(bus...)
-	defer cmn.Bus.Close()
-
-	cmn.Core = usb.New(cmn.Bus, allowCancel(), false)
 
 	ui.Is_ready_wg.Add(1)
 	go func() {
@@ -89,26 +80,6 @@ func main() {
 	}
 
 	cmn.SaveConfig()
-}
-
-func initUsb() []usb.USBBus {
-	log.Trace().Msg("Initing libusb")
-
-	w, err := usb.InitLibUSB(!usb.HIDUse, allowCancel(), detachKernelDriver())
-	if err != nil {
-		log.Fatal().Msgf("libusb: %s", err)
-	}
-
-	if !usb.HIDUse {
-		return []usb.USBBus{w}
-	}
-
-	log.Trace().Msg("Initing hidapi")
-	h, err := usb.InitHIDAPI()
-	if err != nil {
-		log.Fatal().Msgf("hidapi: %s", err)
-	}
-	return []usb.USBBus{w, h}
 }
 
 // Does OS allow sync canceling via our custom libusb patches?

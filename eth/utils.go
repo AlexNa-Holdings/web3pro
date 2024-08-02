@@ -1,7 +1,6 @@
 package eth
 
 import (
-	"context"
 	"fmt"
 	"math/big"
 
@@ -44,25 +43,26 @@ func BalanceOf(b *cmn.Blockchain, t *cmn.Token, address common.Address) (*big.In
 }
 
 func SendTx(b *cmn.Blockchain, s *cmn.Signer, tx *types.Transaction, from *cmn.Address) error {
-	d, err := s.GetDriver()
-	if err != nil {
-		log.Error().Msgf("Transfer: Cannot get driver. Error:(%v)", err)
-		return err
-	}
+	// TODO: Implement this
+	// d, err := s.GetDriver()
+	// if err != nil {
+	// 	log.Error().Msgf("Transfer: Cannot get driver. Error:(%v)", err)
+	// 	return err
+	// }
 
-	signedTx, err := d.SignTx(b, s, tx, from)
-	if err != nil {
-		log.Error().Msgf("Transfer: Cannot sign transaction. Error:(%v)", err)
-		return err
-	}
+	// signedTx, err := d.SignTx(b, s, tx, from)
+	// if err != nil {
+	// 	log.Error().Msgf("Transfer: Cannot sign transaction. Error:(%v)", err)
+	// 	return err
+	// }
 
-	// Send the transaction
-	err = b.Client.SendTransaction(context.Background(), signedTx)
-	if err != nil {
-		log.Error().Msgf("Transfer: Cannot send transaction. Error:(%v)", err)
-		return err
-	}
+	// // Send the transaction
+	// err = b.Client.SendTransaction(context.Background(), signedTx)
+	// if err != nil {
+	// 	log.Error().Msgf("Transfer: Cannot send transaction. Error:(%v)", err)
+	// 	return err
+	// }
 
-	cmn.Notifyf("Transaction sent: %s", signedTx.Hash().Hex())
+	// cmn.Notifyf("Transaction sent: %s", signedTx.Hash().Hex())
 	return nil
 }

@@ -6,21 +6,8 @@ import (
 
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
-
-type SignerDriver interface {
-	IsConnected(signer *Signer) bool
-	InitSigner(usb_id string) (string, any, error) // only for HW wallets
-	GetAddresses(signer *Signer, path string, start_from int, count int) ([]Address, error)
-	PrintDetails(path string) string
-	SignTx(b *Blockchain, s *Signer, tx *types.Transaction, a *Address) (*types.Transaction, error)
-}
-
-var WalletTrezorDriver SignerDriver
-var WalletMnemonicsDriver SignerDriver
-var WalletLedgerDriver SignerDriver
 
 var StandardOnClickHotspot func(v *gocui.View, hs *gocui.Hotspot)
 var StandardOnOverHotspot func(v *gocui.View, hs *gocui.Hotspot)
@@ -58,6 +45,8 @@ type Blockchain struct {
 
 	Client *ethclient.Client `json:"-"`
 }
+
+var KNOWN_SIGNER_TYPES = []string{"mnemonics", "ledger", "trezor"}
 
 type Token struct {
 	Blockchain     string         `json:"blockchain"`

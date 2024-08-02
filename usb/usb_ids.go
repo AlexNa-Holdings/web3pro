@@ -1,4 +1,4 @@
-package usb_server
+package usb
 
 import (
 	"io"

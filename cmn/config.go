@@ -7,7 +7,6 @@ import (
 	"runtime"
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
-	"github.com/AlexNa-Holdings/web3pro/usb"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v2"
@@ -95,9 +94,6 @@ func InitConfig() {
 	}
 
 	log.Info().Msgf("Log level: %s", Config.Verbosity)
-
-	usb.USBLog = Config.USBLog
-	usb.USBBackgroundEnumerate = Config.USBBackgroundEnumerate
 
 	bus.BusTimeout = Config.BusTimeout
 	bus.BusHardTimeout = Config.BusHardTimeout

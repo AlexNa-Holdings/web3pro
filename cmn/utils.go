@@ -9,23 +9,9 @@ import (
 	"strings"
 
 	"github.com/AlexNa-Holdings/web3pro/gocui"
-	"github.com/AlexNa-Holdings/web3pro/usb"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog/log"
 )
-
-var Bus *usb.USB
-var Core *usb.Core
-
-func GetID(info usb.EnumerateEntry) (string, error) {
-
-	// switch info.Vendor {
-	// case "Ledger":
-	// 	// TO DO
-	// 	return "12345", nil
-	// }
-	return info.Path, nil
-}
 
 func Contains(s string, subststr string) bool {
 	return strings.Contains(
