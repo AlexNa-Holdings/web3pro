@@ -177,7 +177,7 @@ Please connect your Trezor device:
 		OnTick: func(h *bus.B_Hail, tick int) {
 			t = find_by_name(n)
 			if t != nil {
-				bus.Send("ui", "remove_hail", h)
+				bus.Send("ui", "remove-hail", h)
 			}
 		},
 	})

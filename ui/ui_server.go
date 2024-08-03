@@ -62,9 +62,9 @@ func process(msg *bus.Message) {
 				HailPane.open(msg)
 			}
 		}
-	case "remove_hail":
+	case "remove-hail":
 		if hail, ok := msg.Data.(*bus.B_Hail); ok {
-			log.Trace().Msgf("ProcessHails: Remove hail received: %s", hail.Title)
+			log.Trace().Msgf("ProcessHails: Remove hail received: %v", hail.Title)
 
 			var m *bus.Message
 			Mutex.Lock()

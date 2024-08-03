@@ -100,6 +100,8 @@ func ProcessTimers() {
 					msg.Respond("ERROR", errors.New("invalid timer delete data"))
 				}
 			case "tick":
+			// ignore
+			case "done":
 				// ignore
 			default:
 				log.Error().Msgf("Invalid timer message type %s", msg.Type)

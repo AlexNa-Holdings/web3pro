@@ -3,6 +3,7 @@ package bus
 import (
 	"errors"
 	"sync"
+	"time"
 
 	"github.com/rs/zerolog/log"
 )
@@ -140,16 +141,30 @@ func (m *Message) Respond(data interface{}, err error) int {
 func Fetch(topic, t string, data interface{}) *Message {
 	return FetchEx(topic, t, data,
 		BusTimeout,
-		BusHardTimeout)
+		BusHardTimeout,
+		nil,
+		0)
 }
 
-func FetchEx(topic, t string, data interface{}, limit int, hardlimit int) *Message {
+func FetchWithHail(topic, t string, data interface{}, hail *B_Hail, hail_delay int) *Message {
+	return FetchEx(topic, t, data,
+		BusTimeout,
+		BusHardTimeout,
+		hail,
+		hail_delay)
+}
+
+func FetchEx(topic, t string, data interface{}, limit int, hardlimit int, hail *B_Hail, hail_delay int) *Message {
 
 	if topic == "timer" {
 		return &Message{Error: errors.New("invalid topic to fetch")}
 	}
 
-	ch := Subscribe(topic, "timer")
+	if topic == "ui" && hail != nil {
+		return &Message{Error: errors.New("cannot fetch 'ui' with hail")}
+	}
+
+	ch := Subscribe(topic, "timer", "ui")
 	defer Unsubscribe(ch)
 
 	timer_id := Send("timer", "init", &B_TimerInit{
@@ -160,20 +175,36 @@ func FetchEx(topic, t string, data interface{}, limit int, hardlimit int) *Messa
 
 	id := SendEx(topic, t, data, timer_id, 0, nil)
 
-	for msg := range ch {
-		switch msg.Topic {
-		case topic:
-			if msg.RespondTo == id {
-				Send("timer", "delete", &B_TimerDelete{ID: timer_id})
-				return msg
+	timer := time.After(time.Duration(hail_delay) * time.Second)
+	for {
+		select {
+		case <-timer:
+			if hail != nil {
+				hail.OnCancel = func(h *B_Hail) {
+					Send("timer", "done", &B_TimerDone{
+						ID: timer_id, // simulate timeout
+					})
+					Send("timer", "delete", &B_TimerDelete{ID: timer_id})
+				}
+				SendEx("ui", "hail", hail, timer_id, 0, nil)
 			}
-		case "timer":
-			if d, ok := msg.Data.(*B_TimerDone); ok {
-				if d.ID == timer_id {
-					return &Message{Error: errors.New("timeout")}
+		case msg := <-ch:
+			switch msg.Topic {
+			case topic:
+				if msg.RespondTo == id {
+					Send("timer", "delete", &B_TimerDelete{ID: timer_id})
+					if hail != nil {
+						Send("ui", "remove-hail", hail)
+					}
+					return msg
+				}
+			case "timer":
+				if d, ok := msg.Data.(*B_TimerDone); ok {
+					if d.ID == timer_id {
+						return &Message{Error: errors.New("timeout")}
+					}
 				}
 			}
-
 		}
 	}
 

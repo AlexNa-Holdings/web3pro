@@ -16,11 +16,10 @@ type Ledger struct {
 }
 
 type APDU struct {
-	cla  byte
-	ins  byte
-	p1   byte
-	p2   byte
-	data []byte
+	cla     byte
+	op_code byte
+	p1      byte
+	p2      byte
 }
 
 var ledgers = []*Ledger{}
@@ -90,7 +89,19 @@ func list() []string {
 
 	var names []string
 	for _, t := range ledgers {
-		names = append(names, t.Name)
+		if t.Name == "" {
+			n, err := getName(t.USB_ID)
+			if err != nil {
+				log.Error().Err(err).Msg("Error initializing ledger")
+			} else {
+				t.Name = n
+			}
+		}
+
+		if t.Name != "" {
+			names = append(names, t.Name)
+		}
+
 	}
 
 	return names
@@ -121,13 +132,19 @@ func add(t *Ledger) {
 func connected(m *bus.B_UsbConnected) {
 	log.Debug().Msgf("Ledger Connected: %s %s", m.Vendor, m.Product)
 
-	t, err := init_ledger(m.USB_ID)
+	t := &Ledger{
+		USB_ID: m.USB_ID,
+	}
+
+	add(t)
+
+	n, err := getName(m.USB_ID)
 	if err != nil {
 		log.Error().Err(err).Msg("Error initializing ledger")
 		return
 	}
 
-	add(t)
+	t.Name = n
 	cmn.Notifyf("Ledger connected: %s", t.Name)
 }
 
@@ -147,6 +164,36 @@ func find_by_name(name []string) *Ledger {
 		}
 	}
 
+	// if not found let's try to initialize those without a name
+	//check if there are not initialized ledgers
+	for _, t := range ledgers {
+		if t.Name == "" {
+			n, err := getName(t.USB_ID)
+			if err != nil {
+				log.Error().Err(err).Msg("Error initializing ledger")
+			}
+			t.Name = n
+			cmn.Notifyf("Ledger connected: %s", t.Name)
+			for _, n := range name {
+				if t.Name == n {
+					return t
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+func find_by_usb_id(usb_id string) *Ledger {
+	ledgers_mutex.Lock()
+	defer ledgers_mutex.Unlock()
+
+	for _, t := range ledgers {
+		if t.USB_ID == usb_id {
+			return t
+		}
+	}
 	return nil
 }
 
@@ -186,7 +233,7 @@ Please connect your Ledger device:
 		OnTick: func(h *bus.B_Hail, tick int) {
 			t = find_by_name(n)
 			if t != nil {
-				bus.Send("ui", "remove_hail", h)
+				bus.Send("ui", "remove-hail", h)
 			}
 		},
 	})

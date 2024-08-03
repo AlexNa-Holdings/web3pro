@@ -165,7 +165,7 @@ func (d *Trezor) RequsetPassword() (string, error) {
 				case "button":
 					switch value {
 					case "standard":
-						bus.Send("ui", "remove_hail", h)
+						bus.Send("ui", "remove-hail", h)
 					case "hidden":
 						h.TimerPaused = true
 						v.GetGui().ShowPopup(&gocui.Popup{
@@ -180,7 +180,7 @@ Password: <input id:password size:16 masked:true>
 									case "button OK":
 										password = v.GetInput("password")
 										v.GetGui().HidePopup()
-										bus.Send("ui", "remove_hail", h)
+										bus.Send("ui", "remove-hail", h)
 									case "button Cancel":
 										v.GetGui().HidePopup()
 									}

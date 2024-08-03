@@ -300,7 +300,6 @@ func enumerate() {
 
 			v, p := ResolveVendorProduct(uint16(desc.Vendor), uint16(desc.Product))
 
-			log.Debug().Msgf("New device connected: %s %s %s", sid, v, p)
 			bus.Send("usb", "connected", &bus.B_UsbConnected{
 				USB_ID:  sid,
 				Vendor:  v,
