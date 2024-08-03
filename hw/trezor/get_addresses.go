@@ -10,11 +10,11 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func get_addresses(m *bus.B_HwGetAddresses) (*bus.B_HwGetAddresses_Response, error) {
-	rd := &bus.B_HwGetAddresses_Response{}
+func get_addresses(m *bus.B_SignerGetAddresses) (*bus.B_SignerGetAddresses_Response, error) {
+	rd := &bus.B_SignerGetAddresses_Response{}
 	t := provide_device(m.Name)
 	if t == nil {
-		return rd, fmt.Errorf("No device found with name %s", m.Name)
+		return rd, fmt.Errorf("no device found with name %s", m.Name)
 	}
 
 	rd.Addresses = []common.Address{}

@@ -1158,7 +1158,7 @@ func (v *View) AddTagEx(tagName string, tagParams map[string]string) error {
 		v.AddButton(tagParams["text"], "button "+tagParams["id"], tagParams["id"], tagParams["tip"], tagParams["color"], tagParams["bgcolor"])
 	case "input": // input
 		v.AddInput(tagParams)
-	case "t": // text input
+	case "text": // text input
 		v.AddTextInput(tagParams)
 	case "select": // combo box
 		v.AddSelect(tagParams)
@@ -1184,7 +1184,7 @@ func GetTagLength(tagName string, tagParams map[string]string) int {
 	case "input": // input
 		size, _ := strconv.Atoi(tagParams["size"])
 		return size
-	case "t": // text input
+	case "text": // text input
 		width, _ := strconv.Atoi(tagParams["width"])
 		return width
 	case "select": // droplist

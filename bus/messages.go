@@ -93,8 +93,8 @@ type B_UsbDisconnected struct { // disconnected
 	USB_ID string
 }
 
-// ---------- hw ----------
-type B_HwGetAddresses struct { // get-addresses
+// ---------- signer ----------
+type B_SignerGetAddresses struct { // get-addresses
 	Type      string
 	Name      []string
 	MasterKey string
@@ -103,27 +103,24 @@ type B_HwGetAddresses struct { // get-addresses
 	Count     int
 }
 
-type B_HwGetAddresses_Response struct { // get-addresses_response
+type B_SignerGetAddresses_Response struct { // get-addresses_response
 	Addresses []common.Address
 	Paths     []string
 }
 
-type B_HwIsConnected struct { // is-connected
+type B_SignerIsConnected struct { // is-connected
 	Type string
 	Name []string
 }
 
-type B_HwIsConnected_Response struct { // is-connected_response
+type B_SignerIsConnected_Response struct { // is-connected_response
 	Connected bool
 }
 
-// ---------- signer ----------
-type B_SignerInit struct { // get_name
-	USB_ID string
-	Type   string
+type B_SignerList struct { // list
+	Type string
 }
 
-type B_SignerInit_Response struct { // get-name_response
-	Name      string
-	HW_Params interface{}
+type B_SignerList_Response struct { // list_response
+	Names []string
 }

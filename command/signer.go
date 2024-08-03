@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/ui"
@@ -99,23 +100,26 @@ func Signer_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 			return "type", &options, param
 		}
 
-		//TODO: implement
-		// l, err := cmn.Core.Enumerate()
-		// if err != nil {
-		// 	ui.PrintErrorf("\nError listing usb devices: %v\n", err)
-		// 	return "", &options, ""
-		// }
-		// for _, u := range l {
-		// 	if param == cmn.GetDeviceType(u.Vendor, u.Product) {
-		// 		dn, err := cmn.GetDeviceName(u)
-		// 		if err == nil {
-		// 			if cmn.Contains(dn, p3) && p3 != dn {
-		// 				options = append(options, ui.ACOption{Name: dn, Result: command + " add " + param + " '" + dn + "'"})
-		// 			}
-		// 		}
-		// 	}
-		// }
-		// return "Serial number", &options, ""
+		if p3 != "" || strings.HasSuffix(input, " ") {
+			switch param {
+			case "trezor":
+				r := bus.Fetch("signer", "list", &bus.B_SignerList{Type: "trezor"})
+				if r.Error != nil {
+					ui.PrintErrorf("\nError listing trezor devices: %v\n", r.Error)
+					return "", &options, ""
+				}
+
+				if res, ok := r.Data.(*bus.B_SignerList_Response); ok {
+					for _, n := range res.Names {
+						if cmn.Contains(n, p3) {
+							options = append(options, ui.ACOption{Name: n, Result: command + " add " + param + " '" + n + "'"})
+						}
+					}
+				}
+				return "Trezor name", &options, ""
+			}
+
+		}
 	}
 
 	return "", &options, ""

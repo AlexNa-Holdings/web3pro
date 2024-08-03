@@ -19,8 +19,10 @@ type Trezor struct {
 var trezors = []*Trezor{}
 var trezors_mutex = &sync.Mutex{}
 
+const TRZ = "trezor"
+
 func Loop() {
-	ch := bus.Subscribe("hw", "usb")
+	ch := bus.Subscribe("signer", "usb")
 	for msg := range ch {
 		if msg.RespondTo != 0 {
 			continue // ignore responses
@@ -34,46 +36,57 @@ func process(msg *bus.Message) {
 	case "usb":
 		switch msg.Type {
 		case "connected":
-			m, ok := msg.Data.(*bus.B_UsbConnected)
-			if !ok {
+			if m, ok := msg.Data.(*bus.B_UsbConnected); ok {
+				connected(m)
+			} else {
 				log.Error().Msg("Loop: Invalid usb connected data")
-				return
 			}
-			connected(m)
-
 		case "disconnected":
-			m, ok := msg.Data.(*bus.B_UsbDisconnected)
-			if !ok {
+			if m, ok := msg.Data.(*bus.B_UsbDisconnected); ok {
+				disconnected(m)
+			} else {
 				log.Error().Msg("Loop: Invalid usb disconnected data")
-				return
 			}
-			disconnected(m)
 		}
-	case "hw":
+	case "signer":
 		switch msg.Type {
 		case "is-connected":
-			m, ok := msg.Data.(*bus.B_HwIsConnected)
-			if !ok {
+			if m, ok := msg.Data.(*bus.B_SignerIsConnected); ok && m.Type == TRZ {
+				msg.Respond(&bus.B_SignerIsConnected_Response{Connected: find_by_name(m.Name) != nil}, nil)
+			} else {
 				log.Error().Msg("Loop: Invalid hw is-connected data")
-				return
 			}
-
-			if m.Type == "trezor" {
-				msg.Respond(&bus.B_HwIsConnected_Response{Connected: find_by_name(m.Name) != nil}, nil)
-			}
-
 		case "get-addresses":
-			m, ok := msg.Data.(*bus.B_HwGetAddresses)
-			if !ok {
-				log.Error().Msg("Loop: Invalid hw get-addresses data")
-				return
-			}
-
-			if m.Type == "trezor" {
+			if m, ok := msg.Data.(*bus.B_SignerGetAddresses); ok && m.Type == TRZ {
 				msg.Respond(get_addresses(m))
+			} else {
+				log.Error().Msg("Loop: Invalid hw get-addresses data")
+			}
+		case "list":
+
+			log.Debug().Msgf("List received %v", msg.Data)
+
+			if m, ok := msg.Data.(*bus.B_SignerList); ok && m.Type == TRZ {
+				msg.Respond(&bus.B_SignerList_Response{Names: list()}, nil)
+			} else {
+				log.Error().Msg("Loop: Invalid hw list data")
 			}
 		}
 	}
+}
+
+func list() []string {
+
+	log.Debug().Msg("List")
+	trezors_mutex.Lock()
+	defer trezors_mutex.Unlock()
+
+	var names []string
+	for _, t := range trezors {
+		names = append(names, t.Name)
+	}
+
+	return names
 }
 
 func remove(usb_id string) {
@@ -100,11 +113,11 @@ func add(t *Trezor) {
 
 func connected(m *bus.B_UsbConnected) {
 
-	log.Debug().Msgf("Connected: %s %s", m.Vendor, m.Product)
-
 	if m.Vendor != "SatoshiLabs" {
 		return
 	}
+
+	log.Debug().Msgf("Trezor Connected: %s %s", m.Vendor, m.Product)
 
 	t, err := init_trezor(m.USB_ID)
 	if err != nil {

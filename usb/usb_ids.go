@@ -106,5 +106,20 @@ func fix_usb_ids() error {
 	usbid.Vendors[gousb.ID(0x534C)].Name = "SatoshiLabs"
 	usbid.Vendors[gousb.ID(0x534C)].Product[gousb.ID(0x0001)] = &usbid.Product{Name: "Trezor Model T"}
 
+	// fix Ledger
+	// form https://github.com/LedgerHQ/ledger-live/blob/develop/libs/ledgerjs/packages/devices/src/index.ts
+	if usbid.Vendors[gousb.ID(0x2c97)] == nil {
+		usbid.Vendors[gousb.ID(0x2c97)] = &usbid.Vendor{}
+	}
+	usbid.Vendors[gousb.ID(0x2c97)].Name = "Ledger"
+	usbid.Vendors[gousb.ID(0x2c97)].Product[gousb.ID(0x1001)] = &usbid.Product{Name: "Ledger Nano S"}
+	usbid.Vendors[gousb.ID(0x2c97)].Product[gousb.ID(0x1011)] = &usbid.Product{Name: "Ledger Nano S"}
+	usbid.Vendors[gousb.ID(0x2c97)].Product[gousb.ID(0x0000)] = &usbid.Product{Name: "Ledger Blue"}
+	usbid.Vendors[gousb.ID(0x2c97)].Product[gousb.ID(0x4000)] = &usbid.Product{Name: "Ledger Nano X"}
+	usbid.Vendors[gousb.ID(0x2c97)].Product[gousb.ID(0x0004)] = &usbid.Product{Name: "Ledger Nano X"}
+	usbid.Vendors[gousb.ID(0x2c97)].Product[gousb.ID(0x5000)] = &usbid.Product{Name: "Ledger Nano S Plus"}
+	usbid.Vendors[gousb.ID(0x2c97)].Product[gousb.ID(0x6000)] = &usbid.Product{Name: "Ledger Stax"}
+	usbid.Vendors[gousb.ID(0x2c97)].Product[gousb.ID(0x7000)] = &usbid.Product{Name: "Ledger Europa"}
+
 	return nil
 }

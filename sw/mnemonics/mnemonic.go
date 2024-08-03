@@ -23,7 +23,7 @@ type Mnemonic struct {
 }
 
 func Loop() {
-	ch := bus.Subscribe("hw", "usb")
+	ch := bus.Subscribe("signer", "usb")
 	for msg := range ch {
 		if msg.RespondTo != 0 {
 			continue // ignore responses
@@ -34,21 +34,21 @@ func Loop() {
 
 func process(msg *bus.Message) {
 	switch msg.Topic {
-	case "sw":
+	case "signer":
 		switch msg.Type {
 		case "is-connected":
-			m, ok := msg.Data.(*bus.B_HwIsConnected)
+			m, ok := msg.Data.(*bus.B_SignerIsConnected)
 			if !ok {
 				log.Error().Msg("Loop: Invalid hw is-connected data")
 				return
 			}
 
 			if m.Type == "mnemonics" {
-				msg.Respond(&bus.B_HwIsConnected_Response{Connected: true}, nil)
+				msg.Respond(&bus.B_SignerIsConnected_Response{Connected: true}, nil)
 			}
 
 		case "get-addresses":
-			m, ok := msg.Data.(*bus.B_HwGetAddresses)
+			m, ok := msg.Data.(*bus.B_SignerGetAddresses)
 			if !ok {
 				log.Error().Msg("Loop: Invalid hw get-addresses data")
 				return
@@ -58,17 +58,17 @@ func process(msg *bus.Message) {
 				mnemonics, err := NewFromSN(m.MasterKey)
 				if err != nil {
 					log.Error().Msgf("Error creating mnemonics: %v", err)
-					msg.Respond(&bus.B_HwGetAddresses_Response{}, err)
+					msg.Respond(&bus.B_SignerGetAddresses_Response{}, err)
 					return
 				}
 
 				a, p, err := mnemonics.GetAddresses(m.Path, m.StartFrom, m.Count)
 				if err != nil {
 					log.Error().Msgf("Error getting addresses: %v", err)
-					msg.Respond(&bus.B_HwGetAddresses_Response{}, err)
+					msg.Respond(&bus.B_SignerGetAddresses_Response{}, err)
 					return
 				}
-				msg.Respond(&bus.B_HwGetAddresses_Response{
+				msg.Respond(&bus.B_SignerGetAddresses_Response{
 					Addresses: a,
 					Paths:     p,
 				}, nil)

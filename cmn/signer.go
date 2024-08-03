@@ -35,7 +35,7 @@ var STANDARD_DERIVATIONS = map[string]struct {
 }
 
 func (s *Signer) GetAddresses(path string, start_from int, count int) ([]common.Address, []string, error) {
-	m := bus.Fetch("hw", "get-addresses", &bus.B_HwGetAddresses{
+	m := bus.Fetch("signer", "get-addresses", &bus.B_SignerGetAddresses{
 		Type:      s.Type,
 		Name:      s.GetFamilyNames(),
 		Path:      path,
@@ -48,7 +48,7 @@ func (s *Signer) GetAddresses(path string, start_from int, count int) ([]common.
 		return []common.Address{}, []string{}, m.Error
 	}
 
-	r, ok := m.Data.(*bus.B_HwGetAddresses_Response)
+	r, ok := m.Data.(*bus.B_SignerGetAddresses_Response)
 	if !ok {
 		log.Error().Msgf("GetAddresses: Error getting addresses: %s (%v)", s.Name, r)
 		return []common.Address{}, []string{}, errors.New("error getting addresses")
@@ -58,13 +58,13 @@ func (s *Signer) GetAddresses(path string, start_from int, count int) ([]common.
 }
 
 func (s *Signer) IsConnected() bool {
-	r := bus.Fetch("hw", "is-connected", &bus.B_HwIsConnected{Type: s.Type, Name: s.GetFamilyNames()})
+	r := bus.Fetch("signer", "is-connected", &bus.B_SignerIsConnected{Type: s.Type, Name: s.GetFamilyNames()})
 	if r.Error != nil {
 		log.Error().Err(r.Error).Msgf("Error checking connection: %s (%s)", s.Name, s.Type)
 		return false
 	}
 
-	m, ok := r.Data.(*bus.B_HwIsConnected_Response)
+	m, ok := r.Data.(*bus.B_SignerIsConnected_Response)
 	if !ok {
 		log.Error().Msgf("Error checking connection: %s (%s)", s.Name, s.Type)
 		return false
