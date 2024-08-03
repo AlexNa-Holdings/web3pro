@@ -98,7 +98,7 @@ func (d Trezor) RawCall(req proto.Message) (trezorproto.MessageType, []byte, err
 			log.Error().Msgf("RawCall: Error reading from device: %s", resp.Error)
 			return 0, nil, resp.Error
 		}
-		chunk := resp.Data.(bus.B_UsbRead_Response).Data
+		chunk := resp.Data.(*bus.B_UsbRead_Response).Data
 
 		// Make sure the transport header matches
 		if chunk[0] != 0x3f || (len(reply) == 0 && (chunk[1] != 0x23 || chunk[2] != 0x23)) {

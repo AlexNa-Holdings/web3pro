@@ -1,6 +1,7 @@
 package ledger
 
 import (
+	"encoding/binary"
 	"sync"
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
@@ -22,13 +23,12 @@ type APDU struct {
 	data []byte
 }
 
-var CLEANING_APDU = APDU{0xe0, 0x50, 0x00, 0x00, nil}
-var GET_DEVICE_NAME_APDU = APDU{0xe0, 0xd2, 0x00, 0x00, nil}
-
 var ledgers = []*Ledger{}
 var ledgers_mutex = &sync.Mutex{}
 
 const LDG = "ledger"
+
+var codec = binary.BigEndian
 
 func Loop() {
 	ch := bus.Subscribe("signer", "usb")
@@ -45,10 +45,8 @@ func process(msg *bus.Message) {
 	case "usb":
 		switch msg.Type {
 		case "connected":
-			if m, ok := msg.Data.(*bus.B_UsbConnected); ok {
+			if m, ok := msg.Data.(*bus.B_UsbConnected); ok && m.Vendor == "Ledger" {
 				connected(m)
-			} else {
-				log.Error().Msg("Loop: Invalid usb connected data")
 			}
 		case "disconnected":
 			if m, ok := msg.Data.(*bus.B_UsbDisconnected); ok {
@@ -121,11 +119,6 @@ func add(t *Ledger) {
 }
 
 func connected(m *bus.B_UsbConnected) {
-
-	if m.Vendor != "Ledger" {
-		return
-	}
-
 	log.Debug().Msgf("Ledger Connected: %s %s", m.Vendor, m.Product)
 
 	t, err := init_ledger(m.USB_ID)

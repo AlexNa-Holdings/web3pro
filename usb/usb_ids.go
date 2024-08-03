@@ -112,12 +112,16 @@ func fix_usb_ids() error {
 		usbid.Vendors[gousb.ID(0x2c97)] = &usbid.Vendor{}
 	}
 	usbid.Vendors[gousb.ID(0x2c97)].Name = "Ledger"
+	usbid.Vendors[gousb.ID(0x2c97)].Product[gousb.ID(0x0001)] = &usbid.Product{Name: "Ledger Nano S"}
 	usbid.Vendors[gousb.ID(0x2c97)].Product[gousb.ID(0x1001)] = &usbid.Product{Name: "Ledger Nano S"}
 	usbid.Vendors[gousb.ID(0x2c97)].Product[gousb.ID(0x1011)] = &usbid.Product{Name: "Ledger Nano S"}
 	usbid.Vendors[gousb.ID(0x2c97)].Product[gousb.ID(0x0000)] = &usbid.Product{Name: "Ledger Blue"}
-	usbid.Vendors[gousb.ID(0x2c97)].Product[gousb.ID(0x4000)] = &usbid.Product{Name: "Ledger Nano X"}
 	usbid.Vendors[gousb.ID(0x2c97)].Product[gousb.ID(0x0004)] = &usbid.Product{Name: "Ledger Nano X"}
+	usbid.Vendors[gousb.ID(0x2c97)].Product[gousb.ID(0x4000)] = &usbid.Product{Name: "Ledger Nano X"}
+	usbid.Vendors[gousb.ID(0x2c97)].Product[gousb.ID(0x4011)] = &usbid.Product{Name: "Ledger Nano X"}
+	usbid.Vendors[gousb.ID(0x2c97)].Product[gousb.ID(0x0005)] = &usbid.Product{Name: "Ledger Nano S Plus"}
 	usbid.Vendors[gousb.ID(0x2c97)].Product[gousb.ID(0x5000)] = &usbid.Product{Name: "Ledger Nano S Plus"}
+	usbid.Vendors[gousb.ID(0x2c97)].Product[gousb.ID(0x5011)] = &usbid.Product{Name: "Ledger Nano S Plus"}
 	usbid.Vendors[gousb.ID(0x2c97)].Product[gousb.ID(0x6000)] = &usbid.Product{Name: "Ledger Stax"}
 	usbid.Vendors[gousb.ID(0x2c97)].Product[gousb.ID(0x7000)] = &usbid.Product{Name: "Ledger Europa"}
 

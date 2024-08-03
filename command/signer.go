@@ -117,8 +117,22 @@ func Signer_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 					}
 				}
 				return "Trezor name", &options, ""
-			}
+			case "ledger":
+				r := bus.Fetch("signer", "list", &bus.B_SignerList{Type: "ledger"})
+				if r.Error != nil {
+					ui.PrintErrorf("\nError listing trezor devices: %v\n", r.Error)
+					return "", &options, ""
+				}
 
+				if res, ok := r.Data.(*bus.B_SignerList_Response); ok {
+					for _, n := range res.Names {
+						if cmn.Contains(n, p3) {
+							options = append(options, ui.ACOption{Name: n, Result: command + " add " + param + " '" + n + "'"})
+						}
+					}
+				}
+				return "Ledger name", &options, ""
+			}
 		}
 	}
 

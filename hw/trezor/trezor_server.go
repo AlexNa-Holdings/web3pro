@@ -36,10 +36,8 @@ func process(msg *bus.Message) {
 	case "usb":
 		switch msg.Type {
 		case "connected":
-			if m, ok := msg.Data.(*bus.B_UsbConnected); ok {
+			if m, ok := msg.Data.(*bus.B_UsbConnected); ok && m.Vendor == "Satoshilabs" {
 				connected(m)
-			} else {
-				log.Error().Msg("Loop: Invalid usb connected data")
 			}
 		case "disconnected":
 			if m, ok := msg.Data.(*bus.B_UsbDisconnected); ok {
@@ -112,11 +110,6 @@ func add(t *Trezor) {
 }
 
 func connected(m *bus.B_UsbConnected) {
-
-	if m.Vendor != "SatoshiLabs" {
-		return
-	}
-
 	log.Debug().Msgf("Trezor Connected: %s %s", m.Vendor, m.Product)
 
 	t, err := init_trezor(m.USB_ID)

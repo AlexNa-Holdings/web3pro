@@ -165,10 +165,6 @@ func FetchEx(topic, t string, data interface{}, limit int, hardlimit int) *Messa
 		case topic:
 			if msg.RespondTo == id {
 				Send("timer", "delete", &B_TimerDelete{ID: timer_id})
-
-				log.Debug().Msgf("bus.FetchEx: %s %s response: %v", topic, t, msg.Error)
-				log.Debug().Msgf("bus.FetchEx:response data: %v", msg.Data)
-
 				return msg
 			}
 		case "timer":

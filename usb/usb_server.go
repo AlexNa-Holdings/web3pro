@@ -131,7 +131,7 @@ func process(msg *bus.Message) {
 			return
 		}
 
-		msg.Respond(bus.B_UsbRead_Response{Data: data[:n]}, nil)
+		msg.Respond(&bus.B_UsbRead_Response{Data: data[:n]}, nil)
 	}
 }
 
@@ -213,39 +213,47 @@ func OpenDevice(id string) (*USB_DEV, error) {
 
 	t.Device = d[0]
 
+	log.Debug().Msgf("Descriptor: %v", t.Device.Desc)
+
 	cfg, err := t.Device.Config(1)
 	if err != nil {
 		log.Error().Msgf("%s.Config(1): %v", t.Device, err)
 		return nil, err
 	}
 
-	intf, err := cfg.Interface(0, 0)
+	// Detach the kernel driver if necessary
+	if err := t.Device.SetAutoDetach(true); err != nil {
+		log.Error().Err(err).Msg("SetAutoDetach(true)")
+	}
+
+	iface, err := cfg.Interface(0, 0)
 	if err != nil {
 		cfg.Close()
-		log.Error().Msgf("%s.DefaultInterface(): %v", t.Device, err)
+		log.Error().Err(err).Msgf("Interface(0, 0)")
 		return nil, err
 	}
 
-	ep_out, err := intf.OutEndpoint(1)
-	if err != nil {
-		cfg.Close()
-		intf.Close()
-		log.Fatal().Msgf("%s.OutEndpoint(1): %v", intf, err)
-		return nil, err
+	var epIn *gousb.InEndpoint
+	var epOut *gousb.OutEndpoint
+
+	for _, ep := range iface.Setting.Endpoints {
+		if ep.Direction == gousb.EndpointDirectionIn {
+			epIn, _ = iface.InEndpoint(ep.Number)
+		} else {
+			epOut, _ = iface.OutEndpoint(ep.Number)
+		}
 	}
 
-	ep_in, err := intf.InEndpoint(1)
-	if err != nil {
+	if epIn == nil || epOut == nil {
 		cfg.Close()
-		intf.Close()
-		log.Fatal().Msgf("%s.InEndpoint(1): %v", intf, err)
-		return nil, err
+		log.Error().Msg("No endpoints found")
+		return nil, errors.New("no endpoints found")
 	}
 
 	t.Config = cfg
-	t.Interface = intf
-	t.EndpointOut = ep_out
-	t.EndpointIn = ep_in
+	t.Interface = iface
+	t.EndpointOut = epOut
+	t.EndpointIn = epIn
 
 	return t, nil
 }
