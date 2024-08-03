@@ -145,6 +145,7 @@ func connected(m *bus.B_UsbConnected) {
 	}
 
 	t.Name = n
+	bus.Send("signer", "connected", &bus.B_SignerConnected{Type: LDG, Name: t.Name})
 	cmn.Notifyf("Ledger connected: %s", t.Name)
 }
 
@@ -173,6 +174,7 @@ func find_by_name(name []string) *Ledger {
 				log.Error().Err(err).Msg("Error initializing ledger")
 			}
 			t.Name = n
+			bus.Send("signer", "connected", &bus.B_SignerConnected{Type: LDG, Name: t.Name})
 			cmn.Notifyf("Ledger connected: %s", t.Name)
 			for _, n := range name {
 				if t.Name == n {

@@ -13,14 +13,16 @@ var StandardOnClickHotspot func(v *gocui.View, hs *gocui.Hotspot)
 var StandardOnOverHotspot func(v *gocui.View, hs *gocui.Hotspot)
 
 type Wallet struct {
-	Name        string        `json:"name"`
-	Blockchains []*Blockchain `json:"blockchains"`
-	Signers     []*Signer     `json:"signers"`
-	Addresses   []*Address    `json:"addresses"`
-	Tokens      []*Token      `json:"tokens"`
-	FilePath    string        `json:"-"`
-	Password    string        `json:"-"`
-	WriteMutex  sync.Mutex    `json:"-"`
+	Name         string        `json:"name"`
+	Blockchains  []*Blockchain `json:"blockchains"`
+	Signers      []*Signer     `json:"signers"`
+	Addresses    []*Address    `json:"addresses"`
+	Tokens       []*Token      `json:"tokens"`
+	CurrentChain string        `json:"current_chain"`
+
+	filePath   string     `json:"-"`
+	password   string     `json:"-"`
+	writeMutex sync.Mutex `json:"-"`
 }
 
 type Address struct {
@@ -55,5 +57,6 @@ type Token struct {
 	PriceFeeder    string         `json:"price_feeder"`
 	PriceFeedParam string         `json:"price_feed_id"`
 	Price          float64        `json:"price"`
+	PraceChange24  float64        `json:"price_change_24"`
 	PriceTimestamp time.Time      `json:"price_timestamp"` // Unix timestamp
 }

@@ -3,6 +3,7 @@ package trezor
 import (
 	"errors"
 
+	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/hw/trezor/trezorproto"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/protobuf/proto"
@@ -33,6 +34,7 @@ func init_trezor(usb_id string) (*Trezor, error) {
 	t.Features = features
 	t.Name = t.Features.GetLabel()
 
+	bus.Send("signer", "connected", &bus.B_SignerConnected{Type: TRZ, Name: t.Name})
 	log.Trace().Msgf("Initialized trezor dev: %v\n", t.Name)
 
 	return t, nil

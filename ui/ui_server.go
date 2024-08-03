@@ -22,6 +22,7 @@ func Init() {
 	cmn.StandardOnOverHotspot = ProcessOnOverHotspot
 
 	go Loop()
+	go StatusLoop()
 
 	Gui, err = gocui.NewGui(gocui.OutputTrue, true)
 	if err != nil {

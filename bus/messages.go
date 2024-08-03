@@ -124,3 +124,8 @@ type B_SignerList struct { // list
 type B_SignerList_Response struct { // list_response
 	Names []string
 }
+
+type B_SignerConnected struct { // connected
+	Type string
+	Name string
+}

@@ -11,6 +11,7 @@ import (
 	"os"
 	"sync"
 
+	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/pbkdf2"
@@ -25,13 +26,17 @@ func Open(name string, pass string) error {
 	w, err := openFromFile(DataFolder+"/wallets/"+name, pass)
 
 	if err == nil {
-		w.FilePath = DataFolder + "/wallets/" + name
-		w.Password = pass
-		w.WriteMutex = sync.Mutex{}
+		w.filePath = DataFolder + "/wallets/" + name
+		w.password = pass
+		w.writeMutex = sync.Mutex{}
 
 		w.AuditNativeTokens()
 		w.MarkUniqueTokens()
+		if w.CurrentChain == "" && len(w.Blockchains) > 0 {
+			w.CurrentChain = w.Blockchains[0].Name
+		}
 		CurrentWallet = w
+		bus.Send("wallet", "open", nil)
 	}
 	return err
 }
@@ -91,7 +96,7 @@ func (w *Wallet) GetBlockchain(n string) *Blockchain {
 }
 
 func (w *Wallet) Save() error {
-	return SaveToFile(w, w.FilePath, w.Password)
+	return SaveToFile(w, w.filePath, w.password)
 }
 
 func Exists(name string) bool {
@@ -171,8 +176,8 @@ func generateKey(password string, salt []byte) []byte {
 }
 
 func SaveToFile(w *Wallet, file, pass string) error {
-	w.WriteMutex.Lock()
-	defer w.WriteMutex.Unlock()
+	w.writeMutex.Lock()
+	defer w.writeMutex.Unlock()
 
 	jsonData, err := json.Marshal(w)
 	if err != nil {
@@ -202,6 +207,7 @@ func SaveToFile(w *Wallet, file, pass string) error {
 		return err
 	}
 
+	bus.Send("wallet", "saved", nil)
 	return nil
 }
 

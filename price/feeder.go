@@ -9,12 +9,13 @@ import (
 )
 
 type Pair struct {
-	PriceFeeder string
-	PairAddress string
-	BaseToken   string
-	QuoteToken  string
-	PriceUsd    float64
-	Liquidity   float64
+	PriceFeeder   string
+	PairAddress   string
+	BaseToken     string
+	QuoteToken    string
+	PriceUsd      float64
+	PriceChange24 float64
+	Liquidity     float64
 }
 
 var KNOWN_FEEDERS = []string{"dexscreener"}

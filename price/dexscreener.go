@@ -203,12 +203,13 @@ func DSGetPairs(chain_id uint, pairList string) ([]Pair, error) {
 
 		pairs = append(pairs,
 			Pair{
-				PriceFeeder: "dexscreener",
-				PairAddress: pair.PairAddress,
-				BaseToken:   pair.BaseToken.Symbol,
-				QuoteToken:  pair.QuoteToken.Symbol,
-				PriceUsd:    price,
-				Liquidity:   pair.Liquidity.USD,
+				PriceFeeder:   "dexscreener",
+				PairAddress:   pair.PairAddress,
+				BaseToken:     pair.BaseToken.Symbol,
+				QuoteToken:    pair.QuoteToken.Symbol,
+				PriceUsd:      price,
+				PriceChange24: pair.PriceChange.H24,
+				Liquidity:     pair.Liquidity.USD,
 			})
 	}
 
@@ -250,6 +251,7 @@ func DSUpdate(w *cmn.Wallet) (int, error) { // number of pairs updated
 
 			for i, t := range tokens_to_update {
 				t.Price = pairs[i].PriceUsd
+				t.PraceChange24 = pairs[i].PriceChange24
 				t.PriceTimestamp = time.Now()
 			}
 
