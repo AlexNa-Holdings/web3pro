@@ -31,12 +31,14 @@ func (p *StatusPane) SetView(g *gocui.Gui, x0, y0, x1, y1 int) {
 			log.Error().Err(err).Msgf("SetView error: %s", err)
 		}
 		p.View.Title = "Status"
-		p.View.Autoscroll = true
+		p.View.Autoscroll = false
+		p.View.ScrollBar = true
 
 		rebuidTemplate()
 
 		p.View.OnResize = func(v *gocui.View) {
 			v.RenderTemplate(statusTemplate)
+			v.ScrollTop()
 		}
 	}
 }
@@ -62,7 +64,36 @@ func StatusLoop() {
 }
 
 func rebuidTemplate() {
-	tmp := ""
+	log.Debug().Msg("STATUS: rebuidTemplate")
+	temp := "<w>"
+
+	// connected devices
+	cd := ""
+	r := bus.Fetch("signer", "list", &bus.B_SignerList{Type: "ledger"})
+	if r.Error == nil {
+		if res, ok := r.Data.(*bus.B_SignerList_Response); ok {
+			for i, n := range res.Names {
+				if i > 0 {
+					cd += ", "
+				}
+				cd = fmt.Sprintf("%s(L)", n)
+			}
+		}
+	}
+	r = bus.Fetch("signer", "list", &bus.B_SignerList{Type: "trezor"})
+	if r.Error == nil {
+		if res, ok := r.Data.(*bus.B_SignerList_Response); ok {
+			for i, n := range res.Names {
+				if i > 0 {
+					cd += ", "
+				}
+				cd = fmt.Sprintf("%s(T)", n)
+			}
+		}
+	}
+
+	temp += fmt.Sprintf("HW: %s\n", cd)
+
 	if cmn.CurrentWallet != nil {
 		w := cmn.CurrentWallet
 
@@ -74,11 +105,14 @@ func rebuidTemplate() {
 				return
 			}
 
-			tmp += fmt.Sprintf("Chain: %s (%s %s ) \n", b.Name, t.Symbol, cmn.FmtFloat64DN(t.Price))
+			temp += fmt.Sprintf("Chain: %s (%s %s ) \n", b.Name, t.Symbol, cmn.FmtFloat64DN(t.Price))
 		}
 	}
 
+	statusTemplate = temp
+
 	Gui.Update(func(g *gocui.Gui) error {
+
 		Status.RenderTemplate(statusTemplate)
 		return nil
 	})

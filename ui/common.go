@@ -38,6 +38,9 @@ func Layout(g *gocui.Gui) error {
 		HailPane.MinHeight = max(HailPane.MinHeight, HailPane.View.LinesHeight()+2)
 		HailPane.MinHeight = min(HailPane.MinHeight, maxY-10)
 
+		Status.MinHeight = max(Status.MinHeight, Status.View.LinesHeight()+2)
+		Status.MinHeight = min(Status.MinHeight, maxY-10)
+
 		horizontal := maxX >= (Status.MinWidth + HailPane.MinWidth)
 
 		if horizontal {

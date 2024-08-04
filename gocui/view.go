@@ -1751,7 +1751,7 @@ func (v *View) RenderTemplate(template string) error {
 
 	autowrap := false
 
-	for _, line := range lines {
+	for ln, line := range lines {
 
 		if strings.Contains(line, "\t") {
 			log.Warn().Msgf("tabs are not allowed in templates : %s", line)
@@ -1798,7 +1798,7 @@ func (v *View) RenderTemplate(template string) error {
 		splitted_lines = append(splitted_lines, line)
 
 		var cells []cell
-		for _, l := range splitted_lines {
+		for sln, l := range splitted_lines {
 			left := 0
 			matches := re.FindAllStringIndex(l, -1)
 			draw_line := false
@@ -1977,7 +1977,9 @@ func (v *View) RenderTemplate(template string) error {
 			v.writeCells(v.wx, v.wy, cells)
 			v.wx += len(cells)
 
-			v.Write([]byte("\n"))
+			if ln < len(lines)-1 || sln < len(splitted_lines)-1 {
+				v.Write([]byte("\n")) // do not produce empty last line
+			}
 		}
 
 	}
