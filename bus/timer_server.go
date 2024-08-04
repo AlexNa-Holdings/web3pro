@@ -19,7 +19,7 @@ type BusTimer struct {
 
 var timers = make(map[int]*BusTimer)
 var mu = &sync.Mutex{}
-var timer *time.Timer = time.NewTimer(0)
+var nextCheckTimer *time.Timer = time.NewTimer(0)
 var tick_timer *time.Ticker = time.NewTicker(1 * time.Second)
 var tick = 0
 
@@ -92,23 +92,40 @@ func ProcessTimers() {
 				if ok {
 					mu.Lock()
 					delete(timers, d.ID)
-					log.Debug().Msgf("Timer %d deleted", d.ID)
 					mu.Unlock()
 					msg.Respond("OK", nil)
 				} else {
 					log.Error().Msg("Invalid timer delete data")
 					msg.Respond("ERROR", errors.New("invalid timer delete data"))
 				}
+			case "trigger":
+				d, ok := msg.Data.(*B_TimerTrigger)
+				if ok {
+					mu.Lock()
+					t, ok := timers[d.ID]
+					if !ok {
+						log.Error().Msgf("Timer %d does not exist", d.ID)
+						msg.Respond("ERROR", errors.New("timer does not exist"))
+					} else {
+						t.lapsedSeconds = t.LimitSeconds
+						t.paused = false
+						msg.Respond("OK", nil)
+					}
+					mu.Unlock()
+				} else {
+					log.Error().Msg("Invalid timer trigger data")
+					msg.Respond("ERROR", errors.New("invalid timer trigger data"))
+				}
 			case "tick":
-			// ignore
+				continue
 			case "done":
-				// ignore
+				continue
 			default:
 				log.Error().Msgf("Invalid timer message type %s", msg.Type)
 				msg.Respond("ERROR", errors.New("invalid timer message type"))
 			}
 			updateTimers()
-		case <-timer.C:
+		case <-nextCheckTimer.C:
 			updateTimers()
 		case <-tick_timer.C:
 			mu.Lock()
@@ -139,8 +156,8 @@ func updateTimers() {
 	defer mu.Unlock()
 
 	// reset the timer
-	if timer != nil {
-		timer.Stop()
+	if nextCheckTimer != nil {
+		nextCheckTimer.Stop()
 	}
 
 	earliest_time_to_update := time.Now().Add(time.Hour)
@@ -150,9 +167,7 @@ func updateTimers() {
 		if t.paused {
 			continue
 		}
-
 		lapsed := t.lapsedSeconds + int(time.Since(t.starTime).Seconds())
-
 		if lapsed >= t.LimitSeconds {
 			Send("timer", "done", &B_TimerDone{
 				ID: id,
@@ -170,7 +185,7 @@ func updateTimers() {
 	}
 
 	if !timer_needed {
-		timer = time.AfterFunc(time.Until(earliest_time_to_update), func() {
+		nextCheckTimer = time.AfterFunc(time.Until(earliest_time_to_update), func() {
 			updateTimers()
 		})
 	}
@@ -194,9 +209,6 @@ func timer_init(id int, d *B_TimerInit) {
 		HardLimitSeconds: d.HardLimitSeconds,
 		lapsedSeconds:    0,
 	}
-
-	log.Debug().Msgf("Timer %d initialized %v", id, timers[id])
-
 	mu.Unlock()
 
 	if d.Start {

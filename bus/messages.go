@@ -27,6 +27,10 @@ type B_TimerDone struct { // done
 type B_TimerDelete struct { // delete
 	ID int
 }
+type B_TimerTrigger struct { // trigger
+	ID int
+}
+
 type B_TimerTick struct { // tick
 	Tick int
 	Left map[int]int // id -> seconds left

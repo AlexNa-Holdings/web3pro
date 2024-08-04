@@ -44,6 +44,7 @@ func process(msg *bus.Message) {
 	case "usb":
 		switch msg.Type {
 		case "connected":
+			log.Debug().Msg("Ledger usb connected")
 			if m, ok := msg.Data.(*bus.B_UsbConnected); ok && m.Vendor == "Ledger" {
 				connected(m)
 			}
@@ -69,39 +70,28 @@ func process(msg *bus.Message) {
 				log.Error().Msg("Loop: Invalid hw get-addresses data")
 			}
 		case "list":
-
-			log.Debug().Msgf("List received %v", msg.Data)
-
-			if m, ok := msg.Data.(*bus.B_SignerList); ok && m.Type == LDG {
-				msg.Respond(&bus.B_SignerList_Response{Names: list()}, nil)
+			if m, ok := msg.Data.(*bus.B_SignerList); ok {
+				if m.Type == LDG {
+					msg.Respond(&bus.B_SignerList_Response{Names: list()}, nil)
+				}
 			} else {
-				log.Error().Msg("Loop: Invalid hw list data")
+				log.Error().Msg("Loop: Invalid ledger list data")
 			}
 		}
 	}
 }
 
 func list() []string {
-
-	log.Debug().Msg("List")
 	ledgers_mutex.Lock()
 	defer ledgers_mutex.Unlock()
 
 	var names []string
 	for _, t := range ledgers {
 		if t.Name == "" {
-			n, err := getName(t.USB_ID)
-			if err != nil {
-				log.Error().Err(err).Msg("Error initializing ledger")
-			} else {
-				t.Name = n
-			}
-		}
-
-		if t.Name != "" {
+			bus.Send("usb", "connected", &bus.B_UsbConnected{USB_ID: t.USB_ID}) // trigger name initialization
+		} else {
 			names = append(names, t.Name)
 		}
-
 	}
 
 	return names

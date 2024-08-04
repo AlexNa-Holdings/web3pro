@@ -181,10 +181,10 @@ func FetchEx(topic, t string, data interface{}, limit int, hardlimit int, hail *
 		case <-timer:
 			if hail != nil {
 				hail.OnCancel = func(h *B_Hail) {
-					Send("timer", "done", &B_TimerDone{
-						ID: timer_id, // simulate timeout
+					log.Debug().Msgf("Send 'trigger' to timer:%d", timer_id)
+					Send("timer", "trigger", &B_TimerTrigger{
+						ID: timer_id,
 					})
-					Send("timer", "delete", &B_TimerDelete{ID: timer_id})
 				}
 				SendEx("ui", "hail", hail, timer_id, 0, nil)
 			}
@@ -208,5 +208,4 @@ func FetchEx(topic, t string, data interface{}, limit int, hardlimit int, hail *
 		}
 	}
 
-	return &Message{Error: errors.New("fetch error")}
 }

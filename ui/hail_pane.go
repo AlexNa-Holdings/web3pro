@@ -24,7 +24,7 @@ var HailPane *HailPaneType = &HailPaneType{
 
 var ActiveRequest *bus.Message
 var HailQueue []*bus.Message
-var Mutex = &sync.Mutex{}
+var HQMutex = &sync.Mutex{}
 
 func add(m *bus.Message) bool { // returns if on top
 
@@ -35,28 +35,48 @@ func add(m *bus.Message) bool { // returns if on top
 	}
 
 	log.Trace().Msgf("Adding hail: %s", hail.Title)
-	Mutex.Lock()
-	defer Mutex.Unlock()
+	hqAdd(m, hail.Priorized)
+	return m == HailQueue[0]
+}
 
-	if hail.Priorized {
+func hqAdd(m *bus.Message, on_top bool) {
+	HQMutex.Lock()
+	defer HQMutex.Unlock()
+
+	if on_top {
 		HailQueue = append([]*bus.Message{m}, HailQueue...)
 	} else {
 		HailQueue = append(HailQueue, m)
 	}
-	return m == HailQueue[0]
+}
+
+func hqRemove(h *bus.B_Hail) {
+	HQMutex.Lock()
+	defer HQMutex.Unlock()
+
+	for i := 0; i < len(HailQueue); i++ {
+		if HailQueue[i].Data == h {
+			HailQueue = append(HailQueue[:i], HailQueue[i+1:]...)
+			i -= 1
+		}
+	}
+}
+
+func hqGetTop() *bus.Message {
+	HQMutex.Lock()
+	defer HQMutex.Unlock()
+
+	if len(HailQueue) > 0 {
+		return HailQueue[0]
+	}
+	return nil
 }
 
 func remove(m *bus.Message) {
 	hail := m.Data.(*bus.B_Hail)
 	log.Trace().Msgf("Removing hail %s", hail.Title)
 
-	Mutex.Lock()
-	for i, h := range HailQueue {
-		if h.Data == hail {
-			HailQueue = append(HailQueue[:i], HailQueue[i+1:]...)
-		}
-	}
-	Mutex.Unlock()
+	hqRemove(hail)
 
 	if hail.OnClose != nil {
 		hail.OnClose(hail)
@@ -68,8 +88,9 @@ func remove(m *bus.Message) {
 	if ActiveRequest != nil && ActiveRequest.Data == hail {
 		ActiveRequest = nil
 
-		if len(HailQueue) > 0 {
-			HailPane.open(HailQueue[0])
+		top := hqGetTop()
+		if top != nil {
+			HailPane.open(top)
 		} else {
 			Gui.DeleteView("hail")
 			HailPane.View = nil

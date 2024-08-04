@@ -36,7 +36,7 @@ func process(msg *bus.Message) {
 	case "usb":
 		switch msg.Type {
 		case "connected":
-			if m, ok := msg.Data.(*bus.B_UsbConnected); ok && m.Vendor == "Satoshilabs" {
+			if m, ok := msg.Data.(*bus.B_UsbConnected); ok && m.Vendor == "SatoshiLabs" {
 				connected(m)
 			}
 		case "disconnected":
@@ -61,13 +61,12 @@ func process(msg *bus.Message) {
 				log.Error().Msg("Loop: Invalid hw get-addresses data")
 			}
 		case "list":
-
-			log.Debug().Msgf("List received %v", msg.Data)
-
-			if m, ok := msg.Data.(*bus.B_SignerList); ok && m.Type == TRZ {
-				msg.Respond(&bus.B_SignerList_Response{Names: list()}, nil)
+			if m, ok := msg.Data.(*bus.B_SignerList); ok {
+				if m.Type == TRZ {
+					msg.Respond(&bus.B_SignerList_Response{Names: list()}, nil)
+				}
 			} else {
-				log.Error().Msg("Loop: Invalid hw list data")
+				log.Error().Msg("Loop: Invalid trezor list data")
 			}
 		}
 	}

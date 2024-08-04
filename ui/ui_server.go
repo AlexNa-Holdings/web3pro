@@ -68,14 +68,14 @@ func process(msg *bus.Message) {
 			log.Trace().Msgf("ProcessHails: Remove hail received: %v", hail.Title)
 
 			var m *bus.Message
-			Mutex.Lock()
+			HQMutex.Lock()
 			for i, h := range HailQueue {
 				if h.Data == hail {
 					m = HailQueue[i]
 					break
 				}
 			}
-			Mutex.Unlock()
+			HQMutex.Unlock()
 
 			if m != nil {
 				remove(m)
@@ -83,6 +83,7 @@ func process(msg *bus.Message) {
 		}
 	case "tick":
 		if msg, ok := msg.Data.(*bus.B_TimerTick); ok {
+			HQMutex.Lock()
 			if ActiveRequest != nil {
 				Gui.UpdateAsync(func(g *gocui.Gui) error {
 					HailPane.UpdateSubtitle()
@@ -94,6 +95,7 @@ func process(msg *bus.Message) {
 					hail.OnTick(hail, msg.Tick)
 				}
 			}
+			HQMutex.Unlock()
 		}
 	case "done":
 		if d, ok := msg.Data.(*bus.B_TimerDone); ok {

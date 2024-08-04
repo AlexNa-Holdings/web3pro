@@ -1,6 +1,7 @@
 package usb
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strconv"
@@ -31,16 +32,37 @@ const USB_IDS = "usb.ids"
 var usb_devices = []*USB_DEV{}
 var usb_devices_mutex = &sync.Mutex{}
 
+var rw_cancels = map[int]context.CancelFunc{} // timer id -> cancel
+var rw_mutex = &sync.Mutex{}
+
 func Init() {
 	init_usb_ids()
 	go Loop()
+}
+
+func addCancel(id int, cancel context.CancelFunc) {
+	rw_mutex.Lock()
+	defer rw_mutex.Unlock()
+	rw_cancels[id] = cancel
+}
+
+func doCancel(id int) {
+	rw_mutex.Lock()
+	defer rw_mutex.Unlock()
+
+	c, ok := rw_cancels[id]
+	if ok {
+		log.Debug().Msgf("Cancelling RW timer %d", id)
+		c()
+	}
+	delete(rw_cancels, id)
 }
 
 func Loop() {
 	ctx = gousb.NewContext()
 	defer ctx.Close()
 
-	ch := bus.Subscribe("usb")
+	ch := bus.Subscribe("usb", "timer")
 	enum_ticker := time.NewTicker(3 * time.Second)
 	for {
 		select {
@@ -57,81 +79,109 @@ func Loop() {
 }
 
 func process(msg *bus.Message) {
-	switch msg.Type {
-	case "list": // list all devices
-		list := bus.B_UsbList_Response{}
+	switch msg.Topic {
+	case "usb":
+		switch msg.Type {
+		case "list": // list all devices
+			list := bus.B_UsbList_Response{}
 
-		ctx.OpenDevices(func(desc *gousb.DeviceDesc) bool {
+			ctx.OpenDevices(func(desc *gousb.DeviceDesc) bool {
 
-			if desc.Path == nil || len(desc.Path) == 0 {
-				return false // skip
-			}
+				if desc.Path == nil || len(desc.Path) == 0 {
+					return false // skip
+				}
 
-			conn := GetUSBDevice(GetUSB_ID(desc))
-			connected := false
-			if conn != nil {
-				connected = conn.Device != nil
-			}
+				conn := GetUSBDevice(GetUSB_ID(desc))
+				connected := false
+				if conn != nil {
+					connected = conn.Device != nil
+				}
 
-			v, p := ResolveVendorProduct(uint16(desc.Vendor), uint16(desc.Product))
-			list = append(list, bus.B_UsbList_Device{
-				USB_ID:    GetUSB_ID(desc),
-				Path:      GetPath(desc),
-				Vendor:    v,
-				VendorID:  uint16(desc.Vendor),
-				Product:   p,
-				ProductID: uint16(desc.Product),
-				Connected: connected,
+				v, p := ResolveVendorProduct(uint16(desc.Vendor), uint16(desc.Product))
+				list = append(list, bus.B_UsbList_Device{
+					USB_ID:    GetUSB_ID(desc),
+					Path:      GetPath(desc),
+					Vendor:    v,
+					VendorID:  uint16(desc.Vendor),
+					Product:   p,
+					ProductID: uint16(desc.Product),
+					Connected: connected,
+				})
+				return false
 			})
-			return false
-		})
 
-		msg.Respond(list, nil)
-	case "write":
-		req, ok := msg.Data.(*bus.B_UsbWrite)
-		if !ok {
-			log.Error().Msg("Invalid message data")
-			msg.Respond(nil, bus.ErrInvalidMessageData)
-			return
-		}
+			msg.Respond(list, nil)
+		case "write":
+			req, ok := msg.Data.(*bus.B_UsbWrite)
+			if !ok {
+				log.Error().Msg("Invalid message data")
+				msg.Respond(nil, bus.ErrInvalidMessageData)
+				return
+			}
 
-		conn, err := OpenDevice(req.USB_ID)
-		if err != nil {
-			log.Error().Msg("Device not found")
-			msg.Respond(nil, errors.New("device not found"))
-			return
-		}
+			conn, err := OpenDevice(req.USB_ID)
+			if err != nil {
+				log.Error().Msg("Device not found")
+				msg.Respond(nil, errors.New("device not found"))
+				return
+			}
+			if msg.TimerID == 0 {
+				log.Error().Msg("TimerID is required for USD writing")
+				msg.Respond(nil, errors.New("TimerID is required"))
+				return
+			}
+			cancel_ctx, cancel := context.WithCancel(context.Background())
+			addCancel(msg.TimerID, cancel)
+			_, err = conn.EndpointOut.WriteContext(cancel_ctx, req.Data)
+			if err != nil {
+				log.Error().Err(err).Msg("Error writing to device")
+				msg.Respond(nil, err)
+				return
+			}
+			doCancel(msg.TimerID)
+			msg.Respond(nil, nil)
+		case "read":
+			req, ok := msg.Data.(*bus.B_UsbRead)
+			if !ok {
+				log.Error().Msg("Invalid message data")
+				msg.Respond(nil, bus.ErrInvalidMessageData)
+				return
+			}
+			conn, err := OpenDevice(req.USB_ID)
+			if err != nil {
+				log.Error().Msg("Device not found")
+				msg.Respond(nil, errors.New("device not found"))
+				return
+			}
 
-		_, err = conn.EndpointOut.Write(req.Data)
-		if err != nil {
-			log.Error().Err(err).Msg("Error writing to device")
-			msg.Respond(nil, err)
-			return
-		}
-		msg.Respond(nil, nil)
-	case "read":
-		req, ok := msg.Data.(*bus.B_UsbRead)
-		if !ok {
-			log.Error().Msg("Invalid message data")
-			msg.Respond(nil, bus.ErrInvalidMessageData)
-			return
-		}
-		conn, err := OpenDevice(req.USB_ID)
-		if err != nil {
-			log.Error().Msg("Device not found")
-			msg.Respond(nil, errors.New("device not found"))
-			return
-		}
+			if msg.TimerID == 0 {
+				log.Error().Msg("TimerID is required for USD reading")
+				msg.Respond(nil, errors.New("TimerID is required"))
+				return
+			}
 
-		data := make([]byte, conn.EndpointIn.Desc.MaxPacketSize)
-		n, err := conn.EndpointIn.Read(data)
-		if err != nil {
-			log.Error().Err(err).Msg("Error reading from device")
-			msg.Respond(nil, err)
-			return
-		}
+			cancel_ctx, cancel := context.WithCancel(context.Background())
+			addCancel(msg.TimerID, cancel)
+			data := make([]byte, conn.EndpointIn.Desc.MaxPacketSize)
+			n, err := conn.EndpointIn.ReadContext(cancel_ctx, data)
+			if err != nil {
+				log.Error().Err(err).Msg("Error reading from device")
+				msg.Respond(nil, err)
+				return
+			}
+			doCancel(msg.TimerID)
 
-		msg.Respond(&bus.B_UsbRead_Response{Data: data[:n]}, nil)
+			msg.Respond(&bus.B_UsbRead_Response{Data: data[:n]}, nil)
+		}
+	case "timer":
+		switch msg.Type {
+		case "done":
+			if d, ok := msg.Data.(*bus.B_TimerDone); ok {
+				doCancel(d.ID)
+			} else {
+				log.Error().Msg("Invalid message data")
+			}
+		}
 	}
 }
 

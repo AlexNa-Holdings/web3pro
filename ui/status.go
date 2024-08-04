@@ -77,4 +77,9 @@ func rebuidTemplate() {
 			tmp += fmt.Sprintf("Chain: %s (%s %s ) \n", b.Name, t.Symbol, cmn.FmtFloat64DN(t.Price))
 		}
 	}
+
+	Gui.Update(func(g *gocui.Gui) error {
+		Status.RenderTemplate(statusTemplate)
+		return nil
+	})
 }

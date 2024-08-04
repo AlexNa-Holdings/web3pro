@@ -93,10 +93,10 @@ func rawCall(usb_id string, apdu *APDU, data []byte, hail *bus.B_Hail, hail_dela
 		// Send over to the device
 		log.Trace().Msgf("Ledger: rawCall: Writing data chunk to the Ledger: %s", hexutil.Bytes(chunk))
 
-		resp := bus.Fetch("usb", "write", &bus.B_UsbWrite{
+		resp := bus.FetchWithHail("usb", "write", &bus.B_UsbWrite{
 			USB_ID: usb_id,
 			Data:   chunk,
-		})
+		}, hail, hail_delay+5) // Add 5s to complete the write
 
 		if resp.Error != nil {
 			log.Error().Err(resp.Error).Msg("Ledger: rawCall: Error writing to device")

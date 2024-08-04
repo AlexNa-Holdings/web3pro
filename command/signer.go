@@ -40,6 +40,10 @@ func Signer_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 	p := cmn.SplitN(input, 4)
 	command, subcommand, param, p3 := p[0], p[1], p[2], p[3]
 
+	if cmn.CurrentWallet == nil {
+		return "", &options, ""
+	}
+
 	if !cmn.IsInArray(signer_subcommands, subcommand) {
 		for _, sc := range signer_subcommands {
 			if input == "" || strings.Contains(sc, subcommand) {
