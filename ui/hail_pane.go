@@ -157,7 +157,7 @@ func (p *HailPaneType) open(m *bus.Message) {
 func (p *HailPaneType) UpdateSubtitle() {
 	if HailPane.View != nil && ActiveRequest != nil {
 
-		left := bus.GetTimerSecondsLeft(ActiveRequest.TimerID)
+		left := int(bus.GetTimeLeft(ActiveRequest.TimerID).Seconds())
 
 		if left < 10 {
 			p.SubTitleBgColor = Theme.ErrorFgColor

@@ -33,7 +33,7 @@ Please unlock your Ledger device
 				},
 			})
 		default:
-			log.Debug().Err(err).Msg("Error calling ledger")
+			log.Error().Err(err).Msg("Error calling ledger")
 			return nil, err
 		}
 	}

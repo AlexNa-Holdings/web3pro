@@ -52,7 +52,6 @@ func doCancel(id int) {
 
 	c, ok := rw_cancels[id]
 	if ok {
-		log.Debug().Msgf("Cancelling RW timer %d", id)
 		c()
 	}
 	delete(rw_cancels, id)

@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"time"
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/rs/zerolog"
@@ -24,15 +25,15 @@ var ConfPath = CONFIG_NAME
 var ConfigChanged = false
 
 type SConfig struct {
-	WalletName             string `yaml:"wallet_name"`              // last wallet used
-	Verbosity              string `yaml:"verbosity"`                // log verbosity
-	Theme                  string `yaml:"theme"`                    // UI theme
-	BusTimeout             int    `yaml:"bus_timeout"`              // timeout for bus requests
-	BusHardTimeout         int    `yaml:"bus_hard_timeout"`         // hard timeout for bus requests
-	USBLog                 bool   `yaml:"usb_log"`                  // log USB events
-	USBBackgroundEnumerate bool   `yaml:"usb_background_enumerate"` // enumerate USB devices in background
-	PriceFeed              string `yaml:"price_feed"`               // price feed
-	PriceUpdatePeriod      string `yaml:"price_update_period"`      // price update period
+	WalletName             string        `yaml:"wallet_name"`              // last wallet used
+	Verbosity              string        `yaml:"verbosity"`                // log verbosity
+	Theme                  string        `yaml:"theme"`                    // UI theme
+	BusTimeout             time.Duration `yaml:"bus_timeout"`              // timeout for bus requests
+	BusHardTimeout         time.Duration `yaml:"bus_hard_timeout"`         // hard timeout for bus requests
+	USBLog                 bool          `yaml:"usb_log"`                  // log USB events
+	USBBackgroundEnumerate bool          `yaml:"usb_background_enumerate"` // enumerate USB devices in background
+	PriceFeed              string        `yaml:"price_feed"`               // price feed
+	PriceUpdatePeriod      string        `yaml:"price_update_period"`      // price update period
 }
 
 var Config *SConfig = &SConfig{ //Default config

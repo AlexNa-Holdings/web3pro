@@ -56,8 +56,8 @@ func process(msg *bus.Message) {
 		if hail, ok := msg.Data.(*bus.B_Hail); ok {
 			log.Trace().Msgf("Hail received: %s", hail.Title)
 
-			if hail.TimeoutSec == 0 {
-				hail.TimeoutSec = cmn.Config.BusTimeout
+			if hail.Timeout == 0 {
+				hail.Timeout = cmn.Config.BusTimeout
 			}
 			if on_top := add(msg); on_top {
 				HailPane.open(msg)

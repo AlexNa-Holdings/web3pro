@@ -21,8 +21,8 @@ type Message struct {
 	RespondTo int
 }
 
-var BusTimeout = 60
-var BusHardTimeout = 120
+var BusTimeout = 60 * time.Second
+var BusHardTimeout = 120 * time.Second
 
 var ErrInvalidMessageData = errors.New("invalid message data")
 
@@ -154,7 +154,7 @@ func FetchWithHail(topic, t string, data interface{}, hail *B_Hail, hail_delay i
 		hail_delay)
 }
 
-func FetchEx(topic, t string, data interface{}, limit int, hardlimit int, hail *B_Hail, hail_delay int) *Message {
+func FetchEx(topic, t string, data interface{}, limit time.Duration, hardlimit time.Duration, hail *B_Hail, hail_delay int) *Message {
 
 	if topic == "timer" {
 		return &Message{Error: errors.New("invalid topic to fetch")}
@@ -168,9 +168,9 @@ func FetchEx(topic, t string, data interface{}, limit int, hardlimit int, hail *
 	defer Unsubscribe(ch)
 
 	timer_id := Send("timer", "init", &B_TimerInit{
-		LimitSeconds:     limit,
-		HardLimitSeconds: hardlimit,
-		Start:            true,
+		Limit:     limit,
+		HardLimit: hardlimit,
+		Start:     true,
 	})
 
 	id := SendEx(topic, t, data, timer_id, 0, nil)

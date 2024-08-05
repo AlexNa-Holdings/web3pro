@@ -1,15 +1,17 @@
 package bus
 
 import (
+	"time"
+
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/ethereum/go-ethereum/common"
 )
 
 // ---------- timer ----------
 type B_TimerInit struct { // init
-	LimitSeconds     int
-	HardLimitSeconds int
-	Start            bool
+	Limit     time.Duration
+	HardLimit time.Duration
+	Start     bool
 }
 
 type B_TimerStart struct { // start
@@ -33,7 +35,7 @@ type B_TimerTrigger struct { // trigger
 
 type B_TimerTick struct { // tick
 	Tick int
-	Left map[int]int // id -> seconds left
+	Left map[int]time.Duration // id -> seconds left
 }
 
 type B_TimerPause struct { // pause
@@ -58,7 +60,7 @@ type B_Hail struct { // hail
 	OnClickHotspot func(hr *B_Hail, v *gocui.View, hs *gocui.Hotspot)
 	OnOverHotspot  func(hr *B_Hail, v *gocui.View, hs *gocui.Hotspot)
 	Suspended      bool
-	TimeoutSec     int // in seconds
+	Timeout        time.Duration // in seconds
 	TimerPaused    bool
 }
 

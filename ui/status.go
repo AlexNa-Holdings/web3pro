@@ -44,7 +44,7 @@ func (p *StatusPane) SetView(g *gocui.Gui, x0, y0, x1, y1 int) {
 }
 
 func StatusLoop() {
-	ch := bus.Subscribe("signer", "wallet")
+	ch := bus.Subscribe("signer", "wallet", "price")
 	defer bus.Unsubscribe(ch)
 
 	for msg := range ch {
@@ -59,12 +59,16 @@ func StatusLoop() {
 			case "connected":
 				rebuidTemplate()
 			}
+		case "price":
+			switch msg.Type {
+			case "updated":
+				rebuidTemplate()
+			}
 		}
 	}
 }
 
 func rebuidTemplate() {
-	log.Debug().Msg("STATUS: rebuidTemplate")
 	temp := "<w>"
 
 	// connected devices
@@ -91,8 +95,9 @@ func rebuidTemplate() {
 			}
 		}
 	}
-
-	temp += fmt.Sprintf("HW: %s\n", cd)
+	if cd != "" {
+		temp += fmt.Sprintf("HW: %s\n", cd)
+	}
 
 	if cmn.CurrentWallet != nil {
 		w := cmn.CurrentWallet
@@ -105,7 +110,18 @@ func rebuidTemplate() {
 				return
 			}
 
-			temp += fmt.Sprintf("Chain: %s (%s %s ) \n", b.Name, t.Symbol, cmn.FmtFloat64DN(t.Price))
+			change := ""
+			if t.PraceChange24 > 0 {
+				change = fmt.Sprintf("<color fg:green>▲%2.f</color>", t.PraceChange24)
+			}
+			if t.PraceChange24 < 0 {
+				change = fmt.Sprintf("<color fg:red>▼%2.f</color>", t.PraceChange24)
+			}
+
+			temp += fmt.Sprintf("Chain: %s | %s %s%s \n",
+				b.Name, t.Symbol,
+				cmn.FmtFloat64D(t.Price, false),
+				change)
 		}
 	}
 

@@ -4,6 +4,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/rs/zerolog/log"
 )
@@ -75,6 +76,8 @@ func Update(w *cmn.Wallet) error {
 		if err != nil {
 			log.Error().Msgf("Update: failed to save wallet: %v", err)
 		}
+
+		bus.Send("price", "updated", nil)
 
 		cmn.Notify("Token prices updated")
 	}

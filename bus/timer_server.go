@@ -9,12 +9,12 @@ import (
 )
 
 type BusTimer struct {
-	LimitSeconds     int
-	HardLimitSeconds int
+	Limit     time.Duration
+	HardLimit time.Duration
 
-	paused        bool
-	lapsedSeconds int
-	starTime      time.Time
+	paused   bool
+	lapsed   time.Duration
+	starTime time.Time
 }
 
 var timers = make(map[int]*BusTimer)
@@ -23,7 +23,7 @@ var nextCheckTimer *time.Timer = time.NewTimer(0)
 var tick_timer *time.Ticker = time.NewTicker(1 * time.Second)
 var tick = 0
 
-func GetTimerSecondsLeft(id int) int {
+func GetTimeLeft(id int) time.Duration {
 	mu.Lock()
 	defer mu.Unlock()
 
@@ -33,12 +33,12 @@ func GetTimerSecondsLeft(id int) int {
 	}
 
 	if t.paused {
-		return t.LimitSeconds - t.lapsedSeconds
+		return t.Limit - t.lapsed
 	}
 
 	now := time.Now()
-	lapsed := t.lapsedSeconds + int(now.Sub(t.starTime).Seconds())
-	return t.LimitSeconds - lapsed
+	lapsed := t.lapsed + now.Sub(t.starTime)
+	return t.Limit - lapsed
 }
 
 func ProcessTimers() {
@@ -107,7 +107,7 @@ func ProcessTimers() {
 						log.Error().Msgf("Timer %d does not exist", d.ID)
 						msg.Respond("ERROR", errors.New("timer does not exist"))
 					} else {
-						t.lapsedSeconds = t.LimitSeconds
+						t.lapsed = t.Limit
 						t.paused = false
 						msg.Respond("OK", nil)
 					}
@@ -129,7 +129,7 @@ func ProcessTimers() {
 			updateTimers()
 		case <-tick_timer.C:
 			mu.Lock()
-			left := make(map[int]int)
+			left := make(map[int]time.Duration)
 			tick++
 
 			for id, t := range timers {
@@ -137,8 +137,7 @@ func ProcessTimers() {
 					continue
 				}
 				now := time.Now()
-				lapsed := t.lapsedSeconds + int(now.Sub(t.starTime).Seconds())
-				left[id] = t.LimitSeconds - lapsed
+				left[id] = t.Limit - (t.lapsed + now.Sub(t.starTime))
 			}
 			mu.Unlock()
 			Send("timer", "tick", &B_TimerTick{
@@ -160,34 +159,30 @@ func updateTimers() {
 		nextCheckTimer.Stop()
 	}
 
-	earliest_time_to_update := time.Now().Add(time.Hour)
+	update_after := 60 * time.Minute // 1 hour
 	timer_needed := false
 
 	for id, t := range timers {
-		if t.paused {
-			continue
-		}
-		lapsed := t.lapsedSeconds + int(time.Since(t.starTime).Seconds())
-		if lapsed >= t.LimitSeconds {
-			Send("timer", "done", &B_TimerDone{
-				ID: id,
-			})
-			delete(timers, id) // remove timer
-			continue
-		}
+		if !t.paused {
+			l := t.lapsed + time.Since(t.starTime)
+			if l >= t.Limit {
+				Send("timer", "done", &B_TimerDone{
+					ID: id,
+				})
+				delete(timers, id) // remove timer
+				continue
+			}
+			fires_in := t.Limit - l
+			if update_after > fires_in {
+				update_after = fires_in
+			}
 
-		time_to_update := t.starTime.Add(time.Duration(t.LimitSeconds) * time.Second)
-		if time_to_update.Before(earliest_time_to_update) {
-			earliest_time_to_update = time_to_update
+			timer_needed = true
 		}
-
-		timer_needed = true
 	}
 
-	if !timer_needed {
-		nextCheckTimer = time.AfterFunc(time.Until(earliest_time_to_update), func() {
-			updateTimers()
-		})
+	if timer_needed {
+		nextCheckTimer = time.NewTimer(update_after)
 	}
 
 }
@@ -199,15 +194,15 @@ func timer_init(id int, d *B_TimerInit) {
 		log.Warn().Msgf("Timer %d already exists", id)
 	}
 
-	if d.LimitSeconds > d.HardLimitSeconds {
+	if d.Limit > d.HardLimit {
 		log.Warn().Msgf("Timer %d has a limit greater than the hard limit", id)
 	}
 
 	timers[id] = &BusTimer{
-		paused:           true,
-		LimitSeconds:     d.LimitSeconds,
-		HardLimitSeconds: d.HardLimitSeconds,
-		lapsedSeconds:    0,
+		paused:    true,
+		Limit:     d.Limit,
+		HardLimit: d.HardLimit,
+		lapsed:    0,
 	}
 	mu.Unlock()
 
@@ -231,7 +226,7 @@ func timer_start(id int) {
 		return
 	}
 
-	if t.lapsedSeconds >= t.LimitSeconds {
+	if t.lapsed >= t.Limit {
 		log.Warn().Msgf("Timer %d has reached its limit", id)
 		return
 	}
@@ -256,7 +251,7 @@ func timer_pause(id int) {
 	}
 
 	t.paused = true
-	t.lapsedSeconds += int(time.Since(t.starTime).Seconds())
+	t.lapsed += time.Since(t.starTime)
 }
 
 func timer_reset(id int) {
@@ -269,20 +264,20 @@ func timer_reset(id int) {
 		return
 	}
 
-	lapsed := t.lapsedSeconds
+	l := t.lapsed
 	if !t.paused {
-		lapsed += int(time.Since(t.starTime).Seconds())
+		l += time.Since(t.starTime)
 	}
 
-	if lapsed >= t.HardLimitSeconds {
+	if l >= t.HardLimit {
 		log.Warn().Msgf("Timer %d has reached its hard limit", id)
 		return
 	}
 
-	t.lapsedSeconds = 0
-	t.HardLimitSeconds -= lapsed
-	if t.LimitSeconds > t.HardLimitSeconds {
-		t.lapsedSeconds = t.HardLimitSeconds
+	t.lapsed = 0
+	t.HardLimit -= l
+	if t.Limit > t.HardLimit {
+		t.lapsed = t.HardLimit
 	}
 	t.starTime = time.Now()
 }
