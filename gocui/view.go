@@ -1677,7 +1677,7 @@ func EstimateTemplateLines(template string, width int) int {
 		return 0
 	}
 
-	autowrap := false
+	autowrap := strings.HasPrefix(strings.TrimSpace(template), "<w>")
 
 	for ln, line := range lines {
 
@@ -1750,7 +1750,7 @@ func EstimateTemplateLines(template string, width int) int {
 func (v *View) RenderTemplate(template string) error {
 	v.Clear()
 
-	width := v.x1 - v.x0 - 1
+	width := v.x1 - v.x0
 
 	if width < 3 {
 		return nil // no space to render
@@ -1773,7 +1773,7 @@ func (v *View) RenderTemplate(template string) error {
 	strikethrough := false
 	var FGColor, BGColor *Attribute
 
-	autowrap := false
+	autowrap := strings.HasPrefix(strings.TrimSpace(template), "<w>")
 
 	for ln, line := range lines {
 
@@ -2020,6 +2020,5 @@ func calcLineWidth(line string) int {
 		tagName, tagParams := ParseTag(tag)
 		l = l - utf8.RuneCountInString(tag) + GetTagLength(tagName, tagParams)
 	}
-
 	return l
 }
