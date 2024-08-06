@@ -136,7 +136,7 @@ func rebuidTemplate() {
 
 	Gui.Update(func(g *gocui.Gui) error {
 		if Status.View == nil {
-			Status.PaneDescriptor.On = true
+			Status.PaneDescriptor.ShowPane()
 		} else {
 			Status.View.RenderTemplate(statusTemplate)
 		}

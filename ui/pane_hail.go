@@ -15,7 +15,13 @@ type HailPaneType struct {
 	PaneDescriptor
 }
 
-var HailPane HailPaneType = HailPaneType{}
+var HailPane HailPaneType = HailPaneType{
+	PaneDescriptor: PaneDescriptor{
+		MinWidth:    33,
+		MinHeight:   1,
+		fixed_width: true,
+	},
+}
 
 var ActiveRequest *bus.Message
 var HailQueue []*bus.Message
@@ -64,6 +70,9 @@ func (p *HailPaneType) SetView(x0, y0, x1, y1 int) {
 				}
 			}
 		}
+
+		v.OnResize(v) // render template
+
 		v.OnClickTitle = func(v *gocui.View) { // reset timer
 			bus.Send("timer", "reset", &bus.B_TimerReset{ID: ActiveRequest.TimerID})
 			Gui.UpdateAsync(func(g *gocui.Gui) error {
@@ -183,7 +192,7 @@ func remove(m *bus.Message) {
 		} else {
 			Gui.DeleteView("hail")
 			HailPane.View = nil
-			Flush()
+			HailPane.PaneDescriptor.HidePane()
 		}
 	}
 }
@@ -220,12 +229,8 @@ func (p *HailPaneType) open(m *bus.Message) {
 		hail.Suspended = false
 	}
 
-	maxX, _ := Gui.Size()
-	n_lines := gocui.EstimateTemplateLines(hail.Template, maxX/2)
-	HailPane.MinHeight = n_lines + 2
-
 	if HailPane.View == nil {
-		HailPane.SetView(0, 0, maxX/2, n_lines)
+		HailPane.PaneDescriptor.ShowPane()
 	} else {
 		if hail.Template != "" {
 			HailPane.View.RenderTemplate(hail.Template)

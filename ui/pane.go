@@ -15,3 +15,13 @@ type PaneDescriptor struct {
 	fixed_width bool
 	View        *gocui.View
 }
+
+func (p *PaneDescriptor) ShowPane() {
+	p.On = true
+	Flush()
+}
+
+func (p *PaneDescriptor) HidePane() {
+	p.On = false
+	Flush()
+}
