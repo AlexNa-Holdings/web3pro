@@ -234,7 +234,8 @@ func (g *Gui) Rune(x, y int) (rune, error) {
 // be initialized. It checks if the position is valid.
 func (g *Gui) SetView(name string, x0, y0, x1, y1 int, overlaps byte) (*View, error) {
 	if x0 >= x1 {
-		return nil, errors.New("invalid dimensions")
+		//return nil, errors.New("invalid dimensions")
+		x1 = x0 + 1 //A.N.
 	}
 	if name == "" {
 		return nil, errors.New("invalid name")

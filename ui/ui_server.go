@@ -40,6 +40,22 @@ func Init() {
 	}
 }
 
+func SetKeybindings() error {
+	if err := Gui.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, quit); err != nil {
+		log.Fatal().Msgf("error setting keybinding: %v", err)
+	}
+
+	if err := Gui.SetKeybinding("terminal.autocomplete", gocui.MouseLeft, gocui.ModNone, OnAutocompleteMouseDown); err != nil {
+		log.Fatal().Msgf("error setting keybinding: %v", err)
+	}
+	return nil
+}
+
+func quit(g *gocui.Gui, v *gocui.View) error {
+	log.Info().Msg("Quitting")
+	return gocui.ErrQuit
+}
+
 func Loop() {
 	ch := bus.Subscribe("ui", "timer")
 	defer bus.Unsubscribe(ch)

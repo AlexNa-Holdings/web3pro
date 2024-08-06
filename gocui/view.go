@@ -1670,6 +1670,7 @@ func EstimateTemplateLines(template string, width int) int {
 		return 0 // no space to render
 	}
 
+	re := regexp.MustCompile(REGEX_TAGS)
 	lines := strings.Split(template, "\n")
 
 	if len(lines) == 0 {
@@ -1678,7 +1679,13 @@ func EstimateTemplateLines(template string, width int) int {
 
 	autowrap := false
 
-	for _, line := range lines {
+	for ln, line := range lines {
+
+		if strings.Contains(line, "\t") {
+			log.Warn().Msgf("tabs are not allowed in templates : %s", line)
+			line = strings.ReplaceAll(line, "\t", " ")
+		}
+
 		splitted_lines := []string{}
 
 		if autowrap {
@@ -1717,10 +1724,27 @@ func EstimateTemplateLines(template string, width int) int {
 		}
 
 		splitted_lines = append(splitted_lines, line)
-		n_lines += len(splitted_lines)
-	}
 
-	return n_lines + 1
+		for sln, l := range splitted_lines {
+			matches := re.FindAllStringIndex(l, -1)
+			for _, match := range matches {
+				tag := l[match[0]:match[1]]
+				tagName, _ := ParseTag(tag)
+
+				switch tagName {
+				case "w":
+					autowrap = true
+				case "/w":
+					autowrap = false
+				}
+			}
+
+			if ln < len(lines)-1 || sln < len(splitted_lines)-1 {
+				n_lines++
+			}
+		}
+	}
+	return n_lines
 }
 
 func (v *View) RenderTemplate(template string) error {
