@@ -33,6 +33,7 @@ Address: %s
 		OnOpen: func(v *gocui.View) {
 			name := ""
 			dp := strings.Split(path, "/")
+			dp = append(dp[:], make([]string, 7-len(dp))...) // pad with empty strings
 			if len(dp) >= 5 {
 
 				p3, _ := strconv.Atoi(strings.TrimSuffix(dp[3], "'"))

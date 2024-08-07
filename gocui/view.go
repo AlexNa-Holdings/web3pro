@@ -1679,7 +1679,7 @@ func EstimateTemplateLines(template string, width int) int {
 
 	autowrap := strings.Contains(lines[0], "<w>")
 
-	for _, line := range lines {
+	for ln, line := range lines {
 
 		if strings.Contains(line, "\t") {
 			log.Warn().Msgf("tabs are not allowed in templates : %s", line)
@@ -1726,7 +1726,7 @@ func EstimateTemplateLines(template string, width int) int {
 
 		splitted_lines = append(splitted_lines, line)
 
-		for _, l := range splitted_lines {
+		for sln, l := range splitted_lines {
 			matches := re.FindAllStringIndex(l, -1)
 			for _, match := range matches {
 				tag := l[match[0]:match[1]]
@@ -1740,7 +1740,9 @@ func EstimateTemplateLines(template string, width int) int {
 				}
 			}
 
-			n_lines++
+			if ln != len(lines)-1 || sln != len(splitted_lines)-1 || len(l) > 0 {
+				n_lines++
+			}
 		}
 	}
 	return n_lines

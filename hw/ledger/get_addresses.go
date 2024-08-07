@@ -30,8 +30,6 @@ func get_addresses(m *bus.B_SignerGetAddresses) (*bus.B_SignerGetAddresses_Respo
 	for i := 0; i < m.Count; i++ {
 		path := fmt.Sprintf(m.Path, m.StartFrom+i)
 
-		log.Debug().Msgf("Getting address for path: %s", path)
-
 		bipPath, err := accounts.ParseDerivationPath(path)
 		if err != nil {
 			return rd, fmt.Errorf("error parsing path: %s", err)
@@ -45,13 +43,13 @@ func get_addresses(m *bus.B_SignerGetAddresses) (*bus.B_SignerGetAddresses_Respo
 			return rd, err
 		}
 
-		pubKey, addr, err := parseGetAddressResponse(r)
+		_, addr, err := parseGetAddressResponse(r)
 		if err != nil {
 			return rd, fmt.Errorf("error parsing get address response: %s", err)
 		}
 
 		rd.Addresses = append(rd.Addresses, addr)
-		rd.Paths = append(rd.Paths, pubKey)
+		rd.Paths = append(rd.Paths, path)
 	}
 
 	return rd, nil
@@ -64,20 +62,12 @@ func parseGetAddressResponse(r []byte) (string, common.Address, error) {
 
 	pubKey := hexutil.Encode(r[1:65])
 	r = r[1+int(r[0]):]
-
-	log.Debug().Msgf("r 1 %s", hexutil.Encode(r))
-
 	hexstr := r[1 : 1+int(r[0])]
-
-	log.Debug().Msgf("r 2 %s", hexutil.Encode(hexstr))
 
 	var addr common.Address
 	if _, err := hex.Decode(addr[:], hexstr); err != nil {
 		return pubKey, common.Address{}, err
 	}
-
-	// addr := common.BytesToAddress(r[65:])
-
 	return pubKey, addr, nil
 }
 
