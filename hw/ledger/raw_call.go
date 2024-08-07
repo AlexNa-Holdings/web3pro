@@ -34,6 +34,7 @@ var StatusCodes = map[int]string{
 	0x6734: "INVALID_CHUNK_LENGTH",
 	0x684a: "INVALID_BACKUP_HEADER",
 	0x6800: "MISSING_CRITICAL_PARAMETER",
+	0x6807: "REQUESTED APP IS NOT PRESENT",
 	0x6981: "COMMAND_INCOMPATIBLE_FILE_STRUCTURE",
 	0x6982: "SECURITY_STATUS_NOT_SATISFIED",
 	0x6985: "CONDITIONS_OF_USE_NOT_SATISFIED",
@@ -158,6 +159,8 @@ func rawCall(usb_id string, apdu *APDU, data []byte, hail *bus.B_Hail, hail_dela
 		}
 	}
 
+	log.Debug().Msgf("Ledger: rawCall: Complete Reply: %s", hexutil.Bytes(reply))
+
 	rc := int(binary.BigEndian.Uint16(reply[len(reply)-2:]))
 	if rc != 0x9000 {
 		if msg, ok := StatusCodes[rc]; ok {
@@ -166,7 +169,7 @@ func rawCall(usb_id string, apdu *APDU, data []byte, hail *bus.B_Hail, hail_dela
 		return nil, fmt.Errorf("Ledger: rawCall: Error response from device: %x", rc)
 	}
 
-	log.Debug().Msgf("Ledger: rawCall: Reply: %s", hexutil.Bytes(reply))
+	log.Debug().Msgf("Ledger: rawCall: Reply: %s", hexutil.Bytes(reply[:len(reply)-2]))
 
 	return reply[:len(reply)-2], nil
 }

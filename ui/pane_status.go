@@ -103,7 +103,7 @@ func rebuidTemplate() {
 		}
 	}
 	if cd != "" {
-		temp += fmt.Sprintf("HW: %s\n", cd)
+		temp += fmt.Sprintf("<b>HW:</b> %s\n", cd)
 	}
 
 	if cmn.CurrentWallet != nil {
@@ -119,13 +119,13 @@ func rebuidTemplate() {
 
 			change := ""
 			if t.PraceChange24 > 0 {
-				change = fmt.Sprintf("<color fg:green>▲%2.f%%</color>", t.PraceChange24)
+				change = fmt.Sprintf("<color fg:green>\uf0d8%.2f%%</color>", t.PraceChange24)
 			}
 			if t.PraceChange24 < 0 {
-				change = fmt.Sprintf("<color fg:red>▼%2.f%%</color>", t.PraceChange24)
+				change = fmt.Sprintf("<color fg:red>\uf0d7%.2f%%</color>", t.PraceChange24)
 			}
 
-			temp += fmt.Sprintf("Chain: %s | %s %s%s \n",
+			temp += fmt.Sprintf("<b>Chain:</b> %s | %s %s%s\n",
 				b.Name, t.Symbol,
 				cmn.FmtFloat64D(t.Price, false),
 				change)

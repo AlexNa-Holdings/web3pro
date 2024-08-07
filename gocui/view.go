@@ -1677,9 +1677,9 @@ func EstimateTemplateLines(template string, width int) int {
 		return 0
 	}
 
-	autowrap := strings.HasPrefix(strings.TrimSpace(template), "<w>")
+	autowrap := strings.Contains(lines[0], "<w>")
 
-	for ln, line := range lines {
+	for _, line := range lines {
 
 		if strings.Contains(line, "\t") {
 			log.Warn().Msgf("tabs are not allowed in templates : %s", line)
@@ -1690,6 +1690,7 @@ func EstimateTemplateLines(template string, width int) int {
 
 		if autowrap {
 			spaces := []int{}
+
 			for calcLineWidth(line) > width && len(line) > 0 {
 				in_tag := false
 				for i, r := range line {
@@ -1725,7 +1726,7 @@ func EstimateTemplateLines(template string, width int) int {
 
 		splitted_lines = append(splitted_lines, line)
 
-		for sln, l := range splitted_lines {
+		for _, l := range splitted_lines {
 			matches := re.FindAllStringIndex(l, -1)
 			for _, match := range matches {
 				tag := l[match[0]:match[1]]
@@ -1739,9 +1740,7 @@ func EstimateTemplateLines(template string, width int) int {
 				}
 			}
 
-			if ln < len(lines)-1 || sln < len(splitted_lines)-1 {
-				n_lines++
-			}
+			n_lines++
 		}
 	}
 	return n_lines
@@ -1750,7 +1749,7 @@ func EstimateTemplateLines(template string, width int) int {
 func (v *View) RenderTemplate(template string) error {
 	v.Clear()
 
-	width := v.x1 - v.x0
+	width := v.x1 - v.x0 - 1
 
 	if width < 3 {
 		return nil // no space to render
@@ -1773,7 +1772,7 @@ func (v *View) RenderTemplate(template string) error {
 	strikethrough := false
 	var FGColor, BGColor *Attribute
 
-	autowrap := strings.HasPrefix(strings.TrimSpace(template), "<w>")
+	autowrap := strings.Contains(lines[0], "<w>")
 
 	for ln, line := range lines {
 
@@ -1786,7 +1785,8 @@ func (v *View) RenderTemplate(template string) error {
 
 		if autowrap {
 			spaces := []int{}
-			for calcLineWidth(line) > width && len(line) > 0 {
+
+			for len(line) > 0 && calcLineWidth(line) > width {
 				in_tag := false
 				for i, r := range line {
 					switch r {

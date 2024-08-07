@@ -110,8 +110,12 @@ func Unsubscribe(ch chan *Message) {
 }
 
 func SendEx(topic, t string, data interface{}, timer_id int, respond_to int, err error) int {
-	if topic != "timer" {
-		log.Trace().Msgf("bus.Sending to %s: %s error: %v", topic, t, err)
+	if t != "tick" {
+		if respond_to != 0 {
+			log.Trace().Msgf("   %04d->%s: %s respond to: %d, error: %v", cb.NextID, topic, t, respond_to, err)
+		} else {
+			log.Trace().Msgf("   %04d->%s: %s", cb.NextID, topic, t)
+		}
 	}
 
 	cb.M.Lock()
@@ -174,6 +178,8 @@ func FetchEx(topic, t string, data interface{}, limit time.Duration, hardlimit t
 	})
 
 	id := SendEx(topic, t, data, timer_id, 0, nil)
+
+	log.Trace().Msgf("   FETCH %04d->%s: %s timer_id: %d", id, topic, t, timer_id)
 
 	timer := time.After(time.Duration(hail_delay) * time.Second)
 	for {

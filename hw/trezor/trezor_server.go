@@ -49,14 +49,18 @@ func process(msg *bus.Message) {
 	case "signer":
 		switch msg.Type {
 		case "is-connected":
-			if m, ok := msg.Data.(*bus.B_SignerIsConnected); ok && m.Type == TRZ {
-				msg.Respond(&bus.B_SignerIsConnected_Response{Connected: find_by_name(m.Name) != nil}, nil)
+			if m, ok := msg.Data.(*bus.B_SignerIsConnected); ok {
+				if m.Type != TRZ {
+					msg.Respond(&bus.B_SignerIsConnected_Response{Connected: find_by_name(m.Name) != nil}, nil)
+				}
 			} else {
 				log.Error().Msg("Loop: Invalid hw is-connected data")
 			}
 		case "get-addresses":
-			if m, ok := msg.Data.(*bus.B_SignerGetAddresses); ok && m.Type == TRZ {
-				msg.Respond(get_addresses(m))
+			if m, ok := msg.Data.(*bus.B_SignerGetAddresses); ok {
+				if m.Type == TRZ {
+					msg.Respond(get_addresses(m))
+				}
 			} else {
 				log.Error().Msg("Loop: Invalid hw get-addresses data")
 			}

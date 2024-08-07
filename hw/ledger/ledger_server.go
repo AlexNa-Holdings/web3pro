@@ -2,6 +2,7 @@ package ledger
 
 import (
 	"encoding/binary"
+	"fmt"
 	"sync"
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
@@ -21,6 +22,23 @@ type APDU struct {
 	p1      byte
 	p2      byte
 }
+
+var CLEANING_APDU = APDU{0xe0, 0x50, 0x00, 0x00}
+var GET_DEVICE_NAME_APDU = APDU{0xe0, 0xd2, 0x00, 0x00}
+var GET_INFO_APDU = APDU{0xb0, 0x01, 0x00, 0x00}
+var GET_QUIT_APP_APDU = APDU{0xb0, 0xa7, 0x00, 0x00}
+var GET_LAUNCH_APP_APDU = APDU{0xe0, 0xd8, 0x00, 0x00}
+var BACKUP_APP_STORAGE = APDU{0xe0, 0x6b, 0x00, 0x00}
+var GET_APP_STORAGE_INFO = APDU{0xe0, 0x6a, 0x00, 0x00}
+var RESTORE_APP_STORAGE = APDU{0xe0, 0x6d, 0x00, 0x00}
+var RESTORE_APP_STORAGE_COMMIT = APDU{0xe0, 0x6e, 0x00, 0x00}
+var RESTORE_APP_STORAGE_INIT = APDU{0xe0, 0x6c, 0x00, 0x00}
+var GET_ADDRESS_APDU = APDU{0xe0, 0x03, 0x00, 0x00}
+
+// GET_VERSION: 0x02,
+// GET_ADDRESS: 0x03,
+// SET_ADDRESS: 0x05,
+// PROVIDE_ESDT_INFO: 0x08,
 
 var ledgers = []*Ledger{}
 var ledgers_mutex = &sync.Mutex{}
@@ -44,8 +62,8 @@ func process(msg *bus.Message) {
 	case "usb":
 		switch msg.Type {
 		case "connected":
-			log.Debug().Msg("Ledger usb connected")
 			if m, ok := msg.Data.(*bus.B_UsbConnected); ok && m.Vendor == "Ledger" {
+				log.Debug().Msg("Ledger usb connected")
 				connected(m)
 			}
 		case "disconnected":
@@ -58,14 +76,18 @@ func process(msg *bus.Message) {
 	case "signer":
 		switch msg.Type {
 		case "is-connected":
-			if m, ok := msg.Data.(*bus.B_SignerIsConnected); ok && m.Type == LDG {
-				msg.Respond(&bus.B_SignerIsConnected_Response{Connected: find_by_name(m.Name) != nil}, nil)
+			if m, ok := msg.Data.(*bus.B_SignerIsConnected); ok {
+				if m.Type == LDG {
+					msg.Respond(&bus.B_SignerIsConnected_Response{Connected: find_by_name(m.Name) != nil}, nil)
+				}
 			} else {
 				log.Error().Msg("Loop: Invalid hw is-connected data")
 			}
 		case "get-addresses":
-			if m, ok := msg.Data.(*bus.B_SignerGetAddresses); ok && m.Type == LDG {
-				msg.Respond(get_addresses(m))
+			if m, ok := msg.Data.(*bus.B_SignerGetAddresses); ok {
+				if m.Type == LDG {
+					msg.Respond(get_addresses(m))
+				}
 			} else {
 				log.Error().Msg("Loop: Invalid hw get-addresses data")
 			}
@@ -144,6 +166,8 @@ func disconnected(m *bus.B_UsbDisconnected) {
 }
 
 func find_by_name(name []string) *Ledger {
+	log.Debug().Msgf("find_by_name: %v", name)
+
 	ledgers_mutex.Lock()
 	defer ledgers_mutex.Unlock()
 
@@ -155,10 +179,15 @@ func find_by_name(name []string) *Ledger {
 		}
 	}
 
+	log.Debug().Msg("find_by_name: not found")
+
 	// if not found let's try to initialize those without a name
 	//check if there are not initialized ledgers
 	for _, t := range ledgers {
 		if t.Name == "" {
+
+			log.Debug().Msgf("find_by_name: initializing %s", t.USB_ID)
+
 			n, err := getName(t.USB_ID)
 			if err != nil {
 				log.Error().Err(err).Msg("Error initializing ledger")
@@ -231,4 +260,76 @@ Please connect your Ledger device:
 	})
 
 	return t
+}
+
+func provide_eth_app(usb_id string, needed_app string) error {
+
+	log.Debug().Msgf("provide_eth_app: %s %s", usb_id, needed_app)
+
+	r, err := call(usb_id, &GET_INFO_APDU, nil, generalHail, 5)
+	if err != nil {
+		log.Error().Err(err).Msgf("provide_eth_app: Error getting device name: %s", usb_id)
+		return err
+	}
+
+	name, ver, err := parseGetInfoResponse(r)
+	if err != nil {
+		log.Error().Err(err).Msg("provide_eth_app: Error parsing get info response")
+		return err
+	}
+
+	log.Debug().Msgf("Ledger app: %s %s", name, ver)
+
+	if name != needed_app {
+		if needed_app == "BOLOS" {
+			_, err := call(usb_id, &GET_QUIT_APP_APDU, nil, generalHail, 5)
+			if err != nil {
+				log.Error().Err(err).Msgf("provide_eth_app: Error quitting app: %s", usb_id)
+				return err
+			}
+		} else {
+			_, err := call(usb_id, &GET_LAUNCH_APP_APDU, []byte(needed_app), generalHail, 0)
+			if err != nil {
+				log.Error().Err(err).Msgf("provide_eth_app: Error quitting app: %s", usb_id)
+				return err
+			}
+		}
+	}
+
+	log.Debug().Msgf("Ledger app: %s %s", name, ver)
+
+	return nil
+}
+
+func parseGetInfoResponse(data []byte) (string, string, error) {
+	if len(data) < 3 {
+		return "", "", fmt.Errorf("response too short")
+	}
+
+	// The second byte is the length of the name
+	nameLength := int(data[1])
+	if len(data) < 2+nameLength+1 {
+		return "", "", fmt.Errorf("response too short for name length")
+	}
+
+	// Extract the name
+	nameBytes := data[2 : 2+nameLength]
+	name := string(nameBytes)
+
+	// The byte after the name length is the length of the version
+	versionStart := 2 + nameLength
+	if len(data) < versionStart+1 {
+		return "", "", fmt.Errorf("response too short for version length")
+	}
+
+	versionLength := int(data[versionStart])
+	if len(data) < versionStart+1+versionLength {
+		return "", "", fmt.Errorf("response too short for version length")
+	}
+
+	// Extract the version
+	versionBytes := data[versionStart+1 : versionStart+1+versionLength]
+	version := string(versionBytes)
+
+	return name, version, nil
 }
