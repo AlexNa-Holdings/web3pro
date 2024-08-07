@@ -21,8 +21,8 @@ var STANDARD_DERIVATIONS = map[string]struct {
 	Format string
 }{
 	"legacy": {
-		Name:   "Legacy (MEW, MyCrypto) m/44'/60'/0'/0/%d",
-		Format: "m/44'/60'/0'/0/%d",
+		Name:   "Legacy (MEW, MyCrypto) m/44'/60'/0'/%d",
+		Format: "m/44'/60'/0'/%d",
 	},
 	"ledger-live": {
 		Name:   "Ledger Live m/44'/60'/%d'/0/0",

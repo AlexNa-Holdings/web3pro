@@ -129,7 +129,7 @@ func rawCall(usb_id string, apdu *APDU, data []byte, hail *bus.B_Hail, hail_dela
 
 		r, ok := resp.Data.(*bus.B_UsbRead_Response)
 		if !ok {
-			log.Error().Msg("Ledger: rawCall: Invalid message data")
+			log.Error().Msg("Ledger: rawCall: Invalid message data. Expected B_UsbRead_Response")
 			return nil, bus.ErrInvalidMessageData
 		}
 		chunk = r.Data[:64]

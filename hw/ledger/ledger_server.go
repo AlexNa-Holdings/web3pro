@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
@@ -28,12 +29,7 @@ var GET_DEVICE_NAME_APDU = APDU{0xe0, 0xd2, 0x00, 0x00}
 var GET_INFO_APDU = APDU{0xb0, 0x01, 0x00, 0x00}
 var GET_QUIT_APP_APDU = APDU{0xb0, 0xa7, 0x00, 0x00}
 var GET_LAUNCH_APP_APDU = APDU{0xe0, 0xd8, 0x00, 0x00}
-var BACKUP_APP_STORAGE = APDU{0xe0, 0x6b, 0x00, 0x00}
-var GET_APP_STORAGE_INFO = APDU{0xe0, 0x6a, 0x00, 0x00}
-var RESTORE_APP_STORAGE = APDU{0xe0, 0x6d, 0x00, 0x00}
-var RESTORE_APP_STORAGE_COMMIT = APDU{0xe0, 0x6e, 0x00, 0x00}
-var RESTORE_APP_STORAGE_INIT = APDU{0xe0, 0x6c, 0x00, 0x00}
-var GET_ADDRESS_APDU = APDU{0xe0, 0x03, 0x00, 0x00}
+var GET_ADDRESS_APDU = APDU{0xe0, 0x02, 0x00, 0x00}
 
 // GET_VERSION: 0x02,
 // GET_ADDRESS: 0x03,
@@ -278,7 +274,7 @@ func provide_eth_app(usb_id string, needed_app string) error {
 		return err
 	}
 
-	log.Debug().Msgf("Ledger app: %s %s", name, ver)
+	log.Trace().Msgf("provide_eth_app: Name: %s, Version: %s", name, ver)
 
 	if name != needed_app {
 		if needed_app == "BOLOS" {
@@ -294,11 +290,39 @@ func provide_eth_app(usb_id string, needed_app string) error {
 				return err
 			}
 		}
+
+		// wait for the device reconnected
+		err = waitForReconnect(usb_id)
+		if err != nil {
+			log.Error().Err(err).Msgf("provide_eth_app: Error waiting for reconnect: %s",
+				usb_id)
+			return err
+		}
 	}
-
-	log.Debug().Msgf("Ledger app: %s %s", name, ver)
-
 	return nil
+}
+
+func waitForReconnect(usb_id string) error {
+	const timeout = 500 * time.Millisecond
+	const tries = 10
+	for i := 0; i < tries; i++ {
+
+		<-time.After(timeout)
+
+		m := bus.Fetch("usb", "is_connected", &bus.B_UsbIsConnected{USB_ID: usb_id})
+		if m.Error == nil {
+			res, ok := m.Data.(*bus.B_UsbIsConnected_Response)
+			if ok {
+				if res.Connected {
+					log.Trace().Msg("waitForReconnect: Reconnected")
+					return nil
+				}
+			} else {
+				log.Error().Msg("waitForReconnect: Invalid message data. Expected B_SignerIsConnected_Response")
+			}
+		}
+	}
+	return fmt.Errorf("waitForReconnect: Timeout")
 }
 
 func parseGetInfoResponse(data []byte) (string, string, error) {

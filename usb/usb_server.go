@@ -32,6 +32,8 @@ type USB_DEV struct {
 
 const USB_IDS = "usb.ids"
 
+var operation_mutex = &sync.Mutex{}
+
 var usb_devices = []*USB_DEV{}
 var usb_devices_mutex = &sync.Mutex{}
 
@@ -39,6 +41,11 @@ var rw_cancels = map[int]context.CancelFunc{} // timer id -> cancel
 var rw_cancels_mutex = &sync.Mutex{}
 
 var SHORT_DISCONNECT_PERIOD = 5 * time.Second
+
+var RATE_SLOW = 3 * time.Second
+var RATE_FAST = 1 * time.Second
+var enum_ticker_rate = RATE_SLOW
+var enum_ticker = time.NewTicker(enum_ticker_rate)
 
 func Init() {
 	init_usb_ids()
@@ -49,6 +56,12 @@ func addCancel(id int, cancel context.CancelFunc) {
 	rw_cancels_mutex.Lock()
 	defer rw_cancels_mutex.Unlock()
 	rw_cancels[id] = cancel
+}
+
+func setRate(rate time.Duration) {
+	if rate != enum_ticker_rate {
+		enum_ticker.Reset(rate)
+	}
 }
 
 func doCancel(id int) {
@@ -67,7 +80,7 @@ func Loop() {
 	defer ctx.Close()
 
 	ch := bus.Subscribe("usb", "timer")
-	enum_ticker := time.NewTicker(3 * time.Second)
+
 	for {
 		select {
 		case msg := <-ch:
@@ -83,6 +96,9 @@ func Loop() {
 }
 
 func list() bus.B_UsbList_Response {
+	operation_mutex.Lock()
+	defer operation_mutex.Unlock()
+
 	list := bus.B_UsbList_Response{}
 
 	ctx.OpenDevices(func(desc *gousb.DeviceDesc) bool {
@@ -116,24 +132,28 @@ func list() bus.B_UsbList_Response {
 func write(msg *bus.Message) error {
 	req, ok := msg.Data.(*bus.B_UsbWrite)
 	if !ok {
-		log.Error().Msg("Invalid message data")
+		log.Error().Msg("usb.write: Invalid message data. Expected B_UsbWrite")
 		return bus.ErrInvalidMessageData
 	}
 
 	conn, err := OpenDevice(req.USB_ID)
 	if err != nil {
-		log.Error().Msg("Device not found")
-		return fmt.Errorf("device not found: %s", req.USB_ID)
+		log.Error().Msg("usb.write: Device not found")
+		return fmt.Errorf("usb.write: device not found: %s", req.USB_ID)
 	}
 	if msg.TimerID == 0 {
-		log.Error().Msg("TimerID is required for USD writing")
-		return fmt.Errorf("TimerID is required")
+		log.Error().Msg("usb.write: TimerID is required for USD writing")
+		return fmt.Errorf("usb.write: TimerID is required")
 	}
 	cancel_ctx, cancel := context.WithCancel(context.Background())
 	addCancel(msg.TimerID, cancel)
+
+	operation_mutex.Lock()
 	_, err = conn.EndpointOut.WriteContext(cancel_ctx, req.Data)
+	operation_mutex.Unlock()
+
 	if err != nil {
-		log.Error().Err(err).Msg("Error writing to device")
+		log.Error().Err(err).Msg("usb.write: Error writing to device")
 		return err
 	}
 
@@ -144,7 +164,7 @@ func write(msg *bus.Message) error {
 func read(msg *bus.Message) (*bus.B_UsbRead_Response, error) {
 	req, ok := msg.Data.(*bus.B_UsbRead)
 	if !ok {
-		log.Error().Msg("Invalid message data")
+		log.Error().Msg("Invalid message data. Expected B_UsbRead")
 		return nil, bus.ErrInvalidMessageData
 	}
 	conn, err := OpenDevice(req.USB_ID)
@@ -161,7 +181,11 @@ func read(msg *bus.Message) (*bus.B_UsbRead_Response, error) {
 	cancel_ctx, cancel := context.WithCancel(context.Background())
 	addCancel(msg.TimerID, cancel)
 	data := make([]byte, conn.EndpointIn.Desc.MaxPacketSize)
+
+	operation_mutex.Lock()
 	n, err := conn.EndpointIn.ReadContext(cancel_ctx, data)
+	operation_mutex.Unlock()
+
 	if err != nil {
 		log.Error().Err(err).Msg("Error reading from device")
 		return nil, err
@@ -169,6 +193,15 @@ func read(msg *bus.Message) (*bus.B_UsbRead_Response, error) {
 	doCancel(msg.TimerID)
 
 	return &bus.B_UsbRead_Response{Data: data[:n]}, nil
+}
+
+func is_connected(usb_id string) bool {
+	enumerate()
+	conn := getUSBDevice(usb_id)
+	if conn != nil {
+		return conn.connected
+	}
+	return false
 }
 
 func process(msg *bus.Message) {
@@ -181,6 +214,12 @@ func process(msg *bus.Message) {
 			msg.Respond(nil, write(msg))
 		case "read":
 			msg.Respond(read(msg))
+		case "is_connected":
+			if m, ok := msg.Data.(*bus.B_UsbIsConnected); ok {
+				msg.Respond(&bus.B_UsbIsConnected_Response{Connected: is_connected(m.USB_ID)}, nil)
+			} else {
+				log.Error().Msg("Invalid message data. Expected B_UsbIsConnected")
+			}
 		}
 	case "timer":
 		switch msg.Type {
@@ -188,7 +227,7 @@ func process(msg *bus.Message) {
 			if d, ok := msg.Data.(*bus.B_TimerDone); ok {
 				doCancel(d.ID)
 			} else {
-				log.Error().Msg("Invalid message data")
+				log.Error().Msg("Invalid message data. Expected B_TimerDone")
 			}
 		}
 	}
@@ -350,7 +389,10 @@ func (c *USB_DEV) Close() {
 }
 
 func enumerate() {
-	all_found := map[string]bool{}
+	operation_mutex.Lock()
+	defer operation_mutex.Unlock()
+
+	presented := map[string]bool{}
 
 	// List all devices.
 	ctx.OpenDevices(func(desc *gousb.DeviceDesc) bool {
@@ -361,12 +403,13 @@ func enumerate() {
 		sid := GetUSB_ID(desc)
 
 		found_dev := getUSBDevice(sid)
+		presented[sid] = true
+
 		if found_dev != nil {
-			all_found[sid] = true
 
 			if !found_dev.connected {
 				found_dev.connected = true
-				log.Trace().Msgf("Device %s Address changed. Reconnected.", sid)
+				log.Trace().Msgf("Device %s Reconnected.", sid)
 			}
 		} else {
 			addUSBDevice(sid, &USB_DEV{
@@ -387,21 +430,22 @@ func enumerate() {
 		return false
 	})
 
-	dev_not_found := []*USB_DEV{}
+	not_presented := []*USB_DEV{}
 	usb_devices_mutex.Lock()
 	for _, dev := range usb_devices {
-		if !all_found[dev.USB_ID] {
-			dev_not_found = append(dev_not_found, dev)
+		if !presented[dev.USB_ID] {
+			not_presented = append(not_presented, dev)
 		}
 	}
 	usb_devices_mutex.Unlock()
 
 	// Close all devices that are not found
-	for _, dev := range dev_not_found {
+	for _, dev := range not_presented {
 		if dev.connected {
 			dev.Close()
 			dev.connected = false
 			dev.disconnectTime = time.Now()
+			log.Trace().Msgf("Device %s marked as disconnected", dev.USB_ID)
 		} else {
 			if time.Since(dev.disconnectTime) > SHORT_DISCONNECT_PERIOD {
 				log.Trace().Msgf("Device %s disconnected", dev.USB_ID)
@@ -411,5 +455,20 @@ func enumerate() {
 				removeUSBDevice(dev.USB_ID)
 			}
 		}
+	}
+
+	n_just_disconnected := 0
+	usb_devices_mutex.Lock()
+	for _, dev := range usb_devices {
+		if !dev.connected {
+			n_just_disconnected++
+		}
+	}
+	usb_devices_mutex.Unlock()
+
+	if n_just_disconnected == 0 {
+		setRate(RATE_SLOW)
+	} else {
+		setRate(RATE_FAST)
 	}
 }

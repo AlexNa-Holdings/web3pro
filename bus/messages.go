@@ -99,6 +99,14 @@ type B_UsbDisconnected struct { // disconnected
 	USB_ID string
 }
 
+type B_UsbIsConnected struct { // is-connected
+	USB_ID string
+}
+
+type B_UsbIsConnected_Response struct { // is-connected_response
+	Connected bool
+}
+
 // ---------- signer ----------
 type B_SignerGetAddresses struct { // get-addresses
 	Type      string
