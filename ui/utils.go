@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/AlexNa-Holdings/web3pro/cmn"
@@ -34,8 +35,26 @@ func AddValueLink(v *gocui.View, val *big.Int, t *cmn.Token) {
 		return
 	}
 
+	xf := cmn.NewXF(val, t.Decimals)
+
 	text := cmn.FmtAmount(val, t.Decimals, true)
-	n := cmn.Amount2Str(val, t.Decimals)
+	v.AddLink(text, "copy "+xf.String(), "Copy "+xf.String(), "")
+}
+
+func AddDollarValueLink(v *gocui.View, val *big.Int, t *cmn.Token) {
+	if v == nil {
+		return
+	}
+
+	if t == nil {
+		return
+	}
+
+	xf := cmn.NewXF(val, t.Decimals)
+	f := t.Price * xf.Float64()
+
+	text := cmn.FmtFloat64D(f, true)
+	n := fmt.Sprintf("%f", f)
 
 	v.AddLink(text, "copy "+n, "Copy "+n, "")
 }
@@ -49,8 +68,8 @@ func AddValueSymbolLink(v *gocui.View, val *big.Int, t *cmn.Token) {
 		return
 	}
 
-	text := cmn.FmtAmount(val, t.Decimals, true) + t.Symbol
-	n := cmn.Amount2Str(val, t.Decimals)
+	xf := cmn.NewXF(val, t.Decimals)
+	text := cmn.FmtAmount(val, t.Decimals, true)
 
-	v.AddLink(text, "copy "+n, "Copy "+n, "")
+	v.AddLink(text, "copy "+xf.String(), "Copy "+xf.String(), "")
 }

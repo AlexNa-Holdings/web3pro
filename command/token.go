@@ -291,6 +291,22 @@ func Token_Process(c *Command, input string) {
 			return
 		}
 
+		tid := t.Symbol
+		if !t.Unique {
+			tid = t.Address.String()
+		}
+
+		blist := make([]struct {
+			Address *cmn.Address
+			Balance *big.Int
+		}, 0)
+
+		ui.Printf("\nToken: %s %s\n", t.Symbol, t.Name)
+
+		if t.Price > 0. {
+			ui.Printf("Price: %s\n", cmn.FmtFloat64D(t.Price, true))
+		}
+
 		for _, a := range w.Addresses {
 			if address != "" && a.Address.String() != address {
 				continue
@@ -304,18 +320,47 @@ func Token_Process(c *Command, input string) {
 
 			if balance.Cmp(big.NewInt(0)) != 0 {
 
-				tid := t.Symbol
-				if !t.Unique {
-					tid = t.Address.String()
-				}
-
-				ui.AddAddressShortLink(ui.Terminal.Screen, a.Address)
-				ui.Printf(" ")
-				ui.AddValueSymbolLink(ui.Terminal.Screen, balance, t)
-				ui.Printf(" %s ", a.Name)
-				ui.Terminal.Screen.AddLink(gocui.ICON_SEND, "command send '"+chain+"' '"+tid+"' '"+a.Address.String()+"'", "Send tokens", "")
-				ui.Printf("\n")
+				blist = append(blist, struct {
+					Address *cmn.Address
+					Balance *big.Int
+				}{Address: a, Balance: balance})
 			}
+		}
+
+		//sort by balance
+		sort.Slice(blist, func(i, j int) bool {
+			return blist[i].Balance.Cmp(blist[j].Balance) > 0
+		})
+
+		total_balance := big.NewInt(0)
+		total_dollars := float64(0)
+		for _, b := range blist {
+			ui.AddAddressShortLink(ui.Terminal.Screen, b.Address.Address)
+			ui.Printf(" ")
+			ui.AddValueSymbolLink(ui.Terminal.Screen, b.Balance, t)
+			ui.Printf(" ")
+			if t.Price > 0. {
+				ui.AddDollarValueLink(ui.Terminal.Screen, b.Balance, t)
+			}
+			ui.Printf(" %s ", b.Address.Name)
+			ui.Terminal.Screen.AddLink(
+				gocui.ICON_SEND,
+				"command send '"+chain+"' '"+tid+"' "+string(b.Address.Address.String()),
+				"Send tokens",
+				"")
+
+			ui.Printf("\n")
+			total_balance.Add(total_balance, b.Balance)
+			total_dollars += t.Price * t.Float64(b.Balance)
+		}
+
+		ui.Printf("\n  Total: ")
+		ui.AddValueSymbolLink(ui.Terminal.Screen, total_balance, t)
+		ui.Printf("\n")
+		if t.Price > 0. {
+			ui.Printf("Total $: ")
+			ui.AddDollarValueLink(ui.Terminal.Screen, total_balance, t)
+			ui.Printf("\n")
 		}
 
 	default:

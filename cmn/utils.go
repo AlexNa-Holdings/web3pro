@@ -105,6 +105,11 @@ func FmtFloat64D(v float64, fixed bool) string {
 	return n.Format(fixed, "$")
 }
 
+func (t *Token) FmtValue64D(v float64, fixed bool) string {
+	n := NewXF_Float64(v)
+	return n.Format(fixed, "$")
+}
+
 func FormatUInt64(v uint64, fixed bool) string {
 	n := NewXF_UInt64(v)
 	return n.Format(fixed, "")

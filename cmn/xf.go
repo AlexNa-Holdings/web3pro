@@ -85,6 +85,24 @@ func (n *XF) IsZero() bool {
 	return n.Int.Cmp(big.NewInt(0)) == 0
 }
 
+func (n *XF) Float64() float64 {
+
+	log.Debug().Msgf("Float64: %s", n.String())
+
+	if n.NaN {
+		return 0
+	}
+
+	f := new(big.Float)
+	_, ok := f.SetString(n.String())
+	if !ok {
+		log.Error().Msgf("Cannot convert Float64: %s", n.String())
+	}
+
+	r, _ := f.Float64()
+	return r
+}
+
 var PD []XF
 
 func Pow10(N int) *XF {

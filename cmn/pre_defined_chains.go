@@ -27,18 +27,19 @@ var PrefefinedBlockchains []Blockchain = []Blockchain{
 		Currency:    "tPLS",
 	},
 	{
-		Name:        "Binance Smart Chain Mainnet",
-		Url:         "https://bsc-dataseed1.binance.org",
-		ChainId:     56,
-		ExplorerUrl: "https://bscscan.com",
-		Currency:    "BNB",
-	},
-	{
 		Name:        "Avalanche C-Chain",
 		Url:         "https://api.avax.network/ext/bc/C/rpc",
 		ChainId:     43114,
 		ExplorerUrl: "https://snowtrace.io",
 		Currency:    "AVAX",
+	},
+	{
+		Name:          "Binance Smart Chain Mainnet",
+		Url:           "https://bsc-dataseed1.binance.org",
+		ChainId:       56,
+		ExplorerUrl:   "https://bscscan.com",
+		Currency:      "BNB",
+		WTokenAddress: common.HexToAddress("0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c"),
 	},
 	{
 		Name:        "Base",
