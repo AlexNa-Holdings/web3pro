@@ -17,6 +17,7 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/sw"
 	"github.com/AlexNa-Holdings/web3pro/ui"
 	"github.com/AlexNa-Holdings/web3pro/usb"
+	"github.com/AlexNa-Holdings/web3pro/ws"
 	"github.com/rs/zerolog/log"
 )
 
@@ -36,6 +37,7 @@ func main() {
 	usb.Init()
 	eth.LoadABIs()
 	command.Init()
+	ws.Init()
 	ui.Init()
 	price.Init()
 	defer ui.Gui.Close()
