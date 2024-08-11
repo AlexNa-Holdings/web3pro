@@ -37,12 +37,13 @@ Address: %s
 			if len(dp) >= 5 {
 
 				p3, _ := strconv.Atoi(strings.TrimSuffix(dp[3], "'"))
+				p4, _ := strconv.Atoi(strings.TrimSuffix(dp[4], "'"))
 				p5, _ := strconv.Atoi(strings.TrimSuffix(dp[5], "'"))
 
-				if p3 > 0 {
-					name = signer + "_" + fmt.Sprintf("%d", p3)
+				if dp[5] == "" { // legasy
+					name = signer + fmt.Sprintf("_L%d", p4)
 				} else {
-					name = signer + "_" + fmt.Sprintf("%d", p5)
+					name = signer + fmt.Sprintf("_%d", max(p3, p4, p5))
 				}
 			}
 

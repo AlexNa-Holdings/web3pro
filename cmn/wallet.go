@@ -95,6 +95,15 @@ func (w *Wallet) GetBlockchain(n string) *Blockchain {
 	return nil
 }
 
+func (w *Wallet) GetBlockchainById(id uint) *Blockchain {
+	for _, b := range w.Blockchains {
+		if b.ChainId == id {
+			return b
+		}
+	}
+	return nil
+}
+
 func (w *Wallet) Save() error {
 	return SaveToFile(w, w.filePath, w.password)
 }

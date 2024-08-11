@@ -5,32 +5,87 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 
+	"github.com/AlexNa-Holdings/web3pro/bus"
+	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog/log"
 )
 
 const WEB3PRO_PORT = 9323 // WEB3 mnemonics
 
+type ConContext struct {
+	Agent string
+}
+
+var connections = make([]*ConContext, 0)
+var connectionsMutex = sync.Mutex{}
+
 type RPCRequest struct {
-	JSONRPC string          `json:"jsonrpc"`
-	Method  string          `json:"method"`
-	Params  json.RawMessage `json:"params"`
-	ID      json.RawMessage `json:"id"`
+	JSONRPC       string        `json:"jsonrpc"`
+	ID            int64         `json:"id"`
+	Method        string        `json:"method"`
+	Params        []interface{} `json:"params"` // Params as a slice of interface{}
+	Web3ProOrigin string        `json:"__web3proOrigin,omitempty"`
 }
 
 func Init() {
+	go loop()
+}
+
+func loop() {
+	ch := bus.Subscribe("wallet", "ws")
+	for msg := range ch {
+		switch msg.Topic {
+		case "wallet":
+			switch msg.Type {
+			case "open":
+				startWS()
+			}
+		case "ws":
+			switch msg.Type {
+			case "list":
+				list := bus.B_WsList_Response{}
+				connectionsMutex.Lock()
+				for _, conn := range connections {
+					list = append(list, bus.B_WsList_Conn{
+						Agent: conn.Agent,
+					})
+				}
+				connectionsMutex.Unlock()
+				msg.Respond(list, nil)
+			}
+		}
+	}
+}
+
+func startWS() {
 	http.HandleFunc("/ws", web3Handler)
-
 	go func() {
-
 		log.Trace().Msgf("ws server started on port %d", WEB3PRO_PORT)
 		err := http.ListenAndServe(":"+strconv.Itoa(WEB3PRO_PORT), nil)
 		if err != nil {
 			log.Fatal().Err(err).Msgf("WS server failed to start on port %d", WEB3PRO_PORT)
 		}
 	}()
+}
 
+func AddConnection(conn *ConContext) {
+	connectionsMutex.Lock()
+	connections = append(connections, conn)
+	connectionsMutex.Unlock()
+}
+
+func RemoveConnection(conn *ConContext) {
+	connectionsMutex.Lock()
+	for i, c := range connections {
+		if c == conn {
+			connections = append(connections[:i], connections[i+1:]...)
+			break
+		}
+	}
+	connectionsMutex.Unlock()
 }
 
 // Upgrade HTTP connection to a WebSocket connection
@@ -42,6 +97,13 @@ var upgrader = websocket.Upgrader{
 }
 
 func web3Handler(w http.ResponseWriter, r *http.Request) {
+
+	log.Debug().Msgf("Web3 handler called")
+
+	if cmn.CurrentWallet == nil {
+		http.Error(w, "Wallet not initialized", http.StatusInternalServerError)
+		return
+	}
 
 	if r.URL.Query().Get("identity") != "web3pro-extension" {
 		log.Error().Msgf("Atteempt connecting to WS with invalid identity: %s", r.URL.Query().Get("identity"))
@@ -56,6 +118,12 @@ func web3Handler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.Close()
 
+	context := &ConContext{
+		Agent: r.Header.Get("User-Agent"),
+	}
+	AddConnection(context)
+	defer RemoveConnection(context)
+
 	for {
 		// Read message from browser
 		msgType, msg, err := conn.ReadMessage()
@@ -66,13 +134,12 @@ func web3Handler(w http.ResponseWriter, r *http.Request) {
 
 		if msgType != websocket.TextMessage {
 			log.Trace().Msgf("Received non-text message: %d", msgType)
-			continue
+			break
 		}
 
 		// Print the message to the console
 		log.Trace().Msgf("Received: %s", msg)
 
-		// Parse the JSON-RPC message
 		var rpcReq RPCRequest
 		err = json.Unmarshal(msg, &rpcReq)
 		if err != nil {
@@ -88,7 +155,9 @@ func web3Handler(w http.ResponseWriter, r *http.Request) {
 		// Dispatch based on method prefix
 		switch {
 		case strings.HasPrefix(rpcReq.Method, "eth_"):
-			handleEthMethod(rpcReq, response)
+			handleEthMethod(rpcReq, context, response)
+		case strings.HasPrefix(rpcReq.Method, "net_"):
+			handleNetMethod(rpcReq, context, response)
 		default:
 			log.Printf("Unknown method: %s", rpcReq.Method)
 			// Handle unknown methods or send an error response

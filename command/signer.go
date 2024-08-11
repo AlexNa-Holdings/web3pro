@@ -6,8 +6,10 @@ import (
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
+	"github.com/AlexNa-Holdings/web3pro/eth"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/ui"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 var signer_subcommands = []string{"list", "remove", "promote", "add", "edit", "addresses"}
@@ -150,6 +152,8 @@ func Signer_Process(c *Command, input string) {
 		return
 	}
 
+	w := cmn.CurrentWallet
+
 	p := cmn.SplitN(input, 5)
 	_, subcommand, p1, p2, p3 := p[0], p[1], p[2], p[3], p[4]
 
@@ -221,6 +225,22 @@ func Signer_Process(c *Command, input string) {
 			ui.Printf("%2d: ", from+i)
 			ui.AddAddressLink(nil, a)
 			ui.Printf(" ")
+
+			if w.CurrentChain != "" {
+				b := w.GetBlockchain(w.CurrentChain)
+				if b != nil {
+					t := w.GetTokenByAddress(w.CurrentChain, common.Address{0})
+					if t != nil {
+						balance, err := eth.BalanceOf(b, t, a)
+						if err == nil {
+							ui.AddValueSymbolLink(ui.Terminal.Screen, balance, t)
+							ui.Printf(" ")
+							ui.AddDollarValueLink(ui.Terminal.Screen, balance, t)
+							ui.Printf(" ")
+						}
+					}
+				}
+			}
 
 			if ea := cmn.CurrentWallet.GetAddress(a.Hex()); ea == nil {
 				ui.Terminal.Screen.AddLink(gocui.ICON_ADD, "command address add "+

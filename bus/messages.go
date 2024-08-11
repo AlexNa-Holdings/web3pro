@@ -74,8 +74,8 @@ type B_UsbList_Device struct { // device
 	ProductID uint16
 	Connected bool
 }
-
 type B_UsbList_Response []B_UsbList_Device
+
 type B_UsbWrite struct { // write
 	USB_ID string
 	Data   []byte
@@ -143,3 +143,9 @@ type B_SignerConnected struct { // connected
 	Type string
 	Name string
 }
+
+// ---------- ws ----------
+type B_WsList_Conn struct { // device
+	Agent string
+}
+type B_WsList_Response []B_WsList_Conn

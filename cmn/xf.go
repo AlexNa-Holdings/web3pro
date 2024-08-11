@@ -314,9 +314,9 @@ func (n *XF) Format(fixed bool, prefix string) string {
 	//if v == 0
 	if n.Int.Cmp(big.NewInt(0)) == 0 || n.decimals < 0 || n.decimals > MAX_DECIMALS {
 		if fixed {
-			return "  0.00   "
+			return "  " + prefix + "0.00   "
 		}
-		return "0.00"
+		return prefix + "0.00"
 	}
 
 	// Convert the big.Int value to a string

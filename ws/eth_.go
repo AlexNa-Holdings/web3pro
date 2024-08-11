@@ -4,7 +4,7 @@ import (
 	"strings"
 )
 
-func handleEthMethod(req RPCRequest, res map[string]interface{}) {
+func handleEthMethod(req RPCRequest, ctx *ConContext, res map[string]interface{}) {
 
 	method := strings.TrimPrefix(req.Method, "eth_")
 
