@@ -38,6 +38,7 @@ func Init() {
 		NewSendCommand(),
 		NewPriceCommand(),
 		NewWebSocketCommand(),
+		NewAppCommand(),
 	}
 
 	go func() {

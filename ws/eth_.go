@@ -6,6 +6,7 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/rs/zerolog/log"
 )
 
 func handleEthMethod(req RPCRequest, ctx *ConContext, res *RPCResponse) {
@@ -37,6 +38,11 @@ and use the current address?
 					}
 
 					w.AddOrigin(origin)
+					err := w.Save()
+					if err != nil {
+						log.Error().Err(err).Msg("Failed to save wallet")
+						bus.Send("ui", "notify", "Failed to save wallet")
+					}
 					bus.Send("ui", "remove-hail", h)
 				}})
 		}
