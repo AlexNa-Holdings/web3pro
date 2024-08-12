@@ -26,6 +26,13 @@ func AddAddressShortLink(v *gocui.View, a common.Address) {
 	v.AddLink(s[:6]+gocui.ICON_3DOTS+s[len(s)-4:], "copy "+a.String(), "Copy "+a.String(), "")
 }
 
+func TagAddressShortLink(a common.Address) string {
+	s := a.String()
+
+	return fmt.Sprintf("<l text:'%s%s%s' action:'copy %s' tip:'%s'>",
+		s[:6], gocui.ICON_3DOTS, s[len(s)-4:], a.String(), a.String())
+}
+
 func AddValueLink(v *gocui.View, val *big.Int, t *cmn.Token) {
 	if v == nil {
 		return
@@ -39,6 +46,16 @@ func AddValueLink(v *gocui.View, val *big.Int, t *cmn.Token) {
 
 	text := cmn.FmtAmount(val, t.Decimals, true)
 	v.AddLink(text, "copy "+xf.String(), "Copy "+xf.String(), "")
+}
+
+func TagValueLink(val *big.Int, t *cmn.Token) string {
+	if t == nil {
+		return ""
+	}
+
+	xf := cmn.NewXF(val, t.Decimals)
+
+	return fmt.Sprintf("<l text:'%s' action:'copy %s' tip:'%s'>", cmn.FmtAmount(val, t.Decimals, true), xf.String(), xf.String())
 }
 
 func AddDollarValueLink(v *gocui.View, val *big.Int, t *cmn.Token) {
@@ -59,6 +76,32 @@ func AddDollarValueLink(v *gocui.View, val *big.Int, t *cmn.Token) {
 	v.AddLink(text, "copy "+n, "Copy "+n, "")
 }
 
+func TagDollarValueLink(val *big.Int, t *cmn.Token) string {
+	if t == nil {
+		return ""
+	}
+
+	xf := cmn.NewXF(val, t.Decimals)
+	f := t.Price * xf.Float64()
+
+	return fmt.Sprintf("<l text:'%s' action:'copy %f' tip:'%f'>", cmn.FmtFloat64D(f, true), f, f)
+}
+
+func TagShortDollarValueLink(val *big.Int, t *cmn.Token) string {
+	if t == nil {
+		return ""
+	}
+
+	xf := cmn.NewXF(val, t.Decimals)
+	f := t.Price * xf.Float64()
+
+	return fmt.Sprintf("<l text:'%s' action:'copy %f' tip:'%f'>", cmn.FmtFloat64D(f, false), f, f)
+}
+
+func TagShortDollarLink(val float64) string {
+	return fmt.Sprintf("<l text:'%s' action:'copy %f' tip:'%f'>", cmn.FmtFloat64D(val, false), val, val)
+}
+
 func AddValueSymbolLink(v *gocui.View, val *big.Int, t *cmn.Token) {
 	if v == nil {
 		return
@@ -72,4 +115,26 @@ func AddValueSymbolLink(v *gocui.View, val *big.Int, t *cmn.Token) {
 	text := cmn.FmtAmount(val, t.Decimals, true)
 
 	v.AddLink(text, "copy "+xf.String(), "Copy "+xf.String(), "")
+}
+
+func TagValueSymbolLink(val *big.Int, t *cmn.Token) string {
+	if t == nil {
+		return ""
+	}
+
+	xf := cmn.NewXF(val, t.Decimals)
+
+	return fmt.Sprintf("<l text:'%s' action:'copy %s' tip:'%s'> %s",
+		cmn.FmtAmount(val, t.Decimals, true), xf.String(), xf.String(), t.Symbol)
+}
+
+func TagShortValueSymbolLink(val *big.Int, t *cmn.Token) string {
+	if t == nil {
+		return ""
+	}
+
+	xf := cmn.NewXF(val, t.Decimals)
+
+	return fmt.Sprintf("<l text:'%s' action:'copy %s' tip:'%s'> %s",
+		cmn.FmtAmount(val, t.Decimals, false), xf.String(), xf.String(), t.Symbol)
 }

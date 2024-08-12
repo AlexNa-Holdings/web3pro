@@ -13,7 +13,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-const VERSION = "0.0.1"
+const VERSION = "0.1.0"
 const LOG_NAME = "web3pro.log"
 const CONFIG_NAME = "config.yaml"
 

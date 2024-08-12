@@ -20,7 +20,7 @@ Usage:
   websocket(ws)  - List of active browser connections
 
 		`,
-		Help:             `List browse connections`,
+		Help:             `List browser connections`,
 		Process:          Ws_Process,
 		AutoCompleteFunc: Ws_AutoComplete,
 	}

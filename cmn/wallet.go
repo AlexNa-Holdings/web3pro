@@ -32,9 +32,21 @@ func Open(name string, pass string) error {
 
 		w.AuditNativeTokens()
 		w.MarkUniqueTokens()
-		if w.CurrentChain == "" && len(w.Blockchains) > 0 {
-			w.CurrentChain = w.Blockchains[0].Name
+		if w.CurrentChain == "" || w.GetBlockchain(w.CurrentChain) == nil {
+			if len(w.Blockchains) > 0 {
+				w.CurrentChain = w.Blockchains[0].Name
+			} else {
+				w.CurrentChain = ""
+			}
 		}
+		if w.CurrentAddress == (common.Address{}) || w.GetAddress(w.CurrentAddress.String()) == nil {
+			if len(w.Addresses) > 0 {
+				w.CurrentAddress = w.Addresses[0].Address
+			} else {
+				w.CurrentAddress = common.Address{}
+			}
+		}
+
 		CurrentWallet = w
 		bus.Send("wallet", "open", nil)
 	}
@@ -117,6 +129,38 @@ func Create(name, pass string) error {
 	w := &Wallet{}
 
 	return SaveToFile(w, DataFolder+"/wallets/"+name, pass)
+}
+
+func (w *Wallet) RemoveOrigin(url string) {
+	w.writeMutex.Lock()
+	defer w.writeMutex.Unlock()
+	for i, o := range w.Origins {
+		if o.URL == url {
+			w.Origins = append(w.Origins[:i], w.Origins[i+1:]...)
+			return
+		}
+	}
+}
+
+func (w *Wallet) GetOrigin(url string) *Origin {
+	for _, o := range w.Origins {
+		if o.URL == url {
+			return o
+		}
+	}
+	return nil
+}
+
+func (w *Wallet) AddOrigin(o *Origin) {
+	w.writeMutex.Lock()
+	defer w.writeMutex.Unlock()
+
+	if w.GetOrigin(o.URL) != nil {
+		log.Error().Msgf("Origin already exists: %s\n", o.URL)
+		return
+	}
+
+	w.Origins = append(w.Origins, o)
 }
 
 func WalletList() []string {

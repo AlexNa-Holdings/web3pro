@@ -56,10 +56,7 @@ func main() {
 
 		ui.Printf("\nVersion: %s ", cmn.VERSION)
 		ui.Terminal.Screen.AddLink("GitHub", "open https://github.com/AlexNa-Holdings/web3pro", "github.com/AlexNa-Holdings/web3pro", "")
-
-		ui.Printf("\nThe code includes ")
-		ui.Terminal.Screen.AddLink("gucui", "open https://github.com/jroimartin/gocui", "Open GitHub", "")
-		ui.Printf(" package (heavily modified)\n")
+		ui.Printf("\n")
 
 		ui.Printf("\nData folder: ")
 		ui.Terminal.Screen.AddLink(cmn.DataFolder, "copy "+cmn.DataFolder, "Copy data folder path to clipboard", "")

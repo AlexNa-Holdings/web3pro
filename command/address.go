@@ -62,7 +62,7 @@ func Address_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 					Result: command + " " + subcommand + " '" + a.Name + "'"})
 			}
 		}
-		return "address", &options, subcommand
+		return "address", &options, param
 	}
 
 	if subcommand == "add" {
@@ -77,7 +77,7 @@ func Address_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 						Result: command + " " + subcommand + " " + address + " '" + s.Name + "'"})
 				}
 			}
-			return "signer", &options, param
+			return "signer", &options, signer
 		}
 	}
 
@@ -110,7 +110,7 @@ func Address_Process(c *Command, input string) {
 		}
 		ui.Gui.ShowPopup(ui.DlgAddressAdd(p0, p1, p2))
 	case "remove":
-		for i, a := range cmn.CurrentWallet.Addresses {
+		for i, a := range w.Addresses {
 			if a.Name == p0 {
 				ui.Gui.ShowPopup(ui.DlgConfirm(
 					"Remove address",
@@ -119,9 +119,9 @@ func Address_Process(c *Command, input string) {
 <c> `+a.Name+`
 <c> `+a.Address.String()+"? \n",
 					func() {
-						cmn.CurrentWallet.Addresses = append(cmn.CurrentWallet.Addresses[:i], cmn.CurrentWallet.Addresses[i+1:]...)
+						w.Addresses = append(w.Addresses[:i], w.Addresses[i+1:]...)
 
-						err := cmn.CurrentWallet.Save()
+						err := w.Save()
 						if err != nil {
 							ui.PrintErrorf("\nError saving wallet: %v\n", err)
 							return
@@ -135,11 +135,11 @@ func Address_Process(c *Command, input string) {
 		ui.PrintErrorf("\nAddress not found: %s\n", p0)
 	case "list", "":
 
-		sort.Slice(cmn.CurrentWallet.Addresses, func(i, j int) bool {
-			return cmn.CurrentWallet.Addresses[i].Name < cmn.CurrentWallet.Addresses[j].Name
+		sort.Slice(w.Addresses, func(i, j int) bool {
+			return w.Addresses[i].Name < w.Addresses[j].Name
 		})
 		ui.Printf("\nAddresses:\n")
-		for _, a := range cmn.CurrentWallet.Addresses {
+		for _, a := range w.Addresses {
 			ui.AddAddressShortLink(nil, a.Address)
 			ui.Printf(" ")
 			ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command address edit '"+a.Name+"'", "Edit address", "")
@@ -148,11 +148,24 @@ func Address_Process(c *Command, input string) {
 		}
 
 	case "edit":
-		if cmn.CurrentWallet.GetAddressByName(p0) == nil {
+		if w.GetAddressByName(p0) == nil {
 			ui.PrintErrorf("\nAddress not found: %s\n", p0)
 			return
 		}
 		ui.Gui.ShowPopup(ui.DlgAddressEdit(p0))
+	case "use":
+		fa := w.GetAddressByName(p0)
+		if fa == nil {
+			ui.PrintErrorf("\nAddress not found: %s\n", p0)
+			return
+		}
+		w.CurrentAddress = fa.Address
+		err := w.Save()
+		if err != nil {
+			ui.PrintErrorf("\nError saving wallet: %v\n", err)
+			return
+		}
+
 	default:
 		ui.PrintErrorf("\nInvalid subcommand: %s\n", subcommand)
 	}

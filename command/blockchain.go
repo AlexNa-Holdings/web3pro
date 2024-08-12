@@ -54,7 +54,7 @@ func Blockchain_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 				}
 			}
 		}
-		return "blockchain", &options, subcommand
+		return "blockchain", &options, param
 	}
 
 	if subcommand == "add" && param != "" && strings.HasSuffix(input, " ") {
@@ -62,7 +62,7 @@ func Blockchain_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 	}
 
 	if subcommand == "add" {
-		for _, chain := range cmn.PrefefinedBlockchains {
+		for _, chain := range cmn.PredefinedBlockchains {
 			if cmn.Contains(chain.Name, param) {
 				options = append(options, ui.ACOption{Name: chain.Name, Result: command + " add '" + chain.Name + "' "})
 			}
@@ -85,6 +85,8 @@ func Blockchain_Process(c *Command, input string) {
 		return
 	}
 
+	w := cmn.CurrentWallet
+
 	//parse command subcommand parameters
 	t := cmn.Split(input)
 	subcommand, b_name := t[1], t[2]
@@ -100,21 +102,21 @@ func Blockchain_Process(c *Command, input string) {
 			ui.Gui.ShowPopup(ui.DlgBlockchain(""))
 		} else {
 			// check if such blockchain already added
-			for _, b := range cmn.CurrentWallet.Blockchains {
+			for _, b := range w.Blockchains {
 				if b.Name == b_name {
 					ui.PrintErrorf("\nBlockchain %s already added\n", b_name)
 					return
 				}
 			}
 
-			for _, b := range cmn.PrefefinedBlockchains {
+			for _, b := range cmn.PredefinedBlockchains {
 				if b.Name == b_name {
 
 					bch := b
-					cmn.CurrentWallet.Blockchains = append(cmn.CurrentWallet.Blockchains, &bch)
+					w.Blockchains = append(w.Blockchains, &bch)
 
-					cmn.CurrentWallet.AuditNativeTokens()
-					err := cmn.CurrentWallet.Save()
+					w.AuditNativeTokens()
+					err := w.Save()
 					if err != nil {
 						ui.PrintErrorf("\nFailed to save wallet: %s\n", err)
 						return
@@ -143,7 +145,7 @@ func Blockchain_Process(c *Command, input string) {
 			return
 		}
 
-		for i, b := range cmn.CurrentWallet.Blockchains {
+		for i, b := range w.Blockchains {
 			if b.Name == b_name {
 
 				ui.Gui.ShowPopup(ui.DlgConfirm(
@@ -152,10 +154,10 @@ func Blockchain_Process(c *Command, input string) {
 <c>Are you sure you want to remove 
 <c>blockchain '`+b_name+"' ?\n",
 					func() {
-						cmn.CurrentWallet.Blockchains = append(cmn.CurrentWallet.Blockchains[:i], cmn.CurrentWallet.Blockchains[i+1:]...)
+						w.Blockchains = append(w.Blockchains[:i], w.Blockchains[i+1:]...)
 
-						cmn.CurrentWallet.AuditNativeTokens()
-						err := cmn.CurrentWallet.Save()
+						w.AuditNativeTokens()
+						err := w.Save()
 						if err != nil {
 							ui.PrintErrorf("\nFailed to save wallet: %s\n", err)
 							return
@@ -172,7 +174,7 @@ func Blockchain_Process(c *Command, input string) {
 	case "list", "":
 		ui.Printf("\nBlockchains:\n")
 
-		for _, b := range cmn.CurrentWallet.Blockchains {
+		for _, b := range w.Blockchains {
 			ui.Terminal.Screen.AddLink(b.Name, "command b use '"+b.Name+"'", "Use blockchain '"+b.Name+"'", "")
 			ui.Printf(" ")
 			ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command b edit '"+b.Name+"'", "Edit blockchain '"+b.Name+"'", "")
@@ -187,7 +189,7 @@ func Blockchain_Process(c *Command, input string) {
 			return
 		}
 
-		for _, b := range cmn.CurrentWallet.Blockchains {
+		for _, b := range w.Blockchains {
 			if b.Name == b_name {
 				ui.Gui.ShowPopup(ui.DlgBlockchain(b_name))
 				return
@@ -195,6 +197,24 @@ func Blockchain_Process(c *Command, input string) {
 		}
 
 		ui.PrintErrorf("\nBlockchain %s not found\n", b_name)
+	case "use":
+		if b_name == "" {
+			ui.PrintErrorf("\nUsage: blockchain use [blockchain]\n")
+			return
+		}
+
+		if w.GetBlockchain(b_name) == nil {
+			ui.PrintErrorf("\nBlockchain %s not found\n", b_name)
+			return
+		}
+
+		w.CurrentChain = b_name
+		err := w.Save()
+		if err != nil {
+			ui.PrintErrorf("\nFailed to save wallet: %s\n", err)
+			return
+		}
+
 	default:
 		ui.PrintErrorf("\nInvalid subcommand: %s\n", subcommand)
 	}

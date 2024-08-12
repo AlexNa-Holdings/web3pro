@@ -2,7 +2,7 @@ package cmn
 
 import "github.com/ethereum/go-ethereum/common"
 
-var PrefefinedBlockchains []Blockchain = []Blockchain{
+var PredefinedBlockchains []Blockchain = []Blockchain{
 	{
 		Name:          "Ethereum",
 		Url:           "https://ethereum-rpc.publicnode.com",

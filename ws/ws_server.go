@@ -31,11 +31,16 @@ type RPCRequest struct {
 	Web3ProOrigin string        `json:"__web3proOrigin,omitempty"`
 }
 
+type RPCError struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+}
+
 type RPCResponse struct {
 	JSONRPC string      `json:"jsonrpc"`
 	ID      int64       `json:"id"`
 	Result  interface{} `json:"result"`
-	Error   interface{} `json:"error"`
+	Error   *RPCError   `json:"error,omitempty"`
 }
 
 func Init() {
@@ -177,24 +182,26 @@ func web3Handler(w http.ResponseWriter, r *http.Request) {
 		default:
 			log.Printf("Unknown method: %s", rpcReq.Method)
 			// Handle unknown methods or send an error response
-			response.Error = map[string]interface{}{
-				"code":    -32601,
-				"message": "Method not found",
+			response.Error = &RPCError{
+				Code:    -32601,
+				Message: "Method not found",
 			}
 		}
+
 		sendResponse(conn, response)
 	}
 }
 
 func sendResponse(conn *websocket.Conn, response *RPCResponse) {
 
-	log.Debug().Msgf("Sending response: %v", response)
-
 	respBytes, err := json.Marshal(response)
 	if err != nil {
 		log.Printf("JSON marshal error: %v", err)
 		return
 	}
+
+	log.Debug().Msgf("Sending response: %v", string(respBytes))
+
 	err = conn.WriteMessage(websocket.TextMessage, respBytes)
 	if err != nil {
 		log.Printf("Write error: %v", err)

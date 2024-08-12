@@ -6,7 +6,9 @@ import (
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
+	"github.com/AlexNa-Holdings/web3pro/eth"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog/log"
 )
 
@@ -44,6 +46,8 @@ func (p *StatusPane) SetView(x0, y0, x1, y1 int) {
 			v.RenderTemplate(statusTemplate)
 			v.ScrollTop()
 		}
+		v.OnOverHotspot = ProcessOnOverHotspot
+		v.OnClickHotspot = ProcessOnClickHotspot
 		rebuidTemplate()
 
 	}
@@ -58,7 +62,7 @@ func StatusLoop() {
 		switch msg.Topic {
 		case "wallet":
 			switch msg.Type {
-			case "open":
+			case "open", "saved":
 				rebuidTemplate()
 			}
 		case "signer":
@@ -77,6 +81,64 @@ func StatusLoop() {
 
 func rebuidTemplate() {
 	temp := "<w>"
+
+	if cmn.CurrentWallet != nil {
+		w := cmn.CurrentWallet
+		b := w.GetBlockchain(w.CurrentChain)
+		a := w.GetAddress(w.CurrentAddress.String())
+
+		if b != nil {
+			t, err := w.GetNativeToken(b)
+			if err != nil {
+				log.Error().Err(err).Msg("rebuidTemplate: GetNativeToken")
+				return
+			}
+
+			change := ""
+			if t.PraceChange24 > 0 {
+				change = fmt.Sprintf("<color fg:green>\uf0d8%.2f%%</color>", t.PraceChange24)
+			}
+			if t.PraceChange24 < 0 {
+				change = fmt.Sprintf("<color fg:red>\uf0d7%.2f%%</color>", t.PraceChange24)
+			}
+
+			temp += fmt.Sprintf("<b>Chain:</b> %s | %s %s%s\n",
+				b.Name, t.Symbol,
+				TagShortDollarLink(t.Price),
+				change)
+		}
+
+		if w.CurrentAddress != (common.Address{}) {
+			an := ""
+			if a != nil {
+				an = a.Name
+			}
+
+			balance := ""
+			dollars := ""
+
+			if b != nil {
+				blnc, err := eth.GetBalance(b, w.CurrentAddress)
+				if err != nil {
+					log.Error().Err(err).Msg("Status: GetBalance")
+				} else {
+					t, err := w.GetNativeToken(b)
+					if err != nil {
+						log.Error().Err(err).Msg("Status: GetNativeToken")
+					} else {
+						balance = fmt.Sprintf(" | %s", TagShortValueSymbolLink(blnc, t))
+
+						if t.Price > 0 {
+							dollars = fmt.Sprintf(" | %s", TagShortDollarValueLink(blnc, t))
+						}
+					}
+				}
+			}
+
+			temp += fmt.Sprintf("<b> Addr:</b> %s %s%s%s\n",
+				TagAddressShortLink(w.CurrentAddress), an, balance, dollars)
+		}
+	}
 
 	// connected devices
 	cd := ""
@@ -103,33 +165,7 @@ func rebuidTemplate() {
 		}
 	}
 	if cd != "" {
-		temp += fmt.Sprintf("<b>HW:</b> %s\n", cd)
-	}
-
-	if cmn.CurrentWallet != nil {
-		w := cmn.CurrentWallet
-
-		if w.CurrentChain != "" {
-			b := w.GetBlockchain(w.CurrentChain)
-			t, err := w.GetNativeToken(b)
-			if err != nil {
-				log.Error().Err(err).Msg("rebuidTemplate: GetNativeToken")
-				return
-			}
-
-			change := ""
-			if t.PraceChange24 > 0 {
-				change = fmt.Sprintf("<color fg:green>\uf0d8%.2f%%</color>", t.PraceChange24)
-			}
-			if t.PraceChange24 < 0 {
-				change = fmt.Sprintf("<color fg:red>\uf0d7%.2f%%</color>", t.PraceChange24)
-			}
-
-			temp += fmt.Sprintf("<b>Chain:</b> %s | %s %s%s\n",
-				b.Name, t.Symbol,
-				cmn.FmtFloat64D(t.Price, false),
-				change)
-		}
+		temp += fmt.Sprintf("<b>   HW:</b> %s\n", cd)
 	}
 
 	statusTemplate = temp
