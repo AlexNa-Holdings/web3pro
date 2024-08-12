@@ -4,12 +4,12 @@ import (
 	"strings"
 )
 
-func handleNetMethod(req RPCRequest, ctx *ConContext, res map[string]interface{}) {
+func handleNetMethod(req RPCRequest, ctx *ConContext, res *RPCResponse) {
 
 	method := strings.TrimPrefix(req.Method, "net_")
 
 	switch method {
 	case "version":
-		res["result"] = "0x1"
+		res.Result = "0x1"
 	}
 }

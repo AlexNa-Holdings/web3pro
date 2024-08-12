@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
@@ -28,6 +29,13 @@ type RPCRequest struct {
 	Method        string        `json:"method"`
 	Params        []interface{} `json:"params"` // Params as a slice of interface{}
 	Web3ProOrigin string        `json:"__web3proOrigin,omitempty"`
+}
+
+type RPCResponse struct {
+	JSONRPC string      `json:"jsonrpc"`
+	ID      int64       `json:"id"`
+	Result  interface{} `json:"result"`
+	Error   interface{} `json:"error"`
 }
 
 func Init() {
@@ -62,9 +70,17 @@ func loop() {
 
 func startWS() {
 	http.HandleFunc("/ws", web3Handler)
+
+	server := &http.Server{
+		Addr:              ":" + strconv.Itoa(WEB3PRO_PORT),
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       2 * time.Hour,
+		ReadHeaderTimeout: 5 * time.Second,
+	}
 	go func() {
 		log.Trace().Msgf("ws server started on port %d", WEB3PRO_PORT)
-		err := http.ListenAndServe(":"+strconv.Itoa(WEB3PRO_PORT), nil)
+		err := server.ListenAndServe()
 		if err != nil {
 			log.Fatal().Err(err).Msgf("WS server failed to start on port %d", WEB3PRO_PORT)
 		}
@@ -147,9 +163,9 @@ func web3Handler(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-		response := map[string]interface{}{
-			"jsonrpc": "2.0",
-			"id":      rpcReq.ID,
+		response := &RPCResponse{
+			JSONRPC: "2.0",
+			ID:      rpcReq.ID,
 		}
 
 		// Dispatch based on method prefix
@@ -161,7 +177,7 @@ func web3Handler(w http.ResponseWriter, r *http.Request) {
 		default:
 			log.Printf("Unknown method: %s", rpcReq.Method)
 			// Handle unknown methods or send an error response
-			response["error"] = map[string]interface{}{
+			response.Error = map[string]interface{}{
 				"code":    -32601,
 				"message": "Method not found",
 			}
@@ -170,7 +186,10 @@ func web3Handler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func sendResponse(conn *websocket.Conn, response map[string]interface{}) {
+func sendResponse(conn *websocket.Conn, response *RPCResponse) {
+
+	log.Debug().Msgf("Sending response: %v", response)
+
 	respBytes, err := json.Marshal(response)
 	if err != nil {
 		log.Printf("JSON marshal error: %v", err)
