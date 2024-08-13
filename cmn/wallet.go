@@ -131,15 +131,17 @@ func Create(name, pass string) error {
 	return SaveToFile(w, DataFolder+"/wallets/"+name, pass)
 }
 
-func (w *Wallet) RemoveOrigin(url string) {
+func (w *Wallet) RemoveOrigin(url string) error {
 	w.writeMutex.Lock()
 	defer w.writeMutex.Unlock()
 	for i, o := range w.Origins {
 		if o.URL == url {
 			w.Origins = append(w.Origins[:i], w.Origins[i+1:]...)
-			return
+			return nil
 		}
 	}
+
+	return errors.New("origin not found")
 }
 
 func (w *Wallet) GetOrigin(url string) *Origin {
@@ -161,6 +163,66 @@ func (w *Wallet) AddOrigin(o *Origin) {
 	}
 
 	w.Origins = append(w.Origins, o)
+}
+
+func (w *Wallet) RemoveOriginAddress(url string, a string) error {
+	o := w.GetOrigin(url)
+	if o == nil {
+		return errors.New("origin not found")
+	}
+
+	addr := w.GetAddressByName(a)
+	if addr == nil {
+		return errors.New("address not found")
+	}
+
+	w.writeMutex.Lock()
+	for i, na := range o.Addresses {
+		if na == addr.Address {
+			o.Addresses = append(o.Addresses[:i], o.Addresses[i+1:]...)
+			break
+		}
+	}
+	w.writeMutex.Unlock()
+
+	if len(o.Addresses) == 0 {
+		w.RemoveOrigin(url)
+	}
+
+	return nil
+}
+
+func (o *Origin) IsAllowed(a common.Address) bool {
+	for _, aa := range o.Addresses {
+		if aa == a {
+			return true
+		}
+	}
+	return false
+}
+
+func (w *Wallet) AddOriginAddress(url string, a string) error {
+	o := w.GetOrigin(url)
+	if o == nil {
+		return errors.New("origin not found")
+	}
+
+	addr := w.GetAddressByName(a)
+	if addr == nil {
+		return errors.New("address not found")
+	}
+
+	w.writeMutex.Lock()
+	defer w.writeMutex.Unlock()
+
+	for _, na := range o.Addresses {
+		if na == addr.Address {
+			return nil
+		}
+	}
+
+	o.Addresses = append(o.Addresses, addr.Address)
+	return nil
 }
 
 func WalletList() []string {
@@ -327,7 +389,8 @@ func (w *Wallet) GetAddressByName(n string) *Address {
 			return s
 		}
 	}
-	return nil
+
+	return w.GetAddress(n)
 }
 
 func (w *Wallet) GetToken(b string, a string) *Token {
