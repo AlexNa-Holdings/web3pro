@@ -35,7 +35,7 @@ func main() {
 	sw.Init() // software wallets
 	hw.Init() // hardware wallets
 	usb.Init()
-	eth.LoadABIs()
+	eth.Init()
 	command.Init()
 	ws.Init()
 	ui.Init()

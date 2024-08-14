@@ -10,7 +10,7 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/ui"
 )
 
-var app_subcommands = []string{"remove", "list", "add_addr", "remove_addr"}
+var app_subcommands = []string{"on", "off", "remove", "list", "add_addr", "remove_addr", "promote_addr"}
 
 func NewAppCommand() *Command {
 	return &Command{
@@ -22,10 +22,13 @@ Usage: application [COMMAND]
 Manage web applications (origins)
 
 Commands:
-  list [URL]                  - List web applications
-  remove [URL]                - Remove address  
-  remove_addr [URL] [ADDRESS] - Remove address access
-  add_addr [URL] [ADDRESS]    - Add address access
+  list [URL]                - List web applications
+  remove [URL]              - Remove address  
+  remove_addr [URL] [ADDR] 	- Remove address access
+  add_addr [URL] [ADDR]     - Add address access
+  promote_addr [URL] [ADDR] - Promote address
+  on                        - Open application window
+  off                       - Close application window
 		`,
 		Help:             `Manage connected web applications`,
 		Process:          App_Process,
@@ -75,10 +78,15 @@ func App_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 		}
 	}
 
-	if subcommand == "remove_addr" {
+	if subcommand == "remove_addr" || subcommand == "promote_addr" {
 		o := w.GetOrigin(origin)
 		if o != nil {
-			for _, na := range o.Addresses {
+			for i, na := range o.Addresses {
+
+				if i == 0 && subcommand == "promote_addr" {
+					continue
+				}
+
 				a := w.GetAddress(na.Hex())
 				if a == nil {
 					continue
@@ -90,13 +98,14 @@ func App_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 
 				options = append(options, ui.ACOption{
 					Name:   cmn.ShortAddress(a.Address) + " " + a.Name,
-					Result: "app remove_addr '" + origin + "' '" + a.Name + "'"})
+					Result: "app " + subcommand + " '" + origin + "' '" + a.Name + "'"})
 			}
 			return "address", &options, addr
 		}
 	}
 
-	if subcommand == "remove" || subcommand == "list" || subcommand == "add_addr" || subcommand == "remove_addr" {
+	if subcommand == "remove" || subcommand == "list" || subcommand == "add_addr" ||
+		subcommand == "remove_addr" || subcommand == "promote_addr" {
 		for _, o := range w.Origins {
 			if cmn.Contains(o.URL, origin) {
 				options = append(options, ui.ACOption{
@@ -123,7 +132,7 @@ func App_Process(c *Command, input string) {
 
 	switch subcommand {
 	case "list", "":
-		ui.Printf("\nConnected web applications:\n")
+		ui.Printf("Connected web applications:\n\n")
 
 		sort.Slice(w.Origins, func(i, j int) bool {
 			return w.Origins[i].URL < w.Origins[j].URL
@@ -145,13 +154,27 @@ func App_Process(c *Command, input string) {
 					}
 				}
 
-				ui.Printf("   %d ", i)
+				if i == 0 {
+					ui.Printf("  *%d ", i)
+				} else {
+					ui.Printf("   %d ", i)
+				}
+
 				ui.AddAddressShortLink(nil, a.Address)
 				ui.Printf(" ")
 				ui.Terminal.Screen.AddLink(gocui.ICON_DELETE,
 					"command app remove_addr '"+o.URL+"' '"+a.Name+"'",
 					"Remove access for the address", "")
-				ui.Printf(" %-14s (%s) \n", a.Name, a.Signer)
+
+				if i == 0 {
+					ui.Printf("  ")
+				} else {
+					ui.Terminal.Screen.AddLink(gocui.ICON_PROMOTE,
+						"command app promote_addr '"+o.URL+"' '"+a.Name+"'",
+						"Promote the address", "")
+				}
+
+				ui.Printf("%-14s (%s) \n", a.Name, a.Signer)
 
 			}
 		}
@@ -176,11 +199,6 @@ func App_Process(c *Command, input string) {
 		}
 		bus.Send("ui", "notify", "Address removed: "+addr)
 	case "add_addr":
-		if len(p) < 4 {
-			ui.PrintErrorf("Missing URL or address\n")
-			return
-		}
-
 		w.AddOriginAddress(origin, addr)
 		err := w.Save()
 		if err != nil {
@@ -188,6 +206,28 @@ func App_Process(c *Command, input string) {
 			return
 		}
 		bus.Send("ui", "notify", "Address added: "+addr)
+	case "promote_addr":
+		w.PromoteOriginAddress(origin, addr)
+		err := w.Save()
+		if err != nil {
+			ui.PrintErrorf("Error saving wallet: %v\n", err)
+			return
+		}
+		bus.Send("ui", "notify", "Address promoted: "+addr)
+	case "on":
+		w.AppsPaneOn = true
+		err := w.Save()
+		if err != nil {
+			ui.PrintErrorf("Error saving wallet: %v\n", err)
+			return
+		}
+	case "off":
+		w.AppsPaneOn = false
+		err := w.Save()
+		if err != nil {
+			ui.PrintErrorf("Error saving wallet: %v\n", err)
+			return
+		}
 
 	default:
 		ui.PrintErrorf("Unknown command: %s\n", subcommand)

@@ -6,7 +6,6 @@ import (
 
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
 )
 
 var StandardOnClickHotspot func(v *gocui.View, hs *gocui.Hotspot)
@@ -21,6 +20,7 @@ type Wallet struct {
 	Origins        []*Origin      `json:"origins"`
 	CurrentChain   string         `json:"current_chain"`
 	CurrentAddress common.Address `json:"current_address"`
+	AppsPaneOn     bool           `json:"apps_pane_on"`
 
 	filePath   string     `json:"-"`
 	password   string     `json:"-"`
@@ -29,6 +29,7 @@ type Wallet struct {
 
 type Origin struct {
 	URL       string           `json:"url"`
+	ChainId   uint             `json:"chain_id"`
 	Addresses []common.Address `json:"addresses"`
 }
 
@@ -47,8 +48,6 @@ type Blockchain struct {
 	ExplorerUrl   string         `json:"explorer_url"`
 	Currency      string         `json:"currency"`
 	WTokenAddress common.Address `json:"wrapped_native_token_address"`
-
-	Client *ethclient.Client `json:"-"`
 }
 
 var KNOWN_SIGNER_TYPES = []string{"mnemonics", "ledger", "trezor"}

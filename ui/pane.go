@@ -1,6 +1,13 @@
 package ui
 
-import "github.com/AlexNa-Holdings/web3pro/gocui"
+import (
+	"sync"
+
+	"github.com/AlexNa-Holdings/web3pro/gocui"
+	"github.com/rs/zerolog/log"
+)
+
+var panesMutex = &sync.Mutex{}
 
 type Pane interface {
 	SetView(int, int, int, int)
@@ -17,11 +24,21 @@ type PaneDescriptor struct {
 }
 
 func (p *PaneDescriptor) ShowPane() {
+	panesMutex.Lock()
+	defer panesMutex.Unlock()
+
 	p.On = true
-	Flush()
 }
 
 func (p *PaneDescriptor) HidePane() {
+	panesMutex.Lock()
+	defer panesMutex.Unlock()
+
 	p.On = false
-	Flush()
+
+	if p.View != nil {
+		Gui.DeleteView(p.View.Name())
+		log.Debug().Msgf("Deleted view %s", p.View.Name())
+		p.View = nil
+	}
 }

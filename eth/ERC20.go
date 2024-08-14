@@ -14,7 +14,7 @@ import (
 
 func GetERC20TokenInfo(b *cmn.Blockchain, address *common.Address) (string, string, int, error) {
 
-	err := OpenClient(b)
+	client, err := getEthClient(b)
 	if err != nil {
 		log.Error().Msgf("GetERC20TokenInfo: Failed to open client: %v", err)
 		return "", "", 0, err
@@ -28,7 +28,7 @@ func GetERC20TokenInfo(b *cmn.Blockchain, address *common.Address) (string, stri
 	if err != nil {
 		log.Error().Msgf("ConfigGetAddr: Cannot pack data. Error:(%v)", err)
 	}
-	output, err := b.Client.CallContract(context.Background(), msg, nil)
+	output, err := client.CallContract(context.Background(), msg, nil)
 	if err != nil {
 		log.Error().Msgf("ConfigGetAddr: Cannot call contract. Error:(%v)", err)
 	}
@@ -45,7 +45,7 @@ func GetERC20TokenInfo(b *cmn.Blockchain, address *common.Address) (string, stri
 	if err != nil {
 		log.Error().Msgf("ConfigGetAddr: Cannot pack data. Error:(%v)", err)
 	}
-	output, err = b.Client.CallContract(context.Background(), msg, nil)
+	output, err = client.CallContract(context.Background(), msg, nil)
 	if err != nil {
 		log.Error().Msgf("ConfigGetAddr: Cannot call contract. Error:(%v)", err)
 	}
@@ -59,7 +59,7 @@ func GetERC20TokenInfo(b *cmn.Blockchain, address *common.Address) (string, stri
 	if err != nil {
 		log.Error().Msgf("ConfigGetAddr: Cannot pack data. Error:(%v)", err)
 	}
-	output, err = b.Client.CallContract(context.Background(), msg, nil)
+	output, err = client.CallContract(context.Background(), msg, nil)
 	if err != nil {
 		log.Error().Msgf("ConfigGetAddr: Cannot call contract. Error:(%v)", err)
 	}
@@ -82,7 +82,7 @@ func GetERC20Balance(b *cmn.Blockchain, t *cmn.Token, address common.Address) (*
 		return nil, nil
 	}
 
-	err := OpenClient(b)
+	client, err := getEthClient(b)
 	if err != nil {
 		log.Error().Msgf("GetERC20Balance: Failed to open client: %v", err)
 		return nil, err
@@ -98,7 +98,7 @@ func GetERC20Balance(b *cmn.Blockchain, t *cmn.Token, address common.Address) (*
 		return nil, err
 	}
 
-	output, err := b.Client.CallContract(context.Background(), msg, nil)
+	output, err := client.CallContract(context.Background(), msg, nil)
 	if err != nil {
 		log.Error().Msgf("GetERC20Balance: Cannot call contract. Error:(%v)", err)
 		return nil, err
@@ -136,19 +136,19 @@ func BuildTxERC20Transfer(b *cmn.Blockchain, t *cmn.Token, s *cmn.Signer, from *
 		return nil, err
 	}
 
-	err = OpenClient(b)
+	client, err := getEthClient(b)
 	if err != nil {
 		log.Error().Msgf("BuildTxTransfer: Failed to open client: %v", err)
 		return nil, err
 	}
 
-	nonce, err := b.Client.PendingNonceAt(context.Background(), from.Address)
+	nonce, err := client.PendingNonceAt(context.Background(), from.Address)
 	if err != nil {
 		log.Error().Msgf("BuildTxTransfer: Cannot get nonce. Error:(%v)", err)
 		return nil, err
 	}
 
-	gasLimit, err := b.Client.EstimateGas(context.Background(), ethereum.CallMsg{
+	gasLimit, err := client.EstimateGas(context.Background(), ethereum.CallMsg{
 		From: from.Address, To: &to, Data: data,
 	})
 	if err != nil {
@@ -157,7 +157,7 @@ func BuildTxERC20Transfer(b *cmn.Blockchain, t *cmn.Token, s *cmn.Signer, from *
 	}
 
 	// Suggest gas price
-	gasPrice, err := b.Client.SuggestGasPrice(context.Background())
+	gasPrice, err := client.SuggestGasPrice(context.Background())
 	if err != nil {
 		log.Error().Msgf("BuildTxTransfer: Cannot suggest gas price. Error:(%v)", err)
 		return nil, err

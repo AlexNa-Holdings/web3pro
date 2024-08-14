@@ -77,8 +77,6 @@ func process(msg *bus.Message) {
 }
 
 func list() []string {
-
-	log.Debug().Msg("List")
 	trezors_mutex.Lock()
 	defer trezors_mutex.Unlock()
 

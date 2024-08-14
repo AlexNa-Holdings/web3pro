@@ -12,38 +12,41 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-type StatusPane struct {
+type AppsPane struct {
 	PaneDescriptor
 }
 
-var Status StatusPane = StatusPane{
+var Apps AppsPane = AppsPane{
 	PaneDescriptor: PaneDescriptor{
 		MinWidth:  30,
 		MinHeight: 1,
 	},
 }
 
-var statusTemplate string
+var appsTemplate string
 
-func (p *StatusPane) GetDesc() *PaneDescriptor {
+func (p *AppsPane) GetDesc() *PaneDescriptor {
 	return &p.PaneDescriptor
 }
 
-func (p *StatusPane) GetTemplate() string {
+func (p *AppsPane) GetTemplate() string {
 	return statusTemplate
 }
 
-func (p *StatusPane) SetView(x0, y0, x1, y1 int) {
-	v, err := Gui.SetView("status", x0, y0, x1, y1, 0)
+func (p *AppsPane) SetView(x0, y0, x1, y1 int) {
+	v, err := Gui.SetView("apps", x0, y0, x1, y1, 0)
 	if err != nil {
 		if !errors.Is(err, gocui.ErrUnknownView) {
 			log.Error().Err(err).Msgf("SetView error: %s", err)
 		}
-		v.Title = "Status"
+
+		log.Debug().Msg("SetView: apps")
+
+		v.Title = "Apps"
 		v.Autoscroll = false
 		v.ScrollBar = true
 		v.OnResize = func(v *gocui.View) {
-			v.RenderTemplate(statusTemplate)
+			v.RenderTemplate(appsTemplate)
 			v.ScrollTop()
 		}
 		v.OnOverHotspot = ProcessOnOverHotspot
@@ -54,8 +57,8 @@ func (p *StatusPane) SetView(x0, y0, x1, y1 int) {
 	p.PaneDescriptor.View = v
 }
 
-func StatusLoop() {
-	ch := bus.Subscribe("signer", "wallet", "price")
+func AppsLoop() {
+	ch := bus.Subscribe("wallet", "price")
 	defer bus.Unsubscribe(ch)
 
 	for msg := range ch {
@@ -63,23 +66,18 @@ func StatusLoop() {
 		case "wallet":
 			switch msg.Type {
 			case "open", "saved":
-				Status.rebuidTemplate()
-			}
-		case "signer":
-			switch msg.Type {
-			case "connected":
-				Status.rebuidTemplate()
+				Apps.rebuidTemplate()
 			}
 		case "price":
 			switch msg.Type {
 			case "updated":
-				Status.rebuidTemplate()
+				Apps.rebuidTemplate()
 			}
 		}
 	}
 }
 
-func (p *StatusPane) rebuidTemplate() {
+func (p *AppsPane) rebuidTemplate() {
 	temp := "<w>"
 
 	if cmn.CurrentWallet != nil {

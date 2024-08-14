@@ -13,10 +13,14 @@ import (
 var panes = []Pane{
 	&Status,
 	&HailPane,
+	&Apps,
 	&Terminal,
 }
 
 func Layout(g *gocui.Gui) error {
+	panesMutex.Lock() // prevent changing panes while layouting
+	defer panesMutex.Unlock()
+
 	maxX, maxY := g.Size()
 	pane_map := map[*PaneDescriptor]Pane{}
 

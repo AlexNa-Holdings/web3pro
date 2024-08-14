@@ -17,7 +17,8 @@ import (
 const WEB3PRO_PORT = 9323 // WEB3 mnemonics
 
 type ConContext struct {
-	Agent string
+	Agent      string
+	Connection *websocket.Conn
 }
 
 var connections = make([]*ConContext, 0)
@@ -29,6 +30,13 @@ type RPCRequest struct {
 	Method        string        `json:"method"`
 	Params        []interface{} `json:"params"` // Params as a slice of interface{}
 	Web3ProOrigin string        `json:"__web3proOrigin,omitempty"`
+}
+
+type RPCBroadcast struct {
+	JSONRPC       string `json:"jsonrpc"`
+	Method        string `json:"method"`
+	Params        any    `json:"params"` // Params as a slice of interface{}
+	Web3ProOrigin string `json:"__web3proOrigin,omitempty"`
 }
 
 type RPCError struct {
@@ -68,6 +76,32 @@ func loop() {
 				}
 				connectionsMutex.Unlock()
 				msg.Respond(list, nil)
+			case "address-changed":
+				res, ok := msg.Data.(*bus.B_WsAccountChanged)
+				if !ok {
+					log.Error().Msgf("Invalid message data")
+					continue
+				}
+
+				broadcast(&RPCBroadcast{
+					JSONRPC:       "2.0",
+					Method:        "accountsChanged_subscription",
+					Web3ProOrigin: res.Origin,
+					Params:        res.Addresses,
+				})
+			case "chain-changed":
+				res, ok := msg.Data.(*bus.B_WsChainChanged)
+				if !ok {
+					log.Error().Msgf("Invalid message data")
+					continue
+				}
+
+				broadcast(&RPCBroadcast{
+					JSONRPC:       "2.0",
+					Method:        "chainChanged_subscription",
+					Web3ProOrigin: res.Origin,
+					Params:        res.ChainID,
+				})
 			}
 		}
 	}
@@ -90,6 +124,23 @@ func startWS() {
 			log.Fatal().Err(err).Msgf("WS server failed to start on port %d", WEB3PRO_PORT)
 		}
 	}()
+}
+
+func broadcast(req *RPCBroadcast) {
+	reqBytes, err := json.Marshal(req)
+	if err != nil {
+		log.Error().Msgf("JSON marshal error: %v", err)
+		return
+	}
+
+	connectionsMutex.Lock()
+	for _, conn := range connections {
+		err = conn.Connection.WriteMessage(websocket.TextMessage, reqBytes)
+		if err != nil {
+			log.Error().Msgf("Write error: %v", err)
+		}
+	}
+	connectionsMutex.Unlock()
 }
 
 func AddConnection(conn *ConContext) {
@@ -140,7 +191,8 @@ func web3Handler(w http.ResponseWriter, r *http.Request) {
 	defer conn.Close()
 
 	context := &ConContext{
-		Agent: r.Header.Get("User-Agent"),
+		Agent:      r.Header.Get("User-Agent"),
+		Connection: conn,
 	}
 	AddConnection(context)
 	defer RemoveConnection(context)

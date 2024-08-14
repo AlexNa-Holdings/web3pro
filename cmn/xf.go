@@ -86,9 +86,6 @@ func (n *XF) IsZero() bool {
 }
 
 func (n *XF) Float64() float64 {
-
-	log.Debug().Msgf("Float64: %s", n.String())
-
 	if n.NaN {
 		return 0
 	}

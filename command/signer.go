@@ -159,8 +159,6 @@ func Signer_Process(c *Command, input string) {
 
 	switch subcommand {
 	case "list", "":
-		ui.Printf("List of signers:\n")
-
 		for _, s := range cmn.CurrentWallet.Signers {
 			ui.Printf("%-13s %-9s ", s.Name, s.Type)
 

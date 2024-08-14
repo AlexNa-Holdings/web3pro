@@ -13,13 +13,13 @@ import (
 
 func GetBalance(b *cmn.Blockchain, address common.Address) (*big.Int, error) {
 
-	err := OpenClient(b)
+	client, err := getEthClient(b)
 	if err != nil {
 		log.Error().Msgf("GetBalance: Failed to open client: %v", err)
 		return nil, err
 	}
 
-	balance, err := b.Client.BalanceAt(context.Background(), address, nil)
+	balance, err := client.BalanceAt(context.Background(), address, nil)
 	if err != nil {
 		log.Error().Msgf("GetBalance: Cannot get balance. Error:(%v)", err)
 		return nil, err
@@ -34,20 +34,20 @@ func BuildTxTransfer(b *cmn.Blockchain, s *cmn.Signer, from *cmn.Address, to com
 		return nil, errors.New("signer mismatch")
 	}
 
-	err := OpenClient(b)
+	client, err := getEthClient(b)
 	if err != nil {
 		log.Error().Msgf("BuildTxTransfer: Failed to open client: %v", err)
 		return nil, err
 	}
 
-	nonce, err := b.Client.PendingNonceAt(context.Background(), from.Address)
+	nonce, err := client.PendingNonceAt(context.Background(), from.Address)
 	if err != nil {
 		log.Error().Msgf("BuildTxTransfer: Cannot get nonce. Error:(%v)", err)
 		return nil, err
 	}
 
 	// Suggest gas price
-	gasPrice, err := b.Client.SuggestGasPrice(context.Background())
+	gasPrice, err := client.SuggestGasPrice(context.Background())
 	if err != nil {
 		log.Error().Msgf("BuildTxTransfer: Cannot suggest gas price. Error:(%v)", err)
 		return nil, err

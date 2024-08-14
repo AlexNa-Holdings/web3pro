@@ -23,6 +23,7 @@ func Init() {
 
 	go Loop()
 	go StatusLoop()
+	go AppsLoop()
 
 	Gui, err = gocui.NewGui(gocui.OutputTrue, true)
 	if err != nil {
@@ -57,7 +58,7 @@ func quit(g *gocui.Gui, v *gocui.View) error {
 }
 
 func Loop() {
-	ch := bus.Subscribe("ui", "timer")
+	ch := bus.Subscribe("ui", "timer", "wallet")
 	defer bus.Unsubscribe(ch)
 
 	for msg := range ch {
@@ -130,5 +131,23 @@ func process(msg *bus.Message) {
 		if text, ok := msg.Data.(string); ok {
 			Notification.ShowEx(text, true)
 		}
+	case "open": // open wallet
+		Status.ShowPane()
+		if cmn.CurrentWallet != nil {
+			if cmn.CurrentWallet.AppsPaneOn {
+				Apps.ShowPane()
+			} else {
+				Apps.HidePane()
+			}
+		}
+	case "saved": // save wallet
+		if cmn.CurrentWallet != nil {
+			if cmn.CurrentWallet.AppsPaneOn {
+				Apps.ShowPane()
+			} else {
+				Apps.HidePane()
+			}
+		}
+
 	}
 }

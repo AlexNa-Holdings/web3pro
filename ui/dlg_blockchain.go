@@ -94,6 +94,13 @@ func DlgBlockchain(name string) *gocui.Popup {
 						break
 					}
 
+					for i, bch := range cmn.CurrentWallet.Blockchains {
+						if bch.ChainId == uint(chainid) && (i == -1 || i != bch_index) {
+							Notification.ShowErrorf("Chain id %d already used by %s", chainid, bch.Name)
+							break
+						}
+					}
+
 					explorer := v.GetInput("explorer")
 					if len(explorer) == 0 {
 						Notification.ShowError("Explorer URL cannot be empty")

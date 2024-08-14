@@ -189,6 +189,8 @@ func (w *Wallet) RemoveOriginAddress(url string, a string) error {
 		w.RemoveOrigin(url)
 	}
 
+	bus.Send("ws", "address-changed", &bus.B_WsAccountChanged{Origin: url, Addresses: o.Addresses})
+
 	return nil
 }
 
@@ -222,6 +224,44 @@ func (w *Wallet) AddOriginAddress(url string, a string) error {
 	}
 
 	o.Addresses = append(o.Addresses, addr.Address)
+
+	bus.Send("ws", "address-changed", &bus.B_WsAccountChanged{Origin: url, Addresses: o.Addresses})
+
+	return nil
+}
+
+func (w *Wallet) PromoteOriginAddress(url string, a string) error {
+	o := w.GetOrigin(url)
+	if o == nil {
+		return errors.New("origin not found")
+	}
+
+	addr := w.GetAddressByName(a)
+	if addr == nil {
+		return errors.New("address not found")
+	}
+
+	w.writeMutex.Lock()
+	defer w.writeMutex.Unlock()
+
+	found := false
+	for i, na := range o.Addresses {
+		if na == addr.Address {
+			found = true
+			if i == 0 {
+				break
+			}
+			o.Addresses = append([]common.Address{addr.Address}, append(o.Addresses[:i], o.Addresses[i+1:]...)...)
+			break
+		}
+	}
+
+	if !found {
+		return errors.New("address not found")
+	}
+
+	bus.Send("ws", "address-changed", &bus.B_WsAccountChanged{Origin: url, Addresses: o.Addresses})
+
 	return nil
 }
 

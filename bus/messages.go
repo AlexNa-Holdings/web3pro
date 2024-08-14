@@ -149,3 +149,13 @@ type B_WsList_Conn struct { // device
 	Agent string
 }
 type B_WsList_Response []B_WsList_Conn
+
+type B_WsAccountChanged struct { // account-changed
+	Origin    string
+	Addresses []common.Address
+}
+
+type B_WsChainChanged struct { // chain-changed
+	Origin  string
+	ChainID int
+}
