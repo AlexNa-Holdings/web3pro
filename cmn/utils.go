@@ -180,7 +180,7 @@ func (t *Token) Value2Str(value *big.Int) string {
 func AddressShortLinkTag(a common.Address) string {
 	sa := a.String()
 	sh := ShortAddress(a)
-	return fmt.Sprintf("<l text:'%s' action:'copy %s' tip:'Copy %s'>", sh, sa, sa)
+	return fmt.Sprintf("<l text:'%s' action:'copy %s' tip:'%s'>", sh, sa, sa)
 }
 
 func OpenBrowser(url string) error {
@@ -262,7 +262,7 @@ func AddAddressLink(v *gocui.View, a common.Address) {
 
 func AddAddressShortLink(v *gocui.View, a common.Address) {
 	s := a.String()
-	v.AddLink(s[:6]+gocui.ICON_3DOTS+s[len(s)-4:], "copy "+a.String(), "Copy "+a.String(), "")
+	v.AddLink(s[:6]+gocui.ICON_3DOTS+s[len(s)-4:], "copy "+a.String(), a.String(), "")
 }
 
 func TagLink(text, action, tip string) string {
@@ -288,7 +288,7 @@ func AddValueLink(v *gocui.View, val *big.Int, t *Token) {
 	xf := NewXF(val, t.Decimals)
 
 	text := FmtAmount(val, t.Decimals, true)
-	v.AddLink(text, "copy "+xf.String(), "Copy "+xf.String(), "")
+	v.AddLink(text, "copy "+xf.String(), xf.String(), "")
 }
 
 func TagValueLink(val *big.Int, t *Token) string {
@@ -314,12 +314,10 @@ func AddDollarValueLink(v *gocui.View, val *big.Int, t *Token) {
 
 	f := t.Price * xf.Float64()
 
-	log.Debug().Msgf("AddDollarValueLink: %v (%.15f) *  %v= %.15f", val, xf.Float64(), t.Price, f)
-
 	text := FmtFloat64D(f, true)
 	n := fmt.Sprintf("%.15f", f)
 
-	v.AddLink(text, "copy "+n, "Copy "+n, "")
+	v.AddLink(text, "copy "+n, n, "")
 }
 
 func TagDollarValueLink(val *big.Int, t *Token) string {
@@ -345,7 +343,7 @@ func TagShortDollarValueLink(val *big.Int, t *Token) string {
 }
 
 func TagShortDollarLink(val float64) string {
-	return fmt.Sprintf("<l text:'%s' action:'copy %f' tip:'$%f'>", FmtFloat64D(val, false), val, val)
+	return fmt.Sprintf("<l text:'%s' action:'copy %.15f' tip:'%.15f'>", FmtFloat64D(val, false), val, val)
 }
 
 func AddValueSymbolLink(v *gocui.View, val *big.Int, t *Token) {
@@ -360,7 +358,7 @@ func AddValueSymbolLink(v *gocui.View, val *big.Int, t *Token) {
 	xf := NewXF(val, t.Decimals)
 	text := FmtAmount(val, t.Decimals, true)
 
-	v.AddLink(text, "copy "+xf.String(), "Copy "+xf.String(), "")
+	v.AddLink(text, "copy "+xf.String(), xf.String(), "")
 }
 
 func TagValueSymbolLink(val *big.Int, t *Token) string {
