@@ -273,7 +273,7 @@ func web3Handler(w http.ResponseWriter, r *http.Request) {
 			ID:      rpcReq.ID,
 		}
 
-		log.Printf("ws->%v", rpcReq)
+		log.Debug().Msgf("ws-> %v", rpcReq)
 
 		// Dispatch based on method prefix
 		switch {
@@ -303,7 +303,7 @@ func (con *ConContext) send(data any) {
 		return
 	}
 
-	log.Debug().Msgf("Sending response: %v", string(respBytes))
+	log.Debug().Msgf("<-ws %v", string(respBytes))
 
 	err = con.Connection.WriteMessage(websocket.TextMessage, respBytes)
 	if err != nil {
@@ -348,6 +348,7 @@ and use the current chain & address?
 				}
 
 				w.AddOrigin(origin)
+				w.CurrentOrigin = url
 				err := w.Save()
 				if err != nil {
 					log.Error().Err(err).Msg("Failed to save wallet")

@@ -105,11 +105,11 @@ func (p *AppPane) rebuidTemplate() string {
 	parsedURL, err := url.Parse(o.URL)
 	if err != nil {
 		temp += cmn.TagLink(o.URL,
-			"start_command app set '"+o.URL+"'",
+			"start_command app set ",
 			"Set the app")
 	} else {
 		temp += cmn.TagLink(parsedURL.Hostname(),
-			"start_command app set '"+o.URL+"'",
+			"start_command app set ",
 			"Set the app")
 	}
 

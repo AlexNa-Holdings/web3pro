@@ -311,10 +311,13 @@ func AddDollarValueLink(v *gocui.View, val *big.Int, t *Token) {
 	}
 
 	xf := NewXF(val, t.Decimals)
+
 	f := t.Price * xf.Float64()
 
+	log.Debug().Msgf("AddDollarValueLink: %v (%.15f) *  %v= %.15f", val, xf.Float64(), t.Price, f)
+
 	text := FmtFloat64D(f, true)
-	n := fmt.Sprintf("%f", f)
+	n := fmt.Sprintf("%.15f", f)
 
 	v.AddLink(text, "copy "+n, "Copy "+n, "")
 }

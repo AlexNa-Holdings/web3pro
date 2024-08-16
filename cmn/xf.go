@@ -34,7 +34,7 @@ func NewXF(v *big.Int, decimal int) *XF {
 }
 
 func NewXF_Float64(v float64) *XF {
-	n, _ := ParseXF(fmt.Sprintf("%f", v))
+	n, _ := ParseXF(fmt.Sprintf("%.15f", v))
 	return n
 }
 
