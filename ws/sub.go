@@ -1,39 +1,43 @@
 package ws
 
-import "sync"
+import (
+	"fmt"
+	"sync"
+)
 
 type appSubscription struct {
-	id     int
+	id     string
 	event  string
 	params any
 }
 
 type subManger struct {
-	nexId int
-	subs  map[string][]appSubscription //url -> subscriptions
-	mutex sync.Mutex
+	nextId int
+	subs   map[string][]appSubscription //url -> subscriptions
+	mutex  sync.Mutex
 }
 
 func newSubManager() *subManger {
 	return &subManger{
-		nexId: 0,
-		subs:  make(map[string][]appSubscription),
-		mutex: sync.Mutex{},
+		nextId: 0,
+		subs:   make(map[string][]appSubscription),
+		mutex:  sync.Mutex{},
 	}
 }
 
-func (sm *subManger) addSubscription(url string, event string, params any) int {
+func (sm *subManger) addSubscription(url string, event string, params any) string {
 	sm.mutex.Lock()
 	defer sm.mutex.Unlock()
 
-	sm.nexId++
+	sm.nextId++
+	s_id := fmt.Sprintf("0x%x", sm.nextId)
 	sm.subs[url] = append(sm.subs[url], appSubscription{
-		id:     sm.nexId,
+		id:     s_id,
 		event:  event,
 		params: params,
 	})
 
-	return sm.nexId
+	return s_id
 }
 
 func (sm *subManger) getSubsForEvent(url string, event string) []appSubscription {

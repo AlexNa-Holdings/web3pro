@@ -11,6 +11,7 @@ import (
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog/log"
 )
@@ -33,13 +34,16 @@ type RPCRequest struct {
 	Params        []interface{} `json:"params"` // Params as a slice of interface{}
 	Web3ProOrigin string        `json:"__web3proOrigin,omitempty"`
 }
+type BroadcastParams struct {
+	Subscription string `json:"subscription,omitempty"`
+	Result       any    `json:"result,omitempty"`
+}
 
 type RPCBroadcast struct {
-	JSONRPC       string `json:"jsonrpc"`
-	Method        string `json:"method"`
-	Params        any    `json:"params"` // Params as a slice of interface{}
-	Subscription  string `json:"subscription,omitempty"`
-	Web3ProOrigin string `json:"__web3proOrigin,omitempty"`
+	JSONRPC       string          `json:"jsonrpc"`
+	Method        string          `json:"method"`
+	Params        BroadcastParams `json:"params"`
+	Web3ProOrigin string          `json:"__web3proOrigin,omitempty"`
 }
 
 type RPCError struct {
@@ -134,11 +138,11 @@ func broadcastChainChanged(data any) {
 		a := conn.SM.getSubsForEvent(url, "chainChanged")
 		for _, sub := range a {
 			conn.send(&RPCBroadcast{
-				JSONRPC:      "2.0",
-				Method:       "chainChanged",
-				Subscription: fmt.Sprintf("0x%x", sub.id),
-				Params: []string{
-					fmt.Sprintf("0x%x", o.ChainId),
+				JSONRPC: "2.0",
+				Method:  "chainChanged_subscription",
+				Params: BroadcastParams{
+					Subscription: sub.id,
+					Result:       fmt.Sprintf("0x%x", o.ChainId),
 				},
 				Web3ProOrigin: url,
 			})
@@ -177,10 +181,12 @@ func broadcastAddressesChanged(data any) {
 		a := conn.SM.getSubsForEvent(url, "accountsChanged")
 		for _, sub := range a {
 			conn.send(&RPCBroadcast{
-				JSONRPC:       "2.0",
-				Method:        "accountsChanged",
-				Subscription:  fmt.Sprintf("0x%x", sub.id),
-				Params:        addrs,
+				JSONRPC: "2.0",
+				Method:  "accountsChanged_subscription",
+				Params: BroadcastParams{
+					Subscription: sub.id,
+					Result:       addrs,
+				},
 				Web3ProOrigin: url,
 			})
 		}
@@ -267,14 +273,18 @@ func web3Handler(w http.ResponseWriter, r *http.Request) {
 			ID:      rpcReq.ID,
 		}
 
+		log.Printf("ws->%v", rpcReq)
+
 		// Dispatch based on method prefix
 		switch {
 		case strings.HasPrefix(rpcReq.Method, "eth_"):
 			handleEthMethod(rpcReq, ctx, response)
 		case strings.HasPrefix(rpcReq.Method, "net_"):
 			handleNetMethod(rpcReq, ctx, response)
+		case strings.HasPrefix(rpcReq.Method, "wallet_"):
+			handleWalletMethod(rpcReq, ctx, response)
 		default:
-			log.Printf("Unknown method: %s", rpcReq.Method)
+			log.Printf("Unknown method: %v", rpcReq.Method)
 			// Handle unknown methods or send an error response
 			response.Error = &RPCError{
 				Code:    -32601,
@@ -299,4 +309,56 @@ func (con *ConContext) send(data any) {
 	if err != nil {
 		log.Printf("Write error: %v", err)
 	}
+}
+
+func getAllowedOrigin(url string) (*cmn.Origin, bool) {
+
+	log.Debug().Msgf("getAllowedOrigin: %s", url)
+
+	w := cmn.CurrentWallet
+	if w == nil {
+		return nil, false
+	}
+
+	allowed := false
+	origin := w.GetOrigin(url)
+	if origin == nil {
+		bus.Fetch("ui", "hail", &bus.B_Hail{
+			Title: "Connect Web Application",
+			Template: `<c><w>
+Allow to connect to this web application:
+
+<u><b>` + url + `</b></u>
+
+and use the current chain & address?
+
+<button text:Ok> <button text:Cancel>`,
+			OnOk: func(m *bus.Message) {
+
+				chain_id := 1
+				b := w.GetBlockchain(w.CurrentChain)
+				if b != nil {
+					chain_id = b.ChainId
+				}
+
+				origin = &cmn.Origin{
+					URL:       url,
+					ChainId:   chain_id,
+					Addresses: []common.Address{w.CurrentAddress},
+				}
+
+				w.AddOrigin(origin)
+				err := w.Save()
+				if err != nil {
+					log.Error().Err(err).Msg("Failed to save wallet")
+					bus.Send("ui", "notify", "Failed to save wallet")
+				}
+				allowed = true
+				bus.Send("ui", "remove-hail", m)
+			}})
+	} else {
+		allowed = true
+	}
+
+	return origin, allowed
 }
