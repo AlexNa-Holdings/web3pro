@@ -74,7 +74,7 @@ func (p *HailPaneType) SetView(x0, y0, x1, y1 int) {
 		v.OnResize(v) // render template
 
 		v.OnClickTitle = func(v *gocui.View) { // reset timer
-			bus.Send("timer", "reset", &bus.B_TimerReset{ID: ActiveRequest.TimerID})
+			bus.Send("timer", "reset", ActiveRequest.TimerID)
 			Gui.UpdateAsync(func(g *gocui.Gui) error {
 				HailPane.UpdateSubtitle()
 				return nil
@@ -93,18 +93,18 @@ func (p *HailPaneType) SetView(x0, y0, x1, y1 int) {
 				case "button ok":
 					log.Trace().Msgf("HailPane: button Ok")
 					if active_hail.OnOk != nil {
-						active_hail.OnOk(active_hail)
+						active_hail.OnOk(ActiveRequest)
 					}
 					remove(ActiveRequest)
 				case "button cancel":
 					log.Trace().Msgf("HailPane: button Cancel")
 					if active_hail.OnCancel != nil {
-						active_hail.OnCancel(active_hail)
+						active_hail.OnCancel(ActiveRequest)
 					}
 					remove(ActiveRequest)
 				default:
 					if active_hail.OnClickHotspot != nil {
-						active_hail.OnClickHotspot(active_hail, v, hs)
+						active_hail.OnClickHotspot(ActiveRequest, v, hs)
 					}
 				}
 			}
@@ -117,9 +117,14 @@ func (p *HailPaneType) SetView(x0, y0, x1, y1 int) {
 			active_hail := ActiveRequest.Data.(*bus.B_Hail)
 
 			if active_hail.OnOverHotspot != nil {
-				active_hail.OnOverHotspot(active_hail, v, hs)
+				active_hail.OnOverHotspot(ActiveRequest, v, hs)
 			}
 		}
+
+		if active_hail.OnOpen != nil {
+			active_hail.OnOpen(ActiveRequest, Gui, v)
+		}
+
 	}
 	p.PaneDescriptor.View = v
 }
@@ -148,12 +153,12 @@ func hqAdd(m *bus.Message, on_top bool) {
 	}
 }
 
-func hqRemove(h *bus.B_Hail) {
+func hqRemove(m *bus.Message) {
 	HQMutex.Lock()
 	defer HQMutex.Unlock()
 
 	for i := 0; i < len(HailQueue); i++ {
-		if HailQueue[i].Data == h {
+		if HailQueue[i] == m {
 			HailQueue = append(HailQueue[:i], HailQueue[i+1:]...)
 			i -= 1
 		}
@@ -174,13 +179,13 @@ func remove(m *bus.Message) {
 	hail := m.Data.(*bus.B_Hail)
 	log.Trace().Msgf("Removing hail %s", hail.Title)
 
-	hqRemove(hail)
+	hqRemove(m)
 
 	if hail.OnClose != nil {
-		hail.OnClose(hail)
+		hail.OnClose(m)
 	}
 
-	bus.Send("timer", "delete", &bus.B_TimerDelete{ID: m.TimerID})
+	bus.Send("timer", "delete", m.TimerID)
 	m.Respond(nil, nil)
 
 	if ActiveRequest != nil && ActiveRequest.Data == hail {
@@ -201,7 +206,7 @@ func cancel(m *bus.Message) {
 	hail := m.Data.(*bus.B_Hail)
 
 	if hail.OnCancel != nil {
-		hail.OnCancel(hail)
+		hail.OnCancel(m)
 	}
 
 	remove(m)
@@ -215,7 +220,7 @@ func (p *HailPaneType) open(m *bus.Message) {
 		if ActiveRequest.Data != hail {
 			active_hail := ActiveRequest.Data.(*bus.B_Hail)
 			if active_hail.OnSuspend != nil {
-				active_hail.OnSuspend(hail)
+				active_hail.OnSuspend(ActiveRequest)
 			}
 			active_hail.Suspended = true
 		}
@@ -224,7 +229,7 @@ func (p *HailPaneType) open(m *bus.Message) {
 	ActiveRequest = m
 	if hail.Suspended {
 		if hail.OnResume != nil {
-			hail.OnResume(hail)
+			hail.OnResume(ActiveRequest)
 		}
 		hail.Suspended = false
 	}
@@ -234,6 +239,9 @@ func (p *HailPaneType) open(m *bus.Message) {
 	} else {
 		if hail.Template != "" {
 			HailPane.View.RenderTemplate(hail.Template)
+			if hail.OnOpen != nil {
+				hail.OnOpen(ActiveRequest, Gui, HailPane.View)
+			}
 			Flush()
 		}
 	}
@@ -243,9 +251,6 @@ func (p *HailPaneType) open(m *bus.Message) {
 		return nil
 	})
 
-	if hail.OnOpen != nil {
-		hail.OnOpen(hail, Gui, HailPane.View)
-	}
 }
 
 func (p *HailPaneType) UpdateSubtitle() {

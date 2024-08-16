@@ -15,7 +15,7 @@ type con struct {
 	URL string
 }
 
-var cons map[uint]*con // chainId -> client
+var cons map[int]*con // chainId -> client
 var consMutex = sync.Mutex{}
 
 func Init() {
@@ -36,6 +36,11 @@ func Loop() {
 func process(msg *bus.Message) {
 	switch msg.Topic {
 	case "eth":
+		switch msg.Type {
+		case "send":
+			err := send(msg)
+			msg.Respond(nil, err)
+		}
 	case "wallet":
 		switch msg.Type {
 		case "open":
@@ -53,7 +58,7 @@ func initConnections() {
 	for _, c := range cons {
 		c.Close()
 	}
-	cons = make(map[uint]*con)
+	cons = make(map[int]*con)
 
 	w := cmn.CurrentWallet
 	if w == nil {
@@ -76,7 +81,7 @@ func updateConnections() {
 		return
 	}
 
-	vetted := make(map[uint]bool)
+	vetted := make(map[int]bool)
 	for _, b := range w.Blockchains {
 		vetted[b.ChainId] = true
 
@@ -94,7 +99,7 @@ func updateConnections() {
 		}
 	}
 
-	to_delete := []uint{}
+	to_delete := []int{}
 	for c := range cons {
 		if _, ok := vetted[c]; !ok {
 			to_delete = append(to_delete, c)

@@ -1,6 +1,7 @@
 package ws
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
@@ -14,12 +15,36 @@ func handleEthMethod(req RPCRequest, ctx *ConContext, res *RPCResponse) {
 
 	switch method {
 	case "chainId":
-		res.Result = "0x1"
+		requestChainId(req, ctx, res)
 	case "subscribe":
 		subscribe(req, ctx, res)
 	case "requestAccounts":
 		requestAccounts(req, ctx, res)
+	default:
+		log.Error().Msgf("Method not found: %v", req)
+		res.Error = &RPCError{
+			Code:    4001,
+			Message: "Method not found",
+		}
 	}
+}
+
+func requestChainId(req RPCRequest, _ *ConContext, res *RPCResponse) {
+	id := 1
+
+	w := cmn.CurrentWallet
+	if w != nil {
+		origin := w.GetOrigin(req.Web3ProOrigin)
+		if origin != nil {
+			id = origin.ChainId
+		} else {
+			b := w.GetBlockchain(w.CurrentChain)
+			if b != nil {
+				id = b.ChainId
+			}
+		}
+	}
+	res.Result = fmt.Sprintf("0x%x", id)
 }
 
 func requestAccounts(req RPCRequest, _ *ConContext, res *RPCResponse) {
@@ -37,9 +62,17 @@ Allow to connect to this web application:
 and use the current address?
 
 <button text:Ok> <button text:Cancel>`,
-			OnOk: func(h *bus.B_Hail) {
+			OnOk: func(m *bus.Message) {
+
+				chain_id := 1
+				b := w.GetBlockchain(w.CurrentChain)
+				if b != nil {
+					chain_id = b.ChainId
+				}
+
 				origin = &cmn.Origin{
 					URL:       req.Web3ProOrigin,
+					ChainId:   chain_id,
 					Addresses: []common.Address{w.CurrentAddress},
 				}
 
@@ -49,7 +82,7 @@ and use the current address?
 					log.Error().Err(err).Msg("Failed to save wallet")
 					bus.Send("ui", "notify", "Failed to save wallet")
 				}
-				bus.Send("ui", "remove-hail", h)
+				bus.Send("ui", "remove-hail", m)
 			}})
 	}
 
@@ -69,4 +102,27 @@ and use the current address?
 }
 
 func subscribe(req RPCRequest, ctx *ConContext, res *RPCResponse) {
+
+	if len(req.Params) < 1 {
+		res.Error = &RPCError{
+			Code:    4001,
+			Message: "Invalid params",
+		}
+		return
+
+	}
+
+	stype := req.Params[0].(string)
+
+	switch stype {
+	case "chainChanged", "accountsChanged":
+		id := ctx.SM.addSubscription(req.Web3ProOrigin, stype, nil)
+		res.Result = fmt.Sprintf("0x%x", id)
+	default:
+		log.Error().Msgf("Invalid subscription type: %v", req)
+		res.Error = &RPCError{
+			Code:    4001,
+			Message: "Invalid params",
+		}
+	}
 }

@@ -5,8 +5,8 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
-	"github.com/AlexNa-Holdings/web3pro/eth"
 	"github.com/AlexNa-Holdings/web3pro/ui"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog/log"
@@ -158,5 +158,13 @@ func Send_Process(c *Command, input string) {
 		ui.Notification.ShowErrorf("Invalid amount: %s", amount)
 		return
 	}
-	eth.HailToSend(b, t, a_from, common.HexToAddress(to), amt)
+
+	bus.Send("eth", "send", &bus.B_EthSend{
+		Blockchain: b.Name,
+		Token:      t.Symbol,
+		From:       a_from.Address,
+		To:         common.HexToAddress(to),
+		Amount:     amt,
+	})
+
 }

@@ -12,15 +12,17 @@ var StandardOnClickHotspot func(v *gocui.View, hs *gocui.Hotspot)
 var StandardOnOverHotspot func(v *gocui.View, hs *gocui.Hotspot)
 
 type Wallet struct {
-	Name           string         `json:"name"`
-	Blockchains    []*Blockchain  `json:"blockchains"`
-	Signers        []*Signer      `json:"signers"`
-	Addresses      []*Address     `json:"addresses"`
-	Tokens         []*Token       `json:"tokens"`
-	Origins        []*Origin      `json:"origins"`
+	Name        string        `json:"name"`
+	Blockchains []*Blockchain `json:"blockchains"`
+	Signers     []*Signer     `json:"signers"`
+	Addresses   []*Address    `json:"addresses"`
+	Tokens      []*Token      `json:"tokens"`
+	Origins     []*Origin     `json:"origins"`
+	AppsPaneOn  bool          `json:"apps_pane_on"`
+
 	CurrentChain   string         `json:"current_chain"`
 	CurrentAddress common.Address `json:"current_address"`
-	AppsPaneOn     bool           `json:"apps_pane_on"`
+	CurrentOrigin  string         `json:"current_origin"`
 
 	filePath   string     `json:"-"`
 	password   string     `json:"-"`
@@ -29,7 +31,7 @@ type Wallet struct {
 
 type Origin struct {
 	URL       string           `json:"url"`
-	ChainId   uint             `json:"chain_id"`
+	ChainId   int              `json:"chain_id"`
 	Addresses []common.Address `json:"addresses"`
 }
 
@@ -44,7 +46,7 @@ type Address struct {
 type Blockchain struct {
 	Name          string         `json:"name"`
 	Url           string         `json:"url"`
-	ChainId       uint           `json:"chain_id"`
+	ChainId       int            `json:"chain_id"`
 	ExplorerUrl   string         `json:"explorer_url"`
 	Currency      string         `json:"currency"`
 	WTokenAddress common.Address `json:"wrapped_native_token_address"`

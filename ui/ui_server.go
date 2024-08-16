@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
@@ -81,21 +82,20 @@ func process(msg *bus.Message) {
 			}
 		}
 	case "remove-hail":
-		if hail, ok := msg.Data.(*bus.B_Hail); ok {
-			log.Trace().Msgf("ProcessHails: Remove hail received: %v", hail.Title)
-
-			var m *bus.Message
-			HQMutex.Lock()
-			for i, h := range HailQueue {
-				if h.Data == hail {
-					m = HailQueue[i]
-					break
-				}
-			}
-			HQMutex.Unlock()
-
+		if m, ok := msg.Data.(*bus.Message); ok {
 			if m != nil {
 				remove(m)
+			}
+		}
+	case "start_command":
+		if text, ok := msg.Data.(string); ok {
+			Terminal.Input.Clear()
+			fmt.Fprint(Terminal.Input, text)
+			Terminal.Input.SetCursor(len(text), 0)
+			// try autocomplete again
+			if Terminal.AutoCompleteFunc != nil {
+				t, o, h := Terminal.AutoCompleteFunc(text)
+				Terminal.ShowAutocomplete(t, o, h)
 			}
 		}
 	case "tick":
@@ -109,16 +109,16 @@ func process(msg *bus.Message) {
 
 				hail := ActiveRequest.Data.(*bus.B_Hail)
 				if hail.OnTick != nil {
-					hail.OnTick(hail, msg.Tick)
+					hail.OnTick(ActiveRequest, msg.Tick)
 				}
 			}
 			HQMutex.Unlock()
 		}
 	case "done":
-		if d, ok := msg.Data.(*bus.B_TimerDone); ok {
-			log.Trace().Msgf("Alert: %v", d.ID)
+		if id, ok := msg.Data.(int); ok {
+			log.Trace().Msgf("Alert: %v", id)
 			if ActiveRequest != nil {
-				if ActiveRequest.TimerID == d.ID {
+				if ActiveRequest.TimerID == id {
 					cancel(ActiveRequest)
 				}
 			}
@@ -135,17 +135,17 @@ func process(msg *bus.Message) {
 		Status.ShowPane()
 		if cmn.CurrentWallet != nil {
 			if cmn.CurrentWallet.AppsPaneOn {
-				Apps.ShowPane()
+				App.ShowPane()
 			} else {
-				Apps.HidePane()
+				App.HidePane()
 			}
 		}
 	case "saved": // save wallet
 		if cmn.CurrentWallet != nil {
 			if cmn.CurrentWallet.AppsPaneOn {
-				Apps.ShowPane()
+				App.ShowPane()
 			} else {
-				Apps.HidePane()
+				App.HidePane()
 			}
 		}
 

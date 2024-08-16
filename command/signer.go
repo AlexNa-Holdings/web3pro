@@ -221,7 +221,7 @@ func Signer_Process(c *Command, input string) {
 
 		for i, a := range l {
 			ui.Printf("%2d: ", from+i)
-			ui.AddAddressLink(nil, a)
+			cmn.AddAddressLink(ui.Terminal.Screen, a)
 			ui.Printf(" ")
 
 			if w.CurrentChain != "" {
@@ -231,9 +231,9 @@ func Signer_Process(c *Command, input string) {
 					if t != nil {
 						balance, err := eth.BalanceOf(b, t, a)
 						if err == nil {
-							ui.AddValueSymbolLink(ui.Terminal.Screen, balance, t)
+							cmn.AddValueSymbolLink(ui.Terminal.Screen, balance, t)
 							ui.Printf(" ")
-							ui.AddDollarValueLink(ui.Terminal.Screen, balance, t)
+							cmn.AddDollarValueLink(ui.Terminal.Screen, balance, t)
 							ui.Printf(" ")
 						}
 					}

@@ -19,6 +19,8 @@ type PaneDescriptor struct {
 	On          bool
 	MinWidth    int
 	MinHeight   int
+	MaxHeight   int
+	MaxWidth    int
 	fixed_width bool
 	View        *gocui.View
 }

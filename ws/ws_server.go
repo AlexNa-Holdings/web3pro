@@ -2,6 +2,7 @@ package ws
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -19,10 +20,11 @@ const WEB3PRO_PORT = 9323 // WEB3 mnemonics
 type ConContext struct {
 	Agent      string
 	Connection *websocket.Conn
+	SM         *subManger
 }
 
-var connections = make([]*ConContext, 0)
-var connectionsMutex = sync.Mutex{}
+var WSConnections = make([]*ConContext, 0)
+var WSConnectionsMutex = sync.Mutex{}
 
 type RPCRequest struct {
 	JSONRPC       string        `json:"jsonrpc"`
@@ -36,12 +38,14 @@ type RPCBroadcast struct {
 	JSONRPC       string `json:"jsonrpc"`
 	Method        string `json:"method"`
 	Params        any    `json:"params"` // Params as a slice of interface{}
+	Subscription  string `json:"subscription,omitempty"`
 	Web3ProOrigin string `json:"__web3proOrigin,omitempty"`
 }
 
 type RPCError struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
+	Result  string `json:"result"`
 }
 
 type RPCResponse struct {
@@ -63,45 +67,26 @@ func loop() {
 			switch msg.Type {
 			case "open":
 				startWS()
+			case "origin-chain-changed":
+				broadcastChainChanged(msg.Data)
+			case "origin-addresses-changed":
+				broadcastAddressesChanged(msg.Data)
+			case "origin-changed":
+				broadcastChainChanged(msg.Data)
+				broadcastAddressesChanged(msg.Data)
 			}
 		case "ws":
 			switch msg.Type {
 			case "list":
 				list := bus.B_WsList_Response{}
-				connectionsMutex.Lock()
-				for _, conn := range connections {
+				WSConnectionsMutex.Lock()
+				for _, conn := range WSConnections {
 					list = append(list, bus.B_WsList_Conn{
 						Agent: conn.Agent,
 					})
 				}
-				connectionsMutex.Unlock()
+				WSConnectionsMutex.Unlock()
 				msg.Respond(list, nil)
-			case "address-changed":
-				res, ok := msg.Data.(*bus.B_WsAccountChanged)
-				if !ok {
-					log.Error().Msgf("Invalid message data")
-					continue
-				}
-
-				broadcast(&RPCBroadcast{
-					JSONRPC:       "2.0",
-					Method:        "accountsChanged_subscription",
-					Web3ProOrigin: res.Origin,
-					Params:        res.Addresses,
-				})
-			case "chain-changed":
-				res, ok := msg.Data.(*bus.B_WsChainChanged)
-				if !ok {
-					log.Error().Msgf("Invalid message data")
-					continue
-				}
-
-				broadcast(&RPCBroadcast{
-					JSONRPC:       "2.0",
-					Method:        "chainChanged_subscription",
-					Web3ProOrigin: res.Origin,
-					Params:        res.ChainID,
-				})
 			}
 		}
 	}
@@ -126,46 +111,97 @@ func startWS() {
 	}()
 }
 
-func broadcast(req *RPCBroadcast) {
-	reqBytes, err := json.Marshal(req)
-	if err != nil {
-		log.Error().Msgf("JSON marshal error: %v", err)
+func broadcastChainChanged(data any) {
+	url, ok := data.(string)
+	if !ok {
+		log.Error().Msgf("ws_broadcast: Invalid data type: %v", data)
 		return
 	}
 
-	connectionsMutex.Lock()
-	for _, conn := range connections {
-		err = conn.Connection.WriteMessage(websocket.TextMessage, reqBytes)
-		if err != nil {
-			log.Error().Msgf("Write error: %v", err)
+	w := cmn.CurrentWallet
+	if w == nil {
+		log.Error().Msg("ws_broadcast: No wallet")
+		return
+	}
+
+	o := w.GetOrigin(url)
+	if o == nil {
+		log.Error().Msgf("ws_broadcast: Origin not found: %s", url)
+		return
+	}
+
+	for _, conn := range WSConnections {
+		a := conn.SM.getSubsForEvent(url, "chainChanged")
+		for _, sub := range a {
+			conn.send(&RPCBroadcast{
+				JSONRPC:      "2.0",
+				Method:       "chainChanged",
+				Subscription: fmt.Sprintf("0x%x", sub.id),
+				Params: []string{
+					fmt.Sprintf("0x%x", o.ChainId),
+				},
+				Web3ProOrigin: url,
+			})
 		}
 	}
-	connectionsMutex.Unlock()
+}
+
+func broadcastAddressesChanged(data any) {
+
+	log.Debug().Msgf("broadcastAddressesChanged: %v", data)
+
+	url, ok := data.(string)
+	if !ok {
+		log.Error().Msgf("ws_broadcast: Invalid data type: %v", data)
+		return
+	}
+
+	w := cmn.CurrentWallet
+	if w == nil {
+		log.Error().Msg("ws_broadcast: No wallet")
+		return
+	}
+
+	o := w.GetOrigin(url)
+	if o == nil {
+		log.Error().Msgf("ws_broadcast: Origin not found: %s", url)
+		return
+	}
+
+	addrs := make([]string, 0)
+	for _, a := range o.Addresses {
+		addrs = append(addrs, a.String())
+	}
+
+	for _, conn := range WSConnections {
+		a := conn.SM.getSubsForEvent(url, "accountsChanged")
+		for _, sub := range a {
+			conn.send(&RPCBroadcast{
+				JSONRPC:       "2.0",
+				Method:        "accountsChanged",
+				Subscription:  fmt.Sprintf("0x%x", sub.id),
+				Params:        addrs,
+				Web3ProOrigin: url,
+			})
+		}
+	}
 }
 
 func AddConnection(conn *ConContext) {
-	connectionsMutex.Lock()
-	connections = append(connections, conn)
-	connectionsMutex.Unlock()
+	WSConnectionsMutex.Lock()
+	WSConnections = append(WSConnections, conn)
+	WSConnectionsMutex.Unlock()
 }
 
 func RemoveConnection(conn *ConContext) {
-	connectionsMutex.Lock()
-	for i, c := range connections {
+	WSConnectionsMutex.Lock()
+	for i, c := range WSConnections {
 		if c == conn {
-			connections = append(connections[:i], connections[i+1:]...)
+			WSConnections = append(WSConnections[:i], WSConnections[i+1:]...)
 			break
 		}
 	}
-	connectionsMutex.Unlock()
-}
-
-// Upgrade HTTP connection to a WebSocket connection
-var upgrader = websocket.Upgrader{
-	CheckOrigin: func(r *http.Request) bool {
-		// Allow connections from any origin
-		return true
-	},
+	WSConnectionsMutex.Unlock()
 }
 
 func web3Handler(w http.ResponseWriter, r *http.Request) {
@@ -182,6 +218,14 @@ func web3Handler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid token", http.StatusForbidden)
 	}
 
+	// Upgrade HTTP connection to a WebSocket connection
+	var upgrader = websocket.Upgrader{
+		CheckOrigin: func(r *http.Request) bool {
+			log.Debug().Msgf("CheckOrigin: %s", r.Header.Get("Origin"))
+			// Allow WSConnections from any origin
+			return true
+		},
+	}
 	// Upgrade the HTTP connection to a WebSocket connection
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -190,12 +234,13 @@ func web3Handler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.Close()
 
-	context := &ConContext{
+	ctx := &ConContext{
 		Agent:      r.Header.Get("User-Agent"),
 		Connection: conn,
+		SM:         newSubManager(),
 	}
-	AddConnection(context)
-	defer RemoveConnection(context)
+	AddConnection(ctx)
+	defer RemoveConnection(ctx)
 
 	for {
 		// Read message from browser
@@ -209,9 +254,6 @@ func web3Handler(w http.ResponseWriter, r *http.Request) {
 			log.Trace().Msgf("Received non-text message: %d", msgType)
 			break
 		}
-
-		// Print the message to the console
-		log.Trace().Msgf("Received: %s", msg)
 
 		var rpcReq RPCRequest
 		err = json.Unmarshal(msg, &rpcReq)
@@ -228,9 +270,9 @@ func web3Handler(w http.ResponseWriter, r *http.Request) {
 		// Dispatch based on method prefix
 		switch {
 		case strings.HasPrefix(rpcReq.Method, "eth_"):
-			handleEthMethod(rpcReq, context, response)
+			handleEthMethod(rpcReq, ctx, response)
 		case strings.HasPrefix(rpcReq.Method, "net_"):
-			handleNetMethod(rpcReq, context, response)
+			handleNetMethod(rpcReq, ctx, response)
 		default:
 			log.Printf("Unknown method: %s", rpcReq.Method)
 			// Handle unknown methods or send an error response
@@ -240,13 +282,12 @@ func web3Handler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		sendResponse(conn, response)
+		ctx.send(response)
 	}
 }
 
-func sendResponse(conn *websocket.Conn, response *RPCResponse) {
-
-	respBytes, err := json.Marshal(response)
+func (con *ConContext) send(data any) {
+	respBytes, err := json.Marshal(data)
 	if err != nil {
 		log.Printf("JSON marshal error: %v", err)
 		return
@@ -254,7 +295,7 @@ func sendResponse(conn *websocket.Conn, response *RPCResponse) {
 
 	log.Debug().Msgf("Sending response: %v", string(respBytes))
 
-	err = conn.WriteMessage(websocket.TextMessage, respBytes)
+	err = con.Connection.WriteMessage(websocket.TextMessage, respBytes)
 	if err != nil {
 		log.Printf("Write error: %v", err)
 	}

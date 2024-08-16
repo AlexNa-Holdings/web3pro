@@ -8,7 +8,7 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/ui"
 )
 
-var blockchain_subcommands = []string{"remove", "add", "edit", "list", "use"}
+var blockchain_subcommands = []string{"remove", "add", "edit", "list", "set"}
 
 func NewBlockchainCommand() *Command {
 	return &Command{
@@ -21,7 +21,7 @@ Manage blockchains
 
 Commands:
   add [BLOCKCHAIN]    - Add new blockchain
-  use [BLOCKCHAIN]    - Use blockchain
+  set [BLOCKCHAIN]    - Set blockchain
   list                - List blockchains
   remove [BLOCKCHAIN] - Remove blockchain  
 		`,
@@ -45,7 +45,7 @@ func Blockchain_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 		return "action", &options, subcommand
 	}
 
-	if subcommand == "use" || subcommand == "remove" || subcommand == "edit" {
+	if subcommand == "set" || subcommand == "remove" || subcommand == "edit" {
 		if cmn.CurrentWallet != nil {
 			for _, chain := range cmn.CurrentWallet.Blockchains {
 				if cmn.Contains(chain.Name, param) {
@@ -197,7 +197,7 @@ func Blockchain_Process(c *Command, input string) {
 		}
 
 		ui.PrintErrorf("\nBlockchain %s not found\n", b_name)
-	case "use":
+	case "set":
 		if b_name == "" {
 			ui.PrintErrorf("\nUsage: blockchain use [blockchain]\n")
 			return

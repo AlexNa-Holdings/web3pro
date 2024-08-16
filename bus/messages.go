@@ -1,6 +1,7 @@
 package bus
 
 import (
+	"math/big"
 	"time"
 
 	"github.com/AlexNa-Holdings/web3pro/gocui"
@@ -14,32 +15,9 @@ type B_TimerInit struct { // init
 	Start     bool
 }
 
-type B_TimerStart struct { // start
-	ID int
-}
-
-type B_TimerReset struct { // reset
-	ID int
-}
-
-type B_TimerDone struct { // done
-	ID int
-}
-
-type B_TimerDelete struct { // delete
-	ID int
-}
-type B_TimerTrigger struct { // trigger
-	ID int
-}
-
 type B_TimerTick struct { // tick
 	Tick int
 	Left map[int]time.Duration // id -> seconds left
-}
-
-type B_TimerPause struct { // pause
-	ID int
 }
 
 // ---------- ui ----------
@@ -50,18 +28,17 @@ type B_Hail struct { // hail
 	Priorized      bool
 	Title          string
 	Template       string
-	OnOpen         func(hr *B_Hail, g *gocui.Gui, v *gocui.View)
-	OnClose        func(hr *B_Hail)
-	OnCancel       func(hr *B_Hail)
-	OnOk           func(hr *B_Hail)
-	OnSuspend      func(hr *B_Hail)
-	OnResume       func(hr *B_Hail)
-	OnTick         func(hr *B_Hail, tick int)
-	OnClickHotspot func(hr *B_Hail, v *gocui.View, hs *gocui.Hotspot)
-	OnOverHotspot  func(hr *B_Hail, v *gocui.View, hs *gocui.Hotspot)
+	OnOpen         func(*Message, *gocui.Gui, *gocui.View)
+	OnClose        func(*Message)
+	OnCancel       func(*Message)
+	OnOk           func(*Message)
+	OnSuspend      func(*Message)
+	OnResume       func(*Message)
+	OnTick         func(*Message, int)
+	OnClickHotspot func(*Message, *gocui.View, *gocui.Hotspot)
+	OnOverHotspot  func(*Message, *gocui.View, *gocui.Hotspot)
 	Suspended      bool
 	Timeout        time.Duration // in seconds
-	TimerPaused    bool
 }
 
 // ---------- usb ----------
@@ -150,12 +127,11 @@ type B_WsList_Conn struct { // device
 }
 type B_WsList_Response []B_WsList_Conn
 
-type B_WsAccountChanged struct { // account-changed
-	Origin    string
-	Addresses []common.Address
-}
-
-type B_WsChainChanged struct { // chain-changed
-	Origin  string
-	ChainID int
+// ---------- eth ----------
+type B_EthSend struct { // send
+	Blockchain string
+	Token      string
+	From       common.Address
+	To         common.Address
+	Amount     *big.Int
 }

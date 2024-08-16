@@ -46,7 +46,7 @@ func Init() {
 	}()
 }
 
-func GetPairs(chain_id uint, tokenAddr string) ([]Pair, error) {
+func GetPairs(chain_id int, tokenAddr string) ([]Pair, error) {
 
 	list, err := DSListPairs(chain_id, tokenAddr)
 	if err != nil {

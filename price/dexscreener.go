@@ -14,7 +14,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-var chain_names = map[uint]string{
+var chain_names = map[int]string{
 	1:    "ethereum",
 	56:   "bsc",
 	137:  "polygon",
@@ -98,7 +98,7 @@ func extractBlockchainFromURL(pairURL string) (string, error) {
 	return "", fmt.Errorf("invalid URL format")
 }
 
-func DSListPairs(chain_id uint, tokenAddr string) ([]Pair, error) {
+func DSListPairs(chain_id int, tokenAddr string) ([]Pair, error) {
 	url := fmt.Sprintf("https://api.dexscreener.com/latest/dex/tokens/%s", tokenAddr)
 	resp, err := http.Get(url)
 	if err != nil {
@@ -156,7 +156,7 @@ func DSListPairs(chain_id uint, tokenAddr string) ([]Pair, error) {
 	return pairs, nil
 }
 
-func DSGetPairs(chain_id uint, pairList string) ([]Pair, error) {
+func DSGetPairs(chain_id int, pairList string) ([]Pair, error) {
 
 	chain_name, ok := chain_names[chain_id]
 	if !ok {

@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"sync"
@@ -44,6 +45,14 @@ func Open(name string, pass string) error {
 				w.CurrentAddress = w.Addresses[0].Address
 			} else {
 				w.CurrentAddress = common.Address{}
+			}
+		}
+
+		if w.CurrentOrigin == "" || w.GetOrigin(w.CurrentOrigin) == nil {
+			if len(w.Origins) > 0 {
+				w.CurrentOrigin = w.Origins[0].URL
+			} else {
+				w.CurrentOrigin = ""
 			}
 		}
 
@@ -107,7 +116,7 @@ func (w *Wallet) GetBlockchain(n string) *Blockchain {
 	return nil
 }
 
-func (w *Wallet) GetBlockchainById(id uint) *Blockchain {
+func (w *Wallet) GetBlockchainById(id int) *Blockchain {
 	for _, b := range w.Blockchains {
 		if b.ChainId == id {
 			return b
@@ -132,13 +141,26 @@ func Create(name, pass string) error {
 }
 
 func (w *Wallet) RemoveOrigin(url string) error {
+
 	w.writeMutex.Lock()
-	defer w.writeMutex.Unlock()
+	deleted := false
 	for i, o := range w.Origins {
 		if o.URL == url {
 			w.Origins = append(w.Origins[:i], w.Origins[i+1:]...)
-			return nil
+			deleted = true
+			break
 		}
+	}
+
+	if w.CurrentOrigin == url {
+		w.CurrentOrigin = ""
+	}
+
+	w.writeMutex.Unlock()
+
+	if deleted {
+		bus.Send("wallet", "origin-changed", url)
+		return w.Save()
 	}
 
 	return errors.New("origin not found")
@@ -153,16 +175,21 @@ func (w *Wallet) GetOrigin(url string) *Origin {
 	return nil
 }
 
-func (w *Wallet) AddOrigin(o *Origin) {
-	w.writeMutex.Lock()
-	defer w.writeMutex.Unlock()
-
+func (w *Wallet) AddOrigin(o *Origin) error {
 	if w.GetOrigin(o.URL) != nil {
 		log.Error().Msgf("Origin already exists: %s\n", o.URL)
-		return
+		return fmt.Errorf("origin already exists: %s", o.URL)
 	}
 
+	w.writeMutex.Lock()
 	w.Origins = append(w.Origins, o)
+	if w.CurrentOrigin == "" {
+		w.CurrentOrigin = o.URL
+	}
+	w.writeMutex.Unlock()
+
+	bus.Send("wallet", "origin-changed", o.URL)
+	return w.Save()
 }
 
 func (w *Wallet) RemoveOriginAddress(url string, a string) error {
@@ -189,9 +216,8 @@ func (w *Wallet) RemoveOriginAddress(url string, a string) error {
 		w.RemoveOrigin(url)
 	}
 
-	bus.Send("ws", "address-changed", &bus.B_WsAccountChanged{Origin: url, Addresses: o.Addresses})
-
-	return nil
+	bus.Send("wallet", "origin-addresses-changed", url)
+	return w.Save()
 }
 
 func (o *Origin) IsAllowed(a common.Address) bool {
@@ -214,20 +240,51 @@ func (w *Wallet) AddOriginAddress(url string, a string) error {
 		return errors.New("address not found")
 	}
 
+	found := false
 	w.writeMutex.Lock()
-	defer w.writeMutex.Unlock()
-
 	for _, na := range o.Addresses {
 		if na == addr.Address {
-			return nil
+			found = true
+			break
 		}
 	}
+	if !found {
+		o.Addresses = append(o.Addresses, addr.Address)
+	}
+	w.writeMutex.Unlock()
 
-	o.Addresses = append(o.Addresses, addr.Address)
+	bus.Send("wallet", "origin-addresses-changed", url)
 
-	bus.Send("ws", "address-changed", &bus.B_WsAccountChanged{Origin: url, Addresses: o.Addresses})
+	return w.Save()
+}
 
-	return nil
+func (w *Wallet) SetOriginChain(url string, ch string) error {
+	o := w.GetOrigin(url)
+	if o == nil {
+		return errors.New("origin not found")
+	}
+
+	b := w.GetBlockchain(ch)
+	if b == nil {
+		return errors.New("blockchain not found")
+	}
+
+	o.ChainId = b.ChainId
+
+	bus.Send("wallet", "origin-chain-changed", url)
+
+	return w.Save()
+}
+
+func (w *Wallet) SetOrigin(url string) error {
+	o := w.GetOrigin(url)
+	if o == nil {
+		return errors.New("origin not found")
+	}
+
+	w.CurrentOrigin = url
+
+	return w.Save()
 }
 
 func (w *Wallet) PromoteOriginAddress(url string, a string) error {
@@ -242,8 +299,6 @@ func (w *Wallet) PromoteOriginAddress(url string, a string) error {
 	}
 
 	w.writeMutex.Lock()
-	defer w.writeMutex.Unlock()
-
 	found := false
 	for i, na := range o.Addresses {
 		if na == addr.Address {
@@ -255,14 +310,15 @@ func (w *Wallet) PromoteOriginAddress(url string, a string) error {
 			break
 		}
 	}
+	w.writeMutex.Unlock()
 
 	if !found {
 		return errors.New("address not found")
 	}
 
-	bus.Send("ws", "address-changed", &bus.B_WsAccountChanged{Origin: url, Addresses: o.Addresses})
+	bus.Send("wallet", "origin-addresses-changed", url)
 
-	return nil
+	return w.Save()
 }
 
 func WalletList() []string {
@@ -456,6 +512,18 @@ func (w *Wallet) GetNativeToken(b *Blockchain) (*Token, error) {
 }
 
 func (w *Wallet) GetTokenByAddress(b string, a common.Address) *Token {
+	if a.Cmp(common.Address{}) == 0 {
+		b := w.GetBlockchain(b)
+		if b == nil {
+			return nil
+		}
+		t, err := w.GetNativeToken(b)
+		if err != nil {
+			return nil
+		}
+		return t
+	}
+
 	for _, t := range w.Tokens {
 		if t.Blockchain == b && ((!t.Native && t.Address == a) ||
 			(t.Native && a == common.Address{})) {

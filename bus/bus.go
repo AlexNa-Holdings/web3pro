@@ -160,10 +160,6 @@ func FetchWithHail(topic, t string, data interface{}, hail *B_Hail, hail_delay i
 
 func FetchEx(topic, t string, data interface{}, limit time.Duration, hardlimit time.Duration, hail *B_Hail, hail_delay int) *Message {
 
-	if topic == "timer" {
-		return &Message{Error: errors.New("invalid topic to fetch")}
-	}
-
 	if topic == "ui" && hail != nil {
 		return &Message{Error: errors.New("cannot fetch 'ui' with hail")}
 	}
@@ -186,32 +182,30 @@ func FetchEx(topic, t string, data interface{}, limit time.Duration, hardlimit t
 		select {
 		case <-timer:
 			if hail != nil {
-				hail.OnCancel = func(h *B_Hail) {
+				hail.OnCancel = func(m *Message) {
 					log.Debug().Msgf("Send 'trigger' to timer:%d", timer_id)
-					Send("timer", "trigger", &B_TimerTrigger{
-						ID: timer_id,
-					})
+					Send("timer", "trigger", timer_id)
 				}
 				SendEx("ui", "hail", hail, timer_id, 0, nil)
 			}
 		case msg := <-ch:
-			switch msg.Topic {
-			case topic:
+			if msg.Topic == topic {
 				if msg.RespondTo == id {
-					Send("timer", "delete", &B_TimerDelete{ID: timer_id})
+					Send("timer", "delete", timer_id)
 					if hail != nil {
 						Send("ui", "remove-hail", hail)
 					}
 					return msg
 				}
-			case "timer":
-				if d, ok := msg.Data.(*B_TimerDone); ok {
-					if d.ID == timer_id {
+			}
+
+			if msg.Topic == "timer" && msg.Type == "done" {
+				if id, ok := msg.Data.(int); ok {
+					if id == timer_id {
 						return &Message{Error: errors.New("timeout")}
 					}
 				}
 			}
 		}
 	}
-
 }

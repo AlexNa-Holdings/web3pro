@@ -1,6 +1,7 @@
 package command
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 
@@ -10,7 +11,10 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/ui"
 )
 
-var app_subcommands = []string{"on", "off", "remove", "list", "add_addr", "remove_addr", "promote_addr"}
+var app_subcommands = []string{
+	"on", "off", "remove",
+	"list", "add_addr", "remove_addr",
+	"promote_addr", "chain", "set"}
 
 func NewAppCommand() *Command {
 	return &Command{
@@ -29,6 +33,9 @@ Commands:
   promote_addr [URL] [ADDR] - Promote address
   on                        - Open application window
   off                       - Close application window
+  chain [URL] [CHAIN]       - Set blockchain
+  set [URL]  			    - Set web application
+
 		`,
 		Help:             `Manage connected web applications`,
 		Process:          App_Process,
@@ -56,6 +63,20 @@ func App_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 			}
 		}
 		return "action", &options, subcommand
+	}
+
+	if subcommand == "chain" {
+		o := w.GetOrigin(origin)
+		if o != nil {
+			for _, b := range w.Blockchains {
+				if strings.Contains(b.Name, addr) {
+					options = append(options, ui.ACOption{
+						Name:   b.Name,
+						Result: "app chain '" + origin + "' '" + b.Name + "'"})
+				}
+			}
+			return "chain", &options, addr
+		}
 	}
 
 	if subcommand == "add_addr" {
@@ -105,7 +126,8 @@ func App_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 	}
 
 	if subcommand == "remove" || subcommand == "list" || subcommand == "add_addr" ||
-		subcommand == "remove_addr" || subcommand == "promote_addr" {
+		subcommand == "remove_addr" || subcommand == "promote_addr" ||
+		subcommand == "chain" || subcommand == "set" {
 		for _, o := range w.Origins {
 			if cmn.Contains(o.URL, origin) {
 				options = append(options, ui.ACOption{
@@ -120,6 +142,7 @@ func App_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 }
 
 func App_Process(c *Command, input string) {
+	var err error
 	if cmn.CurrentWallet == nil {
 		ui.PrintErrorf("\nNo wallet open\n")
 		return
@@ -160,7 +183,7 @@ func App_Process(c *Command, input string) {
 					ui.Printf("   %d ", i)
 				}
 
-				ui.AddAddressShortLink(nil, a.Address)
+				cmn.AddAddressShortLink(ui.Terminal.Screen, a.Address)
 				ui.Printf(" ")
 				ui.Terminal.Screen.AddLink(gocui.ICON_DELETE,
 					"command app remove_addr '"+o.URL+"' '"+a.Name+"'",
@@ -179,58 +202,69 @@ func App_Process(c *Command, input string) {
 			}
 		}
 	case "remove":
-		err := w.RemoveOrigin(origin)
-		if err != nil {
-			ui.PrintErrorf("Error removing origin: %v\n", err)
-			return
-		}
-		err = w.Save()
-		if err != nil {
-			ui.PrintErrorf("Error saving wallet: %v\n", err)
-			return
-		}
-		bus.Send("ui", "notify", "Web application removed: "+origin)
+		ui.Gui.ShowPopup(ui.DlgConfirm(
+			"Deny access", `
+<c>Are you sure you want to deny access for the web application
+`+origin+`?
+`,
+			func() {
+				err := w.RemoveOrigin(origin)
+				if err != nil {
+					ui.PrintErrorf("Error removing origin: %v\n", err)
+					return
+				}
+				err = w.Save()
+				if err != nil {
+					ui.PrintErrorf("Error saving wallet: %v\n", err)
+					return
+				}
+				bus.Send("ui", "notify", "Web application removed: "+origin)
+			}))
+
 	case "remove_addr":
-		w.RemoveOriginAddress(origin, addr)
-		err := w.Save()
-		if err != nil {
-			ui.PrintErrorf("Error saving wallet: %v\n", err)
-			return
-		}
-		bus.Send("ui", "notify", "Address removed: "+addr)
+		ui.Gui.ShowPopup(ui.DlgConfirm(
+			"Remove address", `
+<c>Are you sure you want to remove access for the address:
+<b>`+addr+`</b>
+from the web application 
+<b>`+origin+`</b>?
+`,
+
+			func() {
+				err := w.RemoveOriginAddress(origin, addr)
+				if err != nil {
+					ui.PrintErrorf("Error saving wallet: %v\n", err)
+					return
+				}
+				bus.Send("ui", "notify", "Address removed: "+addr)
+			}))
 	case "add_addr":
-		w.AddOriginAddress(origin, addr)
-		err := w.Save()
-		if err != nil {
-			ui.PrintErrorf("Error saving wallet: %v\n", err)
-			return
+		err = w.AddOriginAddress(origin, addr)
+		if err == nil {
+			bus.Send("ui", "notify", "Address added: "+addr)
 		}
-		bus.Send("ui", "notify", "Address added: "+addr)
 	case "promote_addr":
-		w.PromoteOriginAddress(origin, addr)
-		err := w.Save()
-		if err != nil {
-			ui.PrintErrorf("Error saving wallet: %v\n", err)
-			return
+		err = w.PromoteOriginAddress(origin, addr)
+		if err == nil {
+			bus.Send("ui", "notify", "Address promoted: "+addr)
 		}
-		bus.Send("ui", "notify", "Address promoted: "+addr)
 	case "on":
 		w.AppsPaneOn = true
-		err := w.Save()
-		if err != nil {
-			ui.PrintErrorf("Error saving wallet: %v\n", err)
-			return
-		}
+		err = w.Save()
 	case "off":
 		w.AppsPaneOn = false
-		err := w.Save()
-		if err != nil {
-			ui.PrintErrorf("Error saving wallet: %v\n", err)
-			return
-		}
+		err = w.Save()
+	case "chain":
+		err = w.SetOriginChain(origin, p[3])
+	case "set":
+		err = w.SetOrigin(origin)
 
 	default:
-		ui.PrintErrorf("Unknown command: %s\n", subcommand)
+		err = fmt.Errorf("Unknown command: %s\n", subcommand)
+	}
+
+	if err != nil {
+		ui.PrintErrorf(err.Error())
 	}
 
 }

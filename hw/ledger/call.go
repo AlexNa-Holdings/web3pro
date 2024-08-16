@@ -31,11 +31,11 @@ func call(usb_id string, apdu *APDU, data []byte, hail *bus.B_Hail, hail_delay i
 Please unlock your Ledger device
 
 <button text:Cancel>`,
-				OnTick: func(h *bus.B_Hail, tick int) {
+				OnTick: func(m *bus.Message, tick int) {
 					if tick%3 == 0 {
 						r, err = rawCall(usb_id, apdu, data, hail, hail_delay)
 						if err == nil || !strings.Contains(err.Error(), "LOCKED_DEVICE") {
-							bus.Send("ui", "remove-hail", h)
+							bus.Send("ui", "remove-hail", m)
 						}
 					}
 				},
@@ -47,11 +47,11 @@ Please unlock your Ledger device
 Please open the Ethereum app on your Ledger device
 
 <button text:Cancel>`,
-				OnTick: func(h *bus.B_Hail, tick int) {
+				OnTick: func(m *bus.Message, tick int) {
 					if tick%3 == 0 {
 						r, err = rawCall(usb_id, apdu, data, hail, hail_delay)
 						if err == nil || !strings.Contains(err.Error(), "LOCKED_DEVICE") {
-							bus.Send("ui", "remove-hail", h)
+							bus.Send("ui", "remove-hail", m)
 						}
 					}
 				},

@@ -1679,54 +1679,21 @@ func EstimateTemplateLines(template string, width int) int {
 
 	autowrap := strings.Contains(lines[0], "<w>")
 
-	for ln, line := range lines {
+	for _, line := range lines {
 
 		if strings.Contains(line, "\t") {
 			log.Warn().Msgf("tabs are not allowed in templates : %s", line)
 			line = strings.ReplaceAll(line, "\t", " ")
 		}
 
-		splitted_lines := []string{}
-
+		var splitted_lines []string
 		if autowrap {
-			spaces := []int{}
-
-			for calcLineWidth(line) > width && len(line) > 0 {
-				in_tag := false
-				for i, r := range line {
-					switch r {
-					case '<':
-						in_tag = true
-					case '>':
-						in_tag = false
-					case ' ':
-						if !in_tag {
-							spaces = append(spaces, i)
-						}
-					}
-				}
-
-				splited := false
-				for i := len(spaces) - 2; i > 0; i-- {
-					try := line[:spaces[i]]
-
-					if calcLineWidth(try) <= width {
-						splitted_lines = append(splitted_lines, try)
-						line = line[spaces[i]+1:]
-						splited = true
-						break
-					}
-				}
-
-				if !splited {
-					break
-				}
-			}
+			splitted_lines = SplitLine(line, width)
+		} else {
+			splitted_lines = []string{line}
 		}
 
-		splitted_lines = append(splitted_lines, line)
-
-		for sln, l := range splitted_lines {
+		for _, l := range splitted_lines {
 			matches := re.FindAllStringIndex(l, -1)
 			for _, match := range matches {
 				tag := l[match[0]:match[1]]
@@ -1739,12 +1706,10 @@ func EstimateTemplateLines(template string, width int) int {
 					autowrap = false
 				}
 			}
-
-			if ln != len(lines)-1 || sln != len(splitted_lines)-1 || len(l) > 0 {
-				n_lines++
-			}
+			n_lines++
 		}
 	}
+
 	return n_lines
 }
 
@@ -1783,45 +1748,12 @@ func (v *View) RenderTemplate(template string) error {
 			line = strings.ReplaceAll(line, "\t", " ")
 		}
 
-		splitted_lines := []string{}
-
+		var splitted_lines []string
 		if autowrap {
-			spaces := []int{}
-
-			for len(line) > 0 && calcLineWidth(line) > width {
-				in_tag := false
-				for i, r := range line {
-					switch r {
-					case '<':
-						in_tag = true
-					case '>':
-						in_tag = false
-					case ' ':
-						if !in_tag {
-							spaces = append(spaces, i)
-						}
-					}
-				}
-
-				splited := false
-				for i := len(spaces) - 2; i > 0; i-- {
-					try := line[:spaces[i]]
-
-					if calcLineWidth(try) <= width {
-						splitted_lines = append(splitted_lines, try)
-						line = line[spaces[i]+1:]
-						splited = true
-						break
-					}
-				}
-
-				if !splited {
-					break
-				}
-			}
+			splitted_lines = SplitLine(line, width)
+		} else {
+			splitted_lines = []string{line}
 		}
-
-		splitted_lines = append(splitted_lines, line)
 
 		var cells []cell
 		for sln, l := range splitted_lines {
@@ -2023,4 +1955,46 @@ func calcLineWidth(line string) int {
 		l = l - utf8.RuneCountInString(tag) + GetTagLength(tagName, tagParams)
 	}
 	return l
+}
+
+func SplitLine(line string, width int) []string {
+	lines := []string{}
+
+	for calcLineWidth(line) > width {
+		// find all spaces outside the tags
+		spaces := []int{}
+		in_tag := make([]bool, len(line))
+		re := regexp.MustCompile(REGEX_TAGS)
+		matches := re.FindAllStringIndex(line, -1)
+		for _, match := range matches {
+			for i := match[0]; i < match[1]; i++ {
+				in_tag[i] = true
+			}
+		}
+
+		for i, r := range line {
+			if r == ' ' && !in_tag[i] {
+				spaces = append(spaces, i)
+			}
+		}
+
+		splitted := false
+		for i := len(spaces) - 2; i > 0; i-- {
+			try := line[:spaces[i]]
+
+			if calcLineWidth(try) <= width {
+				lines = append(lines, try)
+				line = line[spaces[i]+1:]
+				splitted = true
+				break
+			}
+		}
+
+		if !splitted {
+			break
+		}
+	}
+
+	lines = append(lines, line)
+	return lines
 }

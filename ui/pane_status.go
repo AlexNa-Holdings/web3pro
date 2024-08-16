@@ -14,6 +14,7 @@ import (
 
 type StatusPane struct {
 	PaneDescriptor
+	Template string
 }
 
 var Status StatusPane = StatusPane{
@@ -23,14 +24,12 @@ var Status StatusPane = StatusPane{
 	},
 }
 
-var statusTemplate string
-
 func (p *StatusPane) GetDesc() *PaneDescriptor {
 	return &p.PaneDescriptor
 }
 
 func (p *StatusPane) GetTemplate() string {
-	return statusTemplate
+	return p.Template
 }
 
 func (p *StatusPane) SetView(x0, y0, x1, y1 int) {
@@ -43,7 +42,7 @@ func (p *StatusPane) SetView(x0, y0, x1, y1 int) {
 		v.Autoscroll = false
 		v.ScrollBar = true
 		v.OnResize = func(v *gocui.View) {
-			v.RenderTemplate(statusTemplate)
+			v.RenderTemplate(p.Template)
 			v.ScrollTop()
 		}
 		v.OnOverHotspot = ProcessOnOverHotspot
@@ -104,7 +103,7 @@ func (p *StatusPane) rebuidTemplate() {
 
 			temp += fmt.Sprintf("<b>Chain:</b> %s | %s %s%s\n",
 				b.Name, t.Symbol,
-				TagShortDollarLink(t.Price),
+				cmn.TagShortDollarLink(t.Price),
 				change)
 		}
 
@@ -126,17 +125,17 @@ func (p *StatusPane) rebuidTemplate() {
 					if err != nil {
 						log.Error().Err(err).Msg("Status: GetNativeToken")
 					} else {
-						balance = fmt.Sprintf(" | %s", TagShortValueSymbolLink(blnc, t))
+						balance = fmt.Sprintf(" | %s", cmn.TagShortValueSymbolLink(blnc, t))
 
 						if t.Price > 0 {
-							dollars = fmt.Sprintf(" | %s", TagShortDollarValueLink(blnc, t))
+							dollars = fmt.Sprintf(" | %s", cmn.TagShortDollarValueLink(blnc, t))
 						}
 					}
 				}
 			}
 
 			temp += fmt.Sprintf("<b> Addr:</b> %s %s%s%s\n",
-				TagAddressShortLink(w.CurrentAddress), an, balance, dollars)
+				cmn.TagAddressShortLink(w.CurrentAddress), an, balance, dollars)
 		}
 	}
 
@@ -168,11 +167,11 @@ func (p *StatusPane) rebuidTemplate() {
 		temp += fmt.Sprintf("<b>   HW:</b> %s\n", cd)
 	}
 
-	statusTemplate = temp
+	p.Template = temp
 
 	Gui.Update(func(g *gocui.Gui) error {
 		if Status.View != nil {
-			Status.View.RenderTemplate(statusTemplate)
+			Status.View.RenderTemplate(p.Template)
 		}
 		return nil
 	})

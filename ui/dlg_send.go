@@ -3,8 +3,8 @@ package ui
 import (
 	"math/big"
 
+	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
-	"github.com/AlexNa-Holdings/web3pro/eth"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog/log"
@@ -56,7 +56,14 @@ func DlgSend(b *cmn.Blockchain, t *cmn.Token, from *cmn.Address, to string, amou
 						return
 					}
 
-					eth.HailToSend(b, t, from, common.HexToAddress(to), val)
+					bus.Send("eth", "send", &bus.B_EthSend{
+						Blockchain: b.Name,
+						Token:      t.Symbol,
+						From:       from.Address,
+						To:         common.HexToAddress(to),
+						Amount:     val,
+					})
+
 					Gui.HidePopup()
 
 				case "button Cancel":

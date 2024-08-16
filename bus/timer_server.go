@@ -60,38 +60,38 @@ func ProcessTimers() {
 					log.Error().Msg("Invalid timer init data")
 					msg.Respond("ERROR", errors.New("invalid timer init data"))
 				}
-			case "start":
-				d, ok := msg.Data.(*B_TimerStart)
+			case "start", "resume":
+				id, ok := msg.Data.(int)
 				if ok {
-					timer_start(d.ID)
+					timer_start(id)
 					msg.Respond("OK", nil)
 				} else {
 					log.Error().Msg("Invalid timer start data")
 					msg.Respond("ERROR", errors.New("invalid timer start data"))
 				}
 			case "reset":
-				d, ok := msg.Data.(*B_TimerReset)
+				id, ok := msg.Data.(int)
 				if ok {
-					timer_reset(d.ID)
+					timer_reset(id)
 					msg.Respond("OK", nil)
 				} else {
 					log.Error().Msg("Invalid timer reset data")
 					msg.Respond("ERROR", errors.New("invalid timer reset data"))
 				}
 			case "pause":
-				d, ok := msg.Data.(*B_TimerPause)
+				id, ok := msg.Data.(int)
 				if ok {
-					timer_pause(d.ID)
+					timer_pause(id)
 					msg.Respond("OK", nil)
 				} else {
 					log.Error().Msg("Invalid timer pause data")
 					msg.Respond("ERROR", errors.New("invalid timer pause data"))
 				}
 			case "delete":
-				d, ok := msg.Data.(*B_TimerDelete)
+				id, ok := msg.Data.(int)
 				if ok {
 					mu.Lock()
-					delete(timers, d.ID)
+					delete(timers, id)
 					mu.Unlock()
 					msg.Respond("OK", nil)
 				} else {
@@ -99,12 +99,12 @@ func ProcessTimers() {
 					msg.Respond("ERROR", errors.New("invalid timer delete data"))
 				}
 			case "trigger":
-				d, ok := msg.Data.(*B_TimerTrigger)
+				id, ok := msg.Data.(int)
 				if ok {
 					mu.Lock()
-					t, ok := timers[d.ID]
+					t, ok := timers[id]
 					if !ok {
-						log.Error().Msgf("Timer %d does not exist", d.ID)
+						log.Error().Msgf("Timer %d does not exist", id)
 						msg.Respond("ERROR", errors.New("timer does not exist"))
 					} else {
 						t.lapsed = t.Limit
@@ -166,9 +166,7 @@ func updateTimers() {
 		if !t.paused {
 			l := t.lapsed + time.Since(t.starTime)
 			if l >= t.Limit {
-				Send("timer", "done", &B_TimerDone{
-					ID: id,
-				})
+				Send("timer", "done", id)
 				delete(timers, id) // remove timer
 				continue
 			}

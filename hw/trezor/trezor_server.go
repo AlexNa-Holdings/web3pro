@@ -175,10 +175,10 @@ Please connect your Trezor device:
 <u><b>` + name + `</b></u>` + copies + `
 
 <button text:Cancel>`,
-		OnTick: func(h *bus.B_Hail, tick int) {
+		OnTick: func(m *bus.Message, tick int) {
 			t = find_by_name(n)
 			if t != nil {
-				bus.Send("ui", "remove-hail", h)
+				bus.Send("ui", "remove-hail", m)
 			}
 		},
 	})

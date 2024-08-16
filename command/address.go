@@ -10,7 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-var address_subcommands = []string{"remove", "edit", "list", "use", "add"}
+var address_subcommands = []string{"remove", "edit", "list", "set", "add"}
 
 func NewAddressCommand() *Command {
 	return &Command{
@@ -23,7 +23,7 @@ Manage addresses
 
 Commands:
   add [ADDRESS] [SIGNER] [PATH] - Add new address
-  use [ADDRESS]                 - Use address
+  set [ADDRESS]                 - set the address
   list                          - List addresses
   remove [ADDRESS]              - Remove address  
 		`,
@@ -54,7 +54,7 @@ func Address_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 		return "action", &options, subcommand
 	}
 
-	if subcommand == "use" || subcommand == "remove" || subcommand == "edit" {
+	if subcommand == "set" || subcommand == "remove" || subcommand == "edit" {
 		for _, a := range w.Addresses {
 			if cmn.Contains(a.Name+a.Address.String(), param) {
 				options = append(options, ui.ACOption{
@@ -140,7 +140,7 @@ func Address_Process(c *Command, input string) {
 		})
 		ui.Printf("\nAddresses:\n")
 		for _, a := range w.Addresses {
-			ui.AddAddressShortLink(nil, a.Address)
+			cmn.AddAddressShortLink(ui.Terminal.Screen, a.Address)
 			ui.Printf(" ")
 			ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command address edit '"+a.Name+"'", "Edit address", "")
 			ui.Terminal.Screen.AddLink(gocui.ICON_DELETE, "command address remove '"+a.Name+"'", "Remove address", "")
@@ -153,7 +153,7 @@ func Address_Process(c *Command, input string) {
 			return
 		}
 		ui.Gui.ShowPopup(ui.DlgAddressEdit(p0))
-	case "use":
+	case "set":
 		fa := w.GetAddressByName(p0)
 		if fa == nil {
 			ui.PrintErrorf("\nAddress not found: %s\n", p0)

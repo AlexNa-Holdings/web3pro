@@ -250,7 +250,7 @@ func Token_Process(c *Command, input string) {
 			if t.Native {
 				ui.Printf("Native          ")
 			} else {
-				ui.AddAddressShortLink(ui.Terminal.Screen, t.Address)
+				cmn.AddAddressShortLink(ui.Terminal.Screen, t.Address)
 				ui.Printf(" ")
 				ui.Terminal.Screen.AddLink(gocui.ICON_LINK, "open "+b.ExplorerLink(t.Address), b.ExplorerLink(t.Address), "")
 				ui.Terminal.Screen.AddLink(gocui.ICON_DELETE, "command token remove '"+t.Blockchain+"' '"+t.Address.String()+"'", "Remove token", "")
@@ -335,12 +335,12 @@ func Token_Process(c *Command, input string) {
 		total_balance := big.NewInt(0)
 		total_dollars := float64(0)
 		for _, b := range blist {
-			ui.AddAddressShortLink(ui.Terminal.Screen, b.Address.Address)
+			cmn.AddAddressShortLink(ui.Terminal.Screen, b.Address.Address)
 			ui.Printf(" ")
-			ui.AddValueSymbolLink(ui.Terminal.Screen, b.Balance, t)
+			cmn.AddValueSymbolLink(ui.Terminal.Screen, b.Balance, t)
 			ui.Printf(" ")
 			if t.Price > 0. {
-				ui.AddDollarValueLink(ui.Terminal.Screen, b.Balance, t)
+				cmn.AddDollarValueLink(ui.Terminal.Screen, b.Balance, t)
 			}
 			ui.Printf(" %s ", b.Address.Name)
 			ui.Terminal.Screen.AddLink(
@@ -355,11 +355,11 @@ func Token_Process(c *Command, input string) {
 		}
 
 		ui.Printf("\n  Total: ")
-		ui.AddValueSymbolLink(ui.Terminal.Screen, total_balance, t)
+		cmn.AddValueSymbolLink(ui.Terminal.Screen, total_balance, t)
 		ui.Printf("\n")
 		if t.Price > 0. {
 			ui.Printf("Total $: ")
-			ui.AddDollarValueLink(ui.Terminal.Screen, total_balance, t)
+			cmn.AddDollarValueLink(ui.Terminal.Screen, total_balance, t)
 			ui.Printf("\n")
 		}
 

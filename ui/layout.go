@@ -13,7 +13,7 @@ import (
 var panes = []Pane{
 	&Status,
 	&HailPane,
-	&Apps,
+	&App,
 	&Terminal,
 }
 
@@ -112,7 +112,11 @@ func Layout(g *gocui.Gui) error {
 				template := pane_map[d].GetTemplate()
 				if template != "" {
 					n_lines := gocui.EstimateTemplateLines(template, widths[i]-1)
-					row_height = max(row_height, n_lines+2)
+					height := n_lines + 2
+					if d.MaxHeight > 0 {
+						height = min(d.MaxHeight, height)
+					}
+					row_height = max(row_height, height)
 				} else {
 					row_height = max(row_height, d.MinHeight)
 				}
@@ -178,6 +182,8 @@ func ProcessOnClickHotspot(v *gocui.View, hs *gocui.Hotspot) {
 		Notification.Show("Copied: " + param)
 	case "command":
 		bus.Send("ui", "command", param)
+	case "start_command":
+		bus.Send("ui", "start_command", param)
 	case "open":
 		cmn.OpenBrowser(param)
 	}

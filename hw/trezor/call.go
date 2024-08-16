@@ -113,7 +113,7 @@ func (d *Trezor) RequsetPin() (string, error) {
 	bus.Fetch("ui", "hail", &bus.B_Hail{
 		Title:    "Enter Trezor PIN",
 		Template: template,
-		OnClickHotspot: func(h *bus.B_Hail, v *gocui.View, hs *gocui.Hotspot) {
+		OnClickHotspot: func(m *bus.Message, v *gocui.View, hs *gocui.Hotspot) {
 			if hs != nil {
 				s := cmn.Split(hs.Value)
 				command, value := s[0], s[1]
@@ -156,7 +156,7 @@ func (d *Trezor) RequsetPassword() (string, error) {
 
 <button text:Cancel>`,
 
-		OnClickHotspot: func(h *bus.B_Hail, v *gocui.View, hs *gocui.Hotspot) {
+		OnClickHotspot: func(m *bus.Message, v *gocui.View, hs *gocui.Hotspot) {
 			if hs != nil {
 				s := cmn.Split(hs.Value)
 				command, value := s[0], s[1]
@@ -165,9 +165,13 @@ func (d *Trezor) RequsetPassword() (string, error) {
 				case "button":
 					switch value {
 					case "standard":
-						bus.Send("ui", "remove-hail", h)
+						bus.Send("ui", "remove-hail", m)
 					case "hidden":
-						h.TimerPaused = true
+						res := bus.Fetch("timer", "pause", m.TimerID)
+						if res.Error != nil {
+							log.Error().Err(res.Error).Msg("Error pausing timer")
+							return
+						}
 						v.GetGui().ShowPopup(&gocui.Popup{
 							Title: "Enter Trezor Password",
 							Template: `<c><w>
@@ -180,21 +184,21 @@ Password: <input id:password size:16 masked:true>
 									case "button OK":
 										password = v.GetInput("password")
 										v.GetGui().HidePopup()
-										bus.Send("ui", "remove-hail", h)
+										bus.Send("ui", "remove-hail", m)
 									case "button Cancel":
 										v.GetGui().HidePopup()
 									}
 								}
 							},
 							OnClose: func(v *gocui.View) {
-								h.TimerPaused = false
+								bus.Fetch("timer", "resume", m.TimerID)
 							},
 						})
 					}
 				}
 			}
 		},
-		OnCancel: func(h *bus.B_Hail) {
+		OnCancel: func(*bus.Message) {
 			canceled = true
 		},
 	})

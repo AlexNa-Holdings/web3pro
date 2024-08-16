@@ -224,8 +224,8 @@ func process(msg *bus.Message) {
 	case "timer":
 		switch msg.Type {
 		case "done":
-			if d, ok := msg.Data.(*bus.B_TimerDone); ok {
-				doCancel(d.ID)
+			if id, ok := msg.Data.(int); ok {
+				doCancel(id)
 			} else {
 				log.Error().Msg("Invalid message data. Expected B_TimerDone")
 			}
