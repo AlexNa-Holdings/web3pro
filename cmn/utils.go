@@ -3,6 +3,7 @@ package cmn
 import (
 	"fmt"
 	"math/big"
+	"net/url"
 	"os/exec"
 	"regexp"
 	"runtime"
@@ -381,4 +382,12 @@ func TagShortValueSymbolLink(val *big.Int, t *Token) string {
 
 	return fmt.Sprintf("<l text:'%s' action:'copy %s' tip:'%s'> %s",
 		FmtAmount(val, t.Decimals, false), xf.String(), xf.String(), t.Symbol)
+}
+
+func GetHostName(URL string) string {
+	parsedURL, err := url.Parse(URL)
+	if err != nil {
+		return URL
+	}
+	return parsedURL.Hostname()
 }

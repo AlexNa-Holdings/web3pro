@@ -3,7 +3,6 @@ package ui
 import (
 	"errors"
 	"fmt"
-	"net/url"
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
@@ -101,17 +100,10 @@ func (p *AppPane) rebuidTemplate() string {
 	}
 
 	temp += `<b>  App: </b>`
-	// Parse the URL
-	parsedURL, err := url.Parse(o.URL)
-	if err != nil {
-		temp += cmn.TagLink(o.URL,
-			"start_command app set ",
-			"Set the app")
-	} else {
-		temp += cmn.TagLink(parsedURL.Hostname(),
-			"start_command app set ",
-			"Set the app")
-	}
+
+	temp += cmn.TagLink(cmn.GetHostName(o.URL),
+		"start_command app set ",
+		"Set the app")
 
 	temp += "\n<b>Chain: </b>"
 	b := w.GetBlockchainById(o.ChainId)

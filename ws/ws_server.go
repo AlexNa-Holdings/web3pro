@@ -328,7 +328,7 @@ func getAllowedOrigin(url string) (*cmn.Origin, bool) {
 			Template: `<c><w>
 Allow to connect to this web application:
 
-<u><b>` + url + `</b></u>
+<u><b>` + cmn.GetHostName(url) + `</b></u>
 
 and use the current chain & address?
 
