@@ -33,6 +33,7 @@ func main() {
 	cmn.InitConfig()
 
 	bus.Init()
+	sound.Init()
 	sw.Init() // software wallets
 	hw.Init() // hardware wallets
 	usb.Init()
@@ -41,7 +42,6 @@ func main() {
 	ws.Init()
 	ui.Init()
 	price.Init()
-	sound.Init()
 
 	defer ui.Gui.Close()
 

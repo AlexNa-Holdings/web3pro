@@ -215,6 +215,7 @@ func cancel(m *bus.Message) {
 func (p *HailPaneType) open(m *bus.Message) {
 	hail := m.Data.(*bus.B_Hail)
 	log.Trace().Msgf("HailPane: open: %s", hail.Title)
+	bus.Send("sound", "play", nil)
 
 	if ActiveRequest != nil {
 		if ActiveRequest.Data != hail {

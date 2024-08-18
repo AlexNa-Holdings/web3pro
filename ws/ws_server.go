@@ -11,6 +11,7 @@ import (
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
+	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog/log"
@@ -26,13 +27,14 @@ type ConContext struct {
 
 var WSConnections = make([]*ConContext, 0)
 var WSConnectionsMutex = sync.Mutex{}
+var blockedUA = map[string]bool{}
 
 type RPCRequest struct {
-	JSONRPC       string        `json:"jsonrpc"`
-	ID            int64         `json:"id"`
-	Method        string        `json:"method"`
-	Params        []interface{} `json:"params"` // Params as a slice of interface{}
-	Web3ProOrigin string        `json:"__web3proOrigin,omitempty"`
+	JSONRPC       string `json:"jsonrpc"`
+	ID            int64  `json:"id"`
+	Method        string `json:"method"`
+	Params        any    `json:"params"` // Params as a slice of interface{}
+	Web3ProOrigin string `json:"__web3proOrigin,omitempty"`
 }
 type BroadcastParams struct {
 	Subscription string `json:"subscription,omitempty"`
@@ -210,6 +212,55 @@ func RemoveConnection(conn *ConContext) {
 	WSConnectionsMutex.Unlock()
 }
 
+func extractVersion(ua string, marker string) string {
+	start := strings.Index(ua, marker)
+	if start == -1 {
+		return "Unknown"
+	}
+
+	start += len(marker)
+	end := strings.IndexAny(ua[start:], " ;)")
+	if end == -1 {
+		end = len(ua)
+	} else {
+		end += start
+	}
+
+	return ua[start:end]
+}
+
+func getBrowser(ua string) (string, string) {
+
+	log.Debug().Msgf("getBrowser: %s", ua)
+
+	var browserName, fullVersion string
+
+	if strings.Contains(ua, "OPR") {
+		browserName = "Opera"
+		fullVersion = extractVersion(ua, "OPR/")
+	} else if strings.Contains(ua, "Edg") {
+		browserName = "Edge"
+		fullVersion = extractVersion(ua, "Edg/")
+	} else if strings.Contains(ua, "Chrome") {
+		browserName = "Chrome"
+		fullVersion = extractVersion(ua, "Chrome/")
+		if strings.Contains(ua, "Brave") || strings.Contains(ua, "brave") {
+			browserName = "Brave"
+		}
+	} else if strings.Contains(ua, "Safari") && !strings.Contains(ua, "Chrome") {
+		browserName = "Safari"
+		fullVersion = extractVersion(ua, "Version/")
+	} else if strings.Contains(ua, "Firefox") {
+		browserName = "Firefox"
+		fullVersion = extractVersion(ua, "Firefox/")
+	} else {
+		browserName = "Unknown"
+		fullVersion = "Unknown"
+	}
+
+	return browserName, fullVersion
+}
+
 func web3Handler(w http.ResponseWriter, r *http.Request) {
 
 	log.Debug().Msgf("Web3 handler called")
@@ -222,6 +273,43 @@ func web3Handler(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Query().Get("identity") != "web3pro-extension" {
 		log.Error().Msgf("Atteempt connecting to WS with invalid identity: %s", r.URL.Query().Get("identity"))
 		http.Error(w, "Invalid token", http.StatusForbidden)
+	}
+
+	allowed := false
+
+	ua := r.Header.Get("User-Agent")
+
+	if blockedUA[ua] {
+		http.Error(w, "Connection not allowed", http.StatusForbidden)
+		return
+	}
+
+	browser, version := getBrowser(ua)
+
+	bus.Fetch("ui", "hail", &bus.B_Hail{
+		Title: "Allow Browser Connection",
+		Template: `<c><w>
+Allow connection from browser?
+
+` + browser + " " + version + `
+
+<button text:Ok> <button text:Cancel>
+
+<button text:'Block for session' id:block>`,
+		OnOk: func(m *bus.Message) {
+			allowed = true
+			bus.Send("ui", "remove-hail", m)
+		},
+		OnClickHotspot: func(m *bus.Message, v *gocui.View, hs *gocui.Hotspot) {
+			if hs.Value == "button block" {
+				allowed = false
+				blockedUA[ua] = true
+				bus.Send("ui", "remove-hail", m)
+			}
+		}})
+	if !allowed {
+		http.Error(w, "Connection not allowed", http.StatusForbidden)
+		return
 	}
 
 	// Upgrade HTTP connection to a WebSocket connection
@@ -255,6 +343,8 @@ func web3Handler(w http.ResponseWriter, r *http.Request) {
 			log.Error().Msgf("Read error: %v", err)
 			break
 		}
+
+		log.Debug().Msgf("ws<- %v", string(msg))
 
 		if msgType != websocket.TextMessage {
 			log.Trace().Msgf("Received non-text message: %d", msgType)

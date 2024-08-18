@@ -7,6 +7,7 @@ import (
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog/log"
 )
 
@@ -19,6 +20,8 @@ func handleWalletMethod(req RPCRequest, ctx *ConContext, res *RPCResponse) {
 		err = switchEthereumChain(req)
 	case "requestPermissions":
 		// TODO
+	case "watchAsset":
+		watchAssets(req)
 	default:
 		log.Error().Msgf("Method not found: %v", req)
 		res.Error = &RPCError{
@@ -37,6 +40,10 @@ func handleWalletMethod(req RPCRequest, ctx *ConContext, res *RPCResponse) {
 }
 
 func switchEthereumChain(req RPCRequest) error {
+	params, ok := req.Params.([]interface{})
+	if !ok {
+		return fmt.Errorf("invalid params: %v", req.Params)
+	}
 
 	w := cmn.CurrentWallet
 	if w == nil {
@@ -48,7 +55,7 @@ func switchEthereumChain(req RPCRequest) error {
 		return fmt.Errorf("origin not found: %v", req.Web3ProOrigin)
 	}
 
-	m, ok := req.Params[0].(map[string]interface{})
+	m, ok := params[0].(map[string]interface{})
 	if !ok {
 		return fmt.Errorf("invalid params: %v", req.Params)
 	}
@@ -95,4 +102,86 @@ to :
 		}})
 
 	return nil
+}
+
+func watchAssets(req RPCRequest) {
+	params, ok := req.Params.(map[string]interface{})
+	if !ok {
+		log.Error().Msgf("Invalid params: %v", req.Params)
+		return
+	}
+
+	options, ok := params["options"].(map[string]any)
+	if !ok {
+		log.Error().Msgf("Invalid options: %v", params["options"])
+		return
+	}
+
+	address, ok := options["address"].(string)
+	if !ok {
+		log.Error().Msgf("Invalid address: %v", options["address"])
+		return
+	}
+	symbol, ok := options["symbol"].(string)
+	if !ok {
+		log.Error().Msgf("Invalid symbol: %v", options["symbol"])
+		return
+	}
+	decimals, ok := options["decimals"].(float64)
+	if !ok {
+		log.Error().Msgf("Invalid decimals: %v", options["decimals"])
+		return
+	}
+	//image := options["image"] // ignore
+
+	w := cmn.CurrentWallet
+	if w == nil {
+		log.Error().Msg("Wallet not found")
+		return
+	}
+
+	o := w.GetOrigin(req.Web3ProOrigin)
+	if o == nil {
+		log.Error().Msgf("Origin not found: %v", req.Web3ProOrigin)
+		return
+	}
+
+	b := w.GetBlockchainById(o.ChainId)
+	if b == nil {
+		log.Error().Msgf("Blockchain not found: %v", o.ChainId)
+		return
+	}
+
+	t := w.GetTokenByAddress(b.Name, common.HexToAddress(address))
+	if t == nil {
+
+		bus.Fetch("ui", "hail", &bus.B_Hail{
+			Title: "Add Token",
+			Template: `<c><w>
+Do you want to add the token:
+<u><b>` + symbol + `</b></u>
+to your wallet?
+
+<button text:Ok> <button text:Cancel>`,
+			OnOk: func(m *bus.Message) {
+
+				t = &cmn.Token{
+					Blockchain: b.Name,
+					Address:    common.HexToAddress(address),
+					Symbol:     symbol,
+					Decimals:   int(decimals),
+				}
+				w.Tokens = append(w.Tokens, t)
+				err := w.Save()
+				if err != nil {
+					log.Error().Err(err).Msg("Failed to save wallet")
+					return
+				}
+				bus.Send("ui", "notify", "Token added to wallet")
+			},
+		})
+
+	} else {
+		bus.Send("ui", "notify", "Token already in wallet")
+	}
 }

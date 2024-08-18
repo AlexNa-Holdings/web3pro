@@ -40,6 +40,7 @@ require (
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.1.0 // indirect
 	github.com/ethereum/c-kzg-4844 v1.0.0 // indirect
 	github.com/gdamore/encoding v1.0.0 // indirect
+	github.com/gen2brain/malgo v0.11.22 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect

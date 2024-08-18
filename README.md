@@ -16,7 +16,7 @@ fc-list | grep "Nerd"
 
 ```
 
-Select in the terminal propertioes
+Select the font for your terminal
 
 
 # GoCui package

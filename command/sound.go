@@ -5,6 +5,7 @@ import (
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
+	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/ui"
 )
 
@@ -59,8 +60,6 @@ func Sound_Process(c *Command, input string) {
 
 	switch subcommand {
 	case "list", "":
-		ui.Printf("\nAvailable Alerts:\n")
-
 		resp := bus.Fetch("sound", "list", nil)
 		if resp.Error != nil {
 			ui.PrintErrorf("\nError listing sounds: %v\n", resp.Error)
@@ -73,9 +72,26 @@ func Sound_Process(c *Command, input string) {
 			return
 		}
 
+		ui.Printf("\nCurrent sound alert: %s\n", w.Sound)
+
+		ui.Printf("\nAvailable Alerts:\n")
+
 		n := 1
 		for _, s := range l {
-			ui.Printf("%02d %s\n", n, s)
+			ui.Printf("%02d %-10s ", n, s)
+
+			ui.Terminal.Screen.AddLink(
+				gocui.ICON_SEND,
+				"command sound play '"+s+"' ",
+				"Play",
+				"")
+			ui.Terminal.Screen.AddLink(
+				gocui.ICON_PROMOTE,
+				"command sound set '"+s+"' ",
+				"Set",
+				"")
+			ui.Printf("\n")
+
 			n++
 		}
 
@@ -120,7 +136,7 @@ func Sound_Process(c *Command, input string) {
 		if param == "" {
 			param = w.Sound
 		}
-		bus.Fetch("sound", "play", param)
+		bus.Send("sound", "play", param)
 	case "on":
 		w.SoundOn = true
 		err := w.Save()

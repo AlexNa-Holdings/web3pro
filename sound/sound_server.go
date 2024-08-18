@@ -4,6 +4,7 @@ import (
 	"bytes"
 	_ "embed"
 	"io"
+	"sync"
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/hajimehoshi/go-mp3"
@@ -11,28 +12,22 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-//go:embed mp3/level-up.mp3
-var level_up []byte
-
-var soundFiles = map[string][]byte{
-	"level-up": level_up,
-}
-
 var sounds = map[string]*mp3.Decoder{}
 var defaultSound string
 var player *oto.Player
+var playerMutex = sync.Mutex{}
 
 func Init() {
-	for name, data := range soundFiles {
-		decoder, err := mp3.NewDecoder(bytes.NewReader(data))
+	for _, sf := range soundFiles {
+		decoder, err := mp3.NewDecoder(bytes.NewReader(sf.data))
 		if err != nil {
 			log.Error().Msgf("Error decoding sound file: %v", err)
 			continue
 		}
-		sounds[name] = decoder
+		sounds[sf.name] = decoder
 
 		if defaultSound == "" {
-			defaultSound = name
+			defaultSound = sf.name
 		}
 	}
 	go Loop()
@@ -40,7 +35,7 @@ func Init() {
 
 func Loop() {
 	// Create a new context for audio playback
-	context, err := oto.NewContext(44100, 2, 2, 1000)
+	context, err := oto.NewContext(44100, 2, 2, 44000)
 	if err != nil {
 		log.Error().Msgf("Error creating audio context: %v", err)
 		return
@@ -71,21 +66,32 @@ func process(msg *bus.Message) {
 			}
 		}
 
-		d, ok := sounds[name]
+		s, ok := sounds[name]
 		if !ok {
 			log.Error().Msgf("sound: sound not found: %v", name)
 			return
 		}
 
-		if _, err := io.Copy(player, d); err != nil {
-			log.Error().Msgf("sound: error playing sound: %v", err)
-		}
+		play(s)
+
 	case "list":
 		l := []string{}
-		for name := range sounds {
-			l = append(l, name)
+		for _, sf := range soundFiles {
+			l = append(l, sf.name)
 		}
 		msg.Respond(l, nil)
 	}
 
+}
+
+func play(d *mp3.Decoder) {
+	go func() {
+		playerMutex.Lock()
+		defer playerMutex.Unlock()
+
+		d.Seek(0, io.SeekStart)
+		if _, err := io.Copy(player, d); err != nil {
+			log.Error().Msgf("sound: error playing sound: %v", err)
+		}
+	}()
 }

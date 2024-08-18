@@ -62,7 +62,17 @@ func accounts(req RPCRequest, _ *ConContext, res *RPCResponse) {
 }
 
 func subscribe(req RPCRequest, ctx *ConContext, res *RPCResponse) {
-	if len(req.Params) < 1 {
+
+	params, ok := req.Params.([]string)
+	if !ok {
+		res.Error = &RPCError{
+			Code:    4001,
+			Message: "Params must be an array of strings",
+		}
+		return
+	}
+
+	if len(params) < 1 {
 		res.Error = &RPCError{
 			Code:    4001,
 			Message: "Invalid params",
@@ -70,7 +80,7 @@ func subscribe(req RPCRequest, ctx *ConContext, res *RPCResponse) {
 		return
 	}
 
-	stype := req.Params[0].(string)
+	stype := params[0]
 
 	switch stype {
 	case "chainChanged", "accountsChanged":
