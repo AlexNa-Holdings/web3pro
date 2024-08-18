@@ -8,6 +8,9 @@ require (
 	github.com/ethereum/go-ethereum v1.14.6
 	github.com/gdamore/tcell/v2 v2.4.0
 	github.com/google/gousb v1.1.3
+	github.com/gorilla/websocket v1.4.2
+	github.com/hajimehoshi/go-mp3 v0.3.0
+	github.com/hajimehoshi/oto v1.0.1
 	github.com/mattn/go-runewidth v0.0.13
 	github.com/rs/zerolog v1.33.0
 	github.com/tyler-smith/go-bip32 v1.0.0
@@ -44,7 +47,6 @@ require (
 	github.com/golang/snappy v0.0.5-0.20220116011046-fa5810519dcb // indirect
 	github.com/google/renameio/v2 v2.0.0 // indirect
 	github.com/gorilla/rpc v1.2.0 // indirect
-	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.16.0 // indirect
 	github.com/holiman/uint256 v1.2.4 // indirect
 	github.com/lucasb-eyer/go-colorful v1.0.3 // indirect
@@ -78,6 +80,9 @@ require (
 	go.uber.org/multierr v1.10.0 // indirect
 	go.uber.org/zap v1.26.0 // indirect
 	golang.org/x/exp v0.0.0-20231127185646-65229373498e // indirect
+	golang.org/x/exp/shiny v0.0.0-20240808152545-0cdaa3abc0fa // indirect
+	golang.org/x/image v0.14.0 // indirect
+	golang.org/x/mobile v0.0.0-20231127183840-76ac6878050a // indirect
 	golang.org/x/net v0.24.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect
 	golang.org/x/sys v0.21.0 // indirect

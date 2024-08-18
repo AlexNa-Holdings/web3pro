@@ -14,6 +14,7 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/hw"
 	"github.com/AlexNa-Holdings/web3pro/price"
+	"github.com/AlexNa-Holdings/web3pro/sound"
 	"github.com/AlexNa-Holdings/web3pro/sw"
 	"github.com/AlexNa-Holdings/web3pro/ui"
 	"github.com/AlexNa-Holdings/web3pro/usb"
@@ -40,6 +41,8 @@ func main() {
 	ws.Init()
 	ui.Init()
 	price.Init()
+	sound.Init()
+
 	defer ui.Gui.Close()
 
 	ui.Is_ready_wg.Add(1)

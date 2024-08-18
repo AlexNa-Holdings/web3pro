@@ -39,6 +39,7 @@ func Init() {
 		NewPriceCommand(),
 		NewWebSocketCommand(),
 		NewAppCommand(),
+		NewSoundCommand(),
 	}
 
 	go func() {

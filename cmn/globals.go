@@ -24,6 +24,9 @@ type Wallet struct {
 	CurrentAddress common.Address `json:"current_address"`
 	CurrentOrigin  string         `json:"current_origin"`
 
+	SoundOn bool   `json:"sound"`
+	Sound   string `json:"sound"`
+
 	filePath   string     `json:"-"`
 	password   string     `json:"-"`
 	writeMutex sync.Mutex `json:"-"`
