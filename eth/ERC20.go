@@ -5,6 +5,7 @@ import (
 	"errors"
 	"math/big"
 
+	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
@@ -12,7 +13,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func GetERC20TokenInfo(b *cmn.Blockchain, address *common.Address) (string, string, int, error) {
+func GetERC20TokenInfo(b *cmn.Blockchain, address common.Address) (string, string, int, error) {
 
 	client, err := getEthClient(b)
 	if err != nil {
@@ -21,7 +22,7 @@ func GetERC20TokenInfo(b *cmn.Blockchain, address *common.Address) (string, stri
 	}
 
 	msg := ethereum.CallMsg{
-		To: address,
+		To: &address,
 	}
 
 	msg.Data, err = ERC20_ABI.Pack("name")
@@ -178,11 +179,31 @@ func ERC20Transfer(b *cmn.Blockchain, t *cmn.Token, s *cmn.Signer, from *cmn.Add
 		return err
 	}
 
-	err = SendTx(b, s, tx, from)
-	if err != nil {
-		log.Error().Msgf("Transfer: Cannot send transaction. Error:(%v)", err)
-		return err
+	res := bus.Fetch("signer", "sign-tx", &bus.B_SignerSignTx{
+		Type:      s.Type,
+		Name:      s.Name,
+		MasterKey: s.MasterKey,
+		Chain:     b.Name,
+		Tx:        tx,
+		From:      from.Address,
+		Path:      from.Path,
+	})
+
+	if res.Error != nil {
+		log.Error().Err(res.Error).Msg("Transfer: Cannot sign tx")
+		return res.Error
 	}
 
+	signedTx, ok := res.Data.(*types.Transaction)
+	if !ok {
+		log.Error().Msgf("Transfer: Cannot convert to transaction. Data:(%v)", res.Data)
+		return errors.New("cannot convert to transaction")
+	}
+
+	res = bus.Fetch("eth", "send", signedTx)
+	if res.Error != nil {
+		log.Error().Err(res.Error).Msg("Transfer: Cannot send tx")
+		return res.Error
+	}
 	return nil
 }

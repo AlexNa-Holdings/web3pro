@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
+	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/ava-labs/coreth/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -23,7 +24,7 @@ type Mnemonic struct {
 }
 
 func Loop() {
-	ch := bus.Subscribe("signer", "usb")
+	ch := bus.Subscribe("signer")
 	for msg := range ch {
 		if msg.RespondTo != 0 {
 			continue // ignore responses
@@ -33,6 +34,12 @@ func Loop() {
 }
 
 func process(msg *bus.Message) {
+	w := cmn.CurrentWallet
+	if w == nil {
+		msg.Respond(nil, errors.New("no wallet"))
+		return
+	}
+
 	switch msg.Topic {
 	case "signer":
 		switch msg.Type {
@@ -73,6 +80,38 @@ func process(msg *bus.Message) {
 					Paths:     p,
 				}, nil)
 
+			}
+		case "sign-tx":
+			m, ok := msg.Data.(*bus.B_SignerSignTx)
+			if !ok {
+				log.Error().Msg("Loop: Invalid hw sign-tx data")
+				msg.Respond(nil, errors.New("invalid data"))
+				return
+			}
+
+			if m.Type == "mnemonics" {
+				b := w.GetBlockchain(m.Chain)
+				if b == nil {
+					log.Error().Msgf("Error getting blockchain: %v", m.Chain)
+					msg.Respond(nil, fmt.Errorf("blockchain not found: %v", m.Chain))
+					return
+				}
+
+				mnemonics, err := NewFromSN(m.MasterKey)
+				if err != nil {
+					log.Error().Msgf("Error creating mnemonics: %v", err)
+					msg.Respond(nil, err)
+					return
+				}
+
+				tx, err := mnemonics.SignTx(int64(b.ChainId), m.Tx, m.Path)
+				if err != nil {
+					log.Error().Msgf("Error signing transaction: %v", err)
+					msg.Respond(nil, err)
+					return
+				}
+
+				msg.Respond(tx, nil)
 			}
 		}
 	}

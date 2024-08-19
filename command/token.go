@@ -157,23 +157,17 @@ func Token_Process(c *Command, input string) {
 			return
 		}
 
-		symbol, name, decimals, err := eth.GetERC20TokenInfo(bchain, &addr)
+		symbol, name, decimals, err := eth.GetERC20TokenInfo(bchain, addr)
 		if err != nil {
 			ui.PrintErrorf("\nError getting token info: %v\n", err)
 			return
 		}
 
-		t := &cmn.Token{
-			Blockchain: bchain.Name,
-			Name:       name,
-			Symbol:     symbol,
-			Address:    addr,
-			Decimals:   decimals,
+		err = w.AddToken(bchain.Name, addr, name, symbol, decimals)
+		if err != nil {
+			ui.PrintErrorf("\nError adding token: %v\n", err)
+			return
 		}
-
-		w.Tokens = append(w.Tokens, t)
-		w.MarkUniqueTokens()
-		w.Save()
 
 		ui.Printf("\nToken added: %s %s\n", symbol, addr.String())
 	case "remove":

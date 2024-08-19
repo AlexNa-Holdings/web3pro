@@ -6,6 +6,7 @@ import (
 
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 )
 
 // ---------- timer ----------
@@ -119,6 +120,16 @@ type B_SignerList_Response struct { // list_response
 type B_SignerConnected struct { // connected
 	Type string
 	Name string
+}
+
+type B_SignerSignTx struct { // sign-tx
+	Type      string
+	Name      string
+	MasterKey string
+	Chain     string
+	Tx        *types.Transaction
+	From      common.Address
+	Path      string
 }
 
 // ---------- ws ----------

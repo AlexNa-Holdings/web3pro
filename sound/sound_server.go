@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
+	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/hajimehoshi/go-mp3"
 	"github.com/hajimehoshi/oto"
 	"github.com/rs/zerolog/log"
@@ -85,6 +86,10 @@ func process(msg *bus.Message) {
 }
 
 func play(d *mp3.Decoder) {
+	if cmn.CurrentWallet == nil || !cmn.CurrentWallet.SoundOn {
+		return
+	}
+
 	go func() {
 		playerMutex.Lock()
 		defer playerMutex.Unlock()

@@ -511,6 +511,25 @@ func (w *Wallet) GetNativeToken(b *Blockchain) (*Token, error) {
 	return nil, errors.New("native token not found")
 }
 
+func (w *Wallet) AddToken(b string, a common.Address, n string, s string, d int) error {
+	if w.GetTokenByAddress(b, a) != nil {
+		return errors.New("token already exists")
+	}
+
+	t := &Token{
+		Blockchain: b,
+		Address:    a,
+		Name:       n,
+		Symbol:     s,
+		Decimals:   d,
+	}
+
+	w.Tokens = append(w.Tokens, t)
+	w.MarkUniqueTokens()
+
+	return w.Save()
+}
+
 func (w *Wallet) GetTokenByAddress(b string, a common.Address) *Token {
 	if a.Cmp(common.Address{}) == 0 {
 		b := w.GetBlockchain(b)

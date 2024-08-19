@@ -1,11 +1,13 @@
 package eth
 
 import (
+	"context"
 	"fmt"
 	"sync"
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/rs/zerolog/log"
 )
@@ -39,6 +41,9 @@ func process(msg *bus.Message) {
 		switch msg.Type {
 		case "send":
 			err := send(msg)
+			msg.Respond(nil, err)
+		case "send-tx":
+			err := sendTx(msg)
 			msg.Respond(nil, err)
 		}
 	case "wallet":
@@ -139,4 +144,27 @@ func getEthClient(b *cmn.Blockchain) (*ethclient.Client, error) {
 	}
 
 	return c.Client, nil
+}
+
+func sendTx(msg *bus.Message) error {
+	signedTx, ok := msg.Data.(*types.Transaction)
+	if !ok {
+		return fmt.Errorf("invalid tx: %v", msg.Data)
+	}
+
+	c, ok := cons[int(signedTx.ChainId().Int64())]
+	if !ok {
+		return fmt.Errorf("client not found for chainId: %v", signedTx.ChainId())
+	}
+
+	// Send the transaction
+	err := c.SendTransaction(context.Background(), signedTx)
+	if err != nil {
+		log.Error().Err(err).Msgf("Transfer: Cannot send transaction")
+		return err
+	}
+
+	cmn.Notifyf("Transaction sent: %s", signedTx.Hash().Hex())
+
+	return nil
 }

@@ -24,7 +24,7 @@ type Wallet struct {
 	CurrentAddress common.Address `json:"current_address"`
 	CurrentOrigin  string         `json:"current_origin"`
 
-	SoundOn bool   `json:"sound"`
+	SoundOn bool   `json:"sound_on"`
 	Sound   string `json:"sound"`
 
 	filePath   string     `json:"-"`

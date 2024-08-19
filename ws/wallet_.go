@@ -7,6 +7,7 @@ import (
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
+	"github.com/AlexNa-Holdings/web3pro/eth"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog/log"
 )
@@ -165,14 +166,23 @@ to your wallet?
 <button text:Ok> <button text:Cancel>`,
 			OnOk: func(m *bus.Message) {
 
-				t = &cmn.Token{
-					Blockchain: b.Name,
-					Address:    common.HexToAddress(address),
-					Symbol:     symbol,
-					Decimals:   int(decimals),
+				a_symbol, a_name, a_decimals, err := eth.GetERC20TokenInfo(b, common.HexToAddress(address))
+				if err != nil {
+					bus.Send("ui", "notify-error", "Error getting token info")
+					return
 				}
-				w.Tokens = append(w.Tokens, t)
-				err := w.Save()
+
+				if a_symbol != symbol {
+					bus.Send("ui", "notify-error", "Symbol mismatch")
+					return
+				}
+
+				if a_decimals != int(decimals) {
+					bus.Send("ui", "notify-error", "Decimals mismatch")
+					return
+				}
+
+				err = w.AddToken(b.Name, common.HexToAddress(address), a_name, symbol, int(decimals))
 				if err != nil {
 					log.Error().Err(err).Msg("Failed to save wallet")
 					return

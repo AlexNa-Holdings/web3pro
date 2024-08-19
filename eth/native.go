@@ -5,6 +5,7 @@ import (
 	"errors"
 	"math/big"
 
+	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -68,11 +69,31 @@ func Transfer(b *cmn.Blockchain, s *cmn.Signer, from *cmn.Address, to common.Add
 		return err
 	}
 
-	err = SendTx(b, s, tx, from)
-	if err != nil {
-		log.Error().Msgf("Transfer: Cannot send transaction. Error:(%v)", err)
-		return err
+	res := bus.Fetch("signer", "sign-tx", &bus.B_SignerSignTx{
+		Type:      s.Type,
+		Name:      s.Name,
+		MasterKey: s.MasterKey,
+		Chain:     b.Name,
+		Tx:        tx,
+		From:      from.Address,
+		Path:      from.Path,
+	})
+
+	if res.Error != nil {
+		log.Error().Err(res.Error).Msg("Transfer: Cannot sign tx")
+		return res.Error
 	}
 
+	signedTx, ok := res.Data.(*types.Transaction)
+	if !ok {
+		log.Error().Msgf("Transfer: Cannot convert to transaction. Data:(%v)", res.Data)
+		return errors.New("cannot convert to transaction")
+	}
+
+	res = bus.Fetch("eth", "send", signedTx)
+	if res.Error != nil {
+		log.Error().Err(res.Error).Msg("Transfer: Cannot send tx")
+		return res.Error
+	}
 	return nil
 }

@@ -60,6 +60,13 @@ func Sound_Process(c *Command, input string) {
 
 	switch subcommand {
 	case "list", "":
+
+		if w.SoundOn {
+			ui.Printf("\nSound alert is on\n")
+		} else {
+			ui.Printf("\nSound alert is off\n")
+		}
+
 		resp := bus.Fetch("sound", "list", nil)
 		if resp.Error != nil {
 			ui.PrintErrorf("\nError listing sounds: %v\n", resp.Error)
@@ -72,7 +79,7 @@ func Sound_Process(c *Command, input string) {
 			return
 		}
 
-		ui.Printf("\nCurrent sound alert: %s\n", w.Sound)
+		ui.Printf("Current sound alert: %s\n", w.Sound)
 
 		ui.Printf("\nAvailable Alerts:\n")
 
