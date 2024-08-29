@@ -111,7 +111,7 @@ func Signer_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 			case "trezor":
 				r := bus.Fetch("signer", "list", &bus.B_SignerList{Type: "trezor"})
 				if r.Error != nil {
-					ui.PrintErrorf("\nError listing trezor devices: %v\n", r.Error)
+					ui.PrintErrorf("Error listing trezor devices: %v", r.Error)
 					return "", &options, ""
 				}
 
@@ -126,7 +126,7 @@ func Signer_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 			case "ledger":
 				r := bus.Fetch("signer", "list", &bus.B_SignerList{Type: "ledger"})
 				if r.Error != nil {
-					ui.PrintErrorf("\nError listing trezor devices: %v\n", r.Error)
+					ui.PrintErrorf("Error listing trezor devices: %v", r.Error)
 					return "", &options, ""
 				}
 
@@ -148,7 +148,7 @@ func Signer_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 func Signer_Process(c *Command, input string) {
 
 	if cmn.CurrentWallet == nil {
-		ui.PrintErrorf("No wallet opened\n")
+		ui.PrintErrorf("No wallet opened")
 		return
 	}
 
@@ -204,18 +204,18 @@ func Signer_Process(c *Command, input string) {
 
 		s := cmn.CurrentWallet.GetSigner(p1)
 		if s == nil {
-			ui.PrintErrorf("\nSigner not found\n")
+			ui.PrintErrorf("Signer not found")
 			return
 		}
 
 		l, p, err := s.GetAddresses(path_format, from, 10)
 		if err != nil {
-			ui.PrintErrorf("\nError getting addresses: %v\n", err)
+			ui.PrintErrorf("Error getting addresses: %v", err)
 			return
 		}
 
 		if len(l) != len(p) {
-			ui.PrintErrorf("\nError getting addresses: length mismatch\n")
+			ui.PrintErrorf("Error getting addresses: length mismatch")
 			return
 		}
 
@@ -258,12 +258,12 @@ func Signer_Process(c *Command, input string) {
 		ui.Flush()
 
 	case "add":
-		ui.Gui.ShowPopup(ui.DlgSignerAdd(p1, p2))
+		bus.Send("ui", "popup", ui.DlgSignerAdd(p1, p2))
 
 	case "remove":
 		for i, s := range cmn.CurrentWallet.Signers {
 			if s.Name == p1 {
-				ui.Gui.ShowPopup(ui.DlgConfirm(
+				bus.Send("ui", "popup", ui.DlgConfirm(
 					"Remove signer",
 					`
 <c> Are you sure you want to remove 
@@ -273,7 +273,7 @@ func Signer_Process(c *Command, input string) {
 
 						err := cmn.CurrentWallet.Save()
 						if err != nil {
-							ui.PrintErrorf("\nFailed to save wallet: %s\n", err)
+							ui.PrintErrorf("Failed to save wallet: %s", err)
 							return
 						}
 
@@ -284,7 +284,7 @@ func Signer_Process(c *Command, input string) {
 
 			for j, c := range s.Copies {
 				if c == p1 {
-					ui.Gui.ShowPopup(ui.DlgConfirm(
+					bus.Send("ui", "popup", ui.DlgConfirm(
 						"Remove signer's copy",
 						`
 <c> Are you sure you want to remove 
@@ -295,7 +295,7 @@ func Signer_Process(c *Command, input string) {
 
 							err := cmn.CurrentWallet.Save()
 							if err != nil {
-								ui.PrintErrorf("\nFailed to save wallet: %s\n", err)
+								ui.PrintErrorf("Failed to save wallet: %s", err)
 								return
 							}
 							ui.Printf("\nSigner's copy %s removed\n", p1)
@@ -305,16 +305,16 @@ func Signer_Process(c *Command, input string) {
 			}
 		}
 
-		ui.PrintErrorf("Signer not found: %s\n", p1)
+		ui.PrintErrorf("Signer not found: %s", p1)
 
 	case "promote":
 		s, ci := cmn.CurrentWallet.GetSignerWithCopy(p1)
 		if s == nil {
-			ui.PrintErrorf("Signer not found: %s\n", p1)
+			ui.PrintErrorf("Signer not found: %s", p1)
 			return
 		}
 
-		ui.Gui.ShowPopup(ui.DlgConfirm(
+		bus.Send("ui", "popup", ui.DlgConfirm(
 			"Promote signer",
 			`Are you sure you want to promote signer '`+p1+"' to main signer?\n",
 			func() {
@@ -342,13 +342,13 @@ func Signer_Process(c *Command, input string) {
 	case "edit":
 		for _, s := range cmn.CurrentWallet.Signers {
 			if s.Name == p1 {
-				ui.Gui.ShowPopup(ui.DlgSignerEdit(s.Name))
+				bus.Send("ui", "popup", ui.DlgSignerEdit(s.Name))
 				return
 			}
 		}
 
-		ui.PrintErrorf("Signer not found: %s\n", p1)
+		ui.PrintErrorf("Signer not found: %s", p1)
 	default:
-		ui.PrintErrorf("Unknown command: %s\n", subcommand)
+		ui.PrintErrorf("Unknown command: %s", subcommand)
 	}
 }

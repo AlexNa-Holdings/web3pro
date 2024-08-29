@@ -32,6 +32,10 @@ func (g *Gui) ShowPopup(p *Popup) {
 	}
 }
 
+func (g *Gui) GetCurentPopup() *Popup {
+	return g.popup
+}
+
 func (g *Gui) ShowPopupAndWait(p *Popup) {
 	if p != nil {
 		p.Closed = make(chan bool)

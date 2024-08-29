@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/eth"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
@@ -113,7 +114,7 @@ func Token_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 
 func Token_Process(c *Command, input string) {
 	if cmn.CurrentWallet == nil {
-		ui.PrintErrorf("\nNo wallet open\n")
+		ui.PrintErrorf("No wallet open")
 		return
 	}
 
@@ -131,41 +132,41 @@ func Token_Process(c *Command, input string) {
 		address := p[3]
 
 		if chain == "" {
-			ui.PrintErrorf("\nUsage: token add [BLOCKCHAIN] [ADDRESS]\n")
+			ui.PrintErrorf("Usage: token add [BLOCKCHAIN] [ADDRESS]")
 			return
 		}
 
 		if address == "" {
-			ui.PrintErrorf("\nUsage: token add %s [ADDRESS]\n", chain)
+			ui.PrintErrorf("Usage: token add %s [ADDRESS]", chain)
 			return
 		}
 
 		if !common.IsHexAddress(address) {
-			ui.PrintErrorf("\nInvalid address: %s\n", address)
+			ui.PrintErrorf("Invalid address: %s", address)
 			return
 		}
 
 		addr := common.HexToAddress(address)
 		bchain := w.GetBlockchain(chain)
 		if bchain == nil {
-			ui.PrintErrorf("\nBlockchain not found: %s\n", chain)
+			ui.PrintErrorf("Blockchain not found: %s", chain)
 			return
 		}
 
 		if w.GetTokenByAddress(bchain.Name, addr) != nil {
-			ui.PrintErrorf("\nToken already exists: %s\n", address)
+			ui.PrintErrorf("Token already exists: %s", address)
 			return
 		}
 
 		symbol, name, decimals, err := eth.GetERC20TokenInfo(bchain, addr)
 		if err != nil {
-			ui.PrintErrorf("\nError getting token info: %v\n", err)
+			ui.PrintErrorf("Error getting token info: %v", err)
 			return
 		}
 
 		err = w.AddToken(bchain.Name, addr, name, symbol, decimals)
 		if err != nil {
-			ui.PrintErrorf("\nError adding token: %v\n", err)
+			ui.PrintErrorf("Error adding token: %v", err)
 			return
 		}
 
@@ -175,17 +176,17 @@ func Token_Process(c *Command, input string) {
 		address := p[3]
 
 		if chain == "" {
-			ui.PrintErrorf("\nUsage: token remove [BLOCKCHAIN] [ADDRESS]\n")
+			ui.PrintErrorf("Usage: token remove [BLOCKCHAIN] [ADDRESS]")
 			return
 		}
 
 		if address == "" {
-			ui.PrintErrorf("\nUsage: token remove %s [ADDRESS]\n", chain)
+			ui.PrintErrorf("Usage: token remove %s [ADDRESS]", chain)
 			return
 		}
 
 		if !common.IsHexAddress(address) {
-			ui.PrintErrorf("\nInvalid address: %s\n", address)
+			ui.PrintErrorf("Invalid address: %s", address)
 			return
 		}
 
@@ -193,11 +194,11 @@ func Token_Process(c *Command, input string) {
 
 		t := w.GetTokenByAddress(chain, addr)
 		if t == nil {
-			ui.PrintErrorf("\nToken not found: %s\n", address)
+			ui.PrintErrorf("Token not found: %s", address)
 			return
 		}
 
-		ui.Gui.ShowPopup(ui.DlgConfirm(
+		bus.Send("ui", "popup", ui.DlgConfirm(
 			"Remove address",
 			`
 <c>Are you sure you want to remove token:
@@ -260,18 +261,18 @@ func Token_Process(c *Command, input string) {
 		address := p[4]
 
 		if chain == "" {
-			ui.PrintErrorf("\nUsage: token balance [BLOCKCHAIN] [TOKEN/ADDRESS] [ADDRESS]\n")
+			ui.PrintErrorf("Usage: token balance [BLOCKCHAIN] [TOKEN/ADDRESS] [ADDRESS]")
 			return
 		}
 
 		bchain := w.GetBlockchain(chain)
 		if bchain == nil {
-			ui.PrintErrorf("\nBlockchain not found: %s\n", chain)
+			ui.PrintErrorf("Blockchain not found: %s", chain)
 			return
 		}
 
 		if token == "" {
-			ui.PrintErrorf("\nUsage: token balance %s [TOKEN/ADDRESS] [ADDRESS]\n", chain)
+			ui.PrintErrorf("Usage: token balance %s [TOKEN/ADDRESS] [ADDRESS]", chain)
 			return
 		}
 
@@ -281,7 +282,7 @@ func Token_Process(c *Command, input string) {
 		}
 
 		if t == nil {
-			ui.PrintErrorf("\nToken not found (or ambiguous): %s\n", token)
+			ui.PrintErrorf("Token not found (or ambiguous): %s", token)
 			return
 		}
 
@@ -308,7 +309,7 @@ func Token_Process(c *Command, input string) {
 
 			balance, err := eth.BalanceOf(bchain, t, a.Address)
 			if err != nil {
-				ui.PrintErrorf("\nError getting balance: %v\n", err)
+				ui.PrintErrorf("Error getting balance: %v", err)
 				return
 			}
 
@@ -358,7 +359,7 @@ func Token_Process(c *Command, input string) {
 		}
 
 	default:
-		ui.PrintErrorf("\nInvalid subcommand: %s\n", subcommand)
+		ui.PrintErrorf("Invalid subcommand: %s", subcommand)
 	}
 
 }

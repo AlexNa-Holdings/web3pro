@@ -142,8 +142,19 @@ func (m *Message) Respond(data interface{}, err error) int {
 	return SendEx(m.Topic, m.Type+"_response", data, 0, m.ID, err)
 }
 
+// Chain fetch (on the same timer)
+func (m *Message) Fetch(topic, t string, data interface{}) *Message {
+	return FetchEx(topic, t, data, m.TimerID, BusTimeout, BusHardTimeout, nil, 0)
+}
+
+// Chain fetch with hail (on the same timer)
+func (m *Message) FetchWithHail(topic, t string, data interface{}, hail *B_Hail, hail_delay int) *Message {
+	return FetchEx(topic, t, data, m.TimerID, BusTimeout, BusHardTimeout, hail, hail_delay)
+}
+
 func Fetch(topic, t string, data interface{}) *Message {
 	return FetchEx(topic, t, data,
+		0,
 		BusTimeout,
 		BusHardTimeout,
 		nil,
@@ -152,13 +163,14 @@ func Fetch(topic, t string, data interface{}) *Message {
 
 func FetchWithHail(topic, t string, data interface{}, hail *B_Hail, hail_delay int) *Message {
 	return FetchEx(topic, t, data,
+		0,
 		BusTimeout,
 		BusHardTimeout,
 		hail,
 		hail_delay)
 }
 
-func FetchEx(topic, t string, data interface{}, limit time.Duration, hardlimit time.Duration, hail *B_Hail, hail_delay int) *Message {
+func FetchEx(topic, t string, data interface{}, timer_id int, limit time.Duration, hardlimit time.Duration, hail *B_Hail, hail_delay int) *Message {
 
 	if topic == "ui" && hail != nil {
 		return &Message{Error: errors.New("cannot fetch 'ui' with hail")}
@@ -167,11 +179,24 @@ func FetchEx(topic, t string, data interface{}, limit time.Duration, hardlimit t
 	ch := Subscribe(topic, "timer", "ui")
 	defer Unsubscribe(ch)
 
-	timer_id := Send("timer", "init", &B_TimerInit{
-		Limit:     limit,
-		HardLimit: hardlimit,
-		Start:     true,
-	})
+	if timer_id == 0 {
+		timer_id = Send("timer", "init", &B_TimerInit{
+			Limit:     limit,
+			HardLimit: hardlimit,
+			Start:     true,
+		})
+	} else {
+		res := Fetch("timer", "init-hard", &B_TimerInitHard{
+			TimerId:   timer_id,
+			Limit:     limit,
+			HardLimit: hardlimit,
+			Start:     true,
+		})
+		if res.Error != nil {
+			log.Error().Msgf("Error fetching timer init-hard: %v", res.Error)
+			return res
+		}
+	}
 
 	id := SendEx(topic, t, data, timer_id, 0, nil)
 
@@ -185,6 +210,17 @@ func FetchEx(topic, t string, data interface{}, limit time.Duration, hardlimit t
 				hail.OnCancel = func(m *Message) {
 					log.Debug().Msgf("Send 'trigger' to timer:%d", timer_id)
 					Send("timer", "trigger", timer_id)
+				}
+
+				res := Fetch("timer", "init-hard", &B_TimerInitHard{
+					TimerId:   timer_id,
+					Limit:     limit,
+					HardLimit: hardlimit,
+					Start:     true,
+				})
+				if res.Error != nil {
+					log.Error().Msgf("Error fetching timer init-hard: %v", res.Error)
+					return res
 				}
 				SendEx("ui", "hail", hail, timer_id, 0, nil)
 			}

@@ -4,6 +4,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/ui"
@@ -86,7 +87,7 @@ func Address_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 
 func Address_Process(c *Command, input string) {
 	if cmn.CurrentWallet == nil {
-		ui.PrintErrorf("\nNo wallet open\n")
+		ui.PrintErrorf("No wallet open")
 		return
 	}
 
@@ -99,20 +100,20 @@ func Address_Process(c *Command, input string) {
 	switch subcommand {
 	case "add":
 		if !common.IsHexAddress(p0) {
-			ui.PrintErrorf("\nInvalid address\n")
+			ui.PrintErrorf("Invalid address")
 			return
 		}
 
 		signer := w.GetSigner(p1)
 		if signer == nil {
-			ui.PrintErrorf("\nSigner not found\n")
+			ui.PrintErrorf("Signer not found")
 			return
 		}
-		ui.Gui.ShowPopup(ui.DlgAddressAdd(p0, p1, p2))
+		bus.Send("ui", "popup", ui.DlgAddressAdd(p0, p1, p2))
 	case "remove":
 		for i, a := range w.Addresses {
 			if a.Name == p0 {
-				ui.Gui.ShowPopup(ui.DlgConfirm(
+				bus.Send("ui", "popup", ui.DlgConfirm(
 					"Remove address",
 					`
 <c>Are you sure you want to remove address:
@@ -123,7 +124,7 @@ func Address_Process(c *Command, input string) {
 
 						err := w.Save()
 						if err != nil {
-							ui.PrintErrorf("\nError saving wallet: %v\n", err)
+							ui.PrintErrorf("Error saving wallet: %v", err)
 							return
 						}
 						ui.Notification.Show("Address removed")
@@ -132,7 +133,7 @@ func Address_Process(c *Command, input string) {
 				return
 			}
 		}
-		ui.PrintErrorf("\nAddress not found: %s\n", p0)
+		ui.PrintErrorf("Address not found: %s", p0)
 	case "list", "":
 
 		sort.Slice(w.Addresses, func(i, j int) bool {
@@ -149,25 +150,25 @@ func Address_Process(c *Command, input string) {
 
 	case "edit":
 		if w.GetAddressByName(p0) == nil {
-			ui.PrintErrorf("\nAddress not found: %s\n", p0)
+			ui.PrintErrorf("Address not found: %s", p0)
 			return
 		}
-		ui.Gui.ShowPopup(ui.DlgAddressEdit(p0))
+		bus.Send("ui", "popup", ui.DlgAddressEdit(p0))
 	case "set":
 		fa := w.GetAddressByName(p0)
 		if fa == nil {
-			ui.PrintErrorf("\nAddress not found: %s\n", p0)
+			ui.PrintErrorf("Address not found: %s", p0)
 			return
 		}
 		w.CurrentAddress = fa.Address
 		err := w.Save()
 		if err != nil {
-			ui.PrintErrorf("\nError saving wallet: %v\n", err)
+			ui.PrintErrorf("Error saving wallet: %v", err)
 			return
 		}
 
 	default:
-		ui.PrintErrorf("\nInvalid subcommand: %s\n", subcommand)
+		ui.PrintErrorf("Invalid subcommand: %s", subcommand)
 	}
 
 }

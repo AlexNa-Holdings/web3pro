@@ -66,7 +66,7 @@ func Init() {
 					}
 
 					if !found {
-						ui.PrintErrorf("\nUnknown command: %s\n\n", command)
+						ui.PrintErrorf("Unknown command: %s", command)
 					}
 				}
 			}

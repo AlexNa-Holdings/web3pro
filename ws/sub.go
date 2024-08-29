@@ -40,6 +40,18 @@ func (sm *subManger) addSubscription(url string, event string, params any) strin
 	return s_id
 }
 
+func (sm *subManger) removeSubscription(url string, id string) {
+	sm.mutex.Lock()
+	defer sm.mutex.Unlock()
+
+	for i, sub := range sm.subs[url] {
+		if sub.id == id {
+			sm.subs[url] = append(sm.subs[url][:i], sm.subs[url][i+1:]...)
+			return
+		}
+	}
+}
+
 func (sm *subManger) getSubsForEvent(url string, event string) []appSubscription {
 	sm.mutex.Lock()
 	defer sm.mutex.Unlock()

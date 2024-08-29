@@ -13,7 +13,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func (d *Trezor) Call(req proto.Message, result proto.Message) error {
+func (d *Trezor) Call(m *bus.Message, req proto.Message, result proto.Message) error {
 
 	kind, reply, err := d.RawCall(req)
 	if err != nil {
@@ -25,7 +25,7 @@ func (d *Trezor) Call(req proto.Message, result proto.Message) error {
 		case trezorproto.MessageType_MessageType_PinMatrixRequest:
 			{
 				log.Trace().Msg("*** Enter PIN ...")
-				pin, err := d.RequsetPin()
+				pin, err := d.RequsetPin(m)
 				if err != nil {
 					log.Error().Msgf("Call: Error getting pin: %s", err)
 					d.RawCall(&trezorproto.Cancel{})
@@ -51,7 +51,7 @@ func (d *Trezor) Call(req proto.Message, result proto.Message) error {
 		case trezorproto.MessageType_MessageType_PassphraseRequest:
 			{
 				log.Trace().Msg("Enter Pass	phrase")
-				pass, err := d.RequsetPassword()
+				pass, err := d.RequsetPassword(m)
 				if err != nil {
 					d.RawCall(&trezorproto.Cancel{})
 					return err
@@ -96,7 +96,7 @@ func (d *Trezor) Call(req proto.Message, result proto.Message) error {
 	}
 }
 
-func (d *Trezor) RequsetPin() (string, error) {
+func (d *Trezor) RequsetPin(m *bus.Message) (string, error) {
 	template := "<c><w>\n<l id:pin text:'____________'> <button text:'\U000f006e ' id:back>\n\n"
 
 	ids := []int{7, 8, 9, 4, 5, 6, 1, 2, 3}
@@ -110,7 +110,7 @@ func (d *Trezor) RequsetPin() (string, error) {
 	template += "<button text:OK> <button text:Cancel>"
 	pin := ""
 
-	bus.Fetch("ui", "hail", &bus.B_Hail{
+	m.Fetch("ui", "hail", &bus.B_Hail{
 		Title:    "Enter Trezor PIN",
 		Template: template,
 		OnClickHotspot: func(m *bus.Message, v *gocui.View, hs *gocui.Hotspot) {
@@ -145,11 +145,11 @@ func (d *Trezor) RequsetPin() (string, error) {
 
 }
 
-func (d *Trezor) RequsetPassword() (string, error) {
+func (d *Trezor) RequsetPassword(m *bus.Message) (string, error) {
 	password := ""
 	canceled := false
 
-	bus.Fetch("ui", "hail", &bus.B_Hail{
+	m.Fetch("ui", "hail", &bus.B_Hail{
 		Title: "Select Wallet Type",
 		Template: `<c><w>
 <button text:Standard color:g.HelpFgColor bgcolor:g.HelpBgColor id:standard> <button text:Hidden color:g.HelpFgColor bgcolor:g.HelpBgColor id:hidden> 

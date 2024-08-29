@@ -54,8 +54,25 @@ func ProcessTimers() {
 			case "init":
 				d, ok := msg.Data.(*B_TimerInit)
 				if ok {
-					timer_init(msg.ID, d)
-					msg.Respond("OK", nil)
+					err := timer_init(msg.ID, d)
+					if err != nil {
+						msg.Respond("ERROR", err)
+					} else {
+						msg.Respond("OK", nil)
+					}
+				} else {
+					log.Error().Msg("Invalid timer init data")
+					msg.Respond("ERROR", errors.New("invalid timer init data"))
+				}
+			case "init-hard":
+				d, ok := msg.Data.(*B_TimerInitHard)
+				if ok {
+					err := timer_init_hard(d)
+					if err != nil {
+						msg.Respond("ERROR", err)
+					} else {
+						msg.Respond("OK", nil)
+					}
 				} else {
 					log.Error().Msg("Invalid timer init data")
 					msg.Respond("ERROR", errors.New("invalid timer init data"))
@@ -63,8 +80,12 @@ func ProcessTimers() {
 			case "start", "resume":
 				id, ok := msg.Data.(int)
 				if ok {
-					timer_start(id)
-					msg.Respond("OK", nil)
+					err := timer_start(id)
+					if err != nil {
+						msg.Respond("ERROR", err)
+					} else {
+						msg.Respond("OK", nil)
+					}
 				} else {
 					log.Error().Msg("Invalid timer start data")
 					msg.Respond("ERROR", errors.New("invalid timer start data"))
@@ -185,15 +206,18 @@ func updateTimers() {
 
 }
 
-func timer_init(id int, d *B_TimerInit) {
+func timer_init(id int, d *B_TimerInit) error {
 	mu.Lock()
-
 	if _, ok := timers[id]; ok {
 		log.Warn().Msgf("Timer %d already exists", id)
+		mu.Unlock()
+		return errors.New("timer already exists")
 	}
 
 	if d.Limit > d.HardLimit {
 		log.Warn().Msgf("Timer %d has a limit greater than the hard limit", id)
+		mu.Unlock()
+		return errors.New("limit greater than hard limit")
 	}
 
 	timers[id] = &BusTimer{
@@ -207,30 +231,54 @@ func timer_init(id int, d *B_TimerInit) {
 	if d.Start {
 		timer_start(id)
 	}
+
+	return nil
 }
 
-func timer_start(id int) {
+func timer_init_hard(d *B_TimerInitHard) error {
+	mu.Lock()
+
+	if _, ok := timers[d.TimerId]; !ok {
+		log.Warn().Msgf("Timer %d does not exist", d.TimerId)
+		mu.Unlock()
+		return errors.New("timer does not exist")
+	}
+
+	timers[d.TimerId] = &BusTimer{
+		paused:    true,
+		Limit:     d.Limit,
+		HardLimit: d.HardLimit,
+		lapsed:    0,
+	}
+	mu.Unlock()
+
+	return nil
+}
+
+func timer_start(id int) error {
 	mu.Lock()
 	defer mu.Unlock()
 
 	t, ok := timers[id]
 	if !ok {
 		log.Error().Msgf("Timer %d does not exist", id)
-		return
+		return errors.New("timer does not exist")
 	}
 
 	if !t.paused {
 		log.Warn().Msgf("Timer %d is already running", id)
-		return
+		return errors.New("timer is already running")
 	}
 
 	if t.lapsed >= t.Limit {
 		log.Warn().Msgf("Timer %d has reached its limit", id)
-		return
+		return errors.New("timer has reached its limit")
 	}
 
 	t.paused = false
 	t.starTime = time.Now()
+
+	return nil
 }
 
 func timer_pause(id int) {

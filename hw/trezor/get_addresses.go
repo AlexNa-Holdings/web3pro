@@ -10,18 +10,23 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func get_addresses(m *bus.B_SignerGetAddresses) (*bus.B_SignerGetAddresses_Response, error) {
+func get_addresses(m *bus.Message) (*bus.B_SignerGetAddresses_Response, error) {
+	data, ok := m.Data.(*bus.B_SignerGetAddresses)
+	if !ok {
+		return nil, bus.ErrInvalidMessageData
+	}
+
 	rd := &bus.B_SignerGetAddresses_Response{}
-	t := provide_device(m.Name)
+	t := provide_device(data.Name)
 	if t == nil {
-		return rd, fmt.Errorf("no device found with name %s", m.Name)
+		return rd, fmt.Errorf("no device found with name %s", data.Name)
 	}
 
 	rd.Addresses = []common.Address{}
 	rd.Paths = []string{}
 
-	for i := 0; i < m.Count; i++ {
-		path := fmt.Sprintf(m.Path, m.StartFrom+i)
+	for i := 0; i < data.Count; i++ {
+		path := fmt.Sprintf(data.Path, data.StartFrom+i)
 
 		log.Debug().Msgf("GetAddresses: Getting address: %s", path)
 
@@ -33,6 +38,7 @@ func get_addresses(m *bus.B_SignerGetAddresses) (*bus.B_SignerGetAddresses_Respo
 
 		eth_addr := new(trezorproto.EthereumAddress)
 		if err := t.Call(
+			m,
 			&trezorproto.EthereumGetAddress{AddressN: []uint32(dp)}, eth_addr); err != nil {
 			log.Error().Err(err).Msgf("GetAddresses: Error getting address: %s", path)
 			return rd, err

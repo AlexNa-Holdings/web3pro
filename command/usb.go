@@ -53,13 +53,13 @@ func Usb_Process(c *Command, input string) {
 
 		resp := bus.Fetch("usb", "list", nil)
 		if resp.Error != nil {
-			ui.PrintErrorf("\nError listing usb devices: %v\n", resp.Error)
+			ui.PrintErrorf("Error listing usb devices: %v", resp.Error)
 			return
 		}
 
 		l, ok := resp.Data.(bus.B_UsbList_Response)
 		if !ok {
-			ui.PrintErrorf("\nError listing usb devices: %v\n", resp.Error)
+			ui.PrintErrorf("Error listing usb devices: %v", resp.Error)
 			return
 		}
 
@@ -77,7 +77,7 @@ func Usb_Process(c *Command, input string) {
 		ui.Printf("\n")
 
 		if len(l) == 0 {
-			ui.PrintErrorf("\nNo usb devices found\n")
+			ui.PrintErrorf("No usb devices found")
 			return
 		}
 
@@ -86,6 +86,6 @@ func Usb_Process(c *Command, input string) {
 		ui.Flush()
 
 	default:
-		ui.PrintErrorf("\nInvalid subcommand: %s\n", subcommand)
+		ui.PrintErrorf("Invalid subcommand: %s", subcommand)
 	}
 }

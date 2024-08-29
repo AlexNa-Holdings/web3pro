@@ -343,7 +343,7 @@ func showHistory() {
 
 func PrintErrorf(format string, a ...interface{}) {
 	str := fmt.Sprintf(format, a...)
-	Terminal.Screen.Write([]byte(F(Theme.ErrorFgColor) + str + F(Terminal.Screen.FgColor)))
+	Terminal.Screen.Write([]byte("\n" + F(Theme.ErrorFgColor) + str + F(Terminal.Screen.FgColor) + "\n\n"))
 }
 
 func Printf(format string, a ...interface{}) {

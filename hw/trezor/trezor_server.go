@@ -59,7 +59,7 @@ func process(msg *bus.Message) {
 		case "get-addresses":
 			if m, ok := msg.Data.(*bus.B_SignerGetAddresses); ok {
 				if m.Type == TRZ {
-					msg.Respond(get_addresses(m))
+					msg.Respond(get_addresses(msg))
 				}
 			} else {
 				log.Error().Msg("Loop: Invalid hw get-addresses data")

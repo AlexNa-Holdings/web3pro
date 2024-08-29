@@ -91,7 +91,7 @@ func Theme_Process(cmd *Command, input string) {
 			log.Trace().Msgf("Theme set to: %s", tokens[2])
 		}
 	default:
-		ui.PrintErrorf("Unknown subcommand: %s\n", subcommand)
+		ui.PrintErrorf("Unknown subcommand: %s", subcommand)
 	}
 }
 
@@ -109,7 +109,7 @@ func DL(s string) string {
 func demoTheme(theme string) {
 	t, ok := ui.Themes[theme]
 	if !ok {
-		ui.PrintErrorf("Unknown theme: %s\n", theme)
+		ui.PrintErrorf("Unknown theme: %s", theme)
 		return
 	}
 

@@ -59,7 +59,7 @@ func send(msg *bus.Message) error {
 		tx, _ = BuildTxERC20Transfer(b, t, s, from, to, amount)
 	}
 
-	bus.Fetch("ui", "hail", &bus.B_Hail{
+	msg.Fetch("ui", "hail", &bus.B_Hail{
 		Title:    "Send Tokens",
 		Template: template,
 		OnOpen: func(m *bus.Message, g *gocui.Gui, v *gocui.View) {
@@ -122,7 +122,7 @@ func send(msg *bus.Message) error {
 	return nil
 }
 
-func editFee(_ *bus.Message, v *gocui.View, tx *types.Transaction, t *cmn.Token, nt *cmn.Token, on_close func(*big.Int)) {
+func editFee(m *bus.Message, v *gocui.View, tx *types.Transaction, t *cmn.Token, nt *cmn.Token, on_close func(*big.Int)) {
 	low := new(big.Int).Div(new(big.Int).Mul(tx.GasPrice(), big.NewInt(9)), big.NewInt(10))
 	market := tx.GasPrice()
 	high := new(big.Int).Div(new(big.Int).Mul(tx.GasPrice(), big.NewInt(11)), big.NewInt(10))
@@ -140,7 +140,7 @@ Total($): <input id:gas_price_dollars size:14 value:"` +
 
 	newGasPrice := tx.GasPrice()
 
-	v.GetGui().ShowPopup(&gocui.Popup{
+	m.Fetch("ui", "popup", &gocui.Popup{
 		Title: "Edit Gas Price",
 		Template: `<c><w>
 <button text:' Low  '    id:Low> ` + cmn.FmtAmount(low, 18, true) + p_low + `

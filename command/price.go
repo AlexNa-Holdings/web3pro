@@ -102,13 +102,13 @@ func Price_Process(c *Command, input string) {
 
 		b := w.GetBlockchain(bchain)
 		if b == nil {
-			ui.PrintErrorf("Invalid blockchain\n")
+			ui.PrintErrorf("Invalid blockchain")
 			return
 		}
 
 		t := w.GetToken(bchain, token)
 		if t == nil {
-			ui.PrintErrorf("Invalid token address\n")
+			ui.PrintErrorf("Invalid token address")
 			return
 		}
 
@@ -126,7 +126,7 @@ func Price_Process(c *Command, input string) {
 
 		pairs, err := price.GetPairs(b.ChainId, a.Hex())
 		if err != nil {
-			ui.PrintErrorf("Error discovering trading pairs: %v\n", err)
+			ui.PrintErrorf("Error discovering trading pairs: %v", err)
 			return
 		}
 
@@ -156,23 +156,23 @@ func Price_Process(c *Command, input string) {
 
 		b := w.GetBlockchain(bchain)
 		if b == nil {
-			ui.PrintErrorf("Invalid blockchain\n")
+			ui.PrintErrorf("Invalid blockchain")
 			return
 		}
 
 		t := w.GetToken(bchain, token)
 		if t == nil {
-			ui.PrintErrorf("Invalid token address\n")
+			ui.PrintErrorf("Invalid token address")
 			return
 		}
 
 		if !cmn.IsInArray(price.KNOWN_FEEDERS, feeder) {
-			ui.PrintErrorf("Invalid feeder\n")
+			ui.PrintErrorf("Invalid feeder")
 			return
 		}
 
 		if param == "" {
-			ui.PrintErrorf("Invalid feeder param\n")
+			ui.PrintErrorf("Invalid feeder param")
 			return
 		}
 
@@ -180,7 +180,7 @@ func Price_Process(c *Command, input string) {
 		t.PriceFeedParam = param
 		err := w.Save()
 		if err != nil {
-			ui.PrintErrorf("Error saving wallet: %v\n", err)
+			ui.PrintErrorf("Error saving wallet: %v", err)
 			return
 		}
 
@@ -189,14 +189,14 @@ func Price_Process(c *Command, input string) {
 	case "update":
 		err := price.Update(w)
 		if err != nil {
-			ui.PrintErrorf("Error updating price feeders: %v\n", err)
+			ui.PrintErrorf("Error updating price feeders: %v", err)
 			return
 		}
 
 		cmn.Notify("Price feeders updated")
 
 	default:
-		ui.PrintErrorf("Invalid subcommand: %s\n", subcommand)
+		ui.PrintErrorf("Invalid subcommand: %s", subcommand)
 
 	}
 }

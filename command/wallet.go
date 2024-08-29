@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/ui"
 )
@@ -82,10 +83,10 @@ func Wallet_Process(c *Command, input string) {
 			ui.PrintErrorf("Please specify wallet name")
 			return
 		}
-		ui.Gui.ShowPopup(ui.DlgWaletOpen(tokens[2]))
+		bus.Send("ui", "popup", ui.DlgWaletOpen(tokens[2]))
 
 	case "create":
-		ui.Gui.ShowPopup(ui.DlgWaletCreate())
+		bus.Send("ui", "popup", ui.DlgWaletCreate())
 	case "close":
 		if cmn.CurrentWallet != nil {
 			cmn.CurrentWallet = nil
@@ -110,7 +111,7 @@ func Wallet_Process(c *Command, input string) {
 
 		ui.Printf("\n")
 	default:
-		ui.PrintErrorf("\nInvalid subcommand: %s\n", subcommand)
+		ui.PrintErrorf("Invalid subcommand: %s", subcommand)
 	}
 
 }

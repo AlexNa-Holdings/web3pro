@@ -103,7 +103,7 @@ func Send_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 
 func Send_Process(c *Command, input string) {
 	if cmn.CurrentWallet == nil {
-		ui.PrintErrorf("\nNo wallet open\n")
+		ui.PrintErrorf("No wallet open")
 		return
 	}
 
@@ -116,39 +116,39 @@ func Send_Process(c *Command, input string) {
 
 	b := w.GetBlockchain(bchain)
 	if b == nil {
-		ui.PrintErrorf("\nBlockchain not found: %s\n", bchain)
+		ui.PrintErrorf("Blockchain not found: %s", bchain)
 		return
 	}
 
 	t := w.GetToken(b.Name, token)
 	if t == nil {
-		ui.PrintErrorf("\nToken not found: %s\n", token)
+		ui.PrintErrorf("Token not found: %s", token)
 		return
 	}
 
 	if !common.IsHexAddress(from) {
-		ui.PrintErrorf("\nInvalid address from: %s\n", from)
+		ui.PrintErrorf("Invalid address from: %s", from)
 		return
 	}
 
 	a_from := w.GetAddress(from)
 	if a_from == nil {
-		ui.PrintErrorf("\nAddress not found: %s\n", from)
+		ui.PrintErrorf("Address not found: %s", from)
 		return
 	}
 
 	if to == "" || amount == "" {
-		ui.Gui.ShowPopup(ui.DlgSend(b, t, a_from, to, amount))
+		bus.Send("ui", "popup", ui.DlgSend(b, t, a_from, to, amount))
 		return
 	}
 
 	if !common.IsHexAddress(from) {
-		ui.PrintErrorf("\nInvalid address from: %s\n", from)
+		ui.PrintErrorf("Invalid address from: %s", from)
 		return
 	}
 
 	if !common.IsHexAddress(to) {
-		ui.PrintErrorf("\nInvalid address to: %s\n", to)
+		ui.PrintErrorf("Invalid address to: %s", to)
 		return
 	}
 

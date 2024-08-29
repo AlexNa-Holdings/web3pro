@@ -87,6 +87,9 @@ func process(msg *bus.Message) {
 				remove(m)
 			}
 		}
+	case "popup":
+		processPopup(msg)
+
 	case "start_command":
 		if text, ok := msg.Data.(string); ok {
 			Terminal.Input.Clear()
@@ -148,6 +151,5 @@ func process(msg *bus.Message) {
 				App.HidePane()
 			}
 		}
-
 	}
 }

@@ -54,7 +54,7 @@ func Sound_Process(c *Command, input string) {
 
 	w := cmn.CurrentWallet
 	if w == nil {
-		ui.PrintErrorf("\nWallet not found\n")
+		ui.PrintErrorf("Wallet not found")
 		return
 	}
 
@@ -69,13 +69,13 @@ func Sound_Process(c *Command, input string) {
 
 		resp := bus.Fetch("sound", "list", nil)
 		if resp.Error != nil {
-			ui.PrintErrorf("\nError listing sounds: %v\n", resp.Error)
+			ui.PrintErrorf("Error listing sounds: %v", resp.Error)
 			return
 		}
 
 		l, ok := resp.Data.([]string)
 		if !ok {
-			ui.PrintErrorf("\nError listing sounds: %v\n", resp.Error)
+			ui.PrintErrorf("Error listing sounds: %v", resp.Error)
 			return
 		}
 
@@ -105,7 +105,7 @@ func Sound_Process(c *Command, input string) {
 		ui.Printf("\n")
 
 		if len(l) == 0 {
-			ui.PrintErrorf("\nNo sounds available\n")
+			ui.PrintErrorf("No sounds available")
 			return
 		}
 
@@ -115,13 +115,13 @@ func Sound_Process(c *Command, input string) {
 	case "set":
 		resp := bus.Fetch("sound", "list", nil)
 		if resp.Error != nil {
-			ui.PrintErrorf("\nError listing sounds: %v\n", resp.Error)
+			ui.PrintErrorf("Error listing sounds: %v", resp.Error)
 			return
 		}
 
 		l, ok := resp.Data.([]string)
 		if !ok {
-			ui.PrintErrorf("\nError listing sounds: %v\n", resp.Error)
+			ui.PrintErrorf("Error listing sounds: %v", resp.Error)
 			return
 		}
 
@@ -130,7 +130,7 @@ func Sound_Process(c *Command, input string) {
 				w.Sound = param
 				err := w.Save()
 				if err != nil {
-					ui.PrintErrorf("\nError saving wallet: %v\n", err)
+					ui.PrintErrorf("Error saving wallet: %v", err)
 					return
 				}
 				ui.Printf("\nSound alert set to: %s\n", param)
@@ -138,7 +138,7 @@ func Sound_Process(c *Command, input string) {
 			}
 		}
 
-		ui.PrintErrorf("\nSound alert not found: %s\n", param)
+		ui.PrintErrorf("Sound alert not found: %s", param)
 	case "play":
 		if param == "" {
 			param = w.Sound
@@ -148,7 +148,7 @@ func Sound_Process(c *Command, input string) {
 		w.SoundOn = true
 		err := w.Save()
 		if err != nil {
-			ui.PrintErrorf("\nError saving wallet: %v\n", err)
+			ui.PrintErrorf("Error saving wallet: %v", err)
 			return
 		}
 
@@ -157,12 +157,12 @@ func Sound_Process(c *Command, input string) {
 		w.SoundOn = false
 		err := w.Save()
 		if err != nil {
-			ui.PrintErrorf("\nError saving wallet: %v\n", err)
+			ui.PrintErrorf("Error saving wallet: %v", err)
 			return
 		}
 
 	default:
-		ui.PrintErrorf("\nInvalid subcommand: %s\n", subcommand)
+		ui.PrintErrorf("Invalid subcommand: %s", subcommand)
 	}
 
 }

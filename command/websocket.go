@@ -45,7 +45,7 @@ func Ws_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 
 func Ws_Process(c *Command, input string) {
 	if cmn.CurrentWallet == nil {
-		ui.PrintErrorf("\nNo wallet open\n")
+		ui.PrintErrorf("No wallet open")
 		return
 	}
 
@@ -58,13 +58,13 @@ func Ws_Process(c *Command, input string) {
 
 		resp := bus.Fetch("ws", "list", nil)
 		if resp.Error != nil {
-			ui.PrintErrorf("\nError listing connections: %v\n", resp.Error)
+			ui.PrintErrorf("Error listing connections: %v", resp.Error)
 			return
 		}
 
 		l, ok := resp.Data.(bus.B_WsList_Response)
 		if !ok {
-			ui.PrintErrorf("\nError listing: %v\n", resp.Error)
+			ui.PrintErrorf("Error listing: %v", resp.Error)
 			return
 		}
 
@@ -77,7 +77,7 @@ func Ws_Process(c *Command, input string) {
 		ui.Printf("\n")
 
 		if len(l) == 0 {
-			ui.PrintErrorf("\nNo connections\n")
+			ui.PrintErrorf("No connections")
 			return
 		}
 
@@ -86,6 +86,6 @@ func Ws_Process(c *Command, input string) {
 		ui.Flush()
 
 	default:
-		ui.PrintErrorf("\nInvalid subcommand: %s\n", subcommand)
+		ui.PrintErrorf("Invalid subcommand: %s", subcommand)
 	}
 }

@@ -144,7 +144,7 @@ func App_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 func App_Process(c *Command, input string) {
 	var err error
 	if cmn.CurrentWallet == nil {
-		ui.PrintErrorf("\nNo wallet open\n")
+		ui.PrintErrorf("No wallet open\n")
 		return
 	}
 
@@ -202,7 +202,7 @@ func App_Process(c *Command, input string) {
 			}
 		}
 	case "remove":
-		ui.Gui.ShowPopup(ui.DlgConfirm(
+		bus.Send("ui", "popup", ui.DlgConfirm(
 			"Deny access", `
 <c>Are you sure you want to deny access for the web application
 `+origin+`?
@@ -210,19 +210,19 @@ func App_Process(c *Command, input string) {
 			func() {
 				err := w.RemoveOrigin(origin)
 				if err != nil {
-					ui.PrintErrorf("Error removing origin: %v\n", err)
+					ui.PrintErrorf("Error removing origin: %v", err)
 					return
 				}
 				err = w.Save()
 				if err != nil {
-					ui.PrintErrorf("Error saving wallet: %v\n", err)
+					ui.PrintErrorf("Error saving wallet: %v", err)
 					return
 				}
 				bus.Send("ui", "notify", "Web application removed: "+origin)
 			}))
 
 	case "remove_addr":
-		ui.Gui.ShowPopup(ui.DlgConfirm(
+		bus.Send("ui", "popup", ui.DlgConfirm(
 			"Remove address", `
 <c>Are you sure you want to remove access for the address:
 <b>`+addr+`</b>
@@ -233,7 +233,7 @@ from the web application
 			func() {
 				err := w.RemoveOriginAddress(origin, addr)
 				if err != nil {
-					ui.PrintErrorf("Error saving wallet: %v\n", err)
+					ui.PrintErrorf("Error saving wallet: %v", err)
 					return
 				}
 				bus.Send("ui", "notify", "Address removed: "+addr)

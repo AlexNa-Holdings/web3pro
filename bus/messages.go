@@ -4,6 +4,7 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/AlexNa-Holdings/web3pro/EIP"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -11,6 +12,13 @@ import (
 
 // ---------- timer ----------
 type B_TimerInit struct { // init
+	Limit     time.Duration
+	HardLimit time.Duration
+	Start     bool
+}
+
+type B_TimerInitHard struct { // init-hard
+	TimerId   int
 	Limit     time.Duration
 	HardLimit time.Duration
 	Start     bool
@@ -130,6 +138,15 @@ type B_SignerSignTx struct { // sign-tx
 	Tx        *types.Transaction
 	From      common.Address
 	Path      string
+}
+
+type B_SignerSignTypedData_v4 struct { // sign-typed-data-v4
+	Type      string
+	Name      string
+	MasterKey string
+	Address   common.Address
+	Path      string
+	TypedData EIP.EIP712_TypedData
 }
 
 // ---------- ws ----------
