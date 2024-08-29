@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/price"
@@ -193,7 +194,7 @@ func Price_Process(c *Command, input string) {
 			return
 		}
 
-		cmn.Notify("Price feeders updated")
+		bus.Send("ui", "notify", "Price feeders updated")
 
 	default:
 		ui.PrintErrorf("Invalid subcommand: %s", subcommand)

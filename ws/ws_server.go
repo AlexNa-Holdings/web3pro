@@ -112,7 +112,8 @@ func startWS() {
 		log.Trace().Msgf("ws server started on port %d", WEB3PRO_PORT)
 		err := server.ListenAndServe()
 		if err != nil {
-			log.Fatal().Err(err).Msgf("WS server failed to start on port %d", WEB3PRO_PORT)
+			log.Error().Err(err).Msgf("WS server failed to start on port %d", WEB3PRO_PORT)
+			bus.Send("ui", "notify-error", "Failed to start WS server")
 		}
 	}()
 }

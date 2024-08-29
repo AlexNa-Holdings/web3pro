@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
@@ -45,14 +46,14 @@ func DlgSend(b *cmn.Blockchain, t *cmn.Token, from *cmn.Address, to string, amou
 					amount := v.GetInput("amount")
 
 					if !common.IsHexAddress(to) {
-						cmn.NotifyErrorf("Invalid address: %s", to)
+						bus.Send("ui", "notify-error", fmt.Sprintf("Invalid address: %s", to))
 						return
 					}
 
 					val, err := t.Str2Wei(amount)
 					if err != nil || val.Cmp(big.NewInt(0)) <= 0 {
 						log.Error().Err(err).Msgf("Str2Value(%s) err: %v", amount, err)
-						cmn.NotifyErrorf("Invalid amount: %s", amount)
+						bus.Send("ui", "notify-error", fmt.Sprintf("Invalid amount: %s", amount))
 						return
 					}
 

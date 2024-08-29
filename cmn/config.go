@@ -7,7 +7,6 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v2"
@@ -95,9 +94,6 @@ func InitConfig() {
 	}
 
 	log.Info().Msgf("Log level: %s", Config.Verbosity)
-
-	bus.BusTimeout = Config.BusTimeout
-	bus.BusHardTimeout = Config.BusHardTimeout
 
 	//create wallets folder if needed
 	err = os.MkdirAll(filepath.Join(DataFolder, "wallets"), os.ModePerm)

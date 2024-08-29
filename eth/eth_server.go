@@ -164,7 +164,7 @@ func sendTx(msg *bus.Message) error {
 		return err
 	}
 
-	cmn.Notifyf("Transaction sent: %s", signedTx.Hash().Hex())
+	bus.Send("ui", "notify", fmt.Sprintf("Transaction sent: %s", signedTx.Hash().Hex()))
 
 	return nil
 }

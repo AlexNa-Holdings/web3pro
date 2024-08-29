@@ -179,7 +179,7 @@ func signTypedData_v4(req RPCRequest, ctx *ConContext, res *RPCResponse) error {
 		MasterKey: signer.MasterKey,
 		Address:   a.Address,
 		Path:      a.Path,
-		TypedData: data,
+		TypedData: &data,
 	})
 
 	if sign_res.Error != nil {

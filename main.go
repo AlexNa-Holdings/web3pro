@@ -30,9 +30,13 @@ __ |/ |/ / /  __/  /_/ /___/ /_  ____/_  /   / /_/ /
 ____/|__/  \___//_.___//____/ /_/     /_/    \____/ `
 
 func main() {
+
 	cmn.InitConfig()
 
 	bus.Init()
+	bus.BusTimeout = cmn.Config.BusTimeout
+	bus.BusHardTimeout = cmn.Config.BusHardTimeout
+
 	sound.Init()
 	sw.Init() // software wallets
 	hw.Init() // hardware wallets

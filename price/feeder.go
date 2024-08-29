@@ -79,7 +79,7 @@ func Update(w *cmn.Wallet) error {
 
 		bus.Send("price", "updated", nil)
 
-		cmn.Notify("Token prices updated")
+		bus.Send("ui", "notify", "Token prices updated")
 	}
 
 	return err

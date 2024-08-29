@@ -1,6 +1,7 @@
 package command
 
 import (
+	"errors"
 	"strconv"
 	"strings"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/ui"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/rs/zerolog/log"
 )
 
 var signer_subcommands = []string{"list", "remove", "promote", "add", "edit", "addresses"}
@@ -208,7 +210,7 @@ func Signer_Process(c *Command, input string) {
 			return
 		}
 
-		l, p, err := s.GetAddresses(path_format, from, 10)
+		l, p, err := GetAddresses(s, path_format, from, 10)
 		if err != nil {
 			ui.PrintErrorf("Error getting addresses: %v", err)
 			return
@@ -351,4 +353,27 @@ func Signer_Process(c *Command, input string) {
 	default:
 		ui.PrintErrorf("Unknown command: %s", subcommand)
 	}
+}
+
+func GetAddresses(s *cmn.Signer, path string, start_from int, count int) ([]common.Address, []string, error) {
+	m := bus.Fetch("signer", "get-addresses", &bus.B_SignerGetAddresses{
+		Type:      s.Type,
+		Name:      s.GetFamilyNames(),
+		Path:      path,
+		MasterKey: s.MasterKey,
+		StartFrom: start_from,
+		Count:     count})
+
+	if m.Error != nil {
+		log.Error().Err(m.Error).Msgf("GetAddresses: Error getting addresses: %s (%s) err: %s", s.Name, s.Type, m.Error)
+		return []common.Address{}, []string{}, m.Error
+	}
+
+	r, ok := m.Data.(*bus.B_SignerGetAddresses_Response)
+	if !ok {
+		log.Error().Msgf("GetAddresses: Error getting addresses: %s (%v)", s.Name, r)
+		return []common.Address{}, []string{}, errors.New("error getting addresses")
+	}
+
+	return r.Addresses, r.Paths, nil
 }

@@ -43,7 +43,7 @@ func send(msg *bus.Message) error {
 	template, err := BuildHailToSendTemplate(b, t, from, req.To, req.Amount, nil)
 	if err != nil {
 		log.Error().Err(err).Msg("Error building hail template")
-		cmn.NotifyErrorf("Error: %v", err)
+		bus.Send("ui", "notify-error", fmt.Sprintf("Error: %v", err))
 		return err
 	}
 
@@ -71,13 +71,13 @@ func send(msg *bus.Message) error {
 				err := Transfer(b, s, from, to, amount)
 				if err != nil {
 					log.Error().Err(err).Msg("Error sending native tokens")
-					cmn.NotifyErrorf("Error sending native tokens: %v", err)
+					bus.Send("ui", "notify-error", fmt.Sprintf("Error sending native tokens: %v", err))
 				}
 			} else {
 				err := ERC20Transfer(b, t, s, from, to, amount)
 				if err != nil {
 					log.Error().Err(err).Msg("Error sending tokens")
-					cmn.NotifyErrorf("Error sending tokens: %v", err)
+					bus.Send("ui", "notify-error", fmt.Sprintf("Error sending tokens: %v", err))
 				}
 			}
 		},
@@ -97,7 +97,7 @@ func send(msg *bus.Message) error {
 						template, err := BuildHailToSendTemplate(b, t, from, to, amount, newGasPrice)
 						if err != nil {
 							log.Error().Err(err).Msg("Error building hail template")
-							cmn.NotifyErrorf("Error: %v", err)
+							bus.Send("ui", "notify-error", fmt.Sprintf("Error: %v", err))
 							return
 						}
 
@@ -173,7 +173,7 @@ Gas price: <input id:gas_price size:14 value:"` + cmn.FmtAmount(market, 18, fals
 
 					val, err := cmn.Str2Wei(gp, 18)
 					if err != nil || val.Cmp(big.NewInt(0)) <= 0 {
-						cmn.NotifyErrorf("Invalid gas price: %v", err)
+						bus.Send("ui", "notify-error", fmt.Sprintf("Invalid gas price: %v", err))
 						return
 					}
 					newGasPrice = val
@@ -194,7 +194,7 @@ Gas price: <input id:gas_price size:14 value:"` + cmn.FmtAmount(market, 18, fals
 
 				val, err := cmn.Str2Wei(gp, 18)
 				if err != nil || val.Cmp(big.NewInt(0)) <= 0 {
-					cmn.NotifyErrorf("Invalid gas price: %v", err)
+					bus.Send("ui", "notify-error", fmt.Sprintf("Invalid gas price: %v", err))
 					return
 				}
 
@@ -207,7 +207,7 @@ Gas price: <input id:gas_price size:14 value:"` + cmn.FmtAmount(market, 18, fals
 
 				val, err := cmn.ParseXF(gpd)
 				if err != nil || val.IsZero() {
-					cmn.NotifyErrorf("Invalid dollar price: %v", err)
+					bus.Send("ui", "notify-error", fmt.Sprintf("Invalid dollar price: %v", err))
 					return
 				}
 

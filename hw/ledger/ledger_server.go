@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
-	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/rs/zerolog/log"
 )
 
@@ -118,7 +117,7 @@ func remove(usb_id string) {
 
 	for i, t := range ledgers {
 		if t.USB_ID == usb_id {
-			cmn.Notifyf("Ledger disconnected: %s", t.Name)
+			bus.Send("ui", "notify", fmt.Sprintf("Ledger disconnected: %s", t.Name))
 			ledgers = append(ledgers[:i], ledgers[i+1:]...)
 			return
 		}
@@ -151,7 +150,7 @@ func connected(m *bus.B_UsbConnected) {
 
 	t.Name = n
 	bus.Send("signer", "connected", &bus.B_SignerConnected{Type: LDG, Name: t.Name})
-	cmn.Notifyf("Ledger connected: %s", t.Name)
+	bus.Send("ui", "notify", fmt.Sprintf("Ledger connected: %s", t.Name))
 }
 
 func disconnected(m *bus.B_UsbDisconnected) {
@@ -187,7 +186,7 @@ func find_by_name(name []string) *Ledger {
 			}
 			t.Name = n
 			bus.Send("signer", "connected", &bus.B_SignerConnected{Type: LDG, Name: t.Name})
-			cmn.Notifyf("Ledger connected: %s", t.Name)
+			bus.Send("ui", "notify", fmt.Sprintf("Ledger connected: %s", t.Name))
 			for _, n := range name {
 				if t.Name == n {
 					return t

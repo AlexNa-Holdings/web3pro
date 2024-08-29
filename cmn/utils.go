@@ -8,11 +8,14 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
+	"time"
 
-	"github.com/AlexNa-Holdings/web3pro/bus"
+	"github.com/AlexNa-Holdings/web3pro/EIP"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog/log"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 func Contains(s string, subststr string) bool {
@@ -241,22 +244,6 @@ func Float(value *big.Int, decimals int) *big.Float {
 	return f
 }
 
-func Notify(text string) {
-	bus.Send("ui", "notify", text)
-}
-
-func Notifyf(format string, args ...interface{}) {
-	Notify(fmt.Sprintf(format, args...))
-}
-
-func NotifyError(text string) {
-	bus.Send("ui", "notify-error", text)
-}
-
-func NotifyErrorf(format string, args ...interface{}) {
-	NotifyError(fmt.Sprintf(format, args...))
-}
-
 func AddAddressLink(v *gocui.View, a common.Address) {
 	v.AddLink(a.String(), "copy "+a.String(), "Copy address", "")
 }
@@ -390,4 +377,156 @@ func GetHostName(URL string) string {
 		return URL
 	}
 	return parsedURL.Hostname()
+}
+
+func IntFromAny(value any) int {
+	switch v := value.(type) {
+	case int:
+		return v
+	case float64:
+		return int(v)
+	case string:
+		if strings.HasPrefix(v, "0x") {
+			v = v[2:]
+			i, _ := new(big.Int).SetString(v, 16)
+			return int(i.Int64())
+		} else {
+			i, _ := new(big.Int).SetString(v, 10)
+			return int(i.Int64())
+		}
+	default:
+		return 0
+	}
+}
+
+func AddressFromAny(value any) common.Address {
+	switch v := value.(type) {
+	case string:
+		return common.HexToAddress(v)
+	default:
+		return common.Address{}
+	}
+}
+
+func BigIntFromAny(value any) *big.Int {
+	switch v := value.(type) {
+	case *big.Int:
+		return v
+	case float64:
+		return new(big.Int).SetInt64(int64(v))
+	case string:
+		if strings.HasPrefix(v, "0x") {
+			v = v[2:]
+			i, _ := new(big.Int).SetString(v, 16)
+			return i
+		} else {
+			i, _ := new(big.Int).SetString(v, 10)
+			return i
+		}
+	default:
+		return nil
+	}
+}
+
+type SignedDataInfo struct {
+	Type       string
+	Blockchain *Blockchain
+	Token      *Token
+	Value      *big.Int
+	Address    *Address
+}
+
+func ConfirmEIP712Template(data *EIP.EIP712_TypedData) string {
+	var sb strings.Builder
+	var info SignedDataInfo
+	titleCaser := cases.Title(language.English)
+	w := CurrentWallet
+
+	info.Type = data.PrimaryType
+
+	if w != nil {
+		if data.PrimaryType == "Permit" {
+			// collect all info about the permit
+
+			chain_id := IntFromAny(data.Domain["chainId"])
+			info.Blockchain = w.GetBlockchainById(chain_id)
+			ta := AddressFromAny(data.Domain["verifyingContract"])
+			if info.Blockchain != nil {
+				info.Token = w.GetTokenByAddress(info.Blockchain.Name, ta)
+			}
+			info.Value = BigIntFromAny(data.Message["value"])
+			owner := AddressFromAny(data.Message["owner"])
+			info.Address = w.GetAddress(owner.String())
+		}
+	}
+
+	// Primary Type
+	sb.WriteString(fmt.Sprintf("<b>Types: </b>%s\n", data.PrimaryType))
+
+	// Format Domain
+	sb.WriteString("<line text:Domain>\n")
+	for _, field := range data.Types["EIP712Domain"] {
+		value := data.Domain[field.Name]
+		formattedValue := formatFieldValue(info, field.Name, field.Type, value)
+		sb.WriteString(fmt.Sprintf("<b>%s: </b>%s\n", titleCaser.String(field.Name), formattedValue))
+	}
+
+	// Format Message
+	sb.WriteString("<line text:Message>\n")
+	for _, field := range data.Types[data.PrimaryType] {
+		value := data.Message[field.Name]
+		formattedValue := formatFieldValue(info, field.Name, field.Type, value)
+		sb.WriteString(fmt.Sprintf("<b>%s: </b>%s\n", titleCaser.String(field.Name), formattedValue))
+	}
+
+	sb.WriteString(`
+<c><button text:"Sign" id:ok> <button text:"Cancel">`)
+
+	return sb.String()
+}
+
+func formatFieldValue(info SignedDataInfo, fieldName, fieldType string, value interface{}) string {
+	s := "?"
+
+	switch fieldType {
+	case "string":
+		if sv, ok := value.(string); ok {
+			s = sv
+		}
+	case "uint256":
+		if v, ok := value.(*big.Int); ok {
+			s = v.String()
+		} else if v, ok := value.(float64); ok {
+			s = fmt.Sprintf("%d", uint64(v))
+		} else if v, ok := value.(string); ok {
+			s = v
+		}
+
+	case "address":
+		if sv, ok := value.(string); ok {
+			s = TagAddressShortLink(common.HexToAddress(sv))
+		}
+	}
+
+	if info.Type == "Permit" {
+		switch fieldName {
+		case "value":
+			if info.Value != nil && info.Token != nil {
+				s = TagShortValueSymbolLink(info.Value, info.Token)
+			}
+		case "owner":
+			if info.Address != nil {
+				s = TagAddressShortLink(info.Address.Address) + " " + info.Address.Name
+			}
+		case "deadline":
+			dl := IntFromAny(value)
+			t := time.Unix(0, int64(dl)*int64(time.Millisecond))
+			s = t.Format("2006-01-02 15:04:05 MST")
+		case "chainId":
+			if info.Blockchain != nil {
+				s = fmt.Sprintf("%d %s", info.Blockchain.ChainId, info.Blockchain.Name)
+			}
+		}
+	}
+	return s
 }

@@ -8,8 +8,10 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/AlexNa-Holdings/web3pro/EIP"
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
+	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/ava-labs/coreth/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -113,6 +115,33 @@ func process(msg *bus.Message) {
 
 				msg.Respond(tx, nil)
 			}
+		case "sign-typed-data-v4":
+			m, ok := msg.Data.(*bus.B_SignerSignTypedData_v4)
+			if !ok {
+				log.Error().Msg("Loop: Invalid hw sign-typed-data-v4 data")
+				msg.Respond(nil, errors.New("invalid data"))
+				return
+			}
+
+			if m.Type == "mnemonics" {
+				mnemonics, err := NewFromSN(m.MasterKey)
+				if err != nil {
+					log.Error().Msgf("Error creating mnemonics: %v", err)
+					msg.Respond(nil, err)
+					return
+				}
+
+				// Sign the typed data
+				signature, err := mnemonics.SignTypedData(msg, m.TypedData, m.Path)
+				if err != nil {
+					log.Error().Msgf("Error signing typed data: %v", err)
+					msg.Respond(nil, err)
+					return
+				}
+
+				msg.Respond(signature, nil)
+			}
+
 		}
 	}
 }
@@ -221,4 +250,54 @@ func (d Mnemonic) SignTx(chain_id int64, tx *types.Transaction, path string) (*t
 
 	return signedTx, nil
 
+}
+
+func (d Mnemonic) SignTypedData(msg *bus.Message, typedData *EIP.EIP712_TypedData, path string) (string, error) {
+	// Get the private key
+	privateKey, err := DeriveKey(d.MasterKey, path)
+	if err != nil {
+		log.Error().Msgf("SignTypedData: Failed to derive key: %v", err)
+		return "", err
+	}
+
+	data, err := typedData.EncodeEIP712()
+	if err != nil {
+		log.Error().Msgf("SignTypedData: Failed to encode typed data: %v", err)
+		return "", err
+	}
+
+	// Hash the data
+	fullHash := crypto.Keccak256Hash(data)
+
+	// Sign the hash
+	signature, err := crypto.Sign(fullHash.Bytes(), privateKey)
+	if err != nil {
+		log.Error().Msgf("SignTypedData: Failed to sign hash: %v", err)
+		return "", err
+	}
+
+	OK := false
+
+	msg.Fetch("ui", "hail", &bus.B_Hail{
+		Title:    "Sign Typed Data",
+		Template: cmn.ConfirmEIP712Template(typedData),
+		OnOk: func(m *bus.Message) {
+			OK = true
+			bus.Send("ui", "remove-hail", m)
+		},
+		OnOverHotspot: func(m *bus.Message, v *gocui.View, hs *gocui.Hotspot) {
+			cmn.StandardOnOverHotspot(v, hs)
+		},
+		OnClickHotspot: func(m *bus.Message, v *gocui.View, hs *gocui.Hotspot) {
+			cmn.StandardOnClickHotspot(v, hs)
+		},
+	})
+
+	if OK {
+		ss := fmt.Sprintf("0x%x", signature)
+		log.Info().Msgf("Signature: %s", ss)
+		return ss, nil
+	} else {
+		return "", errors.New("cancelled")
+	}
 }
