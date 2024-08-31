@@ -55,8 +55,10 @@ func showPopup(m *bus.Message) {
 		if len(popupQueue) > 0 {
 			nm := popupQueue[0]
 			popupQueue = popupQueue[1:]
+			popupQueueM.Unlock()
 			showPopup(nm)
 		} else {
+			popupQueueM.Unlock()
 			Gui.SetCurrentView("terminal.input")
 		}
 	}

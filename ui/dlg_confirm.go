@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"strings"
+
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 )
 
@@ -16,14 +18,14 @@ func DlgConfirm(title string, text string, action func()) *gocui.Popup {
 		OnClickHotspot: func(v *gocui.View, hs *gocui.Hotspot) {
 
 			if hs != nil {
-				switch hs.Value {
-				case "button Ok":
+				switch strings.ToLower(hs.Value) {
+				case "button ok":
 					if action != nil {
 						action()
 					}
 					Gui.HidePopup()
 
-				case "button Cancel":
+				case "button cancel":
 					Gui.HidePopup()
 				}
 			}

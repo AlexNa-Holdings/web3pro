@@ -162,11 +162,16 @@ func App_Process(c *Command, input string) {
 		})
 
 		for _, o := range w.Origins {
-			ui.Printf("%s\n", o.URL)
+			ui.Printf("%s ", o.URL)
 
 			if p[2] != "" && o.URL != p[2] {
 				continue
 			}
+
+			ui.Terminal.Screen.AddLink(gocui.ICON_DELETE,
+				"command app remove '"+o.URL+"'",
+				"Remove access for the web application", "")
+			ui.Printf("\n")
 
 			for i, na := range o.Addresses {
 				a := w.GetAddress(na.Hex())

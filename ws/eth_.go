@@ -63,16 +63,16 @@ func handleEthMethod(req RPCRequest, ctx *ConContext, res *RPCResponse) {
 func subscribe(req RPCRequest, ctx *ConContext, res *RPCResponse) error {
 	params, ok := req.Params.([]any)
 	if !ok {
-		return fmt.Errorf("Params must be an array of strings")
+		return fmt.Errorf("params must be an array of strings")
 	}
 
 	if len(params) < 1 {
-		return fmt.Errorf("Length of params must be at least 1")
+		return fmt.Errorf("length of params must be at least 1")
 	}
 
 	stype, ok := params[0].(string)
 	if !ok {
-		return fmt.Errorf("Params must be an array of strings")
+		return fmt.Errorf("params must be an array of strings")
 	}
 
 	switch stype {
