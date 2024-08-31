@@ -4,10 +4,10 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/AlexNa-Holdings/web3pro/EIP"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/signer/core/apitypes"
 )
 
 // ---------- timer ----------
@@ -146,7 +146,7 @@ type B_SignerSignTypedData_v4 struct { // sign-typed-data-v4
 	MasterKey string
 	Address   common.Address
 	Path      string
-	TypedData *EIP.EIP712_TypedData
+	TypedData apitypes.TypedData
 }
 
 // ---------- ws ----------

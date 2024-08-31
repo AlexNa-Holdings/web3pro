@@ -137,7 +137,7 @@ func ProcessTimers() {
 					log.Error().Msg("Invalid timer trigger data")
 					msg.Respond("ERROR", errors.New("invalid timer trigger data"))
 				}
-			case "tick":
+			case "tick", "tick-10sec", "tick-min":
 				continue
 			case "done":
 				continue
@@ -165,6 +165,20 @@ func ProcessTimers() {
 				Tick: tick,
 				Left: left,
 			})
+
+			if tick%10 == 0 {
+				Send("timer", "tick-10sec", &B_TimerTick{
+					Tick: tick,
+					Left: left,
+				})
+			}
+
+			if tick%60 == 0 {
+				Send("timer", "tick-min", &B_TimerTick{
+					Tick: tick,
+					Left: left,
+				})
+			}
 
 			tick_timer.Reset(1 * time.Second)
 		}

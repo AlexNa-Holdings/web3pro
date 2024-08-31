@@ -5,10 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/AlexNa-Holdings/web3pro/EIP"
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/signer/core/apitypes"
 	"github.com/rs/zerolog/log"
 )
 
@@ -18,15 +17,35 @@ func handleEthMethod(req RPCRequest, ctx *ConContext, res *RPCResponse) {
 
 	switch method {
 	case "chainId":
-		err = requestChainId(req, ctx, res)
+		if o, ok := getAllowedOrigin(req.Web3ProOrigin); ok {
+			res.Result = fmt.Sprintf("0x%x", o.ChainId)
+		} else {
+			res.Result = "0x1"
+		}
 	case "subscribe":
-		err = subscribe(req, ctx, res)
+		if _, ok := getAllowedOrigin(req.Web3ProOrigin); ok {
+			err = subscribe(req, ctx, res)
+		} else {
+			err = fmt.Errorf("origin not allowed")
+		}
 	case "unsubscribe":
 		err = unsubscribe(req, ctx, res)
 	case "accounts", "requestAccounts":
-		err = accounts(req, ctx, res)
+		if o, ok := getAllowedOrigin(req.Web3ProOrigin); ok {
+			res.Result = []string{}
+			for _, a := range o.Addresses {
+				res.Result = append(res.Result.([]string), a.String())
+
+			}
+		} else {
+			err = fmt.Errorf("origin not allowed")
+		}
 	case "signTypedData_v4":
-		err = signTypedData_v4(req, ctx, res)
+		if o, ok := getAllowedOrigin(req.Web3ProOrigin); ok {
+			err = signTypedData_v4(o, req, ctx, res)
+		} else {
+			err = fmt.Errorf("origin not allowed")
+		}
 
 	default:
 		log.Error().Msgf("Method not found: %v", req)
@@ -41,45 +60,7 @@ func handleEthMethod(req RPCRequest, ctx *ConContext, res *RPCResponse) {
 	}
 }
 
-func requestChainId(req RPCRequest, _ *ConContext, res *RPCResponse) error {
-	id := 1
-
-	w := cmn.CurrentWallet
-	if w != nil {
-		origin := w.GetOrigin(req.Web3ProOrigin)
-		if origin != nil {
-			id = origin.ChainId
-		} else {
-			b := w.GetBlockchain(w.CurrentChain)
-			if b != nil {
-				id = b.ChainId
-			}
-		}
-	}
-	res.Result = fmt.Sprintf("0x%x", id)
-	return nil
-}
-
-func accounts(req RPCRequest, _ *ConContext, res *RPCResponse) error {
-	if o, ok := getAllowedOrigin(req.Web3ProOrigin); ok {
-		res.Result = []string{}
-		for _, a := range o.Addresses {
-			res.Result = append(res.Result.([]string), a.String())
-
-		}
-	} else {
-		res.Result = []string{}
-		res.Error = &RPCError{
-			Code:    4001,
-			Message: "User rejected request",
-		}
-	}
-
-	return nil
-}
-
 func subscribe(req RPCRequest, ctx *ConContext, res *RPCResponse) error {
-
 	params, ok := req.Params.([]any)
 	if !ok {
 		return fmt.Errorf("Params must be an array of strings")
@@ -127,7 +108,7 @@ func unsubscribe(req RPCRequest, ctx *ConContext, res *RPCResponse) error {
 	return nil
 }
 
-func signTypedData_v4(req RPCRequest, ctx *ConContext, res *RPCResponse) error {
+func signTypedData_v4(o *cmn.Origin, req RPCRequest, ctx *ConContext, res *RPCResponse) error {
 
 	w := cmn.CurrentWallet
 	if w == nil {
@@ -148,15 +129,6 @@ func signTypedData_v4(req RPCRequest, ctx *ConContext, res *RPCResponse) error {
 		return fmt.Errorf("first param must be an address")
 	}
 
-	o := w.GetOrigin(req.Web3ProOrigin)
-	if o == nil {
-		return fmt.Errorf("no origin found")
-	}
-
-	if !o.IsAllowed(common.HexToAddress(address)) {
-		return fmt.Errorf("address not found in origin")
-	}
-
 	a := w.GetAddress(address)
 	if a == nil {
 		return fmt.Errorf("address not found in wallet")
@@ -167,10 +139,37 @@ func signTypedData_v4(req RPCRequest, ctx *ConContext, res *RPCResponse) error {
 		return fmt.Errorf("signer not found")
 	}
 
-	var data EIP.EIP712_TypedData
-	err := json.Unmarshal([]byte(params[1].(string)), &data)
-	if err != nil {
-		return fmt.Errorf("error unmarshalling typed data: %v", err)
+	var data apitypes.TypedData
+
+	if p1, ok := params[1].(string); ok {
+		err := json.Unmarshal([]byte(p1), &data)
+		if err != nil {
+			return fmt.Errorf("error unmarshalling typed data: %v", err)
+		}
+	} else if p1Map, ok := params[1].(map[string]interface{}); ok {
+		// fix version type
+		if dmn, ok := p1Map["domain"].(map[string]interface{}); ok {
+			ver, ok := dmn["version"].(float64)
+			if ok {
+				dmn["version"] = fmt.Sprintf("%v", ver)
+			}
+		}
+
+		// Marshal the map into JSON
+		mapJSON, err := json.Marshal(p1Map)
+		if err != nil {
+			return fmt.Errorf("error marshalling map to JSON: %v", err)
+		}
+
+		log.Debug().Msgf("mapJSON: %v", string(mapJSON))
+
+		// Unmarshal the JSON into the EIP712_TypedData struct
+		err = json.Unmarshal(mapJSON, &data)
+		if err != nil {
+			return fmt.Errorf("error unmarshalling map to typed data: %v", err)
+		}
+	} else {
+		return fmt.Errorf("params[1] is neither a string nor a map[string]interface{}")
 	}
 
 	sign_res := bus.Fetch("signer", "sign-typed-data-v4", &bus.B_SignerSignTypedData_v4{
@@ -179,7 +178,7 @@ func signTypedData_v4(req RPCRequest, ctx *ConContext, res *RPCResponse) error {
 		MasterKey: signer.MasterKey,
 		Address:   a.Address,
 		Path:      a.Path,
-		TypedData: &data,
+		TypedData: data,
 	})
 
 	if sign_res.Error != nil {

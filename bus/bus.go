@@ -110,7 +110,7 @@ func Unsubscribe(ch chan *Message) {
 }
 
 func SendEx(topic, t string, data interface{}, timer_id int, respond_to int, err error) int {
-	if t != "tick" {
+	if t != "tick" && t != "tick-10sec" && t != "tick-min" {
 		if respond_to != 0 {
 			log.Trace().Msgf("   %04d->%s: %s respond to: %d, error: %v", cb.NextID, topic, t, respond_to, err)
 		} else {

@@ -8,7 +8,6 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/AlexNa-Holdings/web3pro/EIP"
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
@@ -16,6 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/signer/core/apitypes"
 	"github.com/rs/zerolog/log"
 	"github.com/tyler-smith/go-bip32"
 	"github.com/tyler-smith/go-bip39"
@@ -252,7 +252,7 @@ func (d Mnemonic) SignTx(chain_id int64, tx *types.Transaction, path string) (*t
 
 }
 
-func (d Mnemonic) SignTypedData(msg *bus.Message, typedData *EIP.EIP712_TypedData, path string) (string, error) {
+func (d Mnemonic) SignTypedData(msg *bus.Message, typedData apitypes.TypedData, path string) (string, error) {
 	// Get the private key
 	privateKey, err := DeriveKey(d.MasterKey, path)
 	if err != nil {
@@ -260,17 +260,14 @@ func (d Mnemonic) SignTypedData(msg *bus.Message, typedData *EIP.EIP712_TypedDat
 		return "", err
 	}
 
-	data, err := typedData.EncodeEIP712()
+	data, _, err := apitypes.TypedDataAndHash(typedData)
 	if err != nil {
-		log.Error().Msgf("SignTypedData: Failed to encode typed data: %v", err)
+		log.Error().Msgf("SignTypedData: Failed to hash typed data: %v", err)
 		return "", err
 	}
 
-	// Hash the data
-	fullHash := crypto.Keccak256Hash(data)
-
 	// Sign the hash
-	signature, err := crypto.Sign(fullHash.Bytes(), privateKey)
+	signature, err := crypto.Sign(data, privateKey)
 	if err != nil {
 		log.Error().Msgf("SignTypedData: Failed to sign hash: %v", err)
 		return "", err

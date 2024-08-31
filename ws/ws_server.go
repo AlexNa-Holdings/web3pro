@@ -99,22 +99,30 @@ func loop() {
 }
 
 func startWS() {
-	http.HandleFunc("/ws", web3Handler)
-
-	server := &http.Server{
-		Addr:              ":" + strconv.Itoa(WEB3PRO_PORT),
-		ReadTimeout:       30 * time.Second,
-		WriteTimeout:      30 * time.Second,
-		IdleTimeout:       2 * time.Hour,
-		ReadHeaderTimeout: 5 * time.Second,
-	}
 	go func() {
-		log.Trace().Msgf("ws server started on port %d", WEB3PRO_PORT)
-		err := server.ListenAndServe()
-		if err != nil {
-			log.Error().Err(err).Msgf("WS server failed to start on port %d", WEB3PRO_PORT)
-			bus.Send("ui", "notify-error", "Failed to start WS server")
+		server := &http.Server{
+			Addr:              ":" + strconv.Itoa(WEB3PRO_PORT),
+			ReadTimeout:       30 * time.Second,
+			WriteTimeout:      30 * time.Second,
+			IdleTimeout:       2 * time.Hour,
+			ReadHeaderTimeout: 5 * time.Second,
 		}
+
+		http.HandleFunc("/ws", web3Handler)
+
+		for {
+			err := server.ListenAndServe()
+			if err != nil {
+				log.Error().Err(err).Msgf("WS server failed to start on port %d", WEB3PRO_PORT)
+				bus.Send("ui", "notify-error", "Failed to start WS server")
+				time.Sleep(10 * time.Second) // Wait for 1 minute before retrying
+				continue
+			} else {
+				break
+			}
+		}
+		log.Trace().Msgf("ws server started on port %d", WEB3PRO_PORT)
+		bus.Send("ui", "notify", "WS server started")
 	}()
 }
 
@@ -345,7 +353,7 @@ Allow connection from browser?
 			break
 		}
 
-		log.Debug().Msgf("ws<- %v", string(msg))
+		log.Debug().Msgf("ws-> %v", string(msg))
 
 		if msgType != websocket.TextMessage {
 			log.Trace().Msgf("Received non-text message: %d", msgType)
@@ -363,8 +371,6 @@ Allow connection from browser?
 			JSONRPC: "2.0",
 			ID:      rpcReq.ID,
 		}
-
-		log.Debug().Msgf("ws-> %v", rpcReq)
 
 		// Dispatch based on method prefix
 		switch {
@@ -394,7 +400,7 @@ func (con *ConContext) send(data any) {
 		return
 	}
 
-	log.Debug().Msgf("<-ws %v", string(respBytes))
+	log.Debug().Msgf("ws<- %v", string(respBytes))
 
 	err = con.Connection.WriteMessage(websocket.TextMessage, respBytes)
 	if err != nil {

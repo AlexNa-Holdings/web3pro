@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/AlexNa-Holdings/web3pro/EIP"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/signer/core/apitypes"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -436,21 +436,21 @@ type SignedDataInfo struct {
 	Address    *Address
 }
 
-func ConfirmEIP712Template(data *EIP.EIP712_TypedData) string {
+func ConfirmEIP712Template(data apitypes.TypedData) string {
 	var sb strings.Builder
 	var info SignedDataInfo
 	titleCaser := cases.Title(language.English)
 	w := CurrentWallet
 
 	info.Type = data.PrimaryType
+	chain_id := int((*big.Int)(data.Domain.ChainId).Int64())
 
 	if w != nil {
 		if data.PrimaryType == "Permit" {
 			// collect all info about the permit
 
-			chain_id := IntFromAny(data.Domain["chainId"])
 			info.Blockchain = w.GetBlockchainById(chain_id)
-			ta := AddressFromAny(data.Domain["verifyingContract"])
+			ta := AddressFromAny(data.Domain.VerifyingContract)
 			if info.Blockchain != nil {
 				info.Token = w.GetTokenByAddress(info.Blockchain.Name, ta)
 			}
@@ -465,11 +465,17 @@ func ConfirmEIP712Template(data *EIP.EIP712_TypedData) string {
 
 	// Format Domain
 	sb.WriteString("<line text:Domain>\n")
-	for _, field := range data.Types["EIP712Domain"] {
-		value := data.Domain[field.Name]
-		formattedValue := formatFieldValue(info, field.Name, field.Type, value)
-		sb.WriteString(fmt.Sprintf("<b>%s: </b>%s\n", titleCaser.String(field.Name), formattedValue))
+	sb.WriteString(fmt.Sprintf("<b>Name: </b>%s\n", data.Domain.Name))
+	sb.WriteString(fmt.Sprintf("<b>Version: </b>%s\n", data.Domain.Version))
+
+	bc_name := "Unknown"
+	if info.Blockchain != nil {
+		bc_name = info.Blockchain.Name
 	}
+
+	sb.WriteString(fmt.Sprintf("<b>ChainId: </b>%d %s\n", chain_id, bc_name))
+	sb.WriteString(fmt.Sprintf("<b>VerifyingContract: </b>%s\n",
+		TagAddressShortLink(common.HexToAddress(data.Domain.VerifyingContract))))
 
 	// Format Message
 	sb.WriteString("<line text:Message>\n")
