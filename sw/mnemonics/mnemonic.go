@@ -273,6 +273,11 @@ func (d Mnemonic) SignTypedData(msg *bus.Message, typedData apitypes.TypedData, 
 		return "", err
 	}
 
+	// fix the signature
+	if len(signature) == 65 && (signature[64] == 0 || signature[64] == 1) {
+		signature[64] += 27
+	}
+
 	OK := false
 
 	msg.Fetch("ui", "hail", &bus.B_Hail{
