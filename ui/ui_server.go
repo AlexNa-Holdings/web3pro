@@ -103,10 +103,9 @@ func process(msg *bus.Message) {
 		}
 	case "tick":
 		if msg, ok := msg.Data.(*bus.B_TimerTick); ok {
-			HQMutex.Lock()
 			if ActiveRequest != nil {
 				Gui.UpdateAsync(func(g *gocui.Gui) error {
-					HailPane.UpdateSubtitle()
+					HailPane.UpdateSubtitle(msg.Left)
 					return nil
 				})
 
@@ -115,11 +114,9 @@ func process(msg *bus.Message) {
 					hail.OnTick(ActiveRequest, msg.Tick)
 				}
 			}
-			HQMutex.Unlock()
 		}
 	case "done":
 		if id, ok := msg.Data.(int); ok {
-			log.Trace().Msgf("Alert: %v", id)
 			if ActiveRequest != nil {
 				if ActiveRequest.TimerID == id {
 					cancel(ActiveRequest)

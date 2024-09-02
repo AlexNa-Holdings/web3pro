@@ -110,14 +110,6 @@ func Unsubscribe(ch chan *Message) {
 }
 
 func SendEx(topic, t string, data interface{}, timer_id int, respond_to int, err error) int {
-	if t != "tick" && t != "tick-10sec" && t != "tick-min" {
-		if respond_to != 0 {
-			log.Trace().Msgf("   %04d->%s: %s respond to: %d, error: %v", cb.NextID, topic, t, respond_to, err)
-		} else {
-			log.Trace().Msgf("   %04d->%s: %s", cb.NextID, topic, t)
-		}
-	}
-
 	cb.M.Lock()
 	defer cb.M.Unlock()
 
@@ -130,6 +122,14 @@ func SendEx(topic, t string, data interface{}, timer_id int, respond_to int, err
 		Data:      data,
 		Error:     err,
 		RespondTo: respond_to}
+
+	if t != "tick" && t != "tick-10sec" && t != "tick-min" && t != "done" {
+		if respond_to != 0 {
+			log.Trace().Msgf("   %04d->%s: %s timer:%d respond to: %d, error: %v", cb.NextID, topic, t, timer_id, respond_to, err)
+		} else {
+			log.Trace().Msgf("   %04d->%s: %s timer:%d", cb.NextID, topic, t, timer_id)
+		}
+	}
 
 	return cb.NextID
 }
@@ -144,6 +144,9 @@ func (m *Message) Respond(data interface{}, err error) int {
 
 // Chain fetch (on the same timer)
 func (m *Message) Fetch(topic, t string, data interface{}) *Message {
+
+	log.Debug().Msgf("   CHAIN Fetch %d -> (%s/%s) %d", m.ID, topic, t, m.TimerID)
+
 	return FetchEx(topic, t, data, m.TimerID, BusTimeout, BusHardTimeout, nil, 0)
 }
 
@@ -176,7 +179,12 @@ func FetchEx(topic, t string, data interface{}, timer_id int, limit time.Duratio
 		return &Message{Error: errors.New("cannot fetch 'ui' with hail")}
 	}
 
-	ch := Subscribe(topic, "timer", "ui")
+	var ch chan *Message
+	if topic != "timer" {
+		ch = Subscribe(topic, "timer")
+	} else {
+		ch = Subscribe("timer")
+	}
 	defer Unsubscribe(ch)
 
 	if timer_id == 0 {
@@ -225,21 +233,27 @@ func FetchEx(topic, t string, data interface{}, timer_id int, limit time.Duratio
 				SendEx("ui", "hail", hail, timer_id, 0, nil)
 			}
 		case msg := <-ch:
-			if msg.Topic == topic {
-				if msg.RespondTo == id {
-					Send("timer", "delete", timer_id)
-					if hail != nil {
-						Send("ui", "remove-hail", hail)
-					}
-					return msg
+			if msg.Topic == topic && msg.RespondTo == id {
+				if hail != nil {
+					Send("ui", "remove-hail", hail)
 				}
+				return msg
 			}
 
 			if msg.Topic == "timer" && msg.Type == "done" {
-				if id, ok := msg.Data.(int); ok {
-					if id == timer_id {
-						return &Message{Error: errors.New("timeout")}
+				if id, ok := msg.Data.(int); ok && id == timer_id {
+
+					if hail != nil {
+						Send("ui", "remove-hail", hail)
 					}
+
+					if topic == "ui" && t == "hail" {
+						if hail, ok := data.(*B_Hail); ok {
+							Send("ui", "remove-hail", hail)
+						}
+					}
+
+					return &Message{Error: errors.New("timeout")}
 				}
 			}
 		}

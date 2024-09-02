@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
@@ -76,7 +77,7 @@ func (p *HailPaneType) SetView(x0, y0, x1, y1 int) {
 		v.OnClickTitle = func(v *gocui.View) { // reset timer
 			bus.Send("timer", "reset", ActiveRequest.TimerID)
 			Gui.UpdateAsync(func(g *gocui.Gui) error {
-				HailPane.UpdateSubtitle()
+				HailPane.UpdateSubtitle(nil)
 				return nil
 			})
 		}
@@ -248,27 +249,46 @@ func (p *HailPaneType) open(m *bus.Message) {
 	}
 
 	Gui.UpdateAsync(func(g *gocui.Gui) error {
-		HailPane.UpdateSubtitle()
+		HailPane.UpdateSubtitle(nil)
 		return nil
 	})
 
 }
 
-func (p *HailPaneType) UpdateSubtitle() {
+func (p *HailPaneType) UpdateSubtitle(left_map map[int]time.Duration) {
 	if HailPane.View != nil && ActiveRequest != nil {
+		left_s := ""
+		sec := int(time.Duration(0))
 
-		left := int(bus.GetTimeLeft(ActiveRequest.TimerID).Seconds())
+		if left_map != nil {
 
-		if left < 10 {
+			if d, ok := left_map[ActiveRequest.TimerID]; ok {
+				sec = int(d.Seconds() + 0.5)
+			}
+		} else {
+			res := bus.Fetch("timer", "left", ActiveRequest.TimerID)
+			if res.Error != nil {
+				log.Error().Err(res.Error).Msg("Error fetching timer left")
+				return
+			} else {
+				sec = int(res.Data.(time.Duration).Seconds() + 0.5)
+			}
+		}
+
+		if sec < 10 {
 			p.View.SubTitleBgColor = Theme.ErrorFgColor
 		} else {
 			p.View.SubTitleBgColor = Theme.HelpBgColor
 		}
 
+		if sec >= 0 {
+			left_s = fmt.Sprintf("%d", sec)
+		}
+
 		if len(HailQueue) > 1 {
-			p.View.Subtitle = fmt.Sprintf("(%d) %d", len(HailQueue), left)
+			p.View.Subtitle = fmt.Sprintf("(%d) %s", len(HailQueue), left_s)
 		} else {
-			p.View.Subtitle = fmt.Sprintf("%d", left)
+			p.View.Subtitle = left_s
 		}
 
 		HailPane.View.Subtitle = p.View.Subtitle
