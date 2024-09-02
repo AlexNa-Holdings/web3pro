@@ -36,10 +36,6 @@ func Init() {
 	SetTheme(cmn.Config.Theme)
 	Gui.SetManagerFunc(Layout)
 	SetKeybindings()
-
-	Gui.OnPopupCloseGlobal = func() {
-		Gui.SetCurrentView("terminal.input")
-	}
 }
 
 func SetKeybindings() error {

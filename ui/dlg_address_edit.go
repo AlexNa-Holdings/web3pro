@@ -40,9 +40,6 @@ Address: %s
 			v.SetInput("name", currect_a.Name)
 			v.SetInput("tag", currect_a.Tag)
 		},
-		OnClose: func(v *gocui.View) {
-			Gui.SetCurrentView("terminal.input")
-		},
 		OnClickHotspot: func(v *gocui.View, hs *gocui.Hotspot) {
 
 			if hs != nil {

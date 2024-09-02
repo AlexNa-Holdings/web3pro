@@ -207,7 +207,6 @@ func FetchEx(topic, t string, data interface{}, timer_id int, limit time.Duratio
 	}
 
 	id := SendEx(topic, t, data, timer_id, 0, nil)
-
 	log.Trace().Msgf("   FETCH %04d->%s: %s timer_id: %d", id, topic, t, timer_id)
 
 	timer := time.After(time.Duration(hail_delay) * time.Second)

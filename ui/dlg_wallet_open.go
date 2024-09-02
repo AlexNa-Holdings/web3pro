@@ -8,9 +8,6 @@ import (
 func DlgWaletOpen(name string) *gocui.Popup {
 	return &gocui.Popup{
 		Title: "Open Wallet " + name,
-		OnClose: func(v *gocui.View) {
-			Gui.SetCurrentView("terminal.input")
-		},
 		OnClickHotspot: func(v *gocui.View, hs *gocui.Hotspot) {
 
 			if hs != nil {

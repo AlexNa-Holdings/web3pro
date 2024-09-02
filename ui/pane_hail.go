@@ -186,7 +186,6 @@ func remove(m *bus.Message) {
 		hail.OnClose(m)
 	}
 
-	bus.Send("timer", "delete", m.TimerID)
 	m.Respond(nil, nil)
 
 	if ActiveRequest != nil && ActiveRequest.Data == hail {

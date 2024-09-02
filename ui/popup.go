@@ -37,7 +37,6 @@ func showPopup(m *bus.Message) {
 
 	onClose := popup.OnClose
 	popup.OnClose = func(v *gocui.View) {
-
 		if m.TimerID != 0 {
 			res := bus.Fetch("timer", "resume", m.TimerID)
 			if res.Error != nil {

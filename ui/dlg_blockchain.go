@@ -59,9 +59,6 @@ func DlgBlockchain(name string) *gocui.Popup {
 				}
 			}
 		},
-		OnClose: func(v *gocui.View) {
-			Gui.SetCurrentView("terminal.input")
-		},
 		OnClickHotspot: func(v *gocui.View, hs *gocui.Hotspot) {
 
 			if hs != nil {

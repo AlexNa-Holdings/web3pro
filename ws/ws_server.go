@@ -61,6 +61,8 @@ type RPCResponse struct {
 	Error   *RPCError   `json:"error,omitempty"`
 }
 
+var start_once sync.Once
+
 func Init() {
 	go loop()
 }
@@ -72,7 +74,7 @@ func loop() {
 		case "wallet":
 			switch msg.Type {
 			case "open":
-				startWS()
+				start_once.Do(startWS)
 			case "origin-chain-changed":
 				broadcastChainChanged(msg.Data)
 			case "origin-addresses-changed":

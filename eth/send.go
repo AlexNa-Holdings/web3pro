@@ -84,12 +84,7 @@ func send(msg *bus.Message) error {
 			if hs != nil {
 				switch hs.Value {
 				case "button edit_gas_price":
-					res := bus.Fetch("timer", "pause", m.TimerID)
-					if res.Error != nil {
-						log.Error().Err(res.Error).Msg("Error pausing timer")
-						return
-					}
-					editFee(m, v, tx, nt, func(newGasPrice *big.Int) {
+					go editFee(m, v, tx, nt, func(newGasPrice *big.Int) {
 						template, err := BuildHailToSendTemplate(b, t, from, to, amount, newGasPrice)
 						if err != nil {
 							log.Error().Err(err).Msg("Error building hail template")
@@ -105,8 +100,6 @@ func send(msg *bus.Message) error {
 							}
 							return nil
 						})
-
-						bus.Fetch("timer", "resume", m.TimerID)
 					})
 				default:
 					cmn.StandardOnClickHotspot(v, hs)
@@ -119,6 +112,7 @@ func send(msg *bus.Message) error {
 }
 
 func editFee(m *bus.Message, v *gocui.View, tx *types.Transaction, nt *cmn.Token, on_close func(*big.Int)) {
+
 	low := new(big.Int).Div(new(big.Int).Mul(tx.GasPrice(), big.NewInt(9)), big.NewInt(10))
 	market := tx.GasPrice()
 	high := new(big.Int).Div(new(big.Int).Mul(tx.GasPrice(), big.NewInt(11)), big.NewInt(10))
@@ -136,6 +130,7 @@ Total($): <input id:gas_price_dollars size:14 value:"` +
 
 	newGasPrice := tx.GasPrice()
 
+	//	m.Fetch("ui", "popup", &gocui.Popup{
 	m.Fetch("ui", "popup", &gocui.Popup{
 		Title: "Edit Gas Price",
 		Template: `<c><w>

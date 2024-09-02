@@ -111,9 +111,7 @@ func ProcessTimers() {
 			case "delete":
 				id, ok := msg.Data.(int)
 				if ok {
-					mu.Lock()
 					delete(timers, id)
-					mu.Unlock()
 					msg.Respond("OK", nil)
 				} else {
 					log.Error().Msg("Invalid timer delete data")
@@ -157,18 +155,20 @@ func ProcessTimers() {
 		case <-nextCheckTimer.C:
 			updateTimers()
 		case <-tick_timer.C:
-			mu.Lock()
 			left := make(map[int]time.Duration)
 			tick++
 
+			mu.Lock()
 			for id, t := range timers {
 				if t.paused {
-					continue
+					left[id] = t.Limit - t.lapsed
+				} else {
+					now := time.Now()
+					left[id] = t.Limit - (t.lapsed + now.Sub(t.starTime))
 				}
-				now := time.Now()
-				left[id] = t.Limit - (t.lapsed + now.Sub(t.starTime))
 			}
 			mu.Unlock()
+
 			Send("timer", "tick", &B_TimerTick{
 				Tick: tick,
 				Left: left,

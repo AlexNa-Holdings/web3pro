@@ -34,9 +34,6 @@ func DlgSend(b *cmn.Blockchain, t *cmn.Token, from *cmn.Address, to string, amou
 			v.SetInput("to", to)
 			v.SetInput("amount", amount)
 		},
-		OnClose: func(v *gocui.View) {
-			Gui.SetCurrentView("terminal.input")
-		},
 		OnClickHotspot: func(v *gocui.View, hs *gocui.Hotspot) {
 
 			if hs != nil {

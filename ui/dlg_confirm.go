@@ -12,9 +12,6 @@ func DlgConfirm(title string, text string, action func()) *gocui.Popup {
 		OnOpen: func(v *gocui.View) {
 			v.SetFocus(1) // focus on cancel button
 		},
-		OnClose: func(v *gocui.View) {
-			Gui.SetCurrentView("terminal.input")
-		},
 		OnClickHotspot: func(v *gocui.View, hs *gocui.Hotspot) {
 
 			if hs != nil {

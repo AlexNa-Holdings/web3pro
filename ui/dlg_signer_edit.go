@@ -37,9 +37,6 @@ func DlgSignerEdit(name string) *gocui.Popup {
 		OnOpen: func(v *gocui.View) {
 			v.SetInput("name", name)
 		},
-		OnClose: func(v *gocui.View) {
-			Gui.SetCurrentView("terminal.input")
-		},
 		OnClickHotspot: func(v *gocui.View, hs *gocui.Hotspot) {
 			if hs != nil {
 				switch hs.Value {

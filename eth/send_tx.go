@@ -64,12 +64,7 @@ func sendTx(msg *bus.Message) error {
 			if hs != nil {
 				switch hs.Value {
 				case "button edit_gas_price":
-					res := bus.Fetch("timer", "pause", m.TimerID)
-					if res.Error != nil {
-						log.Error().Err(res.Error).Msg("Error pausing timer")
-						return
-					}
-					editFee(m, v, tx, nt, func(newGasPrice *big.Int) {
+					go editFee(m, v, tx, nt, func(newGasPrice *big.Int) {
 						template, err := BuildHailToSendTxTemplate(b, from, req.To, req.Amount, req.Data, newGasPrice)
 						if err != nil {
 							log.Error().Err(err).Msg("Error building hail template")
@@ -85,8 +80,6 @@ func sendTx(msg *bus.Message) error {
 							}
 							return nil
 						})
-
-						bus.Fetch("timer", "resume", m.TimerID)
 					})
 				default:
 					cmn.StandardOnClickHotspot(v, hs)

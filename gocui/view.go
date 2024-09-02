@@ -1379,8 +1379,8 @@ func (v *View) AddSelect(tagParams map[string]string) error {
 
 	if err == nil {
 		v.writeMutex.Lock()
-		v.makeWriteable(v.wx, v.wy)
 		defer v.writeMutex.Unlock()
+		v.makeWriteable(v.wx, v.wy)
 		v.writeCells(v.wx, v.wy, cells)
 		v.wx += len(cells)
 		c.Hotspot = hs

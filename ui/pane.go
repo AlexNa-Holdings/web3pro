@@ -43,4 +43,6 @@ func (p *PaneDescriptor) HidePane() {
 		log.Debug().Msgf("Deleted view %s", p.View.Name())
 		p.View = nil
 	}
+
+	Flush()
 }
