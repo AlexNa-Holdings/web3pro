@@ -62,10 +62,6 @@ func send(msg *bus.Message) error {
 	msg.Fetch("ui", "hail", &bus.B_Hail{
 		Title:    "Send Tokens",
 		Template: template,
-		OnOpen: func(m *bus.Message, g *gocui.Gui, v *gocui.View) {
-			v.SetInput("to", to.String())
-			v.SetInput("amount", amount.String())
-		},
 		OnOk: func(m *bus.Message) {
 			if t.Native {
 				err := Transfer(b, s, from, to, amount)
@@ -93,7 +89,7 @@ func send(msg *bus.Message) error {
 						log.Error().Err(res.Error).Msg("Error pausing timer")
 						return
 					}
-					editFee(m, v, tx, t, nt, func(newGasPrice *big.Int) {
+					editFee(m, v, tx, nt, func(newGasPrice *big.Int) {
 						template, err := BuildHailToSendTemplate(b, t, from, to, amount, newGasPrice)
 						if err != nil {
 							log.Error().Err(err).Msg("Error building hail template")
@@ -122,13 +118,13 @@ func send(msg *bus.Message) error {
 	return nil
 }
 
-func editFee(m *bus.Message, v *gocui.View, tx *types.Transaction, t *cmn.Token, nt *cmn.Token, on_close func(*big.Int)) {
+func editFee(m *bus.Message, v *gocui.View, tx *types.Transaction, nt *cmn.Token, on_close func(*big.Int)) {
 	low := new(big.Int).Div(new(big.Int).Mul(tx.GasPrice(), big.NewInt(9)), big.NewInt(10))
 	market := tx.GasPrice()
 	high := new(big.Int).Div(new(big.Int).Mul(tx.GasPrice(), big.NewInt(11)), big.NewInt(10))
 
 	var p_low, p_market, p_high, cp string
-	if t.Price > 0 {
+	if nt.Price > 0 {
 		p_low = cmn.FmtFloat64D(nt.Price*cmn.Float64(high, 18)*float64(tx.Gas()), true)
 		p_market = cmn.FmtFloat64D(nt.Price*cmn.Float64(market, 18)*float64(tx.Gas()), true)
 		p_high = cmn.FmtFloat64D(nt.Price*cmn.Float64(high, 18)*float64(tx.Gas()), true)

@@ -163,3 +163,11 @@ type B_EthSend struct { // send
 	To         common.Address
 	Amount     *big.Int
 }
+
+type B_EthSendTx struct { // send
+	Blockchain string
+	From       common.Address
+	To         common.Address
+	Amount     *big.Int
+	Data       []byte
+}

@@ -3,10 +3,12 @@ package ws
 import (
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"strings"
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/signer/core/apitypes"
 	"github.com/rs/zerolog/log"
 )
@@ -43,6 +45,12 @@ func handleEthMethod(req RPCRequest, ctx *ConContext, res *RPCResponse) {
 	case "signTypedData_v4":
 		if o, ok := getAllowedOrigin(req.Web3ProOrigin); ok {
 			err = signTypedData_v4(o, req, ctx, res)
+		} else {
+			err = fmt.Errorf("origin not allowed")
+		}
+	case "sendTransaction":
+		if o, ok := getAllowedOrigin(req.Web3ProOrigin); ok {
+			err = sendTransaction(o, req, ctx, res)
 		} else {
 			err = fmt.Errorf("origin not allowed")
 		}
@@ -186,5 +194,83 @@ func signTypedData_v4(o *cmn.Origin, req RPCRequest, ctx *ConContext, res *RPCRe
 	}
 
 	res.Result = sign_res.Data.(string)
+	return nil
+}
+
+func sendTransaction(o *cmn.Origin, req RPCRequest, ctx *ConContext, res *RPCResponse) error {
+	w := cmn.CurrentWallet
+	if w == nil {
+		return fmt.Errorf("no wallet found")
+	}
+
+	params, ok := req.Params.([]any)
+	if !ok {
+		return fmt.Errorf("params must be an array of strings")
+	}
+
+	if len(params) < 1 {
+		return fmt.Errorf("length of params must be at least 1")
+	}
+
+	tx_data, ok := params[0].(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("params must be an array of strings")
+	}
+
+	// Get the address
+	address, ok := tx_data["from"].(string)
+	if !ok {
+		return fmt.Errorf("from address not found")
+	}
+
+	from := w.GetAddress(address)
+	if from == nil {
+		return fmt.Errorf("address not found in wallet")
+	}
+
+	signer := w.GetSigner(from.Signer)
+	if signer == nil {
+		return fmt.Errorf("signer not found")
+	}
+
+	b := w.GetBlockchainById(o.ChainId)
+	if b == nil {
+		return fmt.Errorf("blockchain not found")
+	}
+
+	to_s, ok := tx_data["to"].(string)
+	if !ok {
+		return fmt.Errorf("to address not found")
+	}
+
+	to := common.HexToAddress(to_s)
+
+	value_s, ok := tx_data["value"].(string)
+	if !ok {
+		value_s = "0x00"
+	}
+
+	value := big.NewInt(0)
+	value, ok = value.SetString(value_s, 0)
+	if !ok {
+		return fmt.Errorf("error converting value to big.Int")
+	}
+
+	data_s, ok := tx_data["data"].(string)
+	if !ok {
+		return fmt.Errorf("data not found")
+	}
+	data := common.FromHex(data_s)
+
+	send_res := bus.Fetch("eth", "send-tx", &bus.B_EthSendTx{
+		Blockchain: b.Name,
+		From:       from.Address,
+		To:         to,
+		Amount:     value,
+		Data:       data,
+	})
+
+	res.Result = send_res.Data
+
 	return nil
 }
