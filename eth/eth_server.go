@@ -41,8 +41,8 @@ func process(msg *bus.Message) {
 			err := send(msg)
 			msg.Respond(nil, err)
 		case "send-tx":
-			err := sendTx(msg)
-			msg.Respond(nil, err)
+			hash, err := sendTx(msg)
+			msg.Respond(hash, err)
 		}
 	case "wallet":
 		switch msg.Type {

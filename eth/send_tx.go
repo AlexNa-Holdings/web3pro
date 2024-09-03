@@ -15,32 +15,32 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func sendTx(msg *bus.Message) error {
+func sendTx(msg *bus.Message) (string, error) {
 	req, ok := msg.Data.(*bus.B_EthSendTx)
 	if !ok {
-		return fmt.Errorf("invalid tx: %v", msg.Data)
+		return "", fmt.Errorf("invalid tx: %v", msg.Data)
 	}
 
 	w := cmn.CurrentWallet
 	if w == nil {
-		return errors.New("no wallet")
+		return "", errors.New("no wallet")
 	}
 
 	b := w.GetBlockchain(req.Blockchain)
 	if b == nil {
-		return fmt.Errorf("blockchain not found: %v", req.Blockchain)
+		return "", fmt.Errorf("blockchain not found: %v", req.Blockchain)
 	}
 
 	from := w.GetAddress(req.From.String())
 	if from == nil {
-		return fmt.Errorf("address from not found: %v", req.From)
+		return "", fmt.Errorf("address from not found: %v", req.From)
 	}
 
 	template, err := BuildHailToSendTxTemplate(b, from, req.To, req.Amount, req.Data, nil)
 	if err != nil {
 		log.Error().Err(err).Msg("Error building send-tx hail template")
 		bus.Send("ui", "notify-error", fmt.Sprintf("Error: %v", err))
-		return err
+		return "", err
 	}
 
 	nt, _ := w.GetNativeToken(b)
@@ -49,7 +49,7 @@ func sendTx(msg *bus.Message) error {
 	if err != nil {
 		log.Error().Err(err).Msg("Error building transaction")
 		bus.Send("ui", "notify-error", fmt.Sprintf("Error: %v", err))
-		return err
+		return "", err
 	}
 
 	confirmed := false
@@ -93,12 +93,12 @@ func sendTx(msg *bus.Message) error {
 	})
 
 	if !confirmed {
-		return fmt.Errorf("rejected by user")
+		return "", fmt.Errorf("rejected by user")
 	}
 
 	signer := w.GetSigner(from.Signer)
 	if signer == nil {
-		return fmt.Errorf("signer not found: %v", from.Signer)
+		return "", fmt.Errorf("signer not found: %v", from.Signer)
 	}
 
 	sign_res := msg.Fetch("signer", "sign-tx", &bus.B_SignerSignTx{
@@ -112,24 +112,24 @@ func sendTx(msg *bus.Message) error {
 	})
 
 	if sign_res.Error != nil {
-		return fmt.Errorf("error signing transaction: %v", sign_res.Error)
+		return "", fmt.Errorf("error signing transaction: %v", sign_res.Error)
 	}
 
 	signedTx, ok := sign_res.Data.(*types.Transaction)
 	if !ok {
 		log.Error().Msgf("sendTx: Cannot convert to transaction. Data:(%v)", sign_res.Data)
-		return errors.New("cannot convert to transaction")
+		return "", errors.New("cannot convert to transaction")
 	}
 
 	hash, err := SendSignedTx(signedTx)
 	if err != nil {
 		log.Error().Err(err).Msg("sendTx: Cannot send tx")
-		return err
+		return "", err
 	}
 
 	bus.Send("ui", "notify", "Transaction sent: "+hash)
 
-	return nil
+	return hash, nil
 }
 
 func BuildTx(b *cmn.Blockchain, s *cmn.Signer, from *cmn.Address, to common.Address,
@@ -170,6 +170,13 @@ func BuildTx(b *cmn.Blockchain, s *cmn.Signer, from *cmn.Address, to common.Addr
 	gasPrice, err := client.SuggestGasPrice(context.Background())
 	if err != nil {
 		log.Error().Msgf("BuildTxTransfer: Cannot suggest gas price. Error:(%v)", err)
+		return nil, err
+	}
+
+	// Simulate the transaction
+	_, err = client.CallContract(context.Background(), msg, nil)
+	if err != nil {
+		log.Error().Msgf("BuildTxTransfer: Cannot simulate transaction. Error:(%v)", err)
 		return nil, err
 	}
 
