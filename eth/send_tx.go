@@ -9,6 +9,7 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/rs/zerolog/log"
@@ -51,11 +52,13 @@ func sendTx(msg *bus.Message) error {
 		return err
 	}
 
+	confirmed := false
+
 	msg.Fetch("ui", "hail", &bus.B_Hail{
 		Title:    "Send Tx",
 		Template: template,
 		OnOk: func(m *bus.Message) {
-			//TODO
+			confirmed = true
 		},
 		OnOverHotspot: func(m *bus.Message, v *gocui.View, hs *gocui.Hotspot) {
 			cmn.StandardOnOverHotspot(v, hs)
@@ -65,6 +68,7 @@ func sendTx(msg *bus.Message) error {
 				switch hs.Value {
 				case "button edit_gas_price":
 					go editFee(m, v, tx, nt, func(newGasPrice *big.Int) {
+						tx.GasPrice().Set(newGasPrice)
 						template, err := BuildHailToSendTxTemplate(b, from, req.To, req.Amount, req.Data, newGasPrice)
 						if err != nil {
 							log.Error().Err(err).Msg("Error building hail template")
@@ -88,47 +92,42 @@ func sendTx(msg *bus.Message) error {
 		},
 	})
 
-	/////////////////////////////////////////////////////////
-	// Sign the transaction
-	// sign_res := bus.Fetch("signer", "sign-tx", &bus.B_SignerSignTx{
-	// 	Type:      signer.Type,
-	// 	Name:      signer.Name,
-	// 	MasterKey: signer.MasterKey,
-	// 	Chain:     b.Name,
-	// 	Tx:        tx,
-	// 	From:      from.Address,
-	// 	Path:      from.Path,
-	// })
+	if !confirmed {
+		return fmt.Errorf("rejected by user")
+	}
 
-	// if sign_res.Error != nil {
-	// 	return fmt.Errorf("error signing transaction: %v", sign_res.Error)
-	// }
+	signer := w.GetSigner(from.Signer)
+	if signer == nil {
+		return fmt.Errorf("signer not found: %v", from.Signer)
+	}
 
-	// signedTx, ok := sign_res.Data.(*types.Transaction)
-	// if !ok {
-	// 	log.Error().Msgf("Transfer: Cannot convert to transaction. Data:(%v)", sign_res.Data)
-	// 	return errors.New("cannot convert to transaction")
-	// }
+	sign_res := msg.Fetch("signer", "sign-tx", &bus.B_SignerSignTx{
+		Type:      signer.Type,
+		Name:      signer.Name,
+		MasterKey: signer.MasterKey,
+		Chain:     b.Name,
+		Tx:        tx,
+		From:      from.Address,
+		Path:      from.Path,
+	})
 
-	// send_res := bus.Fetch("eth", "send-tx", signedTx)
-	// if res.Error != nil {
-	// 	log.Error().Err(send_res.Error).Msg("Transfer: Cannot send tx")
-	// 	return send_res.Error
-	// }
+	if sign_res.Error != nil {
+		return fmt.Errorf("error signing transaction: %v", sign_res.Error)
+	}
 
-	// c, ok := cons[int(signedTx.ChainId().Int64())]
-	// if !ok {
-	// 	return fmt.Errorf("client not found for chainId: %v", signedTx.ChainId())
-	// }
+	signedTx, ok := sign_res.Data.(*types.Transaction)
+	if !ok {
+		log.Error().Msgf("sendTx: Cannot convert to transaction. Data:(%v)", sign_res.Data)
+		return errors.New("cannot convert to transaction")
+	}
 
-	// // Send the transaction
-	// err := c.SendTransaction(context.Background(), signedTx)
-	// if err != nil {
-	// 	log.Error().Err(err).Msgf("Transfer: Cannot send transaction")
-	// 	return err
-	// }
+	hash, err := SendSignedTx(signedTx)
+	if err != nil {
+		log.Error().Err(err).Msg("sendTx: Cannot send tx")
+		return err
+	}
 
-	//bus.Send("ui", "notify", fmt.Sprintf("Transaction sent: %s", signedTx.Hash().Hex()))
+	bus.Send("ui", "notify", "Transaction sent: "+hash)
 
 	return nil
 }
@@ -153,6 +152,20 @@ func BuildTx(b *cmn.Blockchain, s *cmn.Signer, from *cmn.Address, to common.Addr
 		return nil, err
 	}
 
+	msg := ethereum.CallMsg{
+		From:  from.Address,
+		To:    &to,
+		Gas:   0, // Set to 0 for gas estimation
+		Value: amount,
+		Data:  data,
+	}
+
+	gasLimit, err := client.EstimateGas(context.Background(), msg)
+	if err != nil {
+		log.Error().Msgf("BuildTxTransfer: Cannot estimate gas. Error:(%v)", err)
+		return nil, err
+	}
+
 	// Suggest gas price
 	gasPrice, err := client.SuggestGasPrice(context.Background())
 	if err != nil {
@@ -160,7 +173,8 @@ func BuildTx(b *cmn.Blockchain, s *cmn.Signer, from *cmn.Address, to common.Addr
 		return nil, err
 	}
 
-	tx := types.NewTransaction(nonce, to, amount, uint64(21000), gasPrice, data)
+	tx := types.NewTransaction(nonce, to, amount, gasLimit, gasPrice, data)
+
 	return tx, nil
 
 }

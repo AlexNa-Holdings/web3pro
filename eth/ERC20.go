@@ -175,7 +175,7 @@ func ERC20Transfer(b *cmn.Blockchain, t *cmn.Token, s *cmn.Signer, from *cmn.Add
 
 	tx, err := BuildTxERC20Transfer(b, t, s, from, to, amount)
 	if err != nil {
-		log.Error().Msgf("Transfer: Cannot build transaction. Error:(%v)", err)
+		log.Error().Msgf("ERC20Transfer: Cannot build transaction. Error:(%v)", err)
 		return err
 	}
 
@@ -190,20 +190,23 @@ func ERC20Transfer(b *cmn.Blockchain, t *cmn.Token, s *cmn.Signer, from *cmn.Add
 	})
 
 	if res.Error != nil {
-		log.Error().Err(res.Error).Msg("Transfer: Cannot sign tx")
+		log.Error().Err(res.Error).Msg("ERC20Transfer: Cannot sign tx")
 		return res.Error
 	}
 
 	signedTx, ok := res.Data.(*types.Transaction)
 	if !ok {
-		log.Error().Msgf("Transfer: Cannot convert to transaction. Data:(%v)", res.Data)
+		log.Error().Msgf("ERC20Transfer: Cannot convert to transaction. Data:(%v)", res.Data)
 		return errors.New("cannot convert to transaction")
 	}
 
-	res = bus.Fetch("eth", "send", signedTx)
-	if res.Error != nil {
-		log.Error().Err(res.Error).Msg("Transfer: Cannot send tx")
-		return res.Error
+	hash, err := SendSignedTx(signedTx)
+	if err != nil {
+		log.Error().Err(err).Msg("ERC20Transfer: Cannot send tx")
+		return err
 	}
+
+	bus.Send("ui", "notify", "Transaction sent: "+hash)
+
 	return nil
 }

@@ -90,10 +90,13 @@ func Transfer(b *cmn.Blockchain, s *cmn.Signer, from *cmn.Address, to common.Add
 		return errors.New("cannot convert to transaction")
 	}
 
-	res = bus.Fetch("eth", "send", signedTx)
-	if res.Error != nil {
-		log.Error().Err(res.Error).Msg("Transfer: Cannot send tx")
-		return res.Error
+	hash, err := SendSignedTx(signedTx)
+	if err != nil {
+		log.Error().Err(err).Msg("Transfer: Cannot send tx")
+		return err
 	}
+
+	bus.Send("ui", "notify", "Transaction sent: "+hash)
+
 	return nil
 }
