@@ -150,12 +150,17 @@ func BuildTxERC20Transfer(b *cmn.Blockchain, t *cmn.Token, s *cmn.Signer, from *
 	}
 
 	gasLimit, err := client.EstimateGas(context.Background(), ethereum.CallMsg{
-		From: from.Address, To: &to, Data: data,
+		From: from.Address,
+		To:   &t.Address,
+		Data: data,
+		Gas:  0,
 	})
 	if err != nil {
 		log.Error().Msgf("BuildTxERC20Transfer: Cannot estimate gas. Error:(%v)", err)
 		return nil, err
 	}
+
+	log.Debug().Msgf("BuildTxERC20Transfer: Gas limit: %v", gasLimit)
 
 	// Suggest gas price
 	gasPrice, err := client.SuggestGasPrice(context.Background())
@@ -165,12 +170,11 @@ func BuildTxERC20Transfer(b *cmn.Blockchain, t *cmn.Token, s *cmn.Signer, from *
 	}
 
 	tx := types.NewTransaction(nonce, t.Address, big.NewInt(0), gasLimit, gasPrice, data)
-
 	return tx, nil
 
 }
 
-func ERC20Transfer(b *cmn.Blockchain, t *cmn.Token, s *cmn.Signer, from *cmn.Address, to common.Address, amount *big.Int) error {
+func ERC20Transfer(msg *bus.Message, b *cmn.Blockchain, t *cmn.Token, s *cmn.Signer, from *cmn.Address, to common.Address, amount *big.Int) error {
 	log.Trace().Msgf("ERC20Transfer: Token:(%s) Blockchain:(%s) From:(%s) To:(%s) Amount:(%s)", t.Name, b.Name, from.Address.String(), to.String(), amount.String())
 
 	tx, err := BuildTxERC20Transfer(b, t, s, from, to, amount)
@@ -179,7 +183,7 @@ func ERC20Transfer(b *cmn.Blockchain, t *cmn.Token, s *cmn.Signer, from *cmn.Add
 		return err
 	}
 
-	res := bus.Fetch("signer", "sign-tx", &bus.B_SignerSignTx{
+	res := msg.Fetch("signer", "sign-tx", &bus.B_SignerSignTx{
 		Type:      s.Type,
 		Name:      s.Name,
 		MasterKey: s.MasterKey,
@@ -196,7 +200,7 @@ func ERC20Transfer(b *cmn.Blockchain, t *cmn.Token, s *cmn.Signer, from *cmn.Add
 
 	signedTx, ok := res.Data.(*types.Transaction)
 	if !ok {
-		log.Error().Msgf("ERC20Transfer: Cannot convert to transaction. Data:(%v)", res.Data)
+		log.Error().Msgf("ERC20Transfer: Cannot convert to sig. Data:(%v)", res.Data)
 		return errors.New("cannot convert to transaction")
 	}
 

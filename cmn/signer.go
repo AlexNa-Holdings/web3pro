@@ -25,7 +25,7 @@ var STANDARD_DERIVATIONS = map[string]struct {
 	},
 }
 
-func (s *Signer) GetFamilyNames() []string {
+func (s *Signer) GetAllCopies() []string {
 	r := []string{s.Name}
 	r = append(r, s.Copies...)
 	return r

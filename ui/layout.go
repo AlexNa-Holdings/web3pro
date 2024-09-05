@@ -128,7 +128,6 @@ func Layout(g *gocui.Gui) error {
 
 			if hight_left-row_height < 5 { // at least 5 for the last row
 				row_height = 0
-				log.Error().Msg("Not enough space for the last row")
 			} else {
 
 				hight_left -= row_height

@@ -223,7 +223,7 @@ func DSUpdate(w *cmn.Wallet) (int, error) { // number of pairs updated
 		tokens_to_update := []*cmn.Token{}
 		for _, t := range w.Tokens {
 			if t.Blockchain == b.Name && t.PriceFeeder == "dexscreener" &&
-				t.PriceFeedParam != "" && chain_names[b.ChainId] != "" &&
+				t.PriceFeedParam != "" && chain_names[b.ChainID] != "" &&
 				t.PriceTimestamp.Add(PRICE_UPDATE_PERIOD).Before(time.Now()) {
 				tokens_to_update = append(tokens_to_update, t)
 			}
@@ -238,7 +238,7 @@ func DSUpdate(w *cmn.Wallet) (int, error) { // number of pairs updated
 		}
 
 		if len(pair_list) > 0 {
-			pairs, err := DSGetPairs(b.ChainId, pair_list)
+			pairs, err := DSGetPairs(b.ChainID, pair_list)
 			if err != nil {
 				log.Error().Err(err).Msgf("DSUpdate: failed to get pairs from dexscreener: %v", err)
 				return 0, fmt.Errorf("DSUpdate: failed to get pairs from dexscreener: %w", err)

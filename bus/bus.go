@@ -144,10 +144,12 @@ func (m *Message) Respond(data interface{}, err error) int {
 
 // Chain fetch (on the same timer)
 func (m *Message) Fetch(topic, t string, data interface{}) *Message {
-
-	log.Debug().Msgf("   CHAIN Fetch %d -> (%s/%s) %d", m.ID, topic, t, m.TimerID)
-
-	return FetchEx(topic, t, data, m.TimerID, BusTimeout, BusHardTimeout, nil, 0)
+	if m != nil {
+		log.Debug().Msgf("   CHAIN Fetch %d -> (%s/%s) %d", m.ID, topic, t, m.TimerID)
+		return FetchEx(topic, t, data, m.TimerID, BusTimeout, BusHardTimeout, nil, 0)
+	} else {
+		return FetchEx(topic, t, data, 0, BusTimeout, BusHardTimeout, nil, 0)
+	}
 }
 
 // Chain fetch with hail (on the same timer)

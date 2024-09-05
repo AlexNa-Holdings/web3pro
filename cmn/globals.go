@@ -49,7 +49,7 @@ type Address struct {
 type Blockchain struct {
 	Name          string         `json:"name"`
 	Url           string         `json:"url"`
-	ChainId       int            `json:"chain_id"`
+	ChainID       int            `json:"chain_id"`
 	ExplorerUrl   string         `json:"explorer_url"`
 	Currency      string         `json:"currency"`
 	WTokenAddress common.Address `json:"wrapped_native_token_address"`

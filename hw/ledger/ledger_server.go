@@ -2,11 +2,13 @@ package ledger
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
+	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/rs/zerolog/log"
 )
 
@@ -66,11 +68,20 @@ func process(msg *bus.Message) {
 			}
 		}
 	case "signer":
+		w := cmn.CurrentWallet
+		if w == nil {
+			msg.Respond(nil, errors.New("no wallet"))
+			return
+		}
+
 		switch msg.Type {
 		case "is-connected":
 			if m, ok := msg.Data.(*bus.B_SignerIsConnected); ok {
 				if m.Type == LDG {
-					msg.Respond(&bus.B_SignerIsConnected_Response{Connected: find_by_name(m.Name) != nil}, nil)
+					msg.Respond(&bus.B_SignerIsConnected_Response{
+						Connected: find_by_name(w.GetSignerWithCopies(m.Name)) != nil},
+						nil,
+					)
 				}
 			} else {
 				log.Error().Msg("Loop: Invalid hw is-connected data")
@@ -157,7 +168,7 @@ func disconnected(m *bus.B_UsbDisconnected) {
 	remove(m.USB_ID)
 }
 
-func find_by_name(name []string) *Ledger {
+func find_by_name(name []*cmn.Signer) *Ledger {
 	log.Debug().Msgf("find_by_name: %v", name)
 
 	ledgers_mutex.Lock()
@@ -165,7 +176,7 @@ func find_by_name(name []string) *Ledger {
 
 	for _, t := range ledgers {
 		for _, n := range name {
-			if t.Name == n {
+			if t.Name == n.Name {
 				return t
 			}
 		}
@@ -188,7 +199,7 @@ func find_by_name(name []string) *Ledger {
 			bus.Send("signer", "connected", &bus.B_SignerConnected{Type: LDG, Name: t.Name})
 			bus.Send("ui", "notify", fmt.Sprintf("Ledger connected: %s", t.Name))
 			for _, n := range name {
-				if t.Name == n {
+				if t.Name == n.Name {
 					return t
 				}
 			}
@@ -210,25 +221,31 @@ func find_by_usb_id(usb_id string) *Ledger {
 	return nil
 }
 
-func provide_device(n []string) *Ledger {
+func provide_device(sn string) *Ledger {
+	w := cmn.CurrentWallet
+	if w == nil {
+		return nil
+	}
 
-	if len(n) == 0 {
+	s_list := w.GetSignerWithCopies(sn)
+
+	if len(s_list) == 0 {
 		log.Error().Msg("Open: No device name provided")
 		return nil
 	}
 
-	t := find_by_name(n)
+	t := find_by_name(s_list)
 	if t != nil {
 		return t
 	}
 
-	name := n[0]
+	name := s_list[0].Name
 	copies := ""
-	if len(n) > 1 {
+	if len(s_list) > 1 {
 		copies = "\n or one of the copies:\n<u><b>"
-		for i, c := range n {
-			copies += c
-			if i < len(n)-1 {
+		for i, c := range s_list {
+			copies += c.Name
+			if i < len(s_list)-1 {
 				copies += ", "
 			}
 		}
@@ -244,7 +261,7 @@ Please connect your Ledger device:
 
 <button text:Cancel>`,
 		OnTick: func(m *bus.Message, tick int) {
-			t = find_by_name(n)
+			t = find_by_name(s_list)
 			if t != nil {
 				bus.Send("ui", "remove-hail", m)
 			}

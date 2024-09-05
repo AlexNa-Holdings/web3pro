@@ -1,17 +1,24 @@
 package trezor
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
+	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/hw/trezor/trezorproto"
 	"github.com/ava-labs/coreth/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog/log"
 )
 
-func get_addresses(m *bus.Message) (*bus.B_SignerGetAddresses_Response, error) {
-	data, ok := m.Data.(*bus.B_SignerGetAddresses)
+func get_addresses(msg *bus.Message) (*bus.B_SignerGetAddresses_Response, error) {
+	w := cmn.CurrentWallet
+	if w == nil {
+		return nil, errors.New("no wallet")
+	}
+
+	data, ok := msg.Data.(*bus.B_SignerGetAddresses)
 	if !ok {
 		return nil, bus.ErrInvalidMessageData
 	}
@@ -38,7 +45,7 @@ func get_addresses(m *bus.Message) (*bus.B_SignerGetAddresses_Response, error) {
 
 		eth_addr := new(trezorproto.EthereumAddress)
 		if err := t.Call(
-			m,
+			msg,
 			&trezorproto.EthereumGetAddress{AddressN: []uint32(dp)}, eth_addr); err != nil {
 			log.Error().Err(err).Msgf("GetAddresses: Error getting address: %s", path)
 			return rd, err

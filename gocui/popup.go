@@ -146,7 +146,7 @@ func (p *Popup) Layout(g *Gui) error {
 			}
 
 			if g.popup.OnClickHotspot != nil {
-				g.popup.OnClickHotspot(v, hs)
+				go g.popup.OnClickHotspot(v, hs)
 			}
 		}
 

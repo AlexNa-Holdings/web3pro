@@ -118,7 +118,7 @@ func (w *Wallet) GetBlockchain(n string) *Blockchain {
 
 func (w *Wallet) GetBlockchainById(id int) *Blockchain {
 	for _, b := range w.Blockchains {
-		if b.ChainId == id {
+		if b.ChainID == id {
 			return b
 		}
 	}
@@ -269,7 +269,7 @@ func (w *Wallet) SetOriginChain(url string, ch string) error {
 		return errors.New("blockchain not found")
 	}
 
-	o.ChainId = b.ChainId
+	o.ChainId = b.ChainID
 
 	bus.Send("wallet", "origin-chain-changed", url)
 
@@ -459,7 +459,7 @@ func (w *Wallet) GetSigner(n string) *Signer {
 	return nil
 }
 
-func (w *Wallet) GetSignerWithCopy(name string) (*Signer, int) {
+func (w *Wallet) GetSignerWithCopyIndex(name string) (*Signer, int) {
 	for _, s := range w.Signers {
 		for j, c := range s.Copies {
 			if c == name {
@@ -468,6 +468,26 @@ func (w *Wallet) GetSignerWithCopy(name string) (*Signer, int) {
 		}
 	}
 	return nil, -1
+}
+
+func (w *Wallet) GetSignerWithCopies(name string) []*Signer {
+	res := []*Signer{}
+
+	s := w.GetSigner(name)
+	if s == nil {
+		return res
+	}
+
+	res = append(res, s)
+
+	for _, c := range s.Copies {
+		s = w.GetSigner(c)
+		if s != nil {
+			res = append(res, s)
+		}
+	}
+
+	return res
 }
 
 func (w *Wallet) GetAddress(a string) *Address {

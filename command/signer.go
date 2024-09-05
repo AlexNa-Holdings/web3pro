@@ -310,7 +310,7 @@ func Signer_Process(c *Command, input string) {
 		ui.PrintErrorf("Signer not found: %s", p1)
 
 	case "promote":
-		s, ci := cmn.CurrentWallet.GetSignerWithCopy(p1)
+		s, ci := cmn.CurrentWallet.GetSignerWithCopyIndex(p1)
 		if s == nil {
 			ui.PrintErrorf("Signer not found: %s", p1)
 			return
@@ -358,7 +358,7 @@ func Signer_Process(c *Command, input string) {
 func GetAddresses(s *cmn.Signer, path string, start_from int, count int) ([]common.Address, []string, error) {
 	m := bus.Fetch("signer", "get-addresses", &bus.B_SignerGetAddresses{
 		Type:      s.Type,
-		Name:      s.GetFamilyNames(),
+		Name:      s.Name,
 		Path:      path,
 		MasterKey: s.MasterKey,
 		StartFrom: start_from,

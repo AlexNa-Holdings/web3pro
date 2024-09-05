@@ -43,6 +43,9 @@ func process(msg *bus.Message) {
 		case "send-tx":
 			hash, err := sendTx(msg)
 			msg.Respond(hash, err)
+		case "sign-typed-data-v4":
+			sig, err := signTypedDataV4(msg)
+			msg.Respond(sig, err)
 		}
 	case "wallet":
 		switch msg.Type {
@@ -69,7 +72,7 @@ func initConnections() {
 	}
 
 	for _, b := range w.Blockchains {
-		if _, ok := cons[b.ChainId]; !ok {
+		if _, ok := cons[b.ChainID]; !ok {
 			openClient_locked(b)
 		}
 	}
@@ -86,17 +89,17 @@ func updateConnections() {
 
 	vetted := make(map[int]bool)
 	for _, b := range w.Blockchains {
-		vetted[b.ChainId] = true
+		vetted[b.ChainID] = true
 
-		c, ok := cons[b.ChainId]
+		c, ok := cons[b.ChainID]
 		if !ok {
 			openClient_locked(b)
 		} else {
 
 			if c.URL != b.Url {
 				//reconnect
-				cons[b.ChainId].Close()
-				bus.Send("eth", "disconnected", b.ChainId)
+				cons[b.ChainID].Close()
+				bus.Send("eth", "disconnected", b.ChainID)
 				openClient_locked(b)
 			}
 		}
@@ -122,9 +125,9 @@ func openClient_locked(b *cmn.Blockchain) error {
 		log.Error().Msgf("OpenClient: Cannot dial to (%s). Error:(%v)", b.Url, err)
 		return err
 	}
-	cons[b.ChainId] = &con{client, b.Url}
+	cons[b.ChainID] = &con{client, b.Url}
 	log.Trace().Msgf("OpenClient: Client opened to (%s)", b.Url)
-	bus.Send("eth", "connected", b.ChainId)
+	bus.Send("eth", "connected", b.ChainID)
 	return nil
 }
 
@@ -132,13 +135,13 @@ func getEthClient(b *cmn.Blockchain) (*ethclient.Client, error) {
 	consMutex.Lock()
 	defer consMutex.Unlock()
 
-	c, ok := cons[b.ChainId]
+	c, ok := cons[b.ChainID]
 	if !ok {
-		return nil, fmt.Errorf("OpenClient: Client not found for chainId (%d)", b.ChainId)
+		return nil, fmt.Errorf("OpenClient: Client not found for chainId (%d)", b.ChainID)
 	}
 
 	if c.Client == nil {
-		return nil, fmt.Errorf("OpenClient: Client is nil for chainId (%d)", b.ChainId)
+		return nil, fmt.Errorf("OpenClient: Client is nil for chainId (%d)", b.ChainID)
 	}
 
 	return c.Client, nil

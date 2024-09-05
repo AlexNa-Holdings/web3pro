@@ -530,7 +530,7 @@ func formatFieldValue(info SignedDataInfo, fieldName, fieldType string, value in
 			s = t.Format("2006-01-02 15:04:05 MST")
 		case "chainId":
 			if info.Blockchain != nil {
-				s = fmt.Sprintf("%d %s", info.Blockchain.ChainId, info.Blockchain.Name)
+				s = fmt.Sprintf("%d %s", info.Blockchain.ChainID, info.Blockchain.Name)
 			}
 		}
 	}

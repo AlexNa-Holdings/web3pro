@@ -180,13 +180,15 @@ func signTypedData_v4(o *cmn.Origin, req RPCRequest, ctx *ConContext, res *RPCRe
 		return fmt.Errorf("params[1] is neither a string nor a map[string]interface{}")
 	}
 
-	sign_res := bus.Fetch("signer", "sign-typed-data-v4", &bus.B_SignerSignTypedData_v4{
-		Type:      signer.Type,
-		Name:      signer.Name,
-		MasterKey: signer.MasterKey,
-		Address:   a.Address,
-		Path:      a.Path,
-		TypedData: data,
+	b := w.GetBlockchainById(o.ChainId)
+	if b == nil {
+		return fmt.Errorf("blockchain not found")
+	}
+
+	sign_res := bus.Fetch("eth", "sign-typed-data-v4", &bus.B_EthSignTypedData_v4{
+		Blockchain: b.Name,
+		Address:    a.Address,
+		TypedData:  data,
 	})
 
 	if sign_res.Error != nil {

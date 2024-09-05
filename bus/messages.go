@@ -47,7 +47,6 @@ type B_Hail struct { // hail
 	OnClickHotspot func(*Message, *gocui.View, *gocui.Hotspot)
 	OnOverHotspot  func(*Message, *gocui.View, *gocui.Hotspot)
 	Suspended      bool
-	Timeout        time.Duration // in seconds
 }
 
 // ---------- usb ----------
@@ -96,7 +95,7 @@ type B_UsbIsConnected_Response struct { // is-connected_response
 // ---------- signer ----------
 type B_SignerGetAddresses struct { // get-addresses
 	Type      string
-	Name      []string
+	Name      string
 	MasterKey string
 	Path      string
 	StartFrom int
@@ -110,7 +109,7 @@ type B_SignerGetAddresses_Response struct { // get-addresses_response
 
 type B_SignerIsConnected struct { // is-connected
 	Type string
-	Name []string
+	Name string
 }
 
 type B_SignerIsConnected_Response struct { // is-connected_response
@@ -170,4 +169,10 @@ type B_EthSendTx struct { // send
 	To         common.Address
 	Amount     *big.Int
 	Data       []byte
+}
+
+type B_EthSignTypedData_v4 struct { // sign-typed-data-v4
+	Blockchain string
+	Address    common.Address
+	TypedData  apitypes.TypedData
 }

@@ -15,7 +15,7 @@ import (
 
 func (d *Trezor) Call(m *bus.Message, req proto.Message, result proto.Message) error {
 
-	kind, reply, err := d.RawCall(req)
+	kind, reply, err := d.RawCall(m, req)
 	if err != nil {
 		log.Error().Msgf("Call: Error calling device: %s", err)
 		return err
@@ -28,7 +28,7 @@ func (d *Trezor) Call(m *bus.Message, req proto.Message, result proto.Message) e
 				pin, err := d.RequsetPin(m)
 				if err != nil {
 					log.Error().Msgf("Call: Error getting pin: %s", err)
-					d.RawCall(&trezorproto.Cancel{})
+					d.RawCall(m, &trezorproto.Cancel{})
 					return err
 				}
 
@@ -36,16 +36,21 @@ func (d *Trezor) Call(m *bus.Message, req proto.Message, result proto.Message) e
 				for _, ch := range pinStr {
 					if !strings.ContainsRune("123456789", ch) || len(pin) < 1 {
 						log.Error().Msgf("Call: Invalid PIN provided")
-						d.RawCall(&trezorproto.Cancel{})
+						d.RawCall(m, &trezorproto.Cancel{})
 						return errors.New("trezor: Invalid PIN provided")
 					}
 				}
 				// send pin
-				kind, reply, err = d.RawCall(&trezorproto.PinMatrixAck{Pin: &pinStr})
+				kind, reply, err = d.RawCall(m, &trezorproto.PinMatrixAck{Pin: &pinStr})
 				if err != nil {
 					log.Error().Msgf("Call: Error sending pin: %s", err)
 					return err
 				}
+
+				if kind == trezorproto.MessageType_MessageType_Failure {
+					return errors.New("trezor: " + "PIN request canceled")
+				}
+
 				log.Trace().Msgf("Trezor pin success. kind: %s\n", MessageName(kind))
 			}
 		case trezorproto.MessageType_MessageType_PassphraseRequest:
@@ -53,22 +58,27 @@ func (d *Trezor) Call(m *bus.Message, req proto.Message, result proto.Message) e
 				log.Trace().Msg("Enter Pass	phrase")
 				pass, err := d.RequsetPassword(m)
 				if err != nil {
-					d.RawCall(&trezorproto.Cancel{})
+					d.RawCall(m, &trezorproto.Cancel{})
 					return err
 				}
 				passStr := string(pass)
 				// send it
-				kind, reply, err = d.RawCall(&trezorproto.PassphraseAck{Passphrase: &passStr})
+				kind, reply, err = d.RawCall(m, &trezorproto.PassphraseAck{Passphrase: &passStr})
 				if err != nil {
 					return err
 				}
+
+				if kind == trezorproto.MessageType_MessageType_Failure {
+					return errors.New("trezor: " + "Passphrase request canceled")
+				}
+
 				log.Trace().Msgf("Trezor pass success. kind: %s\n", MessageName(kind))
 			}
 		case trezorproto.MessageType_MessageType_ButtonRequest:
 			{
 				log.Trace().Msg("*** NB! Button request on your Trezor screen ...")
 				// Trezor is waiting for user confirmation, ack and wait for the next message
-				kind, reply, err = d.RawCall(&trezorproto.ButtonAck{})
+				kind, reply, err = d.RawCall(m, &trezorproto.ButtonAck{})
 				if err != nil {
 					return err
 				}
@@ -111,8 +121,9 @@ func (d *Trezor) RequsetPin(m *bus.Message) (string, error) {
 	pin := ""
 
 	m.Fetch("ui", "hail", &bus.B_Hail{
-		Title:    "Enter Trezor PIN",
-		Template: template,
+		Title:     "Enter Trezor PIN",
+		Priorized: true,
+		Template:  template,
 		OnClickHotspot: func(m *bus.Message, v *gocui.View, hs *gocui.Hotspot) {
 			if hs != nil {
 				s := cmn.Split(hs.Value)
@@ -150,7 +161,8 @@ func (d *Trezor) RequsetPassword(m *bus.Message) (string, error) {
 	canceled := false
 
 	m.Fetch("ui", "hail", &bus.B_Hail{
-		Title: "Select Wallet Type",
+		Title:     "Select Wallet Type",
+		Priorized: true,
 		Template: `<c><w>
 <button text:Standard color:g.HelpFgColor bgcolor:g.HelpBgColor id:standard> <button text:Hidden color:g.HelpFgColor bgcolor:g.HelpBgColor id:hidden> 
 

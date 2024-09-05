@@ -1,10 +1,12 @@
 package trezor
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
+	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/hw/trezor/trezorproto"
 	"github.com/rs/zerolog/log"
 )
@@ -47,11 +49,20 @@ func process(msg *bus.Message) {
 			}
 		}
 	case "signer":
+		w := cmn.CurrentWallet
+		if w == nil {
+			msg.Respond(nil, errors.New("no wallet"))
+			return
+		}
+
 		switch msg.Type {
 		case "is-connected":
 			if m, ok := msg.Data.(*bus.B_SignerIsConnected); ok {
 				if m.Type != TRZ {
-					msg.Respond(&bus.B_SignerIsConnected_Response{Connected: find_by_name(m.Name) != nil}, nil)
+					msg.Respond(&bus.B_SignerIsConnected_Response{
+						Connected: find_by_name(w.GetSignerWithCopies(m.Name)) != nil},
+						nil,
+					)
 				}
 			} else {
 				log.Error().Msg("Loop: Invalid hw is-connected data")
@@ -72,6 +83,29 @@ func process(msg *bus.Message) {
 			} else {
 				log.Error().Msg("Loop: Invalid trezor list data")
 			}
+		case "sign-typed-data-v4":
+			m, ok := msg.Data.(*bus.B_SignerSignTypedData_v4)
+			if !ok {
+				log.Error().Msg("Loop: Invalid hw sign-typed-data-v4 data")
+				msg.Respond(nil, errors.New("invalid data"))
+				return
+			}
+
+			if m.Type == "trezor" {
+				msg.Respond(signTypedData_v4(msg))
+			}
+		case "sign-tx":
+			m, ok := msg.Data.(*bus.B_SignerSignTx)
+			if !ok {
+				log.Error().Msg("Loop: Invalid hw sign-tx data")
+				msg.Respond(nil, errors.New("invalid data"))
+				return
+			}
+
+			if m.Type == "trezor" {
+				msg.Respond(signTx(msg))
+			}
+
 		}
 	}
 }
@@ -127,13 +161,13 @@ func disconnected(m *bus.B_UsbDisconnected) {
 	remove(m.USB_ID)
 }
 
-func find_by_name(name []string) *Trezor {
+func find_by_name(name []*cmn.Signer) *Trezor {
 	trezors_mutex.Lock()
 	defer trezors_mutex.Unlock()
 
 	for _, t := range trezors {
 		for _, n := range name {
-			if t.Name == n {
+			if t.Name == n.Name {
 				return t
 			}
 		}
@@ -142,25 +176,31 @@ func find_by_name(name []string) *Trezor {
 	return nil
 }
 
-func provide_device(n []string) *Trezor {
+func provide_device(sn string) *Trezor {
+	w := cmn.CurrentWallet
+	if w == nil {
+		return nil
+	}
 
-	if len(n) == 0 {
+	s_list := w.GetSignerWithCopies(sn)
+
+	if len(s_list) == 0 {
 		log.Error().Msg("Open: No device name provided")
 		return nil
 	}
 
-	t := find_by_name(n)
+	t := find_by_name(s_list)
 	if t != nil {
 		return t
 	}
 
-	name := n[0]
+	name := s_list[0].Name
 	copies := ""
-	if len(n) > 1 {
+	if len(s_list) > 1 {
 		copies = "\n or one of the copies:\n<u><b>"
-		for i, c := range n {
-			copies += c
-			if i < len(n)-1 {
+		for i, c := range s_list {
+			copies += c.Name
+			if i < len(s_list)-1 {
 				copies += ", "
 			}
 		}
@@ -176,7 +216,7 @@ Please connect your Trezor device:
 
 <button text:Cancel>`,
 		OnTick: func(m *bus.Message, tick int) {
-			t = find_by_name(n)
+			t = find_by_name(s_list)
 			if t != nil {
 				bus.Send("ui", "remove-hail", m)
 			}

@@ -437,7 +437,7 @@ and use the current chain & address?
 				chain_id := 1
 				b := w.GetBlockchain(w.CurrentChain)
 				if b != nil {
-					chain_id = b.ChainId
+					chain_id = b.ChainID
 				}
 
 				origin = &cmn.Origin{

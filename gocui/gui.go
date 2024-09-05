@@ -1158,7 +1158,7 @@ func (g *Gui) onKey(ev *gocuiEvent) error {
 
 			if v.activeHotspot != nil && ev.Key == MouseLeft {
 				if v.OnClickHotspot != nil {
-					v.OnClickHotspot(v, v.activeHotspot)
+					go v.OnClickHotspot(v, v.activeHotspot)
 				}
 			}
 

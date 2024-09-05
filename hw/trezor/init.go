@@ -15,7 +15,7 @@ func init_trezor(usb_id string) (*Trezor, error) {
 		USB_ID: usb_id,
 	}
 
-	kind, reply, err := t.RawCall(&trezorproto.Initialize{})
+	kind, reply, err := t.RawCall(nil, &trezorproto.Initialize{})
 	if err != nil {
 		log.Error().Err(err).Msgf("Init: Error initializing device: %s", usb_id)
 		return nil, err

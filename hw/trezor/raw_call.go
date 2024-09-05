@@ -34,7 +34,7 @@ func MessageName(kind trezorproto.MessageType) string {
 // is in browser mode.
 var errTrezorReplyInvalidHeader = errors.New("trezor: invalid reply header")
 
-func (d Trezor) RawCall(req proto.Message) (trezorproto.MessageType, []byte, error) {
+func (d Trezor) RawCall(msg *bus.Message, req proto.Message) (trezorproto.MessageType, []byte, error) {
 	data, err := proto.Marshal(req)
 	if err != nil {
 		log.Error().Msgf("RawCall: Error marshalling request: %s", err)
@@ -51,8 +51,6 @@ func (d Trezor) RawCall(req proto.Message) (trezorproto.MessageType, []byte, err
 	chunk := make([]byte, 64)
 	chunk[0] = 0x3f // Report ID magic number
 
-	// ???? usb.FlushBuffer(dev, 64*time.Millisecond)
-
 	for len(payload) > 0 {
 		// Construct the new message to stream, padding with zeroes if needed
 		if len(payload) > 63 {
@@ -65,11 +63,7 @@ func (d Trezor) RawCall(req proto.Message) (trezorproto.MessageType, []byte, err
 		}
 		// Send over to the dev
 		log.Trace().Msgf("Data chunk sent to the Trezor: %v\n", hexutil.Bytes(chunk))
-		// if _, err := dev.Write(chunk); err != nil {
-		// 	log.Error().Msgf("RawCall: Error writing to device: %s", err)
-		// 	return 0, nil, err
-		// }
-		resp := bus.Fetch("usb", "write", &bus.B_UsbWrite{
+		resp := msg.Fetch("usb", "write", &bus.B_UsbWrite{
 			USB_ID: d.USB_ID,
 			Data:   chunk,
 		})
@@ -85,13 +79,7 @@ func (d Trezor) RawCall(req proto.Message) (trezorproto.MessageType, []byte, err
 		reply []byte
 	)
 	for {
-
-		// Read the next chunk from the Trezor wallet
-		// if _, err := io.ReadFull(dev, chunk); err != nil {
-		// 	log.Error().Msgf("RawCall: Error reading from device: %s", err)
-		// 	return 0, nil, err
-		// }
-		resp := bus.Fetch("usb", "read", &bus.B_UsbRead{
+		resp := msg.Fetch("usb", "read", &bus.B_UsbRead{
 			USB_ID: d.USB_ID,
 		})
 		if resp.Error != nil {

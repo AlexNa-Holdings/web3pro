@@ -64,13 +64,13 @@ func send(msg *bus.Message) error {
 		Template: template,
 		OnOk: func(m *bus.Message) {
 			if t.Native {
-				err := Transfer(b, s, from, to, amount)
+				err := Transfer(msg, b, s, from, to, amount)
 				if err != nil {
 					log.Error().Err(err).Msg("Error sending native tokens")
 					bus.Send("ui", "notify-error", fmt.Sprintf("Error sending native tokens: %v", err))
 				}
 			} else {
-				err := ERC20Transfer(b, t, s, from, to, amount)
+				err := ERC20Transfer(msg, b, t, s, from, to, amount)
 				if err != nil {
 					log.Error().Err(err).Msg("Error sending tokens")
 					bus.Send("ui", "notify-error", fmt.Sprintf("Error sending tokens: %v", err))
@@ -247,7 +247,6 @@ func BuildHailToSendTemplate(b *cmn.Blockchain, t *cmn.Token,
 
 	dollars := ""
 	if t.Price > 0 {
-		//		dollars = cmn.FormatDollarsNormal(t.Price*t.Float64(amount))
 		dollars = cmn.TagShortDollarLink(t.Price * t.Float64(amount))
 	} else {
 		dollars = "(unknown)"

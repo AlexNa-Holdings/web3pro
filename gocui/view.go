@@ -1508,9 +1508,9 @@ func PopupNavigation(v *View, key Key, ch rune, mod Modifier) {
 			c := v.gui.popup.View.Controls[v.gui.popup.View.ControlInFocus]
 			switch c.Type {
 			case C_LINK:
-				v.gui.popup.View.OnClickHotspot(v.gui.popup.View, c.Hotspot)
+				go v.gui.popup.View.OnClickHotspot(v.gui.popup.View, c.Hotspot)
 			case C_BUTTON:
-				v.gui.popup.View.OnClickHotspot(v.gui.popup.View, c.Hotspot)
+				go v.gui.popup.View.OnClickHotspot(v.gui.popup.View, c.Hotspot)
 			case C_INPUT:
 				v.gui.popup.View.FocusNext()
 			case C_SELECT:
@@ -1524,9 +1524,9 @@ func PopupNavigation(v *View, key Key, ch rune, mod Modifier) {
 			c := v.gui.popup.View.Controls[v.gui.popup.View.ControlInFocus]
 			switch c.Type {
 			case C_LINK:
-				v.gui.popup.View.OnClickHotspot(v.gui.popup.View, c.Hotspot)
+				go v.gui.popup.View.OnClickHotspot(v.gui.popup.View, c.Hotspot)
 			case C_BUTTON:
-				v.gui.popup.View.OnClickHotspot(v.gui.popup.View, c.Hotspot)
+				go v.gui.popup.View.OnClickHotspot(v.gui.popup.View, c.Hotspot)
 			default:
 				DefaultEditor.Edit(v, key, ch, mod)
 			}

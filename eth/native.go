@@ -59,7 +59,7 @@ func BuildTxTransfer(b *cmn.Blockchain, s *cmn.Signer, from *cmn.Address, to com
 
 }
 
-func Transfer(b *cmn.Blockchain, s *cmn.Signer, from *cmn.Address, to common.Address, amount *big.Int) error {
+func Transfer(msg *bus.Message, b *cmn.Blockchain, s *cmn.Signer, from *cmn.Address, to common.Address, amount *big.Int) error {
 
 	log.Trace().Msgf("Transfer: Token:(%s) Blockchain:(%s) From:(%s) To:(%s) Amount:(%s)", b.Currency, b.Name, from.Address.String(), to.String(), amount.String())
 
@@ -69,7 +69,7 @@ func Transfer(b *cmn.Blockchain, s *cmn.Signer, from *cmn.Address, to common.Add
 		return err
 	}
 
-	res := bus.Fetch("signer", "sign-tx", &bus.B_SignerSignTx{
+	res := msg.Fetch("signer", "sign-tx", &bus.B_SignerSignTx{
 		Type:      s.Type,
 		Name:      s.Name,
 		MasterKey: s.MasterKey,

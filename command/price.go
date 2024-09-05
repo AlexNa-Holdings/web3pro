@@ -125,7 +125,7 @@ func Price_Process(c *Command, input string) {
 		ui.Printf("Feeder type: %s\n", t.PriceFeeder)
 		ui.Printf("Feeder Param: %s\n", t.PriceFeedParam)
 
-		pairs, err := price.GetPairs(b.ChainId, a.Hex())
+		pairs, err := price.GetPairs(b.ChainID, a.Hex())
 		if err != nil {
 			ui.PrintErrorf("Error discovering trading pairs: %v", err)
 			return

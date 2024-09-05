@@ -66,6 +66,7 @@ func (p *HailPaneType) SetView(x0, y0, x1, y1 int) {
 		v.ScrollBar = true
 		v.OnResize = func(v *gocui.View) {
 			if ActiveRequest != nil {
+				active_hail := ActiveRequest.Data.(*bus.B_Hail)
 				if active_hail.Template != "" {
 					v.RenderTemplate(active_hail.Template)
 				}
@@ -105,7 +106,7 @@ func (p *HailPaneType) SetView(x0, y0, x1, y1 int) {
 					remove(ActiveRequest)
 				default:
 					if active_hail.OnClickHotspot != nil {
-						active_hail.OnClickHotspot(ActiveRequest, v, hs)
+						go active_hail.OnClickHotspot(ActiveRequest, v, hs)
 					}
 				}
 			}
@@ -177,6 +178,17 @@ func hqGetTop() *bus.Message {
 }
 
 func remove(m *bus.Message) {
+
+	if m == nil {
+		log.Error().Msg("HailPane: remove: nil message")
+		return
+	}
+
+	if m.Data == nil {
+		log.Error().Msg("HailPane: remove: nil data")
+		return
+	}
+
 	hail := m.Data.(*bus.B_Hail)
 	log.Trace().Msgf("Removing hail %s", hail.Title)
 
@@ -213,37 +225,42 @@ func cancel(m *bus.Message) {
 }
 
 func (p *HailPaneType) open(m *bus.Message) {
+
+	if m == ActiveRequest {
+		log.Error().Msg("HailPane: open: already active")
+		return
+	}
+
 	hail := m.Data.(*bus.B_Hail)
 	log.Trace().Msgf("HailPane: open: %s", hail.Title)
 	bus.Send("sound", "play", nil)
 
 	if ActiveRequest != nil {
-		if ActiveRequest.Data != hail {
-			active_hail := ActiveRequest.Data.(*bus.B_Hail)
-			if active_hail.OnSuspend != nil {
-				active_hail.OnSuspend(ActiveRequest)
-			}
-			active_hail.Suspended = true
+		active_hail := ActiveRequest.Data.(*bus.B_Hail)
+		if active_hail.OnSuspend != nil {
+			active_hail.OnSuspend(ActiveRequest)
 		}
+		active_hail.Suspended = true
 	}
 
 	ActiveRequest = m
-	if hail.Suspended {
-		if hail.OnResume != nil {
-			hail.OnResume(ActiveRequest)
-		}
-		hail.Suspended = false
-	}
 
 	if HailPane.View == nil {
 		HailPane.PaneDescriptor.ShowPane()
+	}
+
+	// if hail.Template != "" {
+	// 	HailPane.View.RenderTemplate(hail.Template)
+	// }
+
+	if hail.Suspended {
+		if hail.OnResume != nil {
+			hail.OnResume(m)
+		}
+		hail.Suspended = false
 	} else {
-		if hail.Template != "" {
-			HailPane.View.RenderTemplate(hail.Template)
-			if hail.OnOpen != nil {
-				hail.OnOpen(ActiveRequest, Gui, HailPane.View)
-			}
-			Flush()
+		if hail.OnOpen != nil {
+			hail.OnOpen(m, Gui, HailPane.View)
 		}
 	}
 

@@ -10,7 +10,6 @@ import (
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
-	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/ava-labs/coreth/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -106,7 +105,7 @@ func process(msg *bus.Message) {
 					return
 				}
 
-				tx, err := mnemonics.SignTx(int64(b.ChainId), m.Tx, m.Path)
+				tx, err := mnemonics.SignTx(int64(b.ChainID), m.Tx, m.Path)
 				if err != nil {
 					log.Error().Msgf("Error signing transaction: %v", err)
 					msg.Respond(nil, err)
@@ -280,20 +279,7 @@ func (d Mnemonic) SignTypedData(msg *bus.Message, typedData apitypes.TypedData, 
 
 	OK := false
 
-	msg.Fetch("ui", "hail", &bus.B_Hail{
-		Title:    "Sign Typed Data",
-		Template: cmn.ConfirmEIP712Template(typedData),
-		OnOk: func(m *bus.Message) {
-			OK = true
-			bus.Send("ui", "remove-hail", m)
-		},
-		OnOverHotspot: func(m *bus.Message, v *gocui.View, hs *gocui.Hotspot) {
-			cmn.StandardOnOverHotspot(v, hs)
-		},
-		OnClickHotspot: func(m *bus.Message, v *gocui.View, hs *gocui.Hotspot) {
-			cmn.StandardOnClickHotspot(v, hs)
-		},
-	})
+	// TODO: Ask for the password
 
 	if OK {
 		ss := fmt.Sprintf("0x%x", signature)

@@ -51,7 +51,7 @@ func DlgBlockchain(name string) *gocui.Popup {
 				bch := cmn.CurrentWallet.Blockchains[bch_index]
 				v.SetInput("name", bch.Name)
 				v.SetInput("rpc", bch.Url)
-				v.SetInput("chainid", strconv.Itoa(int(bch.ChainId)))
+				v.SetInput("chainid", strconv.Itoa(int(bch.ChainID)))
 				v.SetInput("explorer", bch.ExplorerUrl)
 				v.SetInput("currency", bch.Currency)
 				if bch.WTokenAddress != (common.Address{}) {
@@ -92,7 +92,7 @@ func DlgBlockchain(name string) *gocui.Popup {
 					}
 
 					for i, bch := range cmn.CurrentWallet.Blockchains {
-						if bch.ChainId == chainid && (i == -1 || i != bch_index) {
+						if bch.ChainID == chainid && (i == -1 || i != bch_index) {
 							Notification.ShowErrorf("Chain id %d already used by %s", chainid, bch.Name)
 							break
 						}
@@ -124,7 +124,7 @@ func DlgBlockchain(name string) *gocui.Popup {
 					if bch_index != -1 {
 						cmn.CurrentWallet.Blockchains[bch_index].Name = name
 						cmn.CurrentWallet.Blockchains[bch_index].Url = rpc
-						cmn.CurrentWallet.Blockchains[bch_index].ChainId = chainid
+						cmn.CurrentWallet.Blockchains[bch_index].ChainID = chainid
 						cmn.CurrentWallet.Blockchains[bch_index].ExplorerUrl = explorer
 						cmn.CurrentWallet.Blockchains[bch_index].Currency = currency
 						cmn.CurrentWallet.Blockchains[bch_index].WTokenAddress = wta
@@ -132,7 +132,7 @@ func DlgBlockchain(name string) *gocui.Popup {
 						cmn.CurrentWallet.Blockchains = append(cmn.CurrentWallet.Blockchains, &cmn.Blockchain{
 							Name:          name,
 							Url:           rpc,
-							ChainId:       chainid,
+							ChainID:       chainid,
 							ExplorerUrl:   explorer,
 							Currency:      currency,
 							WTokenAddress: wta,
