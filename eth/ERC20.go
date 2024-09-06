@@ -162,14 +162,55 @@ func BuildTxERC20Transfer(b *cmn.Blockchain, t *cmn.Token, s *cmn.Signer, from *
 
 	log.Debug().Msgf("BuildTxERC20Transfer: Gas limit: %v", gasLimit)
 
-	// Suggest gas price
-	gasPrice, err := client.SuggestGasPrice(context.Background())
+	// // Suggest gas price
+	// gasPrice, err := client.SuggestGasPrice(context.Background())
+	// if err != nil {
+	// 	log.Error().Msgf("BuildTxTransfer: Cannot suggest gas price. Error:(%v)", err)
+	// 	return nil, err
+	// }
+
+	priorityFee, err := client.SuggestGasTipCap(context.Background())
 	if err != nil {
-		log.Error().Msgf("BuildTxTransfer: Cannot suggest gas price. Error:(%v)", err)
+		log.Error().Err(err).Msg("Failed to suggest gas tip cap")
 		return nil, err
 	}
 
-	tx := types.NewTransaction(nonce, t.Address, big.NewInt(0), gasLimit, gasPrice, data)
+	// Get the latest block to determine the base fee
+	block, err := client.BlockByNumber(context.Background(), nil) // Get the latest block
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to get the latest block")
+		return nil, err
+	}
+
+	// Base fee is included in the block header (introduced in EIP-1559)
+	baseFee := block.BaseFee()
+
+	// Calculate the MaxFeePerGas based on base fee and priority fee
+	// For example, you might want to set MaxFeePerGas to be slightly higher than baseFee + priorityFee
+	maxFeePerGas := new(big.Int).Add(baseFee, priorityFee)
+	buffer := big.NewInt(2) // Set a buffer (optional) to ensure transaction gets processed
+	maxFeePerGas = maxFeePerGas.Mul(maxFeePerGas, buffer)
+
+	// tx := types.NewTx(&types.LegacyTx{
+	// 	Nonce:    nonce,
+	// 	To:       &t.Address,
+	// 	Value:    big.NewInt(0),
+	// 	Gas:      gasLimit,
+	// 	GasPrice: gasPrice,
+	// 	Data:     data,
+	// })
+
+	tx := types.NewTx(&types.DynamicFeeTx{
+		ChainID:   big.NewInt(int64(b.ChainID)),
+		Nonce:     nonce,
+		To:        &t.Address,
+		Value:     big.NewInt(0),
+		Gas:       gasLimit,
+		GasFeeCap: maxFeePerGas,
+		GasTipCap: priorityFee,
+		Data:      data,
+	})
+
 	return tx, nil
 
 }

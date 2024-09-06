@@ -54,7 +54,15 @@ func BuildTxTransfer(b *cmn.Blockchain, s *cmn.Signer, from *cmn.Address, to com
 		return nil, err
 	}
 
-	tx := types.NewTransaction(nonce, to, amount, uint64(21000), gasPrice, nil)
+	tx := types.NewTx(&types.LegacyTx{
+		Nonce:    nonce,
+		To:       &to,
+		Value:    amount,
+		Gas:      uint64(21000),
+		GasPrice: gasPrice,
+		Data:     nil,
+	})
+
 	return tx, nil
 
 }

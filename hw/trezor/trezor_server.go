@@ -208,7 +208,8 @@ func provide_device(sn string) *Trezor {
 	}
 
 	bus.Fetch("ui", "hail", &bus.B_Hail{
-		Title: "Connect Trezor",
+		Title:     "Connect Trezor",
+		Priorized: true,
 		Template: `<c><w>
 Please connect your Trezor device:
 

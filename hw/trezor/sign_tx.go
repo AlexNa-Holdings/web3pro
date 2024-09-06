@@ -26,12 +26,24 @@ func signTx(msg *bus.Message) (*types.Transaction, error) {
 		return nil, err
 	}
 
-	request := &trezorproto.EthereumSignTx{
-		AddressN: dp,
-		Nonce:    new(big.Int).SetUint64(m.Tx.Nonce()).Bytes(),
-		GasPrice: m.Tx.GasPrice().Bytes(),
-		GasLimit: new(big.Int).SetUint64(m.Tx.Gas()).Bytes(),
-		Value:    m.Tx.Value().Bytes(),
+	// request := &trezorproto.EthereumSignTx{
+	// 	AddressN: dp,
+	// 	Nonce:    new(big.Int).SetUint64(m.Tx.Nonce()).Bytes(),
+	// 	GasPrice: m.Tx.GasPrice().Bytes(),
+	// 	GasLimit: new(big.Int).SetUint64(m.Tx.Gas()).Bytes(),
+	// 	Value:    m.Tx.Value().Bytes(),
+	// }
+
+	ch_id := uint32(m.Tx.ChainId().Uint64())
+
+	request := &trezorproto.EthereumSignTxEIP1559{
+		AddressN:       dp,
+		Nonce:          new(big.Int).SetUint64(m.Tx.Nonce()).Bytes(),
+		MaxGasFee:      m.Tx.GasFeeCap().Bytes(),
+		MaxPriorityFee: m.Tx.GasTipCap().Bytes(),
+		ChainId:        &ch_id,
+		GasLimit:       new(big.Int).SetUint64(m.Tx.Gas()).Bytes(),
+		Value:          m.Tx.Value().Bytes(),
 	}
 
 	data := m.Tx.Data()
@@ -81,10 +93,11 @@ func signTx(msg *bus.Message) (*types.Transaction, error) {
 
 	log.Debug().Msgf("Signature: 0x%x", signature)
 	log.Debug().Msgf("Len: %d", len(signature))
+	log.Debug().Msgf("ChainID: %d", m.Tx.ChainId().Int64())
 
-	signedTx, err := m.Tx.WithSignature(types.NewEIP155Signer(big.NewInt(m.Tx.ChainId().Int64())), signature)
+	signedTx, err := m.Tx.WithSignature(types.NewCancunSigner(big.NewInt(m.Tx.ChainId().Int64())), signature)
 	if err != nil {
-		log.Error().Err(err).Msg("ERC20Transfer: Cannot sign tx")
+		log.Error().Err(err).Msg("signTx: Failed to sign transaction")
 		return nil, err
 	}
 

@@ -253,7 +253,8 @@ func provide_device(sn string) *Ledger {
 	}
 
 	bus.Fetch("ui", "hail", &bus.B_Hail{
-		Title: "Connect Ledger",
+		Title:     "Connect Ledger",
+		Priorized: true,
 		Template: `<c><w>
 Please connect your Ledger device:
 
