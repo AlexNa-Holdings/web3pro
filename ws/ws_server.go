@@ -307,9 +307,9 @@ Allow connection from browser?
 <button text:Ok> <button text:Cancel>
 
 <button text:'Block for session' id:block>`,
-		OnOk: func(m *bus.Message) {
+		OnOk: func(m *bus.Message) bool {
 			allowed = true
-			bus.Send("ui", "remove-hail", m)
+			return true
 		},
 		OnClickHotspot: func(m *bus.Message, v *gocui.View, hs *gocui.Hotspot) {
 			if hs.Value == "button block" {
@@ -432,7 +432,7 @@ Allow to connect to this web application:
 and use the current chain & address?
 
 <button text:Ok> <button text:Cancel>`,
-			OnOk: func(m *bus.Message) {
+			OnOk: func(m *bus.Message) bool {
 
 				chain_id := 1
 				b := w.GetBlockchain(w.CurrentChain)
@@ -454,7 +454,7 @@ and use the current chain & address?
 					bus.Send("ui", "notify", "Failed to save wallet")
 				}
 				allowed = true
-				bus.Send("ui", "remove-hail", m)
+				return true
 			}})
 	} else {
 		allowed = true

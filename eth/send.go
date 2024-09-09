@@ -62,20 +62,24 @@ func send(msg *bus.Message) error {
 	msg.Fetch("ui", "hail", &bus.B_Hail{
 		Title:    "Send Tokens",
 		Template: template,
-		OnOk: func(m *bus.Message) {
+		OnOk: func(m *bus.Message) bool {
+			bus.Send("ui", "remove-hail", m) // close first
 			if t.Native {
 				err := Transfer(msg, b, s, from, to, amount)
 				if err != nil {
 					log.Error().Err(err).Msg("Error sending native tokens")
 					bus.Send("ui", "notify-error", fmt.Sprintf("Error sending native tokens: %v", err))
+					return false
 				}
 			} else {
 				err := ERC20Transfer(msg, b, t, s, from, to, amount)
 				if err != nil {
 					log.Error().Err(err).Msg("Error sending tokens")
 					bus.Send("ui", "notify-error", fmt.Sprintf("Error sending tokens: %v", err))
+					return false
 				}
 			}
+			return false
 		},
 		OnOverHotspot: func(m *bus.Message, v *gocui.View, hs *gocui.Hotspot) {
 			cmn.StandardOnOverHotspot(v, hs)

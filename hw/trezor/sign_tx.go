@@ -25,15 +25,6 @@ func signTx(msg *bus.Message) (*types.Transaction, error) {
 		log.Error().Err(err).Msgf("SignTypedData: Error parsing path: %s", m.Path)
 		return nil, err
 	}
-
-	// request := &trezorproto.EthereumSignTx{
-	// 	AddressN: dp,
-	// 	Nonce:    new(big.Int).SetUint64(m.Tx.Nonce()).Bytes(),
-	// 	GasPrice: m.Tx.GasPrice().Bytes(),
-	// 	GasLimit: new(big.Int).SetUint64(m.Tx.Gas()).Bytes(),
-	// 	Value:    m.Tx.Value().Bytes(),
-	// }
-
 	ch_id := uint32(m.Tx.ChainId().Uint64())
 
 	request := &trezorproto.EthereumSignTxEIP1559{

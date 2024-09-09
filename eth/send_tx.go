@@ -57,8 +57,9 @@ func sendTx(msg *bus.Message) (string, error) {
 	msg.Fetch("ui", "hail", &bus.B_Hail{
 		Title:    "Send Tx",
 		Template: template,
-		OnOk: func(m *bus.Message) {
+		OnOk: func(m *bus.Message) bool {
 			confirmed = true
+			return true
 		},
 		OnOverHotspot: func(m *bus.Message, v *gocui.View, hs *gocui.Hotspot) {
 			cmn.StandardOnOverHotspot(v, hs)

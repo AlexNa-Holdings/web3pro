@@ -94,10 +94,13 @@ func (p *HailPaneType) SetView(x0, y0, x1, y1 int) {
 				switch strings.ToLower(hs.Value) {
 				case "button ok":
 					log.Trace().Msgf("HailPane: button Ok")
+					close := true
 					if active_hail.OnOk != nil {
-						active_hail.OnOk(ActiveRequest)
+						close = active_hail.OnOk(ActiveRequest)
 					}
-					remove(ActiveRequest)
+					if close {
+						remove(ActiveRequest)
+					}
 				case "button cancel":
 					log.Trace().Msgf("HailPane: button Cancel")
 					if active_hail.OnCancel != nil {

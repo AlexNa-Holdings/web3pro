@@ -92,14 +92,14 @@ to :
 <u><b>` + schain + `</b></u>
 
 <button text:Ok> <button text:Cancel>`,
-		OnOk: func(m *bus.Message) {
+		OnOk: func(m *bus.Message) bool {
 			o.ChainId = int(chainID)
 			err := w.Save()
 			if err != nil {
 				log.Error().Err(err).Msg("Failed to save wallet")
 				bus.Send("ui", "notify", "Failed to save wallet")
 			}
-			bus.Send("ui", "remove-hail", m)
+			return true
 		}})
 
 	return nil
@@ -164,30 +164,31 @@ Do you want to add the token:
 to your wallet?
 
 <button text:Ok> <button text:Cancel>`,
-			OnOk: func(m *bus.Message) {
+			OnOk: func(m *bus.Message) bool {
 
 				a_symbol, a_name, a_decimals, err := eth.GetERC20TokenInfo(b, common.HexToAddress(address))
 				if err != nil {
 					bus.Send("ui", "notify-error", "Error getting token info")
-					return
+					return false
 				}
 
 				if a_symbol != symbol {
 					bus.Send("ui", "notify-error", "Symbol mismatch")
-					return
+					return false
 				}
 
 				if a_decimals != int(decimals) {
 					bus.Send("ui", "notify-error", "Decimals mismatch")
-					return
+					return false
 				}
 
 				err = w.AddToken(b.Name, common.HexToAddress(address), a_name, symbol, int(decimals))
 				if err != nil {
 					log.Error().Err(err).Msg("Failed to save wallet")
-					return
+					return false
 				}
 				bus.Send("ui", "notify", "Token added to wallet")
+				return true
 			},
 		})
 

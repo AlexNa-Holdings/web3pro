@@ -34,9 +34,9 @@ func signTypedDataV4(msg *bus.Message) (string, error) {
 	msg.Fetch("ui", "hail", &bus.B_Hail{
 		Title:    "Sign Typed Data",
 		Template: cmn.ConfirmEIP712Template(req.TypedData),
-		OnOk: func(m *bus.Message) {
+		OnOk: func(m *bus.Message) bool {
 			OK = true
-			bus.Send("ui", "remove-hail", m)
+			return true
 		},
 		OnOverHotspot: func(m *bus.Message, v *gocui.View, hs *gocui.Hotspot) {
 			cmn.StandardOnOverHotspot(v, hs)
