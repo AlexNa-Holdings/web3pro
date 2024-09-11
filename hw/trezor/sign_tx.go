@@ -6,6 +6,7 @@ import (
 	"math/big"
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
+	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/hw/trezor/trezorproto"
 	"github.com/ava-labs/coreth/accounts"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -13,6 +14,11 @@ import (
 )
 
 func signTx(msg *bus.Message) (*types.Transaction, error) {
+	w := cmn.CurrentWallet
+	if w == nil {
+		return nil, errors.New("no wallet")
+	}
+
 	m, _ := msg.Data.(*bus.B_SignerSignTx)
 
 	t := provide_device(m.Name)
@@ -25,7 +31,14 @@ func signTx(msg *bus.Message) (*types.Transaction, error) {
 		log.Error().Err(err).Msgf("SignTypedData: Error parsing path: %s", m.Path)
 		return nil, err
 	}
-	ch_id := uint32(m.Tx.ChainId().Uint64())
+
+	b := w.GetBlockchain(m.Chain)
+	if b == nil {
+		return nil, fmt.Errorf("blockchain not found: %v", m.Chain)
+	}
+
+	ch_id := uint32(b.ChainID)
+	to := m.Tx.To().Hex()
 
 	request := &trezorproto.EthereumSignTxEIP1559{
 		AddressN:       dp,
@@ -35,6 +48,7 @@ func signTx(msg *bus.Message) (*types.Transaction, error) {
 		ChainId:        &ch_id,
 		GasLimit:       new(big.Int).SetUint64(m.Tx.Gas()).Bytes(),
 		Value:          m.Tx.Value().Bytes(),
+		To:             &to,
 	}
 
 	data := m.Tx.Data()
@@ -53,13 +67,15 @@ func signTx(msg *bus.Message) (*types.Transaction, error) {
 	}
 
 	request.DataLength = &length
-
-	if m.Tx.ChainId() != nil { // EIP-155 transaction, set chain ID explicitly (only 32 bit is supported!?)
-		id := uint32(m.Tx.ChainId().Int64())
-		request.ChainId = &id
-	}
+	request.ChainId = &ch_id // EIP-155 transaction, set chain ID explicitly (only 32 bit is supported!?)
 
 	response := new(trezorproto.EthereumTxRequest)
+
+	text_hail := bus.Send("ui", "hail", &bus.B_Hail{
+		Title:    "Sign Transaction",
+		Template: "<c><w>Please review the transaction details and sign it with your Trezor device.",
+	})
+	defer bus.Send("ui", "remove-hail", text_hail)
 
 	if err := t.Call(msg, request, response); err != nil {
 		log.Error().Err(err).Msgf("SignTx: Error signing typed data(1): %s", m.Path)
@@ -80,13 +96,16 @@ func signTx(msg *bus.Message) (*types.Transaction, error) {
 	if len(response.GetSignatureR()) == 0 || len(response.GetSignatureS()) == 0 {
 		return nil, errors.New("trezor returned invalid signature")
 	}
+
+	// v_bytes := make([]byte, 2)
+	// binary.BigEndian.PutUint16(v_bytes, uint16(ch_id*2+35))
+	// //	binary.BigEndian.PutUint16(v_bytes, uint16(response.GetSignatureV()))
+
+	// signature := append(append(response.GetSignatureR(), response.GetSignatureS()...), v_bytes...)
 	signature := append(append(response.GetSignatureR(), response.GetSignatureS()...), byte(response.GetSignatureV()))
 
-	log.Debug().Msgf("Signature: 0x%x", signature)
-	log.Debug().Msgf("Len: %d", len(signature))
-	log.Debug().Msgf("ChainID: %d", m.Tx.ChainId().Int64())
-
-	signedTx, err := m.Tx.WithSignature(types.NewCancunSigner(big.NewInt(m.Tx.ChainId().Int64())), signature)
+	//	signedTx, err := m.Tx.WithSignature(types.NewCancunSigner(big.NewInt(m.Tx.ChainId().Int64())), signature)
+	signedTx, err := m.Tx.WithSignature(types.NewCancunSigner(big.NewInt(int64(ch_id))), signature)
 	if err != nil {
 		log.Error().Err(err).Msg("signTx: Failed to sign transaction")
 		return nil, err

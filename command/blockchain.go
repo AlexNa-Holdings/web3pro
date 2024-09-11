@@ -1,6 +1,7 @@
 package command
 
 import (
+	"sort"
 	"strings"
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
@@ -175,7 +176,12 @@ func Blockchain_Process(c *Command, input string) {
 	case "list", "":
 		ui.Printf("\nBlockchains:\n")
 
+		sort.Slice(w.Blockchains, func(i, j int) bool {
+			return w.Blockchains[i].ChainID < w.Blockchains[j].ChainID
+		})
+
 		for _, b := range w.Blockchains {
+			ui.Printf("%4d ", b.ChainID)
 			ui.Terminal.Screen.AddLink(b.Name, "command b use '"+b.Name+"'", "Use blockchain '"+b.Name+"'", "")
 			ui.Printf(" ")
 			ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command b edit '"+b.Name+"'", "Edit blockchain '"+b.Name+"'", "")

@@ -110,9 +110,6 @@ func (d Trezor) RawCall(msg *bus.Message, req proto.Message) (trezorproto.Messag
 			reply = append(reply, payload[:left]...)
 			break
 		}
-
-		log.Trace().Msg("3")
-
 	}
 
 	return trezorproto.MessageType(kind), reply, nil

@@ -62,8 +62,6 @@ func ProcessMessages() {
 }
 
 func Subscribe(topic ...string) chan *Message {
-	log.Trace().Msgf("bus.Subscribing to %v", topic)
-
 	cb.M.Lock()
 	defer cb.M.Unlock()
 
@@ -91,8 +89,6 @@ func Subscribe(topic ...string) chan *Message {
 }
 
 func Unsubscribe(ch chan *Message) {
-	log.Trace().Msg("bus.Unsubscribing")
-
 	cb.M.Lock()
 	defer cb.M.Unlock()
 
@@ -109,12 +105,13 @@ func Unsubscribe(ch chan *Message) {
 	close(ch)
 }
 
-func SendEx(topic, t string, data interface{}, timer_id int, respond_to int, err error) int {
+func SendEx(topic, t string, data interface{}, timer_id int, respond_to int, err error) *Message {
 	cb.M.Lock()
 	defer cb.M.Unlock()
 
 	cb.NextID++
-	cb.In <- &Message{
+
+	msg := &Message{
 		ID:        cb.NextID,
 		Topic:     topic,
 		Type:      t,
@@ -123,29 +120,31 @@ func SendEx(topic, t string, data interface{}, timer_id int, respond_to int, err
 		Error:     err,
 		RespondTo: respond_to}
 
-	if t != "tick" && t != "tick-10sec" && t != "tick-min" && t != "done" {
-		if respond_to != 0 {
-			log.Trace().Msgf("   %04d->%s: %s timer:%d respond to: %d, error: %v", cb.NextID, topic, t, timer_id, respond_to, err)
-		} else {
-			log.Trace().Msgf("   %04d->%s: %s timer:%d", cb.NextID, topic, t, timer_id)
-		}
-	}
+	cb.In <- msg
 
-	return cb.NextID
+	// if t != "tick" && t != "tick-10sec" && t != "tick-min" && t != "done" {
+	// 	if respond_to != 0 {
+	// 		log.Trace().Msgf("   %04d->%s: %s timer:%d respond to: %d, error: %v", cb.NextID, topic, t, timer_id, respond_to, err)
+	// 	} else {
+	// 		log.Trace().Msgf("   %04d->%s: %s timer:%d", cb.NextID, topic, t, timer_id)
+	// 	}
+	// }
+
+	return msg
 }
 
-func Send(topic, t string, data interface{}) int {
+func Send(topic, t string, data interface{}) *Message {
 	return SendEx(topic, t, data, 0, 0, nil)
 }
 
-func (m *Message) Respond(data interface{}, err error) int {
+func (m *Message) Respond(data interface{}, err error) *Message {
 	return SendEx(m.Topic, m.Type+"_response", data, 0, m.ID, err)
 }
 
 // Chain fetch (on the same timer)
 func (m *Message) Fetch(topic, t string, data interface{}) *Message {
 	if m != nil {
-		log.Debug().Msgf("   CHAIN Fetch %d -> (%s/%s) %d", m.ID, topic, t, m.TimerID)
+		// log.Debug().Msgf("   CHAIN Fetch %d -> (%s/%s) %d", m.ID, topic, t, m.TimerID)
 		return FetchEx(topic, t, data, m.TimerID, BusTimeout, BusHardTimeout, nil, 0)
 	} else {
 		return FetchEx(topic, t, data, 0, BusTimeout, BusHardTimeout, nil, 0)
@@ -190,11 +189,12 @@ func FetchEx(topic, t string, data interface{}, timer_id int, limit time.Duratio
 	defer Unsubscribe(ch)
 
 	if timer_id == 0 {
-		timer_id = Send("timer", "init", &B_TimerInit{
+		m := Send("timer", "init", &B_TimerInit{
 			Limit:     limit,
 			HardLimit: hardlimit,
 			Start:     true,
 		})
+		timer_id = m.ID
 	} else {
 		res := Fetch("timer", "init-hard", &B_TimerInitHard{
 			TimerId:   timer_id,
@@ -208,8 +208,10 @@ func FetchEx(topic, t string, data interface{}, timer_id int, limit time.Duratio
 		}
 	}
 
-	id := SendEx(topic, t, data, timer_id, 0, nil)
-	log.Trace().Msgf("   FETCH %04d->%s: %s timer_id: %d", id, topic, t, timer_id)
+	m := SendEx(topic, t, data, timer_id, 0, nil)
+	// log.Trace().Msgf("   FETCH %04d->%s: %s timer_id: %d", id, topic, t, timer_id)
+
+	var hail_m *Message
 
 	timer := time.After(time.Duration(hail_delay) * time.Second)
 	for {
@@ -231,12 +233,12 @@ func FetchEx(topic, t string, data interface{}, timer_id int, limit time.Duratio
 					log.Error().Msgf("Error fetching timer init-hard: %v", res.Error)
 					return res
 				}
-				SendEx("ui", "hail", hail, timer_id, 0, nil)
+				hail_m = SendEx("ui", "hail", hail, timer_id, 0, nil)
 			}
 		case msg := <-ch:
-			if msg.Topic == topic && msg.RespondTo == id {
-				if hail != nil {
-					Send("ui", "remove-hail", hail)
+			if msg.Topic == topic && msg.RespondTo == m.ID {
+				if hail_m != nil {
+					Send("ui", "remove-hail", hail_m)
 				}
 				return msg
 			}
@@ -244,14 +246,12 @@ func FetchEx(topic, t string, data interface{}, timer_id int, limit time.Duratio
 			if msg.Topic == "timer" && msg.Type == "done" {
 				if id, ok := msg.Data.(int); ok && id == timer_id {
 
-					if hail != nil {
-						Send("ui", "remove-hail", hail)
+					if hail_m != nil {
+						Send("ui", "remove-hail", hail_m)
 					}
 
 					if topic == "ui" && t == "hail" {
-						if hail, ok := data.(*B_Hail); ok {
-							Send("ui", "remove-hail", hail)
-						}
+						Send("ui", "remove-hail", m)
 					}
 
 					return &Message{Error: errors.New("timeout")}

@@ -125,6 +125,7 @@ func sendTx(msg *bus.Message) (string, error) {
 	hash, err := SendSignedTx(signedTx)
 	if err != nil {
 		log.Error().Err(err).Msg("sendTx: Cannot send tx")
+		bus.Send("ui", "notify-error", fmt.Sprintf("Error: %v", err))
 		return "", err
 	}
 

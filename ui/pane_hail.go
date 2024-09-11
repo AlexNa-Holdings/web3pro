@@ -148,6 +148,9 @@ func add(m *bus.Message) bool { // returns if on top
 }
 
 func hqAdd(m *bus.Message, on_top bool) {
+
+	log.Debug().Msgf("hqAdd: hail %s  on_top: %v", m.Data.(*bus.B_Hail).Title, on_top)
+
 	HQMutex.Lock()
 	defer HQMutex.Unlock()
 
@@ -192,6 +195,8 @@ func remove(m *bus.Message) {
 		return
 	}
 
+	log.Debug().Msgf("HailPane: remove: %s", m.Data.(*bus.B_Hail).Title)
+
 	hail := m.Data.(*bus.B_Hail)
 	log.Trace().Msgf("Removing hail %s", hail.Title)
 
@@ -235,7 +240,7 @@ func (p *HailPaneType) open(m *bus.Message) {
 	}
 
 	hail := m.Data.(*bus.B_Hail)
-	log.Trace().Msgf("HailPane: open: %s", hail.Title)
+	log.Debug().Msgf("HailPane: open: %s on_top: %v", hail.Title, hail.Priorized)
 	bus.Send("sound", "play", nil)
 
 	if ActiveRequest != nil {
@@ -252,9 +257,9 @@ func (p *HailPaneType) open(m *bus.Message) {
 		HailPane.PaneDescriptor.ShowPane()
 	}
 
-	// if hail.Template != "" {
-	// 	HailPane.View.RenderTemplate(hail.Template)
-	// }
+	if HailPane.View != nil && hail.Template != "" {
+		HailPane.View.RenderTemplate(hail.Template)
+	}
 
 	if hail.Suspended {
 		if hail.OnResume != nil {
@@ -300,12 +305,18 @@ func (p *HailPaneType) UpdateSubtitle(left_map map[int]time.Duration) {
 			p.View.SubTitleBgColor = Theme.HelpBgColor
 		}
 
-		if sec >= 0 {
+		if sec > 0 {
 			left_s = fmt.Sprintf("%d", sec)
 		}
 
 		if len(HailQueue) > 1 {
 			p.View.Subtitle = fmt.Sprintf("(%d) %s", len(HailQueue), left_s)
+
+			// DEBUG
+			for i, m := range HailQueue {
+				log.Debug().Msgf("HailQueue[%d]: %s", i, m.Data.(*bus.B_Hail).Title)
+			}
+
 		} else {
 			p.View.Subtitle = left_s
 		}
