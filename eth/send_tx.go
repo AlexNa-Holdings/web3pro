@@ -168,27 +168,43 @@ func BuildTx(b *cmn.Blockchain, s *cmn.Signer, from *cmn.Address, to common.Addr
 		return nil, err
 	}
 
-	// Suggest gas price
-	gasPrice, err := client.SuggestGasPrice(context.Background())
+	// // Simulate the transaction
+	// _, err = client.CallContract(context.Background(), msg, nil)
+	// if err != nil {
+	// 	log.Error().Msgf("BuildTxTransfer: Cannot simulate transaction. Error:(%v)", err)
+	// 	return nil, err
+	// }
+
+	priorityFee, err := client.SuggestGasTipCap(context.Background())
 	if err != nil {
-		log.Error().Msgf("BuildTxTransfer: Cannot suggest gas price. Error:(%v)", err)
+		log.Error().Err(err).Msg("Failed to suggest gas tip cap")
 		return nil, err
 	}
 
-	// Simulate the transaction
-	_, err = client.CallContract(context.Background(), msg, nil)
+	// Get the latest block to determine the base fee
+	block, err := client.BlockByNumber(context.Background(), nil) // Get the latest block
 	if err != nil {
-		log.Error().Msgf("BuildTxTransfer: Cannot simulate transaction. Error:(%v)", err)
+		log.Error().Err(err).Msg("Failed to get the latest block")
 		return nil, err
 	}
 
-	tx := types.NewTx(&types.LegacyTx{
-		Nonce:    nonce,
-		To:       &to,
-		Value:    amount,
-		Gas:      gasLimit,
-		GasPrice: gasPrice,
-		Data:     data,
+	// Base fee is included in the block header (introduced in EIP-1559)
+	baseFee := block.BaseFee()
+	// Calculate the MaxFeePerGas based on base fee and priority fee
+	// For example, you might want to set MaxFeePerGas to be slightly higher than baseFee + priorityFee
+	maxFeePerGas := new(big.Int).Add(baseFee, priorityFee)
+	buffer := big.NewInt(2) // Set a buffer (optional) to ensure transaction gets processed
+	maxFeePerGas = maxFeePerGas.Mul(maxFeePerGas, buffer)
+
+	tx := types.NewTx(&types.DynamicFeeTx{
+		ChainID:   big.NewInt(int64(b.ChainID)),
+		Nonce:     nonce,
+		To:        &to,
+		Value:     amount,
+		Gas:       gasLimit,
+		GasFeeCap: maxFeePerGas,
+		GasTipCap: priorityFee,
+		Data:      data,
 	})
 
 	return tx, nil
@@ -233,7 +249,7 @@ func BuildHailToSendTxTemplate(b *cmn.Blockchain, from *cmn.Address, to common.A
 		return "", err
 	}
 
-	gas_price := tx.GasPrice()
+	gas_price := tx.GasFeeCap()
 	gp_change := ""
 	if suggested_gas_price != nil && suggested_gas_price.Cmp(gas_price) != 0 {
 		if suggested_gas_price.Cmp(gas_price) < 0 {
@@ -268,13 +284,13 @@ func BuildHailToSendTxTemplate(b *cmn.Blockchain, from *cmn.Address, to common.A
 	}
 
 	return `  Blockchain: ` + b.Name + `
-        From: ` + cmn.AddressShortLinkTag(from.Address) + " " + from.Name + `
-          To: ` + cmn.AddressShortLinkTag(to) + " " + to_name + `
+        From: ` + cmn.TagAddressShortLink(from.Address) + " " + from.Name + `
+          To: ` + cmn.TagAddressShortLink(to) + " " + to_name + `
       Amount: ` + nt.Value2Str(amount) + " " + nt.Symbol + `
    Amount($): ` + dollars + ` 
       Signer: ` + s.Name + " (" + s.Type + ")" + `
 <line text:Fee> 
-   Gas Limit: ` + cmn.FormatUInt64(tx.Gas(), false) + ` 
+   Gas Limit: ` + cmn.TagUint64Link(tx.Gas()) + ` 
    Gas Price: ` + cmn.TagValueSymbolLink(gas_price, nt) + " " +
 		` <l text:` + gocui.ICON_EDIT + ` action:'button edit_gas_price' tip:"edit fee">` + gp_change + `
    Total Fee: ` + cmn.TagValueSymbolLink(total_gas, nt) + `

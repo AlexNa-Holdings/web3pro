@@ -37,68 +37,78 @@ func Send_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 	p := cmn.SplitN(input, 6)
 	command, bchain, token, from, to, val := p[0], p[1], p[2], p[3], p[4], p[5]
 
+	last_param := len(p) - 1
+	for last_param > 0 && p[last_param] == "" {
+		last_param--
+	}
+
+	if strings.HasSuffix(input, " ") {
+		last_param++
+	}
+
 	b := w.GetBlockchain(bchain)
 
-	if val != "" {
-		return "", nil, val
+	var t *cmn.Token
+	if b != nil {
+		t = w.GetToken(b.Name, token)
 	}
 
-	if b != nil && (token == "" || w.GetToken(b.Name, token) == nil) {
-		for _, t := range w.Tokens {
-			if t.Blockchain != b.Name {
-				continue
+	switch last_param {
+	case 1:
+		for _, chain := range w.Blockchains {
+			if cmn.Contains(chain.Name, bchain) {
+				options = append(options, ui.ACOption{
+					Name: chain.Name, Result: command + " '" + chain.Name + "' "})
 			}
-			if cmn.Contains(t.Symbol, token) || cmn.Contains(t.Address.String(), token) || cmn.Contains(t.Name, token) {
+		}
+		return "blockchain", &options, bchain
+	case 2:
+		if b != nil {
 
-				id := t.Symbol
-				if !t.Unique {
-					id = t.Address.String()
+			for _, t := range w.Tokens {
+				if t.Blockchain != b.Name {
+					continue
 				}
+				if cmn.Contains(t.Symbol, token) || cmn.Contains(t.Address.String(), token) || cmn.Contains(t.Name, token) {
 
-				options = append(options, ui.ACOption{
-					Name:   fmt.Sprintf("%-6s %s", t.Symbol, t.GetPrintName()),
-					Result: command + " '" + b.Name + "' " + id + " "})
+					id := t.Symbol
+					if !t.Unique {
+						id = t.Address.String()
+					}
+
+					options = append(options, ui.ACOption{
+						Name:   fmt.Sprintf("%-6s %s", t.Symbol, t.GetPrintName()),
+						Result: command + " '" + b.Name + "' " + id + " "})
+				}
 			}
+			return "token", &options, token
 		}
-		return "token", &options, token
-	}
-
-	if b != nil && w.GetToken(b.Name, token) != nil &&
-		from != "" && to != "" && strings.HasSuffix(input, " ") {
-		return "", nil, ""
-	}
-
-	if b != nil && w.GetToken(b.Name, token) != nil && from != "" && strings.HasSuffix(input, " ") {
-		for _, a := range w.Addresses {
-			if cmn.Contains(a.Name+a.Address.String(), to) {
-				options = append(options, ui.ACOption{
-					Name: cmn.ShortAddress(a.Address) + " " + a.Name,
-					Result: command + " '" + b.Name + "' " + token + " " +
-						from + " " + a.Address.String() + " "})
+	case 3:
+		if b != nil && t != nil {
+			for _, a := range w.Addresses {
+				if cmn.Contains(a.Name+a.Address.String(), from) {
+					options = append(options, ui.ACOption{
+						Name:   cmn.ShortAddress(a.Address) + " " + a.Name,
+						Result: command + " '" + b.Name + "' " + token + " " + a.Address.String() + " "})
+				}
 			}
+			return "from", &options, from
 		}
-		return "to", &options, from
-	}
-
-	if b != nil && w.GetToken(b.Name, token) != nil {
-		for _, a := range w.Addresses {
-			if cmn.Contains(a.Name+a.Address.String(), from) {
-				options = append(options, ui.ACOption{
-					Name:   cmn.ShortAddress(a.Address) + " " + a.Name,
-					Result: command + " '" + b.Name + "' " + token + " " + a.Address.String() + " "})
+	case 4:
+		if b != nil && t != nil {
+			for _, a := range w.Addresses {
+				if cmn.Contains(a.Name+a.Address.String(), to) {
+					options = append(options, ui.ACOption{
+						Name: cmn.ShortAddress(a.Address) + " " + a.Name,
+						Result: command + " '" + b.Name + "' " + token + " " +
+							from + " " + a.Address.String() + " "})
+				}
 			}
-		}
-		return "from", &options, from
-	}
-
-	for _, chain := range w.Blockchains {
-		if cmn.Contains(chain.Name, bchain) {
-			options = append(options, ui.ACOption{
-				Name: chain.Name, Result: command + " '" + chain.Name + "' "})
+			return "to", &options, from
 		}
 	}
-	return "blockchain", &options, bchain
 
+	return "", nil, val
 }
 
 func Send_Process(c *Command, input string) {

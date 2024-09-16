@@ -91,7 +91,7 @@ func process(msg *bus.Message) {
 				return
 			}
 
-			if m.Type == "trezor" {
+			if m.Type == TRZ {
 				msg.Respond(signTypedData_v4(msg))
 			}
 		case "sign-tx":
@@ -102,7 +102,7 @@ func process(msg *bus.Message) {
 				return
 			}
 
-			if m.Type == "trezor" {
+			if m.Type == TRZ {
 				msg.Respond(signTx(msg))
 			}
 

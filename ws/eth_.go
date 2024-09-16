@@ -272,7 +272,10 @@ func sendTransaction(o *cmn.Origin, req RPCRequest, ctx *ConContext, res *RPCRes
 		Data:       data,
 	})
 
-	res.Result = send_res.Data
+	if send_res.Error != nil {
+		return fmt.Errorf("error sending transaction: %v", send_res.Error)
+	}
 
+	res.Result = send_res.Data
 	return nil
 }

@@ -102,6 +102,28 @@ func process(msg *bus.Message) {
 			} else {
 				log.Error().Msg("Loop: Invalid ledger list data")
 			}
+		case "sign-typed-data-v4":
+			m, ok := msg.Data.(*bus.B_SignerSignTypedData_v4)
+			if !ok {
+				log.Error().Msg("Loop: Invalid hw sign-typed-data-v4 data")
+				msg.Respond(nil, errors.New("invalid data"))
+				return
+			}
+
+			if m.Type == LDG {
+				msg.Respond(signTypedData_v4(msg))
+			}
+		case "sign-tx":
+			m, ok := msg.Data.(*bus.B_SignerSignTx)
+			if !ok {
+				log.Error().Msg("Loop: Invalid hw sign-tx data")
+				msg.Respond(nil, errors.New("invalid data"))
+				return
+			}
+
+			if m.Type == LDG {
+				msg.Respond(signTx(msg))
+			}
 		}
 	}
 }

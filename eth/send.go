@@ -246,7 +246,7 @@ func BuildHailToSendTemplate(b *cmn.Blockchain, t *cmn.Token,
 
 	tc := ""
 	if !t.Native {
-		tc = "\nToken Contract: " + cmn.AddressShortLinkTag(t.Address)
+		tc = "\nToken Contract: " + cmn.TagAddressShortLink(t.Address)
 	}
 
 	dollars := ""
@@ -268,7 +268,7 @@ func BuildHailToSendTemplate(b *cmn.Blockchain, t *cmn.Token,
 		return "", err
 	}
 
-	gas_price := tx.GasPrice()
+	gas_price := tx.GasFeeCap()
 	gp_change := ""
 	if suggested_gas_price != nil && suggested_gas_price.Cmp(gas_price) != 0 {
 		if suggested_gas_price.Cmp(gas_price) < 0 {
@@ -304,13 +304,13 @@ func BuildHailToSendTemplate(b *cmn.Blockchain, t *cmn.Token,
 
 	return `  Blockchain: ` + b.Name + `
        Token: ` + t.Symbol + tc + `
-        From: ` + cmn.AddressShortLinkTag(from.Address) + " " + from.Name + `
-          To: ` + cmn.AddressShortLinkTag(to) + " " + to_name + `
+        From: ` + cmn.TagAddressShortLink(from.Address) + " " + from.Name + `
+          To: ` + cmn.TagAddressShortLink(to) + " " + to_name + `
       Amount: ` + t.Value2Str(amount) + " " + t.Symbol + `
    Amount($): ` + dollars + ` 
       Signer: ` + s.Name + " (" + s.Type + ")" + `
 <line text:Fee> 
-   Gas Limit: ` + cmn.FormatUInt64(tx.Gas(), false) + ` 
+   Gas Limit: ` + cmn.TagUint64Link(tx.Gas()) + ` 
    Gas Price: ` + cmn.TagValueSymbolLink(gas_price, nt) + " " +
 		` <l text:` + gocui.ICON_EDIT + ` action:'button edit_gas_price' tip:"edit fee">` + gp_change + `
    Total Fee: ` + cmn.TagValueSymbolLink(total_gas, nt) + `

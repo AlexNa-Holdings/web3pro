@@ -7,6 +7,7 @@ import (
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/rs/zerolog/log"
@@ -47,20 +48,48 @@ func BuildTxTransfer(b *cmn.Blockchain, s *cmn.Signer, from *cmn.Address, to com
 		return nil, err
 	}
 
-	// Suggest gas price
-	gasPrice, err := client.SuggestGasPrice(context.Background())
+	gasLimit, err := client.EstimateGas(context.Background(), ethereum.CallMsg{
+		From:  from.Address,
+		To:    &to,
+		Data:  nil,
+		Value: amount,
+		Gas:   0,
+	})
 	if err != nil {
-		log.Error().Msgf("BuildTxTransfer: Cannot suggest gas price. Error:(%v)", err)
+		log.Error().Msgf("BuildTxERC20Transfer: Cannot estimate gas. Error:(%v)", err)
 		return nil, err
 	}
 
-	tx := types.NewTx(&types.LegacyTx{
-		Nonce:    nonce,
-		To:       &to,
-		Value:    amount,
-		Gas:      uint64(21000),
-		GasPrice: gasPrice,
-		Data:     nil,
+	priorityFee, err := client.SuggestGasTipCap(context.Background())
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to suggest gas tip cap")
+		return nil, err
+	}
+
+	// Get the latest block to determine the base fee
+	block, err := client.BlockByNumber(context.Background(), nil) // Get the latest block
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to get the latest block")
+		return nil, err
+	}
+
+	// Base fee is included in the block header (introduced in EIP-1559)
+	baseFee := block.BaseFee()
+	// Calculate the MaxFeePerGas based on base fee and priority fee
+	// For example, you might want to set MaxFeePerGas to be slightly higher than baseFee + priorityFee
+	maxFeePerGas := new(big.Int).Add(baseFee, priorityFee)
+	buffer := big.NewInt(2) // Set a buffer (optional) to ensure transaction gets processed
+	maxFeePerGas = maxFeePerGas.Mul(maxFeePerGas, buffer)
+
+	tx := types.NewTx(&types.DynamicFeeTx{
+		ChainID:   big.NewInt(int64(b.ChainID)),
+		Nonce:     nonce,
+		To:        &to,
+		Value:     amount,
+		Gas:       gasLimit,
+		GasFeeCap: maxFeePerGas,
+		GasTipCap: priorityFee,
+		Data:      nil,
 	})
 
 	return tx, nil

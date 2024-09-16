@@ -181,12 +181,6 @@ func (t *Token) Value2Str(value *big.Int) string {
 	return Amount2Str(value, t.Decimals)
 }
 
-func AddressShortLinkTag(a common.Address) string {
-	sa := a.String()
-	sh := ShortAddress(a)
-	return fmt.Sprintf("<l text:'%s' action:'copy %s' tip:'%s'>", sh, sa, sa)
-}
-
 func OpenBrowser(url string) error {
 	var cmd string
 	var args []string
@@ -347,6 +341,10 @@ func AddValueSymbolLink(v *gocui.View, val *big.Int, t *Token) {
 	text := FmtAmount(val, t.Decimals, true)
 
 	v.AddLink(text, "copy "+xf.String(), xf.String(), "")
+}
+
+func TagUint64Link(val uint64) string {
+	return fmt.Sprintf("<l text:'%s' action:'copy %d' tip:'%d'>", FormatUInt64(val, false), val, val)
 }
 
 func TagValueSymbolLink(val *big.Int, t *Token) string {

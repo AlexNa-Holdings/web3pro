@@ -184,21 +184,11 @@ func BuildTxERC20Transfer(b *cmn.Blockchain, t *cmn.Token, s *cmn.Signer, from *
 
 	// Base fee is included in the block header (introduced in EIP-1559)
 	baseFee := block.BaseFee()
-
 	// Calculate the MaxFeePerGas based on base fee and priority fee
 	// For example, you might want to set MaxFeePerGas to be slightly higher than baseFee + priorityFee
 	maxFeePerGas := new(big.Int).Add(baseFee, priorityFee)
 	buffer := big.NewInt(2) // Set a buffer (optional) to ensure transaction gets processed
 	maxFeePerGas = maxFeePerGas.Mul(maxFeePerGas, buffer)
-
-	// tx := types.NewTx(&types.LegacyTx{
-	// 	Nonce:    nonce,
-	// 	To:       &t.Address,
-	// 	Value:    big.NewInt(0),
-	// 	Gas:      gasLimit,
-	// 	GasPrice: gasPrice,
-	// 	Data:     data,
-	// })
 
 	tx := types.NewTx(&types.DynamicFeeTx{
 		ChainID:   big.NewInt(int64(b.ChainID)),

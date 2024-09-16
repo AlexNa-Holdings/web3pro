@@ -13,7 +13,7 @@ import (
 
 func DlgSend(b *cmn.Blockchain, t *cmn.Token, from *cmn.Address, to string, amount string) *gocui.Popup {
 
-	tc := cmn.AddressShortLinkTag(t.Address)
+	tc := cmn.TagAddressShortLink(t.Address)
 	if t.Native {
 		tc = "Native"
 	}
@@ -33,7 +33,14 @@ func DlgSend(b *cmn.Blockchain, t *cmn.Token, from *cmn.Address, to string, amou
 		OnOpen: func(v *gocui.View) {
 			v.SetInput("to", to)
 			v.SetInput("amount", amount)
+
+			if to == "" {
+				v.SetFocus(1)
+			} else {
+				v.SetFocus(2)
+			}
 		},
+		OnOverHotspot: cmn.StandardOnOverHotspot,
 		OnClickHotspot: func(v *gocui.View, hs *gocui.Hotspot) {
 
 			if hs != nil {
@@ -66,6 +73,8 @@ func DlgSend(b *cmn.Blockchain, t *cmn.Token, from *cmn.Address, to string, amou
 
 				case "button Cancel":
 					Gui.HidePopup()
+				default:
+					cmn.StandardOnClickHotspot(v, hs)
 				}
 			}
 		},

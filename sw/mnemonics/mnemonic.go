@@ -242,9 +242,10 @@ func (d Mnemonic) SignTx(chain_id int64, tx *types.Transaction, path string) (*t
 	}
 
 	// Sign the transaction
-	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(big.NewInt(chain_id)), privateKey)
+	signedTx, err := types.SignTx(tx, types.NewCancunSigner(big.NewInt(chain_id)), privateKey)
 	if err != nil {
 		log.Error().Msgf("SignTx: Failed to sign transaction: %v", err)
+		return nil, err
 	}
 
 	return signedTx, nil
