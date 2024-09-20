@@ -11,6 +11,7 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/command"
 	"github.com/AlexNa-Holdings/web3pro/eth"
+	"github.com/AlexNa-Holdings/web3pro/explorer"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/hw"
 	"github.com/AlexNa-Holdings/web3pro/price"
@@ -45,6 +46,7 @@ func main() {
 	command.Init()
 	ws.Init()
 	ui.Init()
+	explorer.Init()
 	price.Init()
 
 	defer ui.Gui.Close()

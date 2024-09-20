@@ -447,6 +447,30 @@ func openFromFile(file string, pass string) (*Wallet, error) {
 		return nil, err
 	}
 
+	if w.Contracts == nil {
+		w.Contracts = make(map[common.Address]*Contract)
+	}
+
+	if w.Tokens == nil {
+		w.Tokens = []*Token{}
+	}
+
+	if w.Addresses == nil {
+		w.Addresses = []*Address{}
+	}
+
+	if w.Signers == nil {
+		w.Signers = []*Signer{}
+	}
+
+	if w.Origins == nil {
+		w.Origins = []*Origin{}
+	}
+
+	if w.Blockchains == nil {
+		w.Blockchains = []*Blockchain{}
+	}
+
 	return w, nil
 }
 

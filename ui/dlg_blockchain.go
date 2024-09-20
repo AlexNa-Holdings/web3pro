@@ -67,6 +67,8 @@ func DlgBlockchain(name string) *gocui.Popup {
 				case "button Ok":
 					name := v.GetInput("name")
 
+					v.SetList("copyof", cmn.EXPLORER_API_TYPES)
+
 					if len(name) == 0 {
 						Notification.ShowError("Name cannot be empty")
 						break
@@ -163,7 +165,10 @@ func DlgBlockchain(name string) *gocui.Popup {
               Name: <input id:name size:32 value:"">
                RPC: <input id:rpc size:32 value:"">
            ChainId: <input id:chainid size:32 value:"">
-          Explorer: <input id:explorer size:32 value:"">
+<line text:Explorer>
+               URL: <input id:explorer size:32 value:"">
+           API URL: <input id:explorer_api_url size:32 value:""> 
+          API Type: <select id:explorer_api_type> 
          API Token: <input id:api_token size:32 value:"">
           Currency: <input id:currency size:32 value:"">
 Wrapped Token Addr: <input id:wtoken_address size:32 value:"">

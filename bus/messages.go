@@ -176,3 +176,9 @@ type B_EthSignTypedData_v4 struct { // sign-typed-data-v4
 	Address    common.Address
 	TypedData  apitypes.TypedData
 }
+
+// ---------- explorer ----------
+type B_ExplorerDownloadContract struct { // download-contract
+	Blockchain string
+	Address    common.Address
+}

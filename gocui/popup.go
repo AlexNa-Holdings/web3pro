@@ -132,7 +132,7 @@ func (p *Popup) Layout(g *Gui) error {
 			}
 		}
 		v.OnClickHotspot = func(v *View, hs *Hotspot) {
-			// Hande droplistes
+			// Handle droplistes
 			if hs != nil {
 				params := strings.Split(hs.Value, " ")
 
@@ -145,7 +145,7 @@ func (p *Popup) Layout(g *Gui) error {
 				}
 			}
 
-			if g.popup.OnClickHotspot != nil {
+			if g.popup != nil && g.popup.OnClickHotspot != nil {
 				go g.popup.OnClickHotspot(v, hs)
 			}
 		}

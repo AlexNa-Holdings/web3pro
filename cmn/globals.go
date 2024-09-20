@@ -60,10 +60,14 @@ type Blockchain struct {
 	Url              string         `json:"url"`
 	ChainID          int            `json:"chain_id"`
 	ExplorerUrl      string         `json:"explorer_url"`
+	ExplorerAPIUrl   string         `json:"explorer_api_url"`
 	ExplorerAPIToken string         `json:"explorer_api_token"`
+	ExplorerApiType  string         `json:"explorer_api_type"`
 	Currency         string         `json:"currency"`
 	WTokenAddress    common.Address `json:"wrapped_native_token_address"`
 }
+
+var EXPLORER_API_TYPES = []string{"etherscan", "blockscout"}
 
 var KNOWN_SIGNER_TYPES = []string{"mnemonics", "ledger", "trezor"}
 
