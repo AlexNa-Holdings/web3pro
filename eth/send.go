@@ -312,7 +312,7 @@ func BuildHailToSendTemplate(b *cmn.Blockchain, t *cmn.Token,
 <line text:Fee> 
    Gas Limit: ` + cmn.TagUint64Link(tx.Gas()) + ` 
    Gas Price: ` + cmn.TagValueSymbolLink(gas_price, nt) + " " +
-		` <l text:` + gocui.ICON_EDIT + ` action:'button edit_gas_price' tip:"edit fee">` + gp_change + `
+		` <l text:` + gocui.ICON_EDIT + ` action:'button edit_gas_price' tip:"Edit Fee">` + gp_change + `
    Total Fee: ` + cmn.TagValueSymbolLink(total_gas, nt) + `
 Total Fee($): ` + total_fee_s + `
 <c>

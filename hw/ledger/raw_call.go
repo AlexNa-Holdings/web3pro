@@ -134,7 +134,7 @@ func rawCall(usb_id string, apdu *APDU, data []byte, hail *bus.B_Hail, hail_dela
 		}
 		chunk = r.Data[:64]
 
-		log.Trace().Msgf("Data chunk received from the Ledger: %s", hexutil.Bytes(chunk))
+		// log.Trace().Msgf("Data chunk received from the Ledger: %s", hexutil.Bytes(chunk))
 
 		// Make sure the transport header matches
 		if chunk[0] != 0x01 || chunk[1] != 0x01 || chunk[2] != 0x05 {
@@ -159,7 +159,7 @@ func rawCall(usb_id string, apdu *APDU, data []byte, hail *bus.B_Hail, hail_dela
 		}
 	}
 
-	log.Debug().Msgf("Ledger: rawCall: Complete Reply: %s", hexutil.Bytes(reply))
+	// log.Debug().Msgf("Ledger: rawCall: Complete Reply: %s", hexutil.Bytes(reply))
 
 	rc := int(binary.BigEndian.Uint16(reply[len(reply)-2:]))
 	if rc != 0x9000 {
@@ -169,7 +169,7 @@ func rawCall(usb_id string, apdu *APDU, data []byte, hail *bus.B_Hail, hail_dela
 		return nil, fmt.Errorf("Ledger: rawCall: Error response from device: %x", rc)
 	}
 
-	log.Debug().Msgf("Ledger: rawCall: Reply: %s", hexutil.Bytes(reply[:len(reply)-2]))
+	// log.Debug().Msgf("Ledger: rawCall: Reply: %s", hexutil.Bytes(reply[:len(reply)-2]))
 
 	return reply[:len(reply)-2], nil
 }

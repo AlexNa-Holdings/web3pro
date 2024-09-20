@@ -86,6 +86,10 @@ func sendTx(msg *bus.Message) (string, error) {
 							return nil
 						})
 					})
+				case "button edit_contract":
+					go editContract(m, v, req.To)
+				case "button download_contract":
+					go downloadContract(m, v, req.To)
 				default:
 					cmn.StandardOnClickHotspot(v, hs)
 				}
@@ -229,10 +233,12 @@ func BuildHailToSendTxTemplate(b *cmn.Blockchain, from *cmn.Address, to common.A
 		return "", errors.New("signer not found")
 	}
 
-	to_name := ""
-	to_addr := w.GetAddress(to.String())
-	if to_addr != nil {
-		to_name = to_addr.Name
+	contract_trusted := false
+	contract_name := "(unknown)"
+	contract := w.GetContract(to)
+	if contract != nil {
+		contract_trusted = contract.Trusted
+		contract_name = contract.Name
 	}
 
 	dollars := ""
@@ -283,20 +289,134 @@ func BuildHailToSendTxTemplate(b *cmn.Blockchain, from *cmn.Address, to common.A
 		total_fee_s = cmn.TagShortDollarLink(total_fee_dollars)
 	}
 
+	color_tag := "<blink><color fg:red>"
+	color_tag_end := "</color></blink>"
+	if contract_trusted {
+		color_tag = "<color fg:green>"
+		color_tag_end = "</color>"
+	}
+
+	toolbar := `<l text:` + gocui.ICON_EDIT + ` action:'button edit_contract' tip:"Edit Contract">`
+
+	if contract != nil {
+		if !contract.HasABI || !contract.HasCode {
+			toolbar += `<l text:` + gocui.ICON_DOWNLOAD + ` action:'button download_contract' tip:"Download Contract Code">`
+		} else {
+			toolbar += `<l text:` + gocui.ICON_VSC + ` action:'button open_contract' tip:"Open Contract Code">`
+		}
+	}
+
 	return `  Blockchain: ` + b.Name + `
         From: ` + cmn.TagAddressShortLink(from.Address) + " " + from.Name + `
-          To: ` + cmn.TagAddressShortLink(to) + " " + to_name + `
       Amount: ` + nt.Value2Str(amount) + " " + nt.Symbol + `
    Amount($): ` + dollars + ` 
       Signer: ` + s.Name + " (" + s.Type + ")" + `
+		<line text:Contract>
+     Address: ` + cmn.TagAddressShortLink(to) + `
+        Name: ` + color_tag + contract_name + color_tag_end + `
+<c>` + toolbar + `<c>
 <line text:Fee> 
    Gas Limit: ` + cmn.TagUint64Link(tx.Gas()) + ` 
    Gas Price: ` + cmn.TagValueSymbolLink(gas_price, nt) + " " +
-		` <l text:` + gocui.ICON_EDIT + ` action:'button edit_gas_price' tip:"edit fee">` + gp_change + `
+		` <l text:` + gocui.ICON_EDIT + ` action:'button edit_gas_price' tip:"Edit Fee">` + gp_change + `
    Total Fee: ` + cmn.TagValueSymbolLink(total_gas, nt) + `
 Total Fee($): ` + total_fee_s + `
 <c>
 ` +
 		`<button text:Send id:ok bgcolor:g.HelpBgColor color:g.HelpFgColor tip:"send tokens">  ` +
 		`<button text:Reject id:cancel bgcolor:g.ErrorFgColor tip:"reject transaction">`, nil
+}
+
+func editContract(m *bus.Message, v *gocui.View, address common.Address) {
+	w := cmn.CurrentWallet
+	if w == nil {
+		bus.Send("ui", "notify-error", "No wallet")
+		return
+	}
+
+	contract := w.GetContract(address)
+	if contract == nil {
+		contract = &cmn.Contract{
+			Name:    "",
+			Trusted: false,
+		}
+	}
+
+	m.Fetch("ui", "popup", &gocui.Popup{
+		Title: "Edit Contract",
+		Template: `<c>
+Name: <input id:name size:16 value:"` + cmn.FmtAmount(market, 18, false) + `"> ` + nt.Name + cp + ` 
+<c>
+<button text:'Use custom price' id:Custom>
+<line>
+
+<button text:Cancel>
+`,
+		OnClickHotspot: func(v *gocui.View, hs *gocui.Hotspot) {
+			if hs != nil {
+				switch hs.Value {
+				case "button Low":
+					newGasPrice = low
+					v.GetGui().HidePopup()
+				case "button Market":
+					newGasPrice = market
+					v.GetGui().HidePopup()
+				case "button High":
+					newGasPrice = high
+					v.GetGui().HidePopup()
+				case "button Custom":
+					gp := v.GetInput("gas_price")
+
+					val, err := cmn.Str2Wei(gp, 18)
+					if err != nil || val.Cmp(big.NewInt(0)) <= 0 {
+						bus.Send("ui", "notify-error", fmt.Sprintf("Invalid gas price: %v", err))
+						return
+					}
+					newGasPrice = val
+					v.GetGui().HidePopup()
+
+				case "button Cancel":
+					v.GetGui().HidePopup()
+				}
+			}
+		},
+		OnChange: func(p *gocui.Popup, pc *gocui.PopoupControl) {
+			if nt.Price <= 0 {
+				return
+			}
+			switch pc.ID {
+			case "gas_price":
+				gp := p.GetInput("gas_price")
+
+				val, err := cmn.Str2Wei(gp, 18)
+				if err != nil || val.Cmp(big.NewInt(0)) <= 0 {
+					bus.Send("ui", "notify-error", fmt.Sprintf("Invalid gas price: %v", err))
+					return
+				}
+
+				total_gas := new(big.Int).Mul(new(big.Int).SetUint64(tx.Gas()), val)
+				total_fee_dollars := nt.Price * cmn.Float64(total_gas, 18)
+
+				p.SetInput("gas_price_dollars", cmn.FmtFloat64(total_fee_dollars, false))
+			case "gas_price_dollars":
+				gpd := p.GetInput("gas_price_dollars")
+
+				val, err := cmn.ParseXF(gpd)
+				if err != nil || val.IsZero() {
+					bus.Send("ui", "notify-error", fmt.Sprintf("Invalid dollar price: %v", err))
+					return
+				}
+
+				val = val.Div(cmn.NewXF_Float64(nt.Price))
+				val = val.Div(cmn.NewXF_UInt64(tx.Gas()))
+				p.SetInput("gas_price", val.Format(false, ""))
+			}
+		},
+		OnClose: func(v *gocui.View) {
+			on_close(newGasPrice)
+		},
+		OnOpen: func(v *gocui.View) {
+			v.SetFocus(1) // market
+		},
+	})
 }

@@ -484,7 +484,7 @@ func ConfirmEIP712Template(data apitypes.TypedData) string {
 	}
 
 	sb.WriteString(`
-<c><button text:"Sign" id:ok> <button text:"Cancel">`)
+<c><button text:"Sign" id:ok> <button id:cancel text:"Reject">`)
 
 	return sb.String()
 }

@@ -499,6 +499,27 @@ func (w *Wallet) GetAddress(a string) *Address {
 	return nil
 }
 
+func (w *Wallet) GetContract(a common.Address) *Contract {
+	c, ok := w.Contracts[a]
+
+	if !ok {
+		return nil
+	}
+
+	// check if the ABI is downloaded
+	path := DataFolder + "/abi/" + a.String() + ".abi"
+	if _, err := os.Stat(path); err == nil {
+		c.HasABI = true
+	}
+
+	path = DataFolder + "/contracts/" + a.String()
+	if _, err := os.Stat(path); err == nil {
+		c.HasCode = true
+	}
+
+	return c
+}
+
 func (w *Wallet) GetAddressByName(n string) *Address {
 	for _, s := range w.Addresses {
 		if s.Name == n {

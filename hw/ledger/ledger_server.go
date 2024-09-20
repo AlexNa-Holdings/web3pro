@@ -28,11 +28,18 @@ type APDU struct {
 var CLEANING_APDU = APDU{0xe0, 0x50, 0x00, 0x00}
 var GET_DEVICE_NAME_APDU = APDU{0xe0, 0xd2, 0x00, 0x00}
 var GET_INFO_APDU = APDU{0xb0, 0x01, 0x00, 0x00}
-var GET_QUIT_APP_APDU = APDU{0xb0, 0xa7, 0x00, 0x00}
-var GET_LAUNCH_APP_APDU = APDU{0xe0, 0xd8, 0x00, 0x00}
+var QUIT_APP_APDU = APDU{0xb0, 0xa7, 0x00, 0x00}
+var LAUNCH_APP_APDU = APDU{0xe0, 0xd8, 0x00, 0x00}
 var GET_ADDRESS_APDU = APDU{0xe0, 0x02, 0x00, 0x00}
-var GET_SIGN_TX_APDU = APDU{0xe0, 0x04, 0x00, 0x00}
-var GET_SIGN_MSG_APDU = APDU{0xe0, 0x0c, 0x00, 0x00}
+var SIGN_TX_APDU = APDU{0xe0, 0x04, 0x00, 0x00}
+var SIGN_MSG_APDU = APDU{0xe0, 0x0c, 0x00, 0x01}
+
+var STRUCT_DEF_NAME = APDU{0xe0, 0x1a, 0x00, 0x00}
+var STRUCT_DEF_FIELD = APDU{0xe0, 0x1a, 0x00, 0xff}
+
+var STRUCT_IMPL_ROOT = APDU{0xe0, 0x1c, 0x00, 0x00}
+var STRUCT_IMPL_ARRAY = APDU{0xe0, 0x1c, 0x00, 0x0f}
+var STRUCT_IMPL_FIELD = APDU{0xe0, 0x1c, 0x00, 0xff}
 
 var ledgers = []*Ledger{}
 var ledgers_mutex = &sync.Mutex{}
@@ -314,13 +321,13 @@ func provide_eth_app(usb_id string, needed_app string) error {
 
 	if name != needed_app {
 		if needed_app == "BOLOS" {
-			_, err := call(usb_id, &GET_QUIT_APP_APDU, nil, generalHail, 5)
+			_, err := call(usb_id, &QUIT_APP_APDU, nil, generalHail, 5)
 			if err != nil {
 				log.Error().Err(err).Msgf("provide_eth_app: Error quitting app: %s", usb_id)
 				return err
 			}
 		} else {
-			_, err := call(usb_id, &GET_LAUNCH_APP_APDU, []byte(needed_app), generalHail, 0)
+			_, err := call(usb_id, &LAUNCH_APP_APDU, []byte(needed_app), generalHail, 0)
 			if err != nil {
 				log.Error().Err(err).Msgf("provide_eth_app: Error quitting app: %s", usb_id)
 				return err

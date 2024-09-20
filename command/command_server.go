@@ -40,6 +40,7 @@ func Init() {
 		NewWebSocketCommand(),
 		NewAppCommand(),
 		NewSoundCommand(),
+		NewExplorerCommand(),
 	}
 
 	go func() {

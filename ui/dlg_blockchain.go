@@ -53,6 +53,7 @@ func DlgBlockchain(name string) *gocui.Popup {
 				v.SetInput("rpc", bch.Url)
 				v.SetInput("chainid", strconv.Itoa(int(bch.ChainID)))
 				v.SetInput("explorer", bch.ExplorerUrl)
+				v.SetInput("api_token", bch.ExplorerAPIToken)
 				v.SetInput("currency", bch.Currency)
 				if bch.WTokenAddress != (common.Address{}) {
 					v.SetInput("wtoken_address", bch.WTokenAddress.String())
@@ -104,6 +105,8 @@ func DlgBlockchain(name string) *gocui.Popup {
 						break
 					}
 
+					api_token := v.GetInput("api_token")
+
 					currency := v.GetInput("currency")
 
 					if len(currency) == 0 {
@@ -126,16 +129,18 @@ func DlgBlockchain(name string) *gocui.Popup {
 						cmn.CurrentWallet.Blockchains[bch_index].Url = rpc
 						cmn.CurrentWallet.Blockchains[bch_index].ChainID = chainid
 						cmn.CurrentWallet.Blockchains[bch_index].ExplorerUrl = explorer
+						cmn.CurrentWallet.Blockchains[bch_index].ExplorerAPIToken = api_token
 						cmn.CurrentWallet.Blockchains[bch_index].Currency = currency
 						cmn.CurrentWallet.Blockchains[bch_index].WTokenAddress = wta
 					} else {
 						cmn.CurrentWallet.Blockchains = append(cmn.CurrentWallet.Blockchains, &cmn.Blockchain{
-							Name:          name,
-							Url:           rpc,
-							ChainID:       chainid,
-							ExplorerUrl:   explorer,
-							Currency:      currency,
-							WTokenAddress: wta,
+							Name:             name,
+							Url:              rpc,
+							ChainID:          chainid,
+							ExplorerUrl:      explorer,
+							ExplorerAPIToken: api_token,
+							Currency:         currency,
+							WTokenAddress:    wta,
 						})
 					}
 
@@ -159,6 +164,7 @@ func DlgBlockchain(name string) *gocui.Popup {
                RPC: <input id:rpc size:32 value:"">
            ChainId: <input id:chainid size:32 value:"">
           Explorer: <input id:explorer size:32 value:"">
+         API Token: <input id:api_token size:32 value:"">
           Currency: <input id:currency size:32 value:"">
 Wrapped Token Addr: <input id:wtoken_address size:32 value:"">
 

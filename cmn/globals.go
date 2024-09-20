@@ -18,7 +18,8 @@ type Wallet struct {
 	Addresses   []*Address    `json:"addresses"`
 	Tokens      []*Token      `json:"tokens"`
 	Origins     []*Origin     `json:"origins"`
-	AppsPaneOn  bool          `json:"apps_pane_on"`
+	Contracts   map[common.Address]*Contract
+	AppsPaneOn  bool `json:"apps_pane_on"`
 
 	CurrentChain   string         `json:"current_chain"`
 	CurrentAddress common.Address `json:"current_address"`
@@ -30,6 +31,14 @@ type Wallet struct {
 	filePath   string     `json:"-"`
 	password   string     `json:"-"`
 	writeMutex sync.Mutex `json:"-"`
+}
+
+type Contract struct {
+	Name    string `json:"name"`
+	Trusted bool   `json:"trusted"`
+
+	HasABI  bool `json:"-"`
+	HasCode bool `json:"-"`
 }
 
 type Origin struct {
@@ -47,12 +56,13 @@ type Address struct {
 }
 
 type Blockchain struct {
-	Name          string         `json:"name"`
-	Url           string         `json:"url"`
-	ChainID       int            `json:"chain_id"`
-	ExplorerUrl   string         `json:"explorer_url"`
-	Currency      string         `json:"currency"`
-	WTokenAddress common.Address `json:"wrapped_native_token_address"`
+	Name             string         `json:"name"`
+	Url              string         `json:"url"`
+	ChainID          int            `json:"chain_id"`
+	ExplorerUrl      string         `json:"explorer_url"`
+	ExplorerAPIToken string         `json:"explorer_api_token"`
+	Currency         string         `json:"currency"`
+	WTokenAddress    common.Address `json:"wrapped_native_token_address"`
 }
 
 var KNOWN_SIGNER_TYPES = []string{"mnemonics", "ledger", "trezor"}

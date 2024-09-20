@@ -1,43 +1,149 @@
 package ledger
 
 import (
-	"errors"
 	"fmt"
+	"math/big"
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/ava-labs/coreth/accounts"
-	"github.com/ava-labs/coreth/core/types"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/rs/zerolog/log"
 )
 
 func signTx(msg *bus.Message) (*types.Transaction, error) {
-	w := cmn.CurrentWallet
-	if w == nil {
-		return nil, errors.New("no wallet")
-	}
-
 	m, _ := msg.Data.(*bus.B_SignerSignTx)
 
-	l := provide_device(m.Name)
-	if l == nil {
-		return nil, fmt.Errorf("Ledger not found: %s", m.Name)
-	}
-
-	dp, err := accounts.ParseDerivationPath(m.Path)
-	if err != nil {
-		log.Error().Err(err).Msgf("SignTypedData: Error parsing path: %s", m.Path)
-		return nil, err
+	w := cmn.CurrentWallet
+	if w == nil {
+		return nil, fmt.Errorf("SignTx: no wallet")
 	}
 
 	b := w.GetBlockchain(m.Chain)
 	if b == nil {
-		return nil, fmt.Errorf("blockchain not found: %v", m.Chain)
+		return nil, fmt.Errorf("SignTx: blockchain not found: %v", m.Chain)
 	}
 
-	// TODO
-	var signedTx *types.Transaction
-	dp = dp
+	ledger := provide_device(m.Name)
+	if ledger == nil {
+		return nil, fmt.Errorf("SignTx: no device found with name %s", m.Name)
+	}
+
+	err := provide_eth_app(ledger.USB_ID, "Ethereum")
+	if err != nil {
+		return nil, err
+	}
+
+	var payload []byte
+	dp, err := accounts.ParseDerivationPath(m.Path)
+	if err != nil {
+		log.Error().Err(err).Msgf("SignTx: Error parsing path: %s", m.Path)
+		return nil, err
+	}
+	payload = append(payload, serializePath(dp)...)
+
+	unsignedTxBytes, err := serializeTxForLedger(m.Tx, big.NewInt(int64(b.ChainID)))
+	if err != nil {
+		log.Error().Err(err).Msg("SignTx: Failed to serialize transaction")
+
+		return nil, err
+	}
+	payload = append(payload, unsignedTxBytes...)
+
+	// var txrlp []byte
+	// if txrlp, err = rlp.EncodeToBytes([]interface{}{
+	// 	m.Tx.Nonce(),
+	// 	m.Tx.GasPrice(),
+	// 	m.Tx.Gas(),
+	// 	m.Tx.To(),
+	// 	m.Tx.Value(),
+	// 	m.Tx.Data(),
+	// 	big.NewInt(int64(b.ChainID)),
+	// 	big.NewInt(0),
+	// 	big.NewInt(0)}); err != nil {
+	// 	return nil, err
+	// }
+
+	// payload = append(payload, txrlp...)
+
+	reply, err := call(ledger.USB_ID, &SIGN_TX_APDU, payload, generalHail, 5)
+	if err != nil {
+		log.Error().Err(err).Msgf("SignTx: Error signing transaction: %s", ledger.USB_ID)
+		return nil, err
+	}
+
+	var sig []byte
+	sig = append(sig, reply[1:]...) // R + S
+	sig = append(sig, reply[0])     // V
+
+	// sig[64] -= byte(b.ChainID*2 + 35)
+
+	signedTx, err := m.Tx.WithSignature(types.NewCancunSigner(big.NewInt(int64(b.ChainID))), sig)
+	if err != nil {
+		log.Error().Err(err).Msg("signTx: Failed to sign transaction")
+		return nil, err
+	}
 
 	return signedTx, nil
+}
+
+func serializeTxForLedger(tx *types.Transaction, chainID *big.Int) ([]byte, error) {
+	var txType byte
+	var txData []byte
+	var err error
+
+	switch tx.Type() {
+	case types.LegacyTxType:
+		// Legacy transaction
+		txType = 0x00 // No type prefix
+		txData, err = rlp.EncodeToBytes([]interface{}{
+			tx.Nonce(),
+			tx.GasPrice(),
+			tx.Gas(),
+			tx.To(),
+			tx.Value(),
+			tx.Data(),
+		})
+	case types.AccessListTxType:
+		// EIP-2930 transaction
+		txType = types.AccessListTxType
+		txData, err = rlp.EncodeToBytes([]interface{}{
+			chainID,
+			tx.Nonce(),
+			tx.GasPrice(),
+			tx.Gas(),
+			tx.To(),
+			tx.Value(),
+			tx.Data(),
+			tx.AccessList(),
+		})
+	case types.DynamicFeeTxType:
+		// EIP-1559 transaction
+		txType = types.DynamicFeeTxType
+		txData, err = rlp.EncodeToBytes([]interface{}{
+			chainID,
+			tx.Nonce(),
+			tx.GasTipCap(),
+			tx.GasFeeCap(),
+			tx.Gas(),
+			tx.To(),
+			tx.Value(),
+			tx.Data(),
+			tx.AccessList(),
+		})
+	default:
+		return nil, fmt.Errorf("unsupported transaction type: %d", tx.Type())
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to RLP encode transaction: %v", err)
+	}
+
+	// For typed transactions, prepend the transaction type
+	if txType != 0x00 {
+		txData = append([]byte{txType}, txData...)
+	}
+
+	return txData, nil
 }
