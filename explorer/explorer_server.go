@@ -34,7 +34,7 @@ func process(msg *bus.Message) {
 		return
 	}
 
-	switch msg.Topic {
+	switch msg.Type {
 	case "download-contract":
 		m, ok := msg.Data.(*bus.B_ExplorerDownloadContract)
 		if !ok {

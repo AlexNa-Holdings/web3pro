@@ -30,6 +30,12 @@ var PredefinedBlockchains []Blockchain = []Blockchain{
 		ExplorerUrl: "https://scan.v4.testnet.pulsechain.com/#/",
 		Currency:    "tPLS",
 	},
+
+	////------------------------------------------------------------------------------
+	////  The rest of the blockchains are not yet confirmed. If you have the bettter
+	////  information, please update the list.
+	////------------------------------------------------------------------------------
+
 	{
 		Name:        "Avalanche C-Chain",
 		Url:         "https://api.avax.network/ext/bc/C/rpc",

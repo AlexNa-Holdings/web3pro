@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
@@ -28,6 +29,12 @@ func (e *EtherScanAPI) DownloadContract(w *cmn.Wallet, b *cmn.Blockchain, a comm
 		return err
 	}
 
+	err = DownloadContractCode(b, a)
+	if err != nil {
+		log.Error().Err(err).Msg("Error downloading contract code")
+		return err
+	}
+
 	return nil
 }
 
@@ -36,7 +43,8 @@ func DownloadContractABI(b *cmn.Blockchain, a common.Address) error {
 		return errors.New("blockchain has no explorer")
 	}
 
-	URL := fmt.Sprintf("%s?module=contract&action=getabi&address=%s&apikey=%s", b.ExplorerAPIUrl, a.Hex(), b.ExplorerAPIToken)
+	exu, _ := strings.CutSuffix(b.ExplorerUrl, "/")
+	URL := fmt.Sprintf("%s?module=contract&action=getabi&address=%s&apikey=%s", exu, a.Hex(), b.ExplorerAPIToken)
 
 	resp, err := http.Get(URL)
 	if err != nil {
@@ -66,7 +74,9 @@ func DownloadContractABI(b *cmn.Blockchain, a common.Address) error {
 }
 
 func DownloadContractCode(b *cmn.Blockchain, a common.Address) error {
-	URL := fmt.Sprintf("%s?module=contract&action=getsourcecode&address=%s&apikey=%s", b.ExplorerAPIUrl, a.Hex(), b.ExplorerAPIToken)
+
+	exu, _ := strings.CutSuffix(b.ExplorerUrl, "/")
+	URL := fmt.Sprintf("%s?module=contract&action=getsourcecode&address=%s&apikey=%s", exu, a.Hex(), b.ExplorerAPIToken)
 
 	resp, err := http.Get(URL)
 	if err != nil {

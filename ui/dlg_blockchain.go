@@ -47,6 +47,7 @@ func DlgBlockchain(name string) *gocui.Popup {
 			}
 		},
 		OnOpen: func(v *gocui.View) {
+			v.SetList("explorer_api_type", cmn.EXPLORER_API_TYPES)
 			if bch_index != -1 {
 				bch := cmn.CurrentWallet.Blockchains[bch_index]
 				v.SetInput("name", bch.Name)
@@ -58,6 +59,7 @@ func DlgBlockchain(name string) *gocui.Popup {
 				if bch.WTokenAddress != (common.Address{}) {
 					v.SetInput("wtoken_address", bch.WTokenAddress.String())
 				}
+				v.SetInput("explorer_api_url", bch.ExplorerAPIUrl)
 			}
 		},
 		OnClickHotspot: func(v *gocui.View, hs *gocui.Hotspot) {
@@ -66,9 +68,6 @@ func DlgBlockchain(name string) *gocui.Popup {
 				switch hs.Value {
 				case "button Ok":
 					name := v.GetInput("name")
-
-					v.SetList("copyof", cmn.EXPLORER_API_TYPES)
-
 					if len(name) == 0 {
 						Notification.ShowError("Name cannot be empty")
 						break
@@ -124,6 +123,9 @@ func DlgBlockchain(name string) *gocui.Popup {
 						}
 					}
 
+					explorer_api_url := v.GetInput("explorer_api_url")
+					explorer_api_type := v.GetInput("explorer_api_type")
+
 					wta := common.HexToAddress(wtoken_address)
 
 					if bch_index != -1 {
@@ -132,6 +134,8 @@ func DlgBlockchain(name string) *gocui.Popup {
 						cmn.CurrentWallet.Blockchains[bch_index].ChainID = chainid
 						cmn.CurrentWallet.Blockchains[bch_index].ExplorerUrl = explorer
 						cmn.CurrentWallet.Blockchains[bch_index].ExplorerAPIToken = api_token
+						cmn.CurrentWallet.Blockchains[bch_index].ExplorerAPIUrl = explorer_api_url
+						cmn.CurrentWallet.Blockchains[bch_index].ExplorerApiType = explorer_api_type
 						cmn.CurrentWallet.Blockchains[bch_index].Currency = currency
 						cmn.CurrentWallet.Blockchains[bch_index].WTokenAddress = wta
 					} else {
@@ -165,13 +169,13 @@ func DlgBlockchain(name string) *gocui.Popup {
               Name: <input id:name size:32 value:"">
                RPC: <input id:rpc size:32 value:"">
            ChainId: <input id:chainid size:32 value:"">
+          Currency: <input id:currency size:32 value:"">
+Wrapped Token Addr: <input id:wtoken_address size:32 value:"">
 <line text:Explorer>
                URL: <input id:explorer size:32 value:"">
            API URL: <input id:explorer_api_url size:32 value:""> 
-          API Type: <select id:explorer_api_type> 
+          API Type: <select id:explorer_api_type size:16> 
          API Token: <input id:api_token size:32 value:"">
-          Currency: <input id:currency size:32 value:"">
-Wrapped Token Addr: <input id:wtoken_address size:32 value:"">
 
  <c><button text:Ok tip:"create wallet">  <button text:Cancel>`,
 	}
