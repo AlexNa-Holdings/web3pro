@@ -529,18 +529,6 @@ func (w *Wallet) GetContract(a common.Address) *Contract {
 	if !ok {
 		return nil
 	}
-
-	// check if the ABI is downloaded
-	path := DataFolder + "/abi/" + a.String() + ".abi"
-	if _, err := os.Stat(path); err == nil {
-		c.HasABI = true
-	}
-
-	path = DataFolder + "/contracts/" + a.String()
-	if _, err := os.Stat(path); err == nil {
-		c.HasCode = true
-	}
-
 	return c
 }
 
@@ -653,4 +641,29 @@ func (w *Wallet) MarkUniqueTokens() {
 			}
 		}
 	}
+}
+
+func (w *Wallet) IsContractTrusted(addr common.Address) bool {
+	if w.Contracts[addr] == nil {
+		return false
+	}
+	return w.Contracts[addr].Trusted
+}
+
+func (w *Wallet) TrustContract(addr common.Address) error {
+	if w.Contracts[addr] == nil {
+		w.Contracts[addr] = &Contract{}
+	}
+	w.Contracts[addr].Trusted = true
+
+	return w.Save()
+}
+
+func (w *Wallet) UntrustContract(addr common.Address) error {
+	if w.Contracts[addr] == nil {
+		return nil
+	}
+	w.Contracts[addr].Trusted = false
+
+	return w.Save()
 }

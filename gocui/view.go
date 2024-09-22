@@ -40,6 +40,8 @@ const (
 	ICON_FEED     = "\uf09e "
 	ICON_DOWNLOAD = "\ueac2 "
 	ICON_VSC      = "\U000f0a1e "
+	ICON_TRUST    = "\uebc1 "
+	ICON_NO_ENTRY = "\uf4f4 "
 )
 
 const REGEX_TAGS = `<(/?\w+)((?:\s+\w+(?::(?:[^>\s]+|"[^"]*"|'[^']*'))?\s*)*)>`

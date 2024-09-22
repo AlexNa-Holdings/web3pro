@@ -1,14 +1,18 @@
 package eth
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"math/big"
+	"os"
+	"strings"
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
+	"github.com/ava-labs/coreth/accounts/abi"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -65,6 +69,7 @@ func sendTx(msg *bus.Message) (string, error) {
 			cmn.StandardOnOverHotspot(v, hs)
 		},
 		OnClickHotspot: func(m *bus.Message, v *gocui.View, hs *gocui.Hotspot) {
+			rebuild := false
 			if hs != nil {
 				switch hs.Value {
 				case "button edit_gas_price":
@@ -110,10 +115,46 @@ func sendTx(msg *bus.Message) (string, error) {
 					})
 					if resp.Error != nil {
 						bus.Send("ui", "notify-error", fmt.Sprintf("Error: %v", resp.Error))
+					} else {
+						rebuild = true
+						bus.Send("ui", "notify", "Contract downloaded")
+					}
+				case "button trust":
+					err := w.TrustContract(req.To)
+					if err != nil {
+						bus.Send("ui", "notify-error", fmt.Sprintf("Error: %v", err))
+					} else {
+						rebuild = true
+						bus.Send("ui", "notify", "Contract trusted")
+					}
+				case "button untrust":
+					err := w.UntrustContract(req.To)
+					if err != nil {
+						bus.Send("ui", "notify-error", fmt.Sprintf("Error: %v", err))
+					} else {
+						rebuild = true
+						bus.Send("ui", "notify", "Contract untrusted")
 					}
 
 				default:
 					cmn.StandardOnClickHotspot(v, hs)
+				}
+
+				if rebuild {
+					template, err := BuildHailToSendTxTemplate(b, from, req.To, req.Amount, req.Data, nil)
+					if err != nil {
+						log.Error().Err(err).Msg("Error building hail template")
+						bus.Send("ui", "notify-error", fmt.Sprintf("Error: %v", err))
+						return
+					}
+					v.GetGui().UpdateAsync(func(*gocui.Gui) error {
+						hail, ok := m.Data.(*bus.B_Hail)
+						if ok {
+							hail.Template = template
+							v.RenderTemplate(template)
+						}
+						return nil
+					})
 				}
 			}
 		},
@@ -255,18 +296,13 @@ func BuildHailToSendTxTemplate(b *cmn.Blockchain, from *cmn.Address, to common.A
 		return "", errors.New("signer not found")
 	}
 
-	contract_trusted := false
 	contract_name := "(unknown)"
 	contract := w.GetContract(to)
 	if contract != nil {
-		contract_trusted = contract.Trusted
 		contract_name = contract.Name
-	} else {
-		contract = &cmn.Contract{
-			Name:    "",
-			Trusted: false,
-		}
 	}
+
+	contract_trusted := w.IsContractTrusted(to)
 
 	dollars := ""
 	if nt.Price > 0 {
@@ -325,13 +361,26 @@ func BuildHailToSendTxTemplate(b *cmn.Blockchain, from *cmn.Address, to common.A
 
 	toolbar := `<l text:'` + gocui.ICON_EDIT + `' action:'button edit_contract' tip:"Edit Contract">`
 
-	if contract != nil {
-		if !contract.HasABI || !contract.HasCode {
-			toolbar += `<l text:'` + gocui.ICON_DOWNLOAD + `' action:'button download_contract' tip:"Download Contract Code">`
-		} else {
-			toolbar += `<l text:'` + gocui.ICON_VSC + `' action:'button open_contract' tip:"Open Contract Code">`
-		}
+	if !cmn.IsContractDownloaded(to) {
+		toolbar += `<l text:'` + gocui.ICON_DOWNLOAD + `' action:'button download_contract' tip:"Download Contract Code">`
+	} else {
+
+		action := "system \"" + cmn.Config.Editor + "\" \"" + cmn.DataFolder + "/contracts/" + to.String() + "\""
+
+		toolbar += `<l text:'` + gocui.ICON_VSC + `' action:'` + action + `' tip:"Open Contract Code">`
 	}
+
+	if w.IsContractTrusted(to) {
+		toolbar += `<l text:'` + gocui.ICON_NO_ENTRY + `' action:'button untrust' tip:"Mark as not trusted">`
+	} else {
+		toolbar += `<l text:'` + gocui.ICON_TRUST + `' action:'button trust' tip:"Mark as trusted">`
+	}
+
+	burl, _ := strings.CutSuffix(b.ExplorerUrl, "/")
+
+	toolbar += `<l text:'` + gocui.ICON_LINK + `' action:'open ` + burl + "/address/" + to.String() + `' tip:"Open in Explorer">`
+
+	call_details := buildCallDetails(w, tx, to)
 
 	return `  Blockchain: ` + b.Name + `
         From: ` + cmn.TagAddressShortLink(from.Address) + " " + from.Name + `
@@ -341,7 +390,7 @@ func BuildHailToSendTxTemplate(b *cmn.Blockchain, from *cmn.Address, to common.A
 <line text:Contract>
      Address: ` + cmn.TagAddressShortLink(to) + `
         Name: ` + color_tag + contract_name + color_tag_end + `
-<c>` + toolbar + `<c>
+<c>` + toolbar + `</c>` + call_details + `
 <line text:Fee> 
    Gas Limit: ` + cmn.TagUint64Link(tx.Gas()) + ` 
    Gas Price: ` + cmn.TagValueSymbolLink(gas_price, nt) + " " +
@@ -399,4 +448,62 @@ func editContract(m *bus.Message, v *gocui.View, address common.Address, on_clos
 			}
 		},
 	})
+}
+
+func buildCallDetails(w *cmn.Wallet, tx *types.Transaction, to common.Address) string {
+	r := `
+      Method: `
+
+	if !cmn.IsContractDownloaded(to) {
+		return r + "(no ABI)"
+	}
+
+	// load and parse ABI
+	path := cmn.DataFolder + "/abi/" + to.String() + ".json"
+	abiJSON, err := os.ReadFile(path)
+	if err != nil {
+		return r + "(error reading ABI)"
+	}
+
+	parsedABI, err := abi.JSON(bytes.NewReader([]byte(abiJSON)))
+	if err != nil {
+		return r + "(error parsing ABI)"
+	}
+
+	data := tx.Data()
+
+	// Extract the first 4 bytes for the function selector
+	functionSelector := data[:4]
+
+	// Match the function selector to a function in the ABI
+	var function abi.Method
+	found := false
+	for _, method := range parsedABI.Methods {
+		if bytes.Equal(functionSelector, method.ID) {
+			function = method
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		return r + "(function not found)"
+	}
+
+	r += fmt.Sprintf("<l text:'%v' tip:'Copy function name' action:'copy %v'>", function.Name, function.Name) + `
+  Parameters: 
+`
+	// Decode the parameters of the function
+	args := data[4:] // The rest of the data contains the function parameters
+	params, err := function.Inputs.Unpack(args)
+	if err != nil {
+		return r + "(error unpacking)"
+	}
+
+	// Display the parameters
+	for i, param := range params {
+		r += fmt.Sprintf("-12%s: %v\n", function.Inputs[i].Name, param)
+	}
+
+	return r
 }

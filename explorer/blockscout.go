@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/rs/zerolog/log"
 )
 
 type SmartContract struct {
@@ -34,17 +34,30 @@ type SmartContract struct {
 	CompilerVersion            string                 `json:"compiler_version"`
 	EvmVersion                 string                 `json:"evm_version"`
 	VerifiedAt                 string                 `json:"verified_at"`
-	Abi                        string                 `json:"abi"`
+	Abi                        []ABIElement           `json:"abi"`
 	SourceCode                 string                 `json:"source_code"`
 	FilePath                   string                 `json:"file_path"`
 	CompilerSettings           map[string]interface{} `json:"compiler_settings"`
 	ConstructorArgs            string                 `json:"constructor_args"`
 	AdditionalSources          []ContractSource       `json:"additional_sources"`
-	DecodedConstructorArgs     []ConstructorArguments `json:"decoded_constructor_args"`
-	DeployedBytecode           string                 `json:"deployed_bytecode"`
-	CreationBytecode           string                 `json:"creation_bytecode"`
-	ExternalLibraries          []ExternalLibrary      `json:"external_libraries"`
-	Language                   string                 `json:"language"`
+	// DecodedConstructorArgs     []ConstructorArguments `json:"decoded_constructor_args"`
+	// DeployedBytecode           string                 `json:"deployed_bytecode"`
+	// CreationBytecode           string                 `json:"creation_bytecode"`
+	// ExternalLibraries          []ExternalLibrary      `json:"external_libraries"`
+	// Language                   string                 `json:"language"`
+}
+
+type ABIElement struct {
+	Type            string            `json:"type"`
+	StateMutability string            `json:"stateMutability,omitempty"`
+	Inputs          []ABIInputElement `json:"inputs,omitempty"`
+	Name            string            `json:"name,omitempty"`
+}
+
+type ABIInputElement struct {
+	Type         string `json:"type"`
+	Name         string `json:"name"`
+	InternalType string `json:"internalType,omitempty"`
 }
 
 type ContractSource struct {
@@ -69,9 +82,11 @@ func (e *BlockscoutAPI) DownloadContract(w *cmn.Wallet, b *cmn.Blockchain, a com
 		return errors.New("blockchain has no explorer")
 	}
 
-	exu, _ := strings.CutSuffix(b.ExplorerUrl, "/")
+	exu, _ := strings.CutSuffix(b.ExplorerAPIUrl, "/")
 
 	URL := fmt.Sprintf("%s/smart-contracts/%s", exu, a.Hex())
+
+	log.Trace().Msgf("Downloading contract from %s", URL)
 
 	resp, err := http.Get(URL)
 	if err != nil {
@@ -85,6 +100,8 @@ func (e *BlockscoutAPI) DownloadContract(w *cmn.Wallet, b *cmn.Blockchain, a com
 		return err
 	}
 
+	// log.Debug().Msgf("Downloaded contract: %s", string(body))
+
 	var sc SmartContract
 	err = json.Unmarshal(body, &sc)
 	if err != nil {
@@ -94,12 +111,18 @@ func (e *BlockscoutAPI) DownloadContract(w *cmn.Wallet, b *cmn.Blockchain, a com
 	os.MkdirAll(cmn.DataFolder+"/abi", 0755)
 	path := cmn.DataFolder + "/abi/" + a.Hex() + ".json"
 
-	err = ioutil.WriteFile(path, []byte(sc.Abi), 0644) // Save the ABI
+	// Marshal the ABI slice to JSON
+	abiData, err := json.MarshalIndent(sc.Abi, "", "  ")
 	if err != nil {
 		return err
 	}
 
-	contractDir := cmn.DataFolder + "/contracts/" + a.Hex() + "/" + a.Hex()
+	err = os.WriteFile(path, abiData, 0644) // Save the ABI
+	if err != nil {
+		return err
+	}
+
+	contractDir := cmn.DataFolder + "/contracts/" + a.Hex()
 	err = os.MkdirAll(contractDir, 0755) // Create the /contract/address directory if it doesn't exist
 	if err != nil {
 		return err
@@ -120,6 +143,12 @@ func (e *BlockscoutAPI) DownloadContract(w *cmn.Wallet, b *cmn.Blockchain, a com
 
 	// Save the main contract source code
 	mainSourcePath := filepath.Join(contractDir, sc.FilePath)
+
+	err = os.MkdirAll(filepath.Dir(mainSourcePath), 0755)
+	if err != nil {
+		return err
+	}
+
 	err = os.WriteFile(mainSourcePath, []byte(sc.SourceCode), 0644)
 	if err != nil {
 		return err

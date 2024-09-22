@@ -185,6 +185,8 @@ func ProcessOnClickHotspot(v *gocui.View, hs *gocui.Hotspot) {
 		bus.Send("ui", "start_command", param)
 	case "open":
 		cmn.OpenBrowser(param)
+	case "system":
+		cmn.SystemCommand(param)
 	}
 }
 

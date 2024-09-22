@@ -36,9 +36,6 @@ type Wallet struct {
 type Contract struct {
 	Name    string `json:"name"`
 	Trusted bool   `json:"trusted"`
-
-	HasABI  bool `json:"-"`
-	HasCode bool `json:"-"`
 }
 
 type Origin struct {

@@ -33,6 +33,7 @@ type SConfig struct {
 	USBBackgroundEnumerate bool          `yaml:"usb_background_enumerate"` // enumerate USB devices in background
 	PriceFeed              string        `yaml:"price_feed"`               // price feed
 	PriceUpdatePeriod      string        `yaml:"price_update_period"`      // price update period
+	Editor                 string        `yaml:"editor"`                   // editor
 }
 
 var Config *SConfig = &SConfig{ //Default config
@@ -45,6 +46,7 @@ var Config *SConfig = &SConfig{ //Default config
 	USBBackgroundEnumerate: true,
 	PriceFeed:              "dexscreener",
 	PriceUpdatePeriod:      "15m",
+	Editor:                 "code",
 }
 
 func InitConfig() {

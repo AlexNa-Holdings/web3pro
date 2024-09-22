@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/big"
 	"net/url"
+	"os"
 	"os/exec"
 	"regexp"
 	"runtime"
@@ -198,6 +199,26 @@ func OpenBrowser(url string) error {
 	default:
 		return fmt.Errorf("unsupported platform")
 	}
+
+	return exec.Command(cmd, args...).Start()
+}
+
+func SystemCommand(command string) error {
+	var cmd string
+
+	args := SplitN(command, 10)
+
+	// remove empty params
+	for args[len(args)-1] == "" {
+		args = args[:len(args)-1]
+	}
+
+	if len(args) == 0 {
+		return fmt.Errorf("empty command")
+	}
+
+	cmd = args[0]
+	args = args[1:]
 
 	return exec.Command(cmd, args...).Start()
 }
@@ -533,4 +554,18 @@ func formatFieldValue(info SignedDataInfo, fieldName, fieldType string, value in
 		}
 	}
 	return s
+}
+
+func IsContractDownloaded(a common.Address) bool {
+	path := DataFolder + "/abi/" + a.String() + ".json"
+	if _, err := os.Stat(path); err != nil {
+		return false
+	}
+
+	path = DataFolder + "/contracts/" + a.String()
+	if _, err := os.Stat(path); err != nil {
+		return false
+	}
+
+	return true
 }

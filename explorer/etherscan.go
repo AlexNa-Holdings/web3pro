@@ -46,6 +46,8 @@ func DownloadContractABI(b *cmn.Blockchain, a common.Address) error {
 	exu, _ := strings.CutSuffix(b.ExplorerUrl, "/")
 	URL := fmt.Sprintf("%s?module=contract&action=getabi&address=%s&apikey=%s", exu, a.Hex(), b.ExplorerAPIToken)
 
+	log.Trace().Msgf("Downloading ABI from %s", URL)
+
 	resp, err := http.Get(URL)
 	if err != nil {
 		log.Error().Err(err).Msgf("Error getting ABI from %s", b.ExplorerAPIUrl)
@@ -75,8 +77,10 @@ func DownloadContractABI(b *cmn.Blockchain, a common.Address) error {
 
 func DownloadContractCode(b *cmn.Blockchain, a common.Address) error {
 
-	exu, _ := strings.CutSuffix(b.ExplorerUrl, "/")
+	exu, _ := strings.CutSuffix(b.ExplorerAPIUrl, "/")
 	URL := fmt.Sprintf("%s?module=contract&action=getsourcecode&address=%s&apikey=%s", exu, a.Hex(), b.ExplorerAPIToken)
+
+	log.Trace().Msgf("Downloading contract from %s", URL)
 
 	resp, err := http.Get(URL)
 	if err != nil {
