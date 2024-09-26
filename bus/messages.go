@@ -148,6 +148,15 @@ type B_SignerSignTypedData_v4 struct { // sign-typed-data-v4
 	TypedData apitypes.TypedData
 }
 
+type B_SignerSign struct { // sign-typed-data-v4
+	Type      string
+	Name      string
+	MasterKey string
+	Address   common.Address
+	Path      string
+	Data      []byte
+}
+
 // ---------- ws ----------
 type B_WsList_Conn struct { // device
 	Agent string
@@ -175,6 +184,12 @@ type B_EthSignTypedData_v4 struct { // sign-typed-data-v4
 	Blockchain string
 	Address    common.Address
 	TypedData  apitypes.TypedData
+}
+
+type B_EthSign struct { // sign
+	Blockchain string
+	Address    common.Address
+	Data       []byte
 }
 
 // ---------- explorer ----------

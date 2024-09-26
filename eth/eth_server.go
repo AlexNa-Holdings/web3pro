@@ -46,6 +46,9 @@ func process(msg *bus.Message) {
 		case "sign-typed-data-v4":
 			sig, err := signTypedDataV4(msg)
 			msg.Respond(sig, err)
+		case "sign":
+			sig, err := sign(msg)
+			msg.Respond(sig, err)
 		}
 	case "wallet":
 		switch msg.Type {

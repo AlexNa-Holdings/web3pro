@@ -375,6 +375,11 @@ Allow connection from browser?
 		}
 
 		// Dispatch based on method prefix
+
+		if rpcReq.Method == "personal_sign" {
+			rpcReq.Method = "eth_sign"
+		}
+
 		switch {
 		case strings.HasPrefix(rpcReq.Method, "eth_"):
 			handleEthMethod(rpcReq, ctx, response)

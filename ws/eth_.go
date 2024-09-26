@@ -9,6 +9,7 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/signer/core/apitypes"
 	"github.com/rs/zerolog/log"
 )
@@ -45,6 +46,12 @@ func handleEthMethod(req RPCRequest, ctx *ConContext, res *RPCResponse) {
 	case "signTypedData_v4":
 		if o, ok := getAllowedOrigin(req.Web3ProOrigin); ok {
 			err = signTypedData_v4(o, req, ctx, res)
+		} else {
+			err = fmt.Errorf("origin not allowed")
+		}
+	case "sign":
+		if o, ok := getAllowedOrigin(req.Web3ProOrigin); ok {
+			err = sign(o, req, ctx, res)
 		} else {
 			err = fmt.Errorf("origin not allowed")
 		}
@@ -199,6 +206,61 @@ func signTypedData_v4(o *cmn.Origin, req RPCRequest, ctx *ConContext, res *RPCRe
 	return nil
 }
 
+func sign(o *cmn.Origin, req RPCRequest, ctx *ConContext, res *RPCResponse) error {
+
+	w := cmn.CurrentWallet
+	if w == nil {
+		return fmt.Errorf("no wallet found")
+	}
+
+	params, ok := req.Params.([]any)
+	if !ok {
+		return fmt.Errorf("params must be an array of strings")
+	}
+
+	if len(params) < 2 {
+		return fmt.Errorf("length of params must be at least 2")
+	}
+
+	address, ok := params[1].(string)
+	if !ok {
+		return fmt.Errorf("first param must be an address")
+	}
+
+	a := w.GetAddress(address)
+	if a == nil {
+		return fmt.Errorf("address not found in wallet")
+	}
+
+	signer := w.GetSigner(a.Signer)
+	if signer == nil {
+		return fmt.Errorf("signer not found")
+	}
+
+	b := w.GetBlockchainById(o.ChainId)
+	if b == nil {
+		return fmt.Errorf("blockchain not found")
+	}
+
+	data_str, ok := params[0].(string)
+	if !ok {
+		return fmt.Errorf("params[1] is not a string")
+	}
+
+	sign_res := bus.Fetch("eth", "sign", &bus.B_EthSign{
+		Blockchain: b.Name,
+		Address:    a.Address,
+		Data:       common.FromHex(data_str),
+	})
+
+	if sign_res.Error != nil {
+		return fmt.Errorf("error signing typed data: %v", sign_res.Error)
+	}
+
+	res.Result = sign_res.Data.(string)
+	return nil
+}
+
 func sendTransaction(o *cmn.Origin, req RPCRequest, ctx *ConContext, res *RPCResponse) error {
 	w := cmn.CurrentWallet
 	if w == nil {
@@ -262,7 +324,10 @@ func sendTransaction(o *cmn.Origin, req RPCRequest, ctx *ConContext, res *RPCRes
 	if !ok {
 		return fmt.Errorf("data not found")
 	}
-	data := common.FromHex(data_s)
+	data, err := hexutil.Decode(data_s)
+	if err != nil {
+		return fmt.Errorf("error decoding data: %v", err)
+	}
 
 	send_res := bus.Fetch("eth", "send-tx", &bus.B_EthSendTx{
 		Blockchain: b.Name,

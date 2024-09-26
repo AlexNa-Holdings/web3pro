@@ -140,7 +140,32 @@ func process(msg *bus.Message) {
 
 				msg.Respond(signature, nil)
 			}
+		case "sign":
+			m, ok := msg.Data.(*bus.B_SignerSign)
+			if !ok {
+				log.Error().Msg("Loop: Invalid hw sign-typed-data-v4 data")
+				msg.Respond(nil, errors.New("invalid data"))
+				return
+			}
 
+			if m.Type == "mnemonics" {
+				mnemonics, err := NewFromSN(m.MasterKey)
+				if err != nil {
+					log.Error().Msgf("Error creating mnemonics: %v", err)
+					msg.Respond(nil, err)
+					return
+				}
+
+				// Sign the typed data
+				signature, err := mnemonics.Sign(msg, m.Data, m.Path)
+				if err != nil {
+					log.Error().Msgf("Error signing data: %v", err)
+					msg.Respond(nil, err)
+					return
+				}
+
+				msg.Respond(signature, nil)
+			}
 		}
 	}
 }
@@ -248,6 +273,16 @@ func (d Mnemonic) SignTx(chain_id int64, tx *types.Transaction, path string) (*t
 		return nil, err
 	}
 
+	OK := true
+
+	// TODO: Ask for the password
+
+	if OK {
+		log.Info().Msgf("Transaction signed: %s", signedTx.Hash().Hex())
+	} else {
+		return nil, errors.New("cancelled")
+	}
+
 	return signedTx, nil
 
 }
@@ -278,7 +313,42 @@ func (d Mnemonic) SignTypedData(msg *bus.Message, typedData apitypes.TypedData, 
 		signature[64] += 27
 	}
 
-	OK := false
+	OK := true
+
+	// TODO: Ask for the password
+
+	if OK {
+		ss := fmt.Sprintf("0x%x", signature)
+		log.Info().Msgf("Signature: %s", ss)
+		return ss, nil
+	} else {
+		return "", errors.New("cancelled")
+	}
+}
+
+func (d Mnemonic) Sign(msg *bus.Message, data []byte, path string) (string, error) {
+	// Get the private key
+	privateKey, err := DeriveKey(d.MasterKey, path)
+	if err != nil {
+		log.Error().Msgf("Sign: Failed to derive key: %v", err)
+		return "", err
+	}
+
+	data = accounts.TextHash(data)
+
+	// Sign the hash
+	signature, err := crypto.Sign(data, privateKey)
+	if err != nil {
+		log.Error().Msgf("Sign: Failed to sign hash: %v", err)
+		return "", err
+	}
+
+	// fix the signature
+	if len(signature) == 65 && (signature[64] == 0 || signature[64] == 1) {
+		signature[64] += 27
+	}
+
+	OK := true
 
 	// TODO: Ask for the password
 
