@@ -229,27 +229,41 @@ func Token_Process(c *Command, input string) {
 				continue
 			}
 
-			price := "          "
-			if t.Price != 0. {
-				price = cmn.FmtFloat64D(t.Price, true)
-			}
-
 			b := w.GetBlockchain(t.Blockchain)
 			if b == nil {
 				log.Error().Msgf("Blockchain not found: %s", t.Blockchain)
 				continue
 			}
 
-			ui.Printf("%-8s %s ", t.Symbol, price)
+			ui.Printf("%-8s ", t.Symbol)
 
-			if t.Native {
-				ui.Printf("Native          ")
+			if t.Price != 0. {
+				cmn.AddDollarLink(ui.Terminal.Screen, t.Price)
 			} else {
-				cmn.AddAddressShortLink(ui.Terminal.Screen, t.Address)
-				ui.Printf(" ")
+				ui.Printf("          ")
+			}
+
+			if !t.Native {
 				ui.Terminal.Screen.AddLink(gocui.ICON_LINK, "open "+b.ExplorerLink(t.Address), b.ExplorerLink(t.Address), "")
 				ui.Terminal.Screen.AddLink(gocui.ICON_DELETE, "command token remove '"+t.Blockchain+"' '"+t.Address.String()+"'", "Remove token", "")
+			} else {
+				ui.Printf("    ")
 			}
+
+			if t.Price == 0 {
+				ui.Terminal.Screen.AddLink(gocui.ICON_FEED, "command p discover '"+b.Name+"' '"+t.Address.String()+"'", "Discover price", "")
+			} else {
+				ui.Printf("  ")
+			}
+
+			if t.Native {
+				ui.Printf("Native     ")
+			} else {
+				cmn.AddAddressShortLink(ui.Terminal.Screen, t.Address)
+			}
+
+			ui.Printf(" ")
+
 			ui.Printf("%s | %s", t.Blockchain, t.Name)
 			ui.Printf("\n")
 		}

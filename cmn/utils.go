@@ -323,6 +323,13 @@ func AddDollarValueLink(v *gocui.View, val *big.Int, t *Token) {
 	v.AddLink(text, "copy "+n, n, "")
 }
 
+func AddDollarLink(v *gocui.View, val float64) {
+	text := FmtFloat64D(val, true)
+	n := fmt.Sprintf("%.15f", val)
+
+	v.AddLink(text, "copy "+n, n, "")
+}
+
 func TagDollarValueLink(val *big.Int, t *Token) string {
 	if t == nil {
 		return ""
