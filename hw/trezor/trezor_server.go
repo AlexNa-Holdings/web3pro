@@ -105,7 +105,17 @@ func process(msg *bus.Message) {
 			if m.Type == TRZ {
 				msg.Respond(signTx(msg))
 			}
+		case "sign":
+			m, ok := msg.Data.(*bus.B_SignerSign)
+			if !ok {
+				log.Error().Msg("Loop: Invalid hw sign data")
+				msg.Respond(nil, errors.New("invalid data"))
+				return
+			}
 
+			if m.Type == TRZ {
+				msg.Respond(sign(msg))
+			}
 		}
 	}
 }

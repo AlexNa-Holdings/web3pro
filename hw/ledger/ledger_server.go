@@ -33,6 +33,7 @@ var LAUNCH_APP_APDU = APDU{0xe0, 0xd8, 0x00, 0x00}
 var GET_ADDRESS_APDU = APDU{0xe0, 0x02, 0x00, 0x00}
 var SIGN_TX_APDU = APDU{0xe0, 0x04, 0x00, 0x00}
 var SIGN_MSG_APDU = APDU{0xe0, 0x0c, 0x00, 0x01}
+var SIGN_MSG_PERSONAL_APDU = APDU{0xe0, 0x08, 0x00, 0x00}
 
 var STRUCT_DEF_NAME = APDU{0xe0, 0x1a, 0x00, 0x00}
 var STRUCT_DEF_FIELD = APDU{0xe0, 0x1a, 0x00, 0xff}
@@ -130,6 +131,17 @@ func process(msg *bus.Message) {
 
 			if m.Type == LDG {
 				msg.Respond(signTx(msg))
+			}
+		case "sign":
+			m, ok := msg.Data.(*bus.B_SignerSign)
+			if !ok {
+				log.Error().Msg("Loop: Invalid hw sign data")
+				msg.Respond(nil, errors.New("invalid data"))
+				return
+			}
+
+			if m.Type == LDG {
+				msg.Respond(sign(msg))
 			}
 		}
 	}

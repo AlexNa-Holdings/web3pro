@@ -134,7 +134,7 @@ func rawCall(usb_id string, apdu *APDU, data []byte, hail *bus.B_Hail, hail_dela
 		}
 		chunk = r.Data[:64]
 
-		// log.Trace().Msgf("Data chunk received from the Ledger: %s", hexutil.Bytes(chunk))
+		log.Trace().Msgf("Data chunk received from the Ledger: %s", hexutil.Bytes(chunk))
 
 		// Make sure the transport header matches
 		if chunk[0] != 0x01 || chunk[1] != 0x01 || chunk[2] != 0x05 {

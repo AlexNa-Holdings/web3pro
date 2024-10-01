@@ -51,22 +51,6 @@ func signTx(msg *bus.Message) (*types.Transaction, error) {
 	}
 	payload = append(payload, unsignedTxBytes...)
 
-	// var txrlp []byte
-	// if txrlp, err = rlp.EncodeToBytes([]interface{}{
-	// 	m.Tx.Nonce(),
-	// 	m.Tx.GasPrice(),
-	// 	m.Tx.Gas(),
-	// 	m.Tx.To(),
-	// 	m.Tx.Value(),
-	// 	m.Tx.Data(),
-	// 	big.NewInt(int64(b.ChainID)),
-	// 	big.NewInt(0),
-	// 	big.NewInt(0)}); err != nil {
-	// 	return nil, err
-	// }
-
-	// payload = append(payload, txrlp...)
-
 	reply, err := call(ledger.USB_ID, &SIGN_TX_APDU, payload, generalHail, 5)
 	if err != nil {
 		log.Error().Err(err).Msgf("SignTx: Error signing transaction: %s", ledger.USB_ID)

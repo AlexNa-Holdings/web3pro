@@ -218,37 +218,6 @@ func GetTypeOrder(typedData apitypes.TypedData) []string {
 	return order
 }
 
-// func GetTypeOrder(typedData apitypes.TypedData) []string {
-// 	visited := make(map[string]bool)
-// 	order := []string{}
-
-// 	var visit func(string)
-// 	visit = func(typeName string) {
-// 		if visited[typeName] {
-// 			return
-// 		}
-// 		visited[typeName] = true
-
-// 		for _, field := range typedData.Types[typeName] {
-// 			// Check if the field type is a custom type
-// 			baseType := strings.TrimSuffix(field.Type, "[]")
-// 			if _, exists := typedData.Types[baseType]; exists {
-// 				visit(baseType)
-// 			}
-// 		}
-// 		order = append(order, typeName)
-// 	}
-
-// 	visit(typedData.PrimaryType)
-
-// 	// Reverse the order to get the correct sequence
-// 	for i, j := 0, len(order)-1; i < j; i, j = i+1, j-1 {
-// 		order[i], order[j] = order[j], order[i]
-// 	}
-
-// 	return order
-// }
-
 func SendStructDefinition(msg *bus.Message, ledger *Ledger, typedData apitypes.TypedData) error {
 	typeOrder := GetTypeOrder(typedData)
 
@@ -288,93 +257,6 @@ func SendRootStruct(msg *bus.Message, ledger *Ledger, rootStructName string) err
 
 	return nil
 }
-
-// func SendFieldValue(msg *bus.Message, ledger *Ledger, value interface{}, typeStr string) error {
-// 	var valueBytes []byte
-
-// 	switch {
-// 	case typeStr == "address":
-// 		addrStr, ok := value.(string)
-// 		if !ok {
-// 			log.Error().Msgf("SendFieldValue: Expected string for address type")
-// 			return fmt.Errorf("expected string for address type")
-// 		}
-// 		addr := common.HexToAddress(addrStr)
-// 		valueBytes = addr.Bytes()
-// 	case typeStr == "bool":
-// 		boolVal, ok := value.(bool)
-// 		if !ok {
-// 			log.Error().Msgf("SendFieldValue: Expected bool for bool type")
-// 			return fmt.Errorf("expected bool for bool type")
-// 		}
-// 		if boolVal {
-// 			valueBytes = []byte{1}
-// 		} else {
-// 			valueBytes = []byte{0}
-// 		}
-// 	case typeStr == "string":
-// 		strVal, ok := value.(string)
-// 		if !ok {
-// 			log.Error().Msgf("SignTypedDSendFieldValueata: Expected string for string type")
-// 			return fmt.Errorf("expected string for string type")
-// 		}
-// 		valueBytes = []byte(strVal)
-// 	case typeStr == "bytes":
-// 		bytesVal, ok := value.(string)
-// 		if !ok {
-// 			log.Error().Msgf("SendFieldValue: Expected string for bytes type")
-// 			return fmt.Errorf("expected string for bytes type")
-// 		}
-// 		valueBytes = common.FromHex(bytesVal)
-// 	case strings.HasPrefix(typeStr, "bytes"):
-// 		// Fixed-size bytes
-// 		bytesVal, ok := value.(string)
-// 		if !ok {
-// 			log.Error().Msgf("SendFieldValue: Expected string for bytes type")
-// 			return fmt.Errorf("expected string for bytes type")
-// 		}
-// 		valueBytes = common.FromHex(bytesVal)
-// 	case strings.HasPrefix(typeStr, "int"), strings.HasPrefix(typeStr, "uint"):
-// 		// Integer types
-// 		var bigIntVal *big.Int
-// 		switch v := value.(type) {
-// 		case string:
-// 			var ok bool
-// 			bigIntVal = big.NewInt(0)
-// 			bigIntVal, ok = bigIntVal.SetString(v, 10)
-// 			if !ok {
-// 				log.Error().Msgf("SendFieldValue: Invalid integer value: %s", v)
-// 				return fmt.Errorf("invalid integer value: %s", v)
-// 			}
-// 		case float64:
-// 			bigIntVal = big.NewInt(int64(v))
-// 		case int, int64:
-// 			bigIntVal = big.NewInt(int64(v.(int)))
-// 		default:
-// 			log.Error().Msgf("SendFieldValue: Unsupported value type for int: %T", value)
-// 			return fmt.Errorf("unsupported value type for int: %T", value)
-// 		}
-// 		valueBytes = bigIntVal.Bytes()
-// 	default:
-// 		log.Error().Msgf("SendFieldValue: Unsupported type: %s", typeStr)
-// 		return fmt.Errorf("unsupported type: %s", typeStr)
-// 	}
-
-// 	// Build the data: Value length (2 bytes BE) + Value
-// 	data := make([]byte, 2+len(valueBytes))
-// 	binary.BigEndian.PutUint16(data[0:2], uint16(len(valueBytes)))
-// 	copy(data[2:], valueBytes)
-
-// 	log.Trace().Msgf("LEDGER: FIELD VALUE: Type %s", typeStr)
-
-// 	_, err := call(ledger.USB_ID, &STRUCT_IMPL_FIELD, data, generalHail, 5)
-// 	if err != nil {
-// 		log.Error().Err(err).Msgf("SendFieldValue: Error sending field value payload: %s", typeStr)
-// 		return err
-// 	}
-
-// 	return nil
-// }
 
 func SendFieldValue(msg *bus.Message, ledger *Ledger, value interface{}, typeStr string) error {
 	var valueBytes []byte
@@ -517,25 +399,6 @@ func SendStructImplementation(msg *bus.Message, ledger *Ledger, typedData apityp
 
 	return nil
 }
-
-// func SendStructImplementation(msg *bus.Message, ledger *Ledger, typedData apitypes.TypedData) error {
-
-// 	// Start with the root struct
-// 	err := SendRootStruct(msg, ledger, typedData.PrimaryType)
-// 	if err != nil {
-// 		log.Error().Err(err).Msgf("SignTypedData: Error setting root struct: %s", typedData.PrimaryType)
-// 		return err
-// 	}
-
-// 	// Send payloads for the message
-// 	err = SendMessagePayloads(msg, ledger, typedData, typedData.PrimaryType, typedData.Message)
-// 	if err != nil {
-// 		log.Error().Err(err).Msgf("SignTypedData: Error sending message payloads: %s", typedData.PrimaryType)
-// 		return err
-// 	}
-
-// 	return nil
-// }
 
 func SendMessagePayloads(msg *bus.Message, ledger *Ledger, typedData apitypes.TypedData, typeName string, messageData map[string]interface{}) error {
 	fields := typedData.Types[typeName]
