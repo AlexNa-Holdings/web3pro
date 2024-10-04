@@ -515,6 +515,14 @@ func (w *Wallet) GetSignerWithCopies(name string) []*Signer {
 }
 
 func (w *Wallet) GetAddress(a string) *Address {
+
+	// normalize the format
+	if common.IsHexAddress(a) {
+		a = common.HexToAddress(a).String()
+	} else {
+		return nil
+	}
+
 	for _, s := range w.Addresses {
 		if s.Address.String() == a {
 			return s

@@ -180,6 +180,14 @@ type B_EthSendTx struct { // send
 	Data       []byte
 }
 
+type B_EthCall struct { // send
+	Blockchain string
+	From       common.Address
+	To         common.Address
+	Amount     *big.Int
+	Data       []byte
+}
+
 type B_EthSignTypedData_v4 struct { // sign-typed-data-v4
 	Blockchain string
 	Address    common.Address
@@ -190,6 +198,41 @@ type B_EthSign struct { // sign
 	Blockchain string
 	Address    common.Address
 	Data       []byte
+}
+
+type B_EthEstimateGas struct { // estimate-gas
+	Blockchain string
+	From       common.Address
+	To         common.Address
+	Amount     *big.Int
+	Data       []byte
+}
+
+type B_EthBlockNumber struct { // get-block-number
+	Blockchain string
+}
+
+type B_EthTxByHash struct { // get-tx-by-hash
+	Blockchain string
+	Hash       common.Hash
+}
+
+type B_EthTxByHash_Response struct { // get-tx-by-hash_response
+	BlockHash        string `json:"blockHash"`
+	BlockNumber      string `json:"blockNumber"`
+	ChainID          int    `json:"chainId"`
+	From             string `json:"from"`
+	Gas              string `json:"gas"`
+	GasPrice         string `json:"gasPrice"`
+	Hash             string `json:"hash"`
+	Input            string `json:"input"`
+	Nonce            string `json:"nonce"`
+	To               string `json:"to"`
+	TransactionIndex string `json:"transactionIndex"`
+	Value            string `json:"value"`
+	V                string `json:"v"`
+	R                string `json:"r"`
+	S                string `json:"s"`
 }
 
 // ---------- explorer ----------

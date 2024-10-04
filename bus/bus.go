@@ -93,12 +93,16 @@ func Unsubscribe(ch chan *Message) {
 	defer cb.M.Unlock()
 
 	for t, subs := range cb.Subscribers {
-		for i, subscriber := range subs {
-			if subscriber == ch {
+		for i := 0; i < len(subs); i++ {
+			if subs[i] == ch {
 				subs = append(subs[:i], subs[i+1:]...)
-				cb.Subscribers[t] = subs
-				break
+				i-- // Adjust index after removal
 			}
+		}
+		if len(subs) == 0 {
+			delete(cb.Subscribers, t)
+		} else {
+			cb.Subscribers[t] = subs
 		}
 	}
 

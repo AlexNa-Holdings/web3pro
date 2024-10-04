@@ -18,50 +18,41 @@ func handleEthMethod(req RPCRequest, ctx *ConContext, res *RPCResponse) {
 	method := strings.TrimPrefix(req.Method, "eth_")
 	var err error
 
+	o, ok := getAllowedOrigin(req.Web3ProOrigin)
+	if !ok {
+		res.Error = &RPCError{
+			Code:    4001,
+			Message: "Origin not allowed",
+		}
+		return
+	}
+
 	switch method {
 	case "chainId":
-		if o, ok := getAllowedOrigin(req.Web3ProOrigin); ok {
-			res.Result = fmt.Sprintf("0x%x", o.ChainId)
-		} else {
-			res.Result = "0x1"
-		}
+		res.Result = fmt.Sprintf("0x%x", o.ChainId)
 	case "subscribe":
-		if _, ok := getAllowedOrigin(req.Web3ProOrigin); ok {
-			err = subscribe(req, ctx, res)
-		} else {
-			err = fmt.Errorf("origin not allowed")
-		}
+		err = subscribe(req, ctx, res)
 	case "unsubscribe":
 		err = unsubscribe(req, ctx, res)
 	case "accounts", "requestAccounts":
-		if o, ok := getAllowedOrigin(req.Web3ProOrigin); ok {
-			res.Result = []string{}
-			for _, a := range o.Addresses {
-				res.Result = append(res.Result.([]string), a.String())
-
-			}
-		} else {
-			err = fmt.Errorf("origin not allowed")
+		res.Result = []string{}
+		for _, a := range o.Addresses {
+			res.Result = append(res.Result.([]string), a.String())
 		}
 	case "signTypedData_v4":
-		if o, ok := getAllowedOrigin(req.Web3ProOrigin); ok {
-			err = signTypedData_v4(o, req, ctx, res)
-		} else {
-			err = fmt.Errorf("origin not allowed")
-		}
+		err = signTypedData_v4(o, req, ctx, res)
 	case "sign":
-		if o, ok := getAllowedOrigin(req.Web3ProOrigin); ok {
-			err = sign(o, req, ctx, res)
-		} else {
-			err = fmt.Errorf("origin not allowed")
-		}
+		err = sign(o, req, ctx, res)
+	case "call":
+		err = call(o, req, ctx, res)
 	case "sendTransaction":
-		if o, ok := getAllowedOrigin(req.Web3ProOrigin); ok {
-			err = sendTransaction(o, req, ctx, res)
-		} else {
-			err = fmt.Errorf("origin not allowed")
-		}
-
+		err = sendTransaction(o, req, ctx, res)
+	case "estimateGas":
+		err = estimateGas(o, req, ctx, res)
+	case "blockNumber":
+		err = getBlockNumber(o, req, ctx, res)
+	case "getTransactionByHash":
+		err = getTransactionByHash(o, req, ctx, res)
 	default:
 		log.Error().Msgf("Method not found: %v", req)
 	}
@@ -342,5 +333,234 @@ func sendTransaction(o *cmn.Origin, req RPCRequest, ctx *ConContext, res *RPCRes
 	}
 
 	res.Result = send_res.Data
+	return nil
+}
+
+func call(o *cmn.Origin, req RPCRequest, ctx *ConContext, res *RPCResponse) error {
+	w := cmn.CurrentWallet
+	if w == nil {
+		return fmt.Errorf("no wallet found")
+	}
+
+	params, ok := req.Params.([]any)
+	if !ok {
+		return fmt.Errorf("params must be an array of strings")
+	}
+
+	if len(params) < 1 {
+		return fmt.Errorf("length of params must be at least 1")
+	}
+
+	tx_data, ok := params[0].(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("params must be an array of strings")
+	}
+
+	// Get the address
+	address, ok := tx_data["from"].(string)
+	if !ok {
+		return fmt.Errorf("from address not found")
+	}
+
+	from := w.GetAddress(address)
+	if from == nil {
+		return fmt.Errorf("address not found in wallet")
+	}
+
+	signer := w.GetSigner(from.Signer)
+	if signer == nil {
+		return fmt.Errorf("signer not found")
+	}
+
+	b := w.GetBlockchainById(o.ChainId)
+	if b == nil {
+		return fmt.Errorf("blockchain not found")
+	}
+
+	to_s, ok := tx_data["to"].(string)
+	if !ok {
+		return fmt.Errorf("to address not found")
+	}
+
+	to := common.HexToAddress(to_s)
+
+	value_s, ok := tx_data["value"].(string)
+	if !ok {
+		value_s = "0x00"
+	}
+
+	value := big.NewInt(0)
+	value, ok = value.SetString(value_s, 0)
+	if !ok {
+		return fmt.Errorf("error converting value to big.Int")
+	}
+
+	data_s, ok := tx_data["data"].(string)
+	if !ok {
+		return fmt.Errorf("data not found")
+	}
+	data, err := hexutil.Decode(data_s)
+	if err != nil {
+		return fmt.Errorf("error decoding data: %v", err)
+	}
+
+	send_res := bus.Fetch("eth", "call", &bus.B_EthCall{
+		Blockchain: b.Name,
+		From:       from.Address,
+		To:         to,
+		Amount:     value,
+		Data:       data,
+	})
+
+	if send_res.Error != nil {
+		return fmt.Errorf("error sending transaction: %v", send_res.Error)
+	}
+
+	res.Result = send_res.Data
+	return nil
+}
+
+func estimateGas(o *cmn.Origin, req RPCRequest, ctx *ConContext, res *RPCResponse) error {
+	w := cmn.CurrentWallet
+	if w == nil {
+		return fmt.Errorf("no wallet found")
+	}
+
+	params, ok := req.Params.([]any)
+	if !ok {
+		return fmt.Errorf("params must be an array of strings")
+	}
+
+	if len(params) < 1 {
+		return fmt.Errorf("length of params must be at least 1")
+	}
+
+	tx_data, ok := params[0].(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("params must be an array of strings")
+	}
+
+	// Get the address
+	address, ok := tx_data["from"].(string)
+	if !ok {
+		return fmt.Errorf("from address not found")
+	}
+
+	from := w.GetAddress(address)
+	if from == nil {
+		return fmt.Errorf("address not found in wallet")
+	}
+
+	signer := w.GetSigner(from.Signer)
+	if signer == nil {
+		return fmt.Errorf("signer not found")
+	}
+
+	b := w.GetBlockchainById(o.ChainId)
+	if b == nil {
+		return fmt.Errorf("blockchain not found")
+	}
+
+	to_s, ok := tx_data["to"].(string)
+	if !ok {
+		return fmt.Errorf("to address not found")
+	}
+
+	to := common.HexToAddress(to_s)
+
+	value_s, ok := tx_data["value"].(string)
+	if !ok {
+		value_s = "0x00"
+	}
+
+	value := big.NewInt(0)
+	value, ok = value.SetString(value_s, 0)
+	if !ok {
+		return fmt.Errorf("error converting value to big.Int")
+	}
+
+	data_s, ok := tx_data["data"].(string)
+	if !ok {
+		return fmt.Errorf("data not found")
+	}
+	data, err := hexutil.Decode(data_s)
+	if err != nil {
+		return fmt.Errorf("error decoding data: %v", err)
+	}
+
+	send_res := bus.Fetch("eth", "estimate-gas", &bus.B_EthEstimateGas{
+		Blockchain: b.Name,
+		From:       from.Address,
+		To:         to,
+		Amount:     value,
+		Data:       data,
+	})
+
+	if send_res.Error != nil {
+		return fmt.Errorf("error sending transaction: %v", send_res.Error)
+	}
+
+	res.Result = send_res.Data
+	return nil
+}
+
+func getBlockNumber(o *cmn.Origin, req RPCRequest, ctx *ConContext, res *RPCResponse) error {
+	w := cmn.CurrentWallet
+	if w == nil {
+		return fmt.Errorf("no wallet found")
+	}
+
+	b := w.GetBlockchainById(o.ChainId)
+	if b == nil {
+		return fmt.Errorf("blockchain not found")
+	}
+
+	send_res := bus.Fetch("eth", "block-number", &bus.B_EthBlockNumber{
+		Blockchain: b.Name,
+	})
+
+	if send_res.Error != nil {
+		return fmt.Errorf("error getting block number: %v", send_res.Error)
+	}
+
+	res.Result = send_res.Data
+	return nil
+}
+
+func getTransactionByHash(o *cmn.Origin, req RPCRequest, ctx *ConContext, res *RPCResponse) error {
+	w := cmn.CurrentWallet
+	if w == nil {
+		return fmt.Errorf("no wallet found")
+	}
+
+	params, ok := req.Params.([]any)
+	if !ok {
+		return fmt.Errorf("params must be an array of strings")
+	}
+
+	if len(params) < 1 {
+		return fmt.Errorf("length of params must be at least 1")
+	}
+
+	tx_hash, ok := params[0].(string)
+	if !ok {
+		return fmt.Errorf("tx_hash must be a string")
+	}
+
+	b := w.GetBlockchainById(o.ChainId)
+	if b == nil {
+		return fmt.Errorf("blockchain not found")
+	}
+
+	send_res := bus.Fetch("eth", "tx-by-hash", &bus.B_EthTxByHash{
+		Blockchain: b.Name,
+		Hash:       common.HexToHash(tx_hash),
+	})
+
+	if send_res.Error != nil {
+		return fmt.Errorf("error getting transaction by hash: %v", send_res.Error)
+	}
+	res.Result = send_res.Data
+
 	return nil
 }

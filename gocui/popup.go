@@ -132,7 +132,7 @@ func (p *Popup) Layout(g *Gui) error {
 			}
 		}
 		v.OnClickHotspot = func(v *View, hs *Hotspot) {
-			// Handle droplistes
+			// Handle droplists
 			if hs != nil {
 				params := strings.Split(hs.Value, " ")
 
@@ -176,11 +176,11 @@ func (p *Popup) Layout(g *Gui) error {
 	}
 
 	for _, c := range p.Controls {
-		if c.Type == C_INPUT {
+		if c.Type == C_INPUT || c.Type == C_TEXT_INPUT {
 			c.View.x0 = v.x0 + c.x0
-			c.View.x1 = v.x0 + c.x1
+			c.View.x1 = v.x0 + c.x1 + 1
 			c.View.y0 = v.y0 + c.y0
-			c.View.y1 = v.y0 + c.y1
+			c.View.y1 = v.y0 + c.y1 + 1
 			g.SetViewOnTop(c.View.name)
 		}
 	}

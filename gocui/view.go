@@ -1411,8 +1411,8 @@ func (v *View) AddInput(tagParams map[string]string) error {
 		ID:   tagParams["id"],
 		x0:   v.wx,
 		y0:   v.wy,
-		x1:   v.wx + size + 1,
-		y1:   v.wy + 2,
+		x1:   v.wx + size,
+		y1:   v.wy + 1,
 	}
 
 	if v, err := v.gui.SetView(name, v.x0+v.wx, v.y0+v.wy, v.x0+v.wx+size+1, v.y0+v.wy+2, 0); err != nil {
@@ -1466,8 +1466,8 @@ func (v *View) AddTextInput(tagParams map[string]string) error {
 		ID:   tagParams["id"],
 		x0:   v.wx,
 		y0:   v.wy,
-		x1:   v.wx + width + 1,
-		y1:   v.wy + height + 1,
+		x1:   v.wx + width,
+		y1:   v.wy + height,
 	}
 
 	if v, err := v.gui.SetView(name, v.x0+v.wx, v.y0+v.wy, v.x0+v.wx+width+1, v.y0+v.wy+height+1, 0); err != nil {

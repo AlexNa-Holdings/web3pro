@@ -57,7 +57,7 @@ func (h *Hotspot) SetText(t string) {
 
 func (v *View) findHotspot(x, y int) *Hotspot {
 
-	if v.hotspots == nil {
+	if v == nil || v.hotspots == nil {
 		return nil
 	}
 

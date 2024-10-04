@@ -60,6 +60,7 @@ func DlgBlockchain(name string) *gocui.Popup {
 					v.SetInput("wtoken_address", bch.WTokenAddress.String())
 				}
 				v.SetInput("explorer_api_url", bch.ExplorerAPIUrl)
+				v.SetInput("explorer_api_type", bch.ExplorerApiType)
 			}
 		},
 		OnClickHotspot: func(v *gocui.View, hs *gocui.Hotspot) {
@@ -166,16 +167,16 @@ func DlgBlockchain(name string) *gocui.Popup {
 			}
 		},
 		Template: `
-              Name: <input id:name size:32 value:"">
-               RPC: <input id:rpc size:32 value:"">
-           ChainId: <input id:chainid size:32 value:"">
-          Currency: <input id:currency size:32 value:"">
-Wrapped Token Addr: <input id:wtoken_address size:32 value:"">
-<line text:Explorer>
-               URL: <input id:explorer size:32 value:"">
-           API URL: <input id:explorer_api_url size:32 value:""> 
+              Name: <input id:name size:32 value:""> 
+               RPC: <input id:rpc size:43 value:""> 
+           ChainId: <input id:chainid size:16 value:""> 
+          Currency: <input id:currency size:16 value:""> 
+Wrapped Token Addr: <input id:wtoken_address size:43 value:""> 
+<line text:Explorer> 
+               URL: <input id:explorer size:43 value:"">
+           API URL: <input id:explorer_api_url size:43 value:""> 
           API Type: <select id:explorer_api_type size:16> 
-         API Token: <input id:api_token size:32 value:"">
+         API Token: <input id:api_token size:43 value:""> 
 
  <c><button text:Ok tip:"create wallet">  <button text:Cancel>`,
 	}

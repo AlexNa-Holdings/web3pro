@@ -251,6 +251,14 @@ func (g *Gui) SetView(name string, x0, y0, x1, y1 int, overlaps byte) (*View, er
 		v.tainted = true
 
 		if resized {
+			if v.gui.popup != nil { // close select list on any view resized
+				if v.gui.popup.DropList != nil {
+					g.DeleteView(v.gui.popup.DropList.name)
+					v.gui.popup.DropList = nil
+					screen.HideCursor()
+				}
+			}
+
 			if v.OnResize != nil {
 				v.OnResize(v)
 			}
@@ -1079,13 +1087,13 @@ func (g *Gui) onKey(ev *gocuiEvent) error {
 			return nil
 		}
 
-		if g.popup != nil && g.popup.View != nil && ev.Key == MouseLeft { // if click on input just set focus
+		if g.popup != nil && g.popup.View != nil && ev.Key == MouseLeft {
 
 			if g.popup.View.DropList != nil {
-				if mx >= g.popup.View.DropList.x0 &&
-					mx <= g.popup.View.DropList.x1 &&
-					my >= g.popup.View.DropList.y0 &&
-					my < g.popup.View.DropList.y1 {
+				if mx >= g.popup.View.DropList.x0+1 &&
+					mx < g.popup.View.DropList.x1+1 &&
+					my >= g.popup.View.DropList.y0+1 &&
+					my < g.popup.View.DropList.y1+1 {
 
 					g.popup.View.DropList.Editor.Edit(g.popup.View.DropList, Key(ev.Key), ev.Ch, Modifier(ev.Mod))
 					return nil
@@ -1093,13 +1101,16 @@ func (g *Gui) onKey(ev *gocuiEvent) error {
 			}
 
 			for i, c := range g.popup.View.Controls {
-				if c.Type == C_INPUT || c.Type == C_TEXT_INPUT {
+				if c.Type == C_INPUT || c.Type == C_TEXT_INPUT || c.Type == C_SELECT {
 
-					if mx >= g.popup.View.x0+c.x0 &&
-						mx <= g.popup.View.x0+c.x1 &&
-						my >= g.popup.View.y0+c.y0 &&
-						my < g.popup.View.y0+c.y1 {
+					if mx >= g.popup.View.x0+c.x0+1 &&
+						mx < g.popup.View.x0+c.x1+1 &&
+						my >= g.popup.View.y0+c.y0+1 &&
+						my < g.popup.View.y0+c.y1+1 {
 						g.popup.View.SetFocus(i)
+						if c.Type == C_SELECT {
+							g.popup.ShowDropList(c)
+						}
 						return nil
 					}
 				}
@@ -1107,8 +1118,7 @@ func (g *Gui) onKey(ev *gocuiEvent) error {
 
 		}
 
-		if ev.Key == MouseLeft {
-			// check if click on a title
+		if ev.Key == MouseLeft { // check if click on a title
 			for i := len(g.views); i > 0; i-- {
 				v := g.views[i-1]
 				if my == v.y0 {
