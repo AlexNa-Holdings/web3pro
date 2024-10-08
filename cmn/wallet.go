@@ -9,7 +9,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
+	"strings"
 	"sync"
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
@@ -179,6 +181,17 @@ func (w *Wallet) AddOrigin(o *Origin) error {
 	if w.GetOrigin(o.URL) != nil {
 		log.Error().Msgf("Origin already exists: %s\n", o.URL)
 		return fmt.Errorf("origin already exists: %s", o.URL)
+	}
+
+	o.URL = strings.TrimSpace(o.URL)
+
+	// check the URL format
+	if o.URL == "" {
+		return errors.New("origin URL is empty")
+	}
+	_, err := url.Parse(o.URL)
+	if err != nil {
+		return err
 	}
 
 	w.writeMutex.Lock()

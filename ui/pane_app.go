@@ -99,9 +99,15 @@ func (p *AppPane) rebuidTemplate() string {
 		return temp + "No origin selected"
 	}
 
-	temp += `<b>  App: </b>`
+	temp += "<b>  App: </b>"
 
-	temp += cmn.TagLink(cmn.GetHostName(o.URL),
+	temp += cmn.TagLink(o.ShortName(),
+		"start_command app set ",
+		"Set the app")
+
+	temp += "\n<b>  URL: </b>"
+
+	temp += cmn.TagLink(o.URL,
 		"start_command app set ",
 		"Set the app")
 

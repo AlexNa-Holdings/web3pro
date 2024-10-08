@@ -158,11 +158,14 @@ func App_Process(c *Command, input string) {
 		ui.Printf("Connected web applications:\n\n")
 
 		sort.Slice(w.Origins, func(i, j int) bool {
-			return w.Origins[i].URL < w.Origins[j].URL
+			return w.Origins[i].ShortName() < w.Origins[j].ShortName()
 		})
 
 		for _, o := range w.Origins {
-			ui.Printf("%s ", o.URL)
+
+			ui.Terminal.Screen.AddLink(fmt.Sprintf("%-14s ", o.ShortName()),
+				"command app set '"+o.URL+"'",
+				"Select application", "")
 
 			if p[2] != "" && o.URL != p[2] {
 				continue
@@ -171,41 +174,45 @@ func App_Process(c *Command, input string) {
 			ui.Terminal.Screen.AddLink(gocui.ICON_DELETE,
 				"command app remove '"+o.URL+"'",
 				"Remove access for the web application", "")
-			ui.Printf("\n")
 
-			for i, na := range o.Addresses {
-				a := w.GetAddress(na.Hex())
-				if a == nil {
-					a = &cmn.Address{
-						Address: na,
-						Name:    "Unknown",
-					}
-				}
+			ui.Printf(" %s\n", o.URL)
 
-				if i == 0 {
-					ui.Printf("  *%d ", i)
-				} else {
-					ui.Printf("   %d ", i)
-				}
+			// for i, na := range o.Addresses {
+			// 	a := w.GetAddress(na.Hex())
+			// 	if a == nil {
+			// 		a = &cmn.Address{
+			// 			Address: na,
+			// 			Name:    "Unknown",
+			// 		}
+			// 	}
 
-				cmn.AddAddressShortLink(ui.Terminal.Screen, a.Address)
-				ui.Printf(" ")
-				ui.Terminal.Screen.AddLink(gocui.ICON_DELETE,
-					"command app remove_addr '"+o.URL+"' '"+a.Name+"'",
-					"Remove access for the address", "")
+			// 	if i == 0 {
+			// 		ui.Printf("  *%d ", i)
+			// 	} else {
+			// 		ui.Printf("   %d ", i)
+			// 	}
 
-				if i == 0 {
-					ui.Printf("  ")
-				} else {
-					ui.Terminal.Screen.AddLink(gocui.ICON_PROMOTE,
-						"command app promote_addr '"+o.URL+"' '"+a.Name+"'",
-						"Promote the address", "")
-				}
+			// 	cmn.AddAddressShortLink(ui.Terminal.Screen, a.Address)
+			// 	ui.Printf(" ")
+			// 	ui.Terminal.Screen.AddLink(gocui.ICON_DELETE,
+			// 		"command app remove_addr '"+o.URL+"' '"+a.Name+"'",
+			// 		"Remove access for the address", "")
 
-				ui.Printf("%-14s (%s) \n", a.Name, a.Signer)
+			// 	if i == 0 {
+			// 		ui.Printf("  ")
+			// 	} else {
+			// 		ui.Terminal.Screen.AddLink(gocui.ICON_PROMOTE,
+			// 			"command app promote_addr '"+o.URL+"' '"+a.Name+"'",
+			// 			"Promote the address", "")
+			// 	}
 
-			}
+			// 	ui.Printf("%-14s (%s) \n", a.Name, a.Signer)
+
+			// }
 		}
+
+		ui.Printf("\n")
+
 	case "remove":
 		bus.Send("ui", "popup", ui.DlgConfirm(
 			"Deny access", `

@@ -3,6 +3,7 @@ package cmn
 import (
 	"fmt"
 	"math/big"
+	"net"
 	"net/url"
 	"os"
 	"os/exec"
@@ -575,4 +576,47 @@ func IsContractDownloaded(a common.Address) bool {
 	}
 
 	return true
+}
+
+func (o *Origin) ShortName() string {
+	NO_SUFFIX := []string{"app", "go", "www"}
+	suffix := ""
+
+	u, _ := url.Parse(o.URL)
+
+	host := u.Host
+
+	if strings.Contains(host, ":") {
+		host, _, _ = net.SplitHostPort(host)
+	}
+
+	ip := net.ParseIP(host)
+	if ip != nil {
+		return host
+	}
+
+	params := strings.Split(host, ".")
+	if len(params) == 1 {
+		return strings.ToUpper(params[0])
+	}
+
+	if len(params) == 2 {
+		return strings.ToUpper(params[1])
+	}
+
+	if len(params) == 3 {
+		if !IsInArray(NO_SUFFIX, params[0]) {
+			suffix = "(" + params[0] + ")"
+		}
+		return strings.ToUpper(params[1] + suffix)
+	}
+
+	if len(params) > 3 {
+		if !IsInArray(NO_SUFFIX, params[0]) {
+			suffix = "(" + params[0] + ")"
+		}
+		return strings.ToUpper(params[len(params)-2] + suffix)
+	}
+
+	return host
 }

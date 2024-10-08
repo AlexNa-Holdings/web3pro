@@ -374,7 +374,7 @@ Allow connection from browser?
 			ID:      rpcReq.ID,
 		}
 
-		// Dispatch based on method prefix
+		// Dispatch based on the method prefix
 
 		if rpcReq.Method == "personal_sign" {
 			rpcReq.Method = "eth_sign"
