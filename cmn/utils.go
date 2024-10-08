@@ -601,7 +601,7 @@ func (o *Origin) ShortName() string {
 	}
 
 	if len(params) == 2 {
-		return strings.ToUpper(params[1])
+		return strings.ToUpper(params[0])
 	}
 
 	if len(params) == 3 {
