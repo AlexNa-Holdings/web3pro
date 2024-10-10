@@ -620,3 +620,8 @@ func (o *Origin) ShortName() string {
 
 	return host
 }
+
+func Uint256FromHex(hex string) *big.Int {
+	i, _ := new(big.Int).SetString(strings.TrimPrefix(hex, "0x"), 16)
+	return i
+}

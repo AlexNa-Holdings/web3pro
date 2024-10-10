@@ -12,14 +12,15 @@ var StandardOnClickHotspot func(v *gocui.View, hs *gocui.Hotspot)
 var StandardOnOverHotspot func(v *gocui.View, hs *gocui.Hotspot)
 
 type Wallet struct {
-	Name        string        `json:"name"`
-	Blockchains []*Blockchain `json:"blockchains"`
-	Signers     []*Signer     `json:"signers"`
-	Addresses   []*Address    `json:"addresses"`
-	Tokens      []*Token      `json:"tokens"`
-	Origins     []*Origin     `json:"origins"`
-	Contracts   map[common.Address]*Contract
-	AppsPaneOn  bool `json:"apps_pane_on"`
+	Name            string        `json:"name"`
+	Blockchains     []*Blockchain `json:"blockchains"`
+	Signers         []*Signer     `json:"signers"`
+	Addresses       []*Address    `json:"addresses"`
+	Tokens          []*Token      `json:"tokens"`
+	Origins         []*Origin     `json:"origins"`
+	LP_V3_Providers []*LP_V3      `json:"lp_v3_providers"`
+	Contracts       map[common.Address]*Contract
+	AppsPaneOn      bool `json:"apps_pane_on"`
 
 	CurrentChain   string         `json:"current_chain"`
 	CurrentAddress common.Address `json:"current_address"`
@@ -81,4 +82,10 @@ type Token struct {
 	Price          float64        `json:"price"`
 	PraceChange24  float64        `json:"price_change_24"`
 	PriceTimestamp time.Time      `json:"price_timestamp"` // Unix timestamp
+}
+
+type LP_V3 struct { // LP v3 Position Manager
+	Name       string         `json:"name"`
+	Address    common.Address `json:"address"`
+	Blockchain string         `json:"chain"`
 }

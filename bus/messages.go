@@ -240,3 +240,9 @@ type B_ExplorerDownloadContract struct { // download-contract
 	Blockchain string
 	Address    common.Address
 }
+
+// ---------- lp_v3 ----------
+type B_LP_V3_Discover struct { // discover
+	Chain string
+	Name  string
+}

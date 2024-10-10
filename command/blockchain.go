@@ -147,7 +147,7 @@ func Blockchain_Process(c *Command, input string) {
 			return
 		}
 
-		for i, b := range w.Blockchains {
+		for _, b := range w.Blockchains {
 			if b.Name == b_name {
 
 				bus.Send("ui", "popup", ui.DlgConfirm(
@@ -156,10 +156,8 @@ func Blockchain_Process(c *Command, input string) {
 <c>Are you sure you want to remove 
 <c>blockchain '`+b_name+"' ?\n",
 					func() {
-						w.Blockchains = append(w.Blockchains[:i], w.Blockchains[i+1:]...)
 
-						w.AuditNativeTokens()
-						err := w.Save()
+						err := w.DeleteBlockchain(b_name)
 						if err != nil {
 							ui.PrintErrorf("Failed to save wallet: %s", err)
 							return

@@ -6,7 +6,6 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/ui"
-	"github.com/rs/zerolog/log"
 )
 
 type CommandProcessFunc func(*Command, string)
@@ -41,6 +40,7 @@ func Init() {
 		NewAppCommand(),
 		NewSoundCommand(),
 		NewExplorerCommand(),
+		NewLP_V3Command(),
 	}
 
 	go func() {
@@ -54,7 +54,7 @@ func Init() {
 				case string:
 					input := strings.TrimSpace(msg.Data.(string))
 					command := strings.Split(input, " ")[0]
-					log.Trace().Msgf("Processing command: %s", command)
+					//log.Trace().Msgf("Processing command: %s", command)
 
 					found := false
 					for _, cmd := range Commands {

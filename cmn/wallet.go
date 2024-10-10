@@ -34,7 +34,6 @@ func Open(name string, pass string) error {
 		w.writeMutex = sync.Mutex{}
 
 		w.AuditNativeTokens()
-		w.MarkUniqueTokens()
 		if w.CurrentChain == "" || w.GetBlockchain(w.CurrentChain) == nil {
 			if len(w.Blockchains) > 0 {
 				w.CurrentChain = w.Blockchains[0].Name
@@ -64,11 +63,39 @@ func Open(name string, pass string) error {
 	return err
 }
 
+func (w *Wallet) DeleteBlockchain(name string) error {
+	w.writeMutex.Lock()
+	defer w.writeMutex.Unlock()
+
+	for i, b := range w.Blockchains {
+		if b.Name == name {
+			w.Blockchains = append(w.Blockchains[:i], w.Blockchains[i+1:]...)
+			break
+		}
+	}
+
+	for i, t := range w.Tokens {
+		if t.Blockchain == name {
+			w.Tokens = append(w.Tokens[:i], w.Tokens[i+1:]...)
+		}
+	}
+
+	for i, o := range w.LP_V3_Providers {
+		if o.Blockchain == name {
+			w.LP_V3_Providers = append(w.LP_V3_Providers[:i], w.LP_V3_Providers[i+1:]...)
+		}
+	}
+
+	w.AuditNativeTokens()
+
+	return w.Save()
+}
+
 func (w *Wallet) AuditNativeTokens() {
 
 	eddited := false
 
-	for _, b := range w.Blockchains {
+	for _, b := range w.Blockchains { // audit native tokens
 		found := false
 		for _, t := range w.Tokens {
 			if t.Blockchain == b.Name && t.Native {
@@ -86,6 +113,22 @@ func (w *Wallet) AuditNativeTokens() {
 				Native:     true,
 			})
 			eddited = true
+		}
+	}
+
+	for _, b := range w.Blockchains { // audit wrapped native tokens
+		if b.WTokenAddress != (common.Address{}) {
+			wt := w.GetTokenByAddress(b.Name, b.WTokenAddress)
+			if wt == nil {
+				w.Tokens = append(w.Tokens, &Token{
+					Blockchain: b.Name,
+					Address:    b.WTokenAddress,
+					Name:       "Wrapped " + b.Currency,
+					Symbol:     "W" + b.Currency,
+					Decimals:   18,
+				})
+				eddited = true
+			}
 		}
 	}
 
@@ -617,12 +660,19 @@ func (w *Wallet) GetTokenByAddress(b string, a common.Address) *Token {
 		return t
 	}
 
+	// for _, t := range w.Tokens {
+	// 	if t.Blockchain == b && ((!t.Native && t.Address == a) ||
+	// 		(t.Native && a == common.Address{})) {
+	// 		return t
+	// 	}
+	// }
+
 	for _, t := range w.Tokens {
-		if t.Blockchain == b && ((!t.Native && t.Address == a) ||
-			(t.Native && a == common.Address{})) {
+		if t.Blockchain == b && (t.Address == a) {
 			return t
 		}
 	}
+
 	return nil
 }
 
@@ -687,4 +737,29 @@ func (w *Wallet) UntrustContract(addr common.Address) error {
 	w.Contracts[addr].Trusted = false
 
 	return w.Save()
+}
+
+func (w *Wallet) GetLP_V3(chain int, addr common.Address) *LP_V3 {
+
+	b := w.GetBlockchainById(chain)
+	if b == nil {
+		return nil
+	}
+
+	for _, lp := range w.LP_V3_Providers {
+		if lp.Blockchain == b.Name && lp.Address == addr {
+			return lp
+		}
+	}
+	return nil
+}
+
+func (w *Wallet) RemoveLP_V3(chain int, addr common.Address) error {
+	for i, lp := range w.LP_V3_Providers {
+		if lp.Blockchain == w.GetBlockchainById(chain).Name && lp.Address == addr {
+			w.LP_V3_Providers = append(w.LP_V3_Providers[:i], w.LP_V3_Providers[i+1:]...)
+			return w.Save()
+		}
+	}
+	return errors.New("provider not found")
 }
