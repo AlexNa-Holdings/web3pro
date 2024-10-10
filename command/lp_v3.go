@@ -13,7 +13,7 @@ import (
 )
 
 var lp_v3_subcommands = []string{
-	"on", "off", "add", "remove", "discover",
+	"on", "off", "add", "remove", "discover", "providers",
 	"list",
 }
 
@@ -27,7 +27,8 @@ Usage: liquidity v3 [COMMAND]
 Manage v3 liquidity 
 
 Commands:
-  list                      - List v3 providers
+  list                      - List v3 positions
+  providers				    - List v3 providers
   add [CHAIN] [ADDR] [NAME] - Add v3 provider
   remove [CHAIN] [ADDR]     - Remove v3 provider
   discover [CHAIN] [Name]   - Discover v3 positions
@@ -125,6 +126,8 @@ func LP_V3_Process(c *Command, input string) {
 
 	switch subcommand {
 	case "list", "":
+
+	case "providers":
 		ui.Printf("\nV3 Providers\n\n")
 
 		if len(w.LP_V3_Providers) == 0 {
