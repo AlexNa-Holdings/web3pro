@@ -42,6 +42,7 @@ const (
 	ICON_VSC      = "\U000f0a1e "
 	ICON_TRUST    = "\uebc1 "
 	ICON_NO_ENTRY = "\uf4f4 "
+	ICON_LIGHT    = "\U000f06e8 "
 )
 
 const REGEX_TAGS = `<(/?\w+)((?:\s+\w+(?::(?:[^>\s]+|"[^"]*"|'[^']*'))?\s*)*)>`

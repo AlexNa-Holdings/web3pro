@@ -250,7 +250,7 @@ func Token_Process(c *Command, input string) {
 				ui.Printf("    ")
 			}
 
-			if t.Price == 0 {
+			if t.PriceFeeder == "" {
 				ui.Terminal.Screen.AddLink(gocui.ICON_FEED, "command p discover '"+b.Name+"' '"+t.Address.String()+"'", "Discover price", "")
 			} else {
 				ui.Printf("  ")

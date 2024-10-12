@@ -170,11 +170,11 @@ func Send_Process(c *Command, input string) {
 	}
 
 	bus.Send("eth", "send", &bus.B_EthSend{
-		Blockchain: b.Name,
-		Token:      t.Symbol,
-		From:       a_from.Address,
-		To:         common.HexToAddress(to),
-		Amount:     amt,
+		ChainId: b.ChainId,
+		Token:   t.Symbol,
+		From:    a_from.Address,
+		To:      common.HexToAddress(to),
+		Amount:  amt,
 	})
 
 }

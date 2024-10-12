@@ -62,11 +62,11 @@ func DlgSend(b *cmn.Blockchain, t *cmn.Token, from *cmn.Address, to string, amou
 					}
 
 					bus.Send("eth", "send", &bus.B_EthSend{
-						Blockchain: b.Name,
-						Token:      t.Symbol,
-						From:       from.Address,
-						To:         common.HexToAddress(to),
-						Amount:     val,
+						ChainId: b.ChainId,
+						Token:   t.Symbol,
+						From:    from.Address,
+						To:      common.HexToAddress(to),
+						Amount:  val,
 					})
 
 					Gui.HidePopup()

@@ -280,31 +280,6 @@ func TagAddressShortLink(a common.Address) string {
 		s[:6], gocui.ICON_3DOTS, s[len(s)-4:], a.String(), a.String())
 }
 
-func AddValueLink(v *gocui.View, val *big.Int, t *Token) {
-	if v == nil {
-		return
-	}
-
-	if t == nil {
-		return
-	}
-
-	xf := NewXF(val, t.Decimals)
-
-	text := FmtAmount(val, t.Decimals, true)
-	v.AddLink(text, "copy "+xf.String(), xf.String(), "")
-}
-
-func TagValueLink(val *big.Int, t *Token) string {
-	if t == nil {
-		return ""
-	}
-
-	xf := NewXF(val, t.Decimals)
-
-	return fmt.Sprintf("<l text:'%s' action:'copy %s' tip:'%s'>", FmtAmount(val, t.Decimals, true), xf.String(), xf.String())
-}
-
 func AddDollarValueLink(v *gocui.View, val *big.Int, t *Token) {
 	if v == nil {
 		return
@@ -357,6 +332,31 @@ func TagShortDollarLink(val float64) string {
 	return fmt.Sprintf("<l text:'%s' action:'copy %.15f' tip:'%.15f'>", FmtFloat64D(val, false), val, val)
 }
 
+func TagValueLink(val *big.Int, t *Token) string {
+	if t == nil {
+		return ""
+	}
+
+	xf := NewXF(val, t.Decimals)
+
+	return fmt.Sprintf("<l text:'%s' action:'copy %s' tip:'%s'>", FmtAmount(val, t.Decimals, true), xf.String(), xf.String())
+}
+
+func AddValueLink(v *gocui.View, val *big.Int, t *Token) {
+	if v == nil {
+		return
+	}
+
+	if t == nil {
+		return
+	}
+
+	xf := NewXF(val, t.Decimals)
+
+	text := FmtAmount(val, t.Decimals, true)
+	v.AddLink(text, "copy "+xf.String(), xf.String(), "")
+}
+
 func AddValueSymbolLink(v *gocui.View, val *big.Int, t *Token) {
 	if v == nil {
 		return
@@ -367,7 +367,7 @@ func AddValueSymbolLink(v *gocui.View, val *big.Int, t *Token) {
 	}
 
 	xf := NewXF(val, t.Decimals)
-	text := FmtAmount(val, t.Decimals, true)
+	text := FmtAmount(val, t.Decimals, true) + t.Symbol
 
 	v.AddLink(text, "copy "+xf.String(), xf.String(), "")
 }
@@ -557,7 +557,7 @@ func formatFieldValue(info SignedDataInfo, fieldName, fieldType string, value in
 			s = t.Format("2006-01-02 15:04:05 MST")
 		case "chainId":
 			if info.Blockchain != nil {
-				s = fmt.Sprintf("%d %s", info.Blockchain.ChainID, info.Blockchain.Name)
+				s = fmt.Sprintf("%d %s", info.Blockchain.ChainId, info.Blockchain.Name)
 			}
 		}
 	}

@@ -9,8 +9,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/big"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -67,8 +69,13 @@ func (w *Wallet) DeleteBlockchain(name string) error {
 	w.writeMutex.Lock()
 	defer w.writeMutex.Unlock()
 
+	bd := w.GetBlockchain(name)
+	if bd == nil {
+		return errors.New("blockchain not found")
+	}
+
 	for i, b := range w.Blockchains {
-		if b.Name == name {
+		if b.Name == bd.Name {
 			w.Blockchains = append(w.Blockchains[:i], w.Blockchains[i+1:]...)
 			break
 		}
@@ -81,7 +88,7 @@ func (w *Wallet) DeleteBlockchain(name string) error {
 	}
 
 	for i, o := range w.LP_V3_Providers {
-		if o.Blockchain == name {
+		if o.ChainId == bd.ChainId {
 			w.LP_V3_Providers = append(w.LP_V3_Providers[:i], w.LP_V3_Providers[i+1:]...)
 		}
 	}
@@ -120,12 +127,18 @@ func (w *Wallet) AuditNativeTokens() {
 		if b.WTokenAddress != (common.Address{}) {
 			wt := w.GetTokenByAddress(b.Name, b.WTokenAddress)
 			if wt == nil {
+
+				nt, _ := w.GetNativeToken(b)
+
 				w.Tokens = append(w.Tokens, &Token{
-					Blockchain: b.Name,
-					Address:    b.WTokenAddress,
-					Name:       "Wrapped " + b.Currency,
-					Symbol:     "W" + b.Currency,
-					Decimals:   18,
+					Blockchain:     b.Name,
+					Address:        b.WTokenAddress,
+					Name:           "Wrapped " + b.Currency,
+					Symbol:         "W" + b.Currency,
+					Decimals:       18,
+					Native:         false,
+					PriceFeeder:    nt.PriceFeeder,
+					PriceFeedParam: nt.PriceFeedParam,
 				})
 				eddited = true
 			}
@@ -158,12 +171,23 @@ func (w *Wallet) GetBlockchain(n string) *Blockchain {
 			return b
 		}
 	}
+
+	// try to find by chain id
+	chain_id, err := strconv.Atoi(n)
+	if err == nil {
+		for _, b := range w.Blockchains {
+			if b.ChainId == chain_id {
+				return b
+			}
+		}
+	}
+
 	return nil
 }
 
 func (w *Wallet) GetBlockchainById(id int) *Blockchain {
 	for _, b := range w.Blockchains {
-		if b.ChainID == id {
+		if b.ChainId == id {
 			return b
 		}
 	}
@@ -325,7 +349,7 @@ func (w *Wallet) SetOriginChain(url string, ch string) error {
 		return errors.New("blockchain not found")
 	}
 
-	o.ChainId = b.ChainID
+	o.ChainId = b.ChainId
 
 	bus.Send("wallet", "origin-chain-changed", url)
 
@@ -570,20 +594,29 @@ func (w *Wallet) GetSignerWithCopies(name string) []*Signer {
 	return res
 }
 
-func (w *Wallet) GetAddress(a string) *Address {
+func (w *Wallet) GetAddress(a any) *Address {
+	switch a := a.(type) {
+	case string:
+		// normalize the format
+		if common.IsHexAddress(a) {
+			a = common.HexToAddress(a).String()
+		} else {
+			return nil
+		}
 
-	// normalize the format
-	if common.IsHexAddress(a) {
-		a = common.HexToAddress(a).String()
-	} else {
-		return nil
-	}
-
-	for _, s := range w.Addresses {
-		if s.Address.String() == a {
-			return s
+		for _, s := range w.Addresses {
+			if s.Address.String() == a {
+				return s
+			}
+		}
+	case common.Address:
+		for _, s := range w.Addresses {
+			if s.Address == a {
+				return s
+			}
 		}
 	}
+
 	return nil
 }
 
@@ -739,27 +772,85 @@ func (w *Wallet) UntrustContract(addr common.Address) error {
 	return w.Save()
 }
 
-func (w *Wallet) GetLP_V3(chain int, addr common.Address) *LP_V3 {
-
-	b := w.GetBlockchainById(chain)
-	if b == nil {
-		return nil
+func (w *Wallet) AddLP_V3(lp *LP_V3) error {
+	if w.GetLP_V3(lp.ChainId, lp.Provider) != nil {
+		return errors.New("provider already exists")
 	}
 
+	if w.GetLP_V3_by_name(lp.ChainId, lp.Name) != nil {
+		return errors.New("provider with the same name already exists")
+	}
+
+	w.LP_V3_Providers = append(w.LP_V3_Providers, lp)
+	return w.Save()
+}
+
+func (w *Wallet) GetLP_V3(chainId int, addr common.Address) *LP_V3 {
 	for _, lp := range w.LP_V3_Providers {
-		if lp.Blockchain == b.Name && lp.Address == addr {
+		if lp.ChainId == chainId && lp.Provider == addr {
 			return lp
 		}
 	}
 	return nil
 }
 
-func (w *Wallet) RemoveLP_V3(chain int, addr common.Address) error {
+func (w *Wallet) GetLP_V3_by_name(chainId int, name string) *LP_V3 {
+	for _, lp := range w.LP_V3_Providers {
+		if lp.ChainId == chainId && lp.Name == name {
+			return lp
+		}
+	}
+	return nil
+}
+
+func (w *Wallet) RemoveLP_V3(chainId int, provider common.Address) error {
 	for i, lp := range w.LP_V3_Providers {
-		if lp.Blockchain == w.GetBlockchainById(chain).Name && lp.Address == addr {
+		if lp.ChainId == chainId && lp.Provider == provider {
 			w.LP_V3_Providers = append(w.LP_V3_Providers[:i], w.LP_V3_Providers[i+1:]...)
+
+			// remove all positions
+			for j := len(w.LP_V3_Positions) - 1; j >= 0; j-- {
+				if w.LP_V3_Positions[j].ChainId == chainId && w.LP_V3_Positions[j].Provider == provider {
+					w.LP_V3_Positions = append(w.LP_V3_Positions[:j], w.LP_V3_Positions[j+1:]...)
+				}
+			}
+
 			return w.Save()
 		}
 	}
+
 	return errors.New("provider not found")
+}
+
+func (w *Wallet) AddLP_V3Position(lp *LP_V3_Position) error {
+
+	if pos := w.GetLP_V3Position(lp.Address, lp.ChainId, lp.Provider, lp.NFT_Token); pos != nil {
+		// update
+		pos.Token0 = lp.Token0
+		pos.Token1 = lp.Token1
+		pos.Pool = lp.Pool
+		pos.Fee = lp.Fee
+	}
+
+	w.LP_V3_Positions = append(w.LP_V3_Positions, lp)
+	return w.Save()
+}
+
+func (w *Wallet) GetLP_V3Position(addr common.Address, chainId int, provider common.Address, nft *big.Int) *LP_V3_Position {
+	for _, lp := range w.LP_V3_Positions {
+		if lp.Address.Cmp(addr) == 0 && lp.ChainId == chainId && lp.Provider == provider && lp.NFT_Token.Cmp(nft) == 0 {
+			return lp
+		}
+	}
+	return nil
+}
+
+func (w *Wallet) RemoveLP_V3Position(addr common.Address, chainId int, provider common.Address, nft *big.Int) error {
+	for i, lp := range w.LP_V3_Positions {
+		if lp.Address.Cmp(addr) == 0 && lp.ChainId == chainId && lp.Provider == provider && lp.NFT_Token.Cmp(nft) == 0 {
+			w.LP_V3_Positions = append(w.LP_V3_Positions[:i], w.LP_V3_Positions[i+1:]...)
+			return w.Save()
+		}
+	}
+	return errors.New("position not found")
 }

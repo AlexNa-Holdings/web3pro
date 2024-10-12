@@ -191,7 +191,7 @@ func BuildTxERC20Transfer(b *cmn.Blockchain, t *cmn.Token, s *cmn.Signer, from *
 	maxFeePerGas = maxFeePerGas.Mul(maxFeePerGas, buffer)
 
 	tx := types.NewTx(&types.DynamicFeeTx{
-		ChainID:   big.NewInt(int64(b.ChainID)),
+		ChainID:   big.NewInt(int64(b.ChainId)),
 		Nonce:     nonce,
 		To:        &t.Address,
 		Value:     big.NewInt(0),

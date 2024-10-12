@@ -8,11 +8,12 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func DlgLP_V3_edit(b *cmn.Blockchain, address string, name string) *gocui.Popup {
+func DlgLP_V3_edit(b *cmn.Blockchain, address string, name string, url string) *gocui.Popup {
 	template := fmt.Sprintf(`
    Chain: %s	
  Address: %s
     Name: <input id:name size:32 value:""> 
+     URL: <input id:url size:32 value:"">
 
 <c><button text:Ok tip:"create wallet">  <button text:Cancel>`, b.Name, address)
 
@@ -28,6 +29,7 @@ func DlgLP_V3_edit(b *cmn.Blockchain, address string, name string) *gocui.Popup 
 		},
 		OnOpen: func(v *gocui.View) {
 			v.SetInput("name", name)
+			v.SetInput("url", url)
 		},
 		OnClickHotspot: func(v *gocui.View, hs *gocui.Hotspot) {
 
@@ -49,13 +51,16 @@ func DlgLP_V3_edit(b *cmn.Blockchain, address string, name string) *gocui.Popup 
 
 					a := common.HexToAddress(address)
 
-					lp := w.GetLP_V3(b.ChainID, a)
+					lp := w.GetLP_V3(b.ChainId, a)
 					if lp == nil {
 						Notification.ShowError("Provider not found")
 						break
 					}
 
+					url := v.GetInput("url")
+
 					lp.Name = name
+					lp.URL = url
 
 					err := cmn.CurrentWallet.Save()
 					if err != nil {

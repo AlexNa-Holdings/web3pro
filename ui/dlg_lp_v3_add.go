@@ -8,11 +8,12 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func DlgLP_V3_add(b *cmn.Blockchain, address string, name string) *gocui.Popup {
+func DlgLP_V3_add(b *cmn.Blockchain, address string, name string, url string) *gocui.Popup {
 	template := fmt.Sprintf(`
    Chain: %s	
  Address: <input id:address size:32 value:"">
     Name: <input id:name size:32 value:""> 
+     URL: <input id:url size:32 value:"">
 
 <c><button text:Ok tip:"create wallet">  <button text:Cancel>`, b.Name)
 
@@ -29,6 +30,7 @@ func DlgLP_V3_add(b *cmn.Blockchain, address string, name string) *gocui.Popup {
 		OnOpen: func(v *gocui.View) {
 			v.SetInput("name", name)
 			v.SetInput("address", address)
+			v.SetInput("url", url)
 		},
 		OnClickHotspot: func(v *gocui.View, hs *gocui.Hotspot) {
 
@@ -56,21 +58,23 @@ func DlgLP_V3_add(b *cmn.Blockchain, address string, name string) *gocui.Popup {
 						break
 					}
 
-					lp := w.GetLP_V3(b.ChainID, a)
+					lp := w.GetLP_V3(b.ChainId, a)
 					if lp != nil {
 						Notification.ShowError("Provider already exists")
 						break
 					}
 
-					cmn.CurrentWallet.LP_V3_Providers = append(cmn.CurrentWallet.LP_V3_Providers, &cmn.LP_V3{
-						Name:       name,
-						Address:    a,
-						Blockchain: b.Name,
+					url := v.GetInput("url")
+
+					err := w.AddLP_V3(&cmn.LP_V3{
+						Name:     name,
+						Provider: a,
+						ChainId:  b.ChainId,
+						URL:      url,
 					})
 
-					err := cmn.CurrentWallet.Save()
 					if err != nil {
-						Notification.ShowErrorf("Error creating LP: %s", err)
+						Notification.ShowErrorf("Error adding LP: %s", err)
 						break
 					}
 					Notification.Showf("LP v3 %s created", name)

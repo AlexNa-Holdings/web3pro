@@ -125,7 +125,7 @@ func Price_Process(c *Command, input string) {
 		ui.Printf("Feeder type: %s\n", t.PriceFeeder)
 		ui.Printf("Feeder Param: %s\n", t.PriceFeedParam)
 
-		pairs, err := price.GetPairs(b.ChainID, a.Hex())
+		pairs, err := price.GetPairs(b.ChainId, a.Hex())
 		if err != nil {
 			ui.PrintErrorf("Error discovering trading pairs: %v", err)
 			return
@@ -179,6 +179,23 @@ func Price_Process(c *Command, input string) {
 
 		t.PriceFeeder = feeder
 		t.PriceFeedParam = param
+
+		if t.Native {
+			wt := w.GetToken(bchain, b.WTokenAddress.Hex())
+			if wt != nil {
+				wt.PriceFeeder = feeder
+				wt.PriceFeedParam = param
+			}
+		} else {
+			if t.Address.Cmp(b.WTokenAddress) != 0 {
+				nt, _ := w.GetNativeToken(b)
+				if nt != nil {
+					nt.PriceFeeder = feeder
+					nt.PriceFeedParam = param
+				}
+			}
+		}
+
 		err := w.Save()
 		if err != nil {
 			ui.PrintErrorf("Error saving wallet: %v", err)

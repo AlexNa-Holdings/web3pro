@@ -9,11 +9,11 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/ui"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/rs/zerolog/log"
 )
 
 func discover(msg *bus.Message) error {
+	found := 0
 
 	req, ok := msg.Data.(bus.B_LP_V3_Discover)
 	if !ok {
@@ -25,11 +25,11 @@ func discover(msg *bus.Message) error {
 		return fmt.Errorf("discover: no wallet")
 	}
 
-	chain_id := -1
+	chain_id := 0
 
-	b := w.GetBlockchain(req.Chain)
+	b := w.GetBlockchainById(req.ChainId)
 	if b != nil {
-		chain_id = b.ChainID
+		chain_id = b.ChainId
 	}
 
 	name := req.Name
@@ -38,22 +38,21 @@ func discover(msg *bus.Message) error {
 
 	for _, pl := range w.LP_V3_Providers {
 
-		b := w.GetBlockchain(pl.Blockchain)
-		if b == nil {
-			return fmt.Errorf("discover: blockchain not found: %v", pl.Blockchain)
-		}
-
-		if chain_id != -1 && b.ChainID != chain_id {
-			continue
-		}
-
 		if name != "" && pl.Name != name {
 			continue
 		}
 
-		ui.Printf("Discovering LP v3: %s %s\n", pl.Blockchain, pl.Name)
+		if chain_id != 0 && pl.ChainId != chain_id {
+			continue
+		}
 
-		found := 0
+		b := w.GetBlockchainById(pl.ChainId)
+		if b == nil {
+			log.Error().Msgf("Blockchain not found: %d", pl.ChainId)
+			continue
+		}
+
+		ui.Printf("Discovering LP v3: %s %s\n", b.Name, pl.Name)
 
 		for _, addr := range w.Addresses {
 
@@ -62,17 +61,17 @@ func discover(msg *bus.Message) error {
 			ui.Printf(" %s \n", addr.Name)
 			ui.Flush()
 
-			data, err := V3_ABI.Pack("balanceOf", addr.Address)
+			data, err := V3_MANAGER.Pack("balanceOf", addr.Address)
 			if err != nil {
 				log.Error().Err(err).Msg("V3_ABI.Pack balanceOf")
 				return err
 			}
 
 			resp := bus.Fetch("eth", "call", &bus.B_EthCall{
-				Blockchain: pl.Blockchain,
-				To:         pl.Address,
-				From:       addr.Address,
-				Data:       data,
+				ChainId: pl.ChainId,
+				To:      pl.Provider,
+				From:    addr.Address,
+				Data:    data,
 			})
 
 			if resp.Error != nil {
@@ -83,17 +82,17 @@ func discover(msg *bus.Message) error {
 			n := cmn.Uint256FromHex(resp.Data.(string))
 
 			for i := 0; i < int(n.Uint64()); i++ {
-				data, err := V3_ABI.Pack("tokenOfOwnerByIndex", addr.Address, big.NewInt(int64(i)))
+				data, err := V3_MANAGER.Pack("tokenOfOwnerByIndex", addr.Address, big.NewInt(int64(i)))
 				if err != nil {
 					log.Error().Err(err).Msg("V3_ABI.Pack tokenByIndex")
 					return err
 				}
 
 				resp := bus.Fetch("eth", "call", &bus.B_EthCall{
-					Blockchain: pl.Blockchain,
-					To:         pl.Address,
-					From:       addr.Address,
-					Data:       data,
+					ChainId: pl.ChainId,
+					To:      pl.Provider,
+					From:    addr.Address,
+					Data:    data,
 				})
 
 				if resp.Error != nil {
@@ -103,108 +102,139 @@ func discover(msg *bus.Message) error {
 
 				token := cmn.Uint256FromHex(resp.Data.(string))
 
-				data, err = V3_ABI.Pack("positions", token)
-				if err != nil {
-					log.Error().Err(err).Msg("V3_ABI.Pack positions")
-					return err
-				}
-
-				resp = bus.Fetch("eth", "call", &bus.B_EthCall{
-					Blockchain: pl.Blockchain,
-					To:         pl.Address,
-					From:       addr.Address,
-					Data:       data,
+				pos_resp := msg.Fetch("lp_v3", "get-position", &bus.B_LP_V3_GetPosition{
+					ChainId:   pl.ChainId,
+					Provider:  pl.Provider,
+					From:      addr.Address,
+					NFT_Token: token,
 				})
 
-				if resp.Error != nil {
-					log.Error().Err(resp.Error).Msg("eth call")
-					return resp.Error
+				if pos_resp.Error != nil {
+					log.Error().Err(pos_resp.Error).Msg("get_position")
+					return pos_resp.Error
 				}
 
-				var (
-					nonce                                              *big.Int
-					operator                                           common.Address
-					token0                                             common.Address
-					token1                                             common.Address
-					fee                                                *big.Int
-					tickLower, tickUpper                               *big.Int
-					liquidity                                          *big.Int
-					feeGrowthInside0LastX128, feeGrowthInside1LastX128 *big.Int
-					tokensOwed0, tokensOwed1                           *big.Int
-				)
-
-				output, err := hexutil.Decode(resp.Data.(string))
-				if err != nil {
-					log.Error().Err(err).Msg("hexutil.Decode")
-					return err
+				pos, ok := pos_resp.Data.(*bus.B_LP_V3_GetPosition_Response)
+				if !ok {
+					log.Error().Msg("get_position: invalid data")
+					return fmt.Errorf("get_position: invalid data")
 				}
 
-				err = V3_ABI.UnpackIntoInterface(
-					&[]interface{}{
-						&nonce,
-						&operator,
-						&token0,
-						&token1,
-						&fee,
-						&tickLower,
-						&tickUpper,
-						&liquidity,
-						&feeGrowthInside0LastX128,
-						&feeGrowthInside1LastX128,
-						&tokensOwed0,
-						&tokensOwed1,
-					}, "positions", output)
-
-				if err != nil {
-					log.Error().Err(err).Msg("positionManagerABI.UnpackIntoInterface")
-					return err
-				}
-
-				if liquidity.Cmp(big.NewInt(0)) == 0 && tokensOwed0.Cmp(big.NewInt(0)) == 0 && tokensOwed1.Cmp(big.NewInt(0)) == 0 {
+				if pos.Liquidity.Cmp(big.NewInt(0)) == 0 && pos.TokensOwed0.Cmp(big.NewInt(0)) == 0 && pos.TokensOwed1.Cmp(big.NewInt(0)) == 0 {
 					// no liquidity no gains
 					continue
 				}
 
-				ui.Printf("    NFT Token: %v\n", token)
-				// ui.Printf("    Operator: %s\n", operator.String())
+				ui.Printf("%3d NFT Token: %v Operator: ", found+1, token)
+				cmn.AddAddressShortLink(ui.Terminal.Screen, pos.Operator)
+				ui.Printf("\n")
 
-				t0 := w.GetTokenByAddress(b.Name, token0)
+				t0 := w.GetTokenByAddress(b.Name, pos.Token0)
 				if t0 != nil {
-					ui.Printf("    Token0: %s (%s)\n", t0.Symbol, t0.Name)
+					ui.Printf("    %s (%s)", t0.Symbol, t0.Name)
 				} else {
-					ui.Printf("    Token0: %s ", token0.String())
-					ui.Terminal.Screen.AddLink(gocui.ICON_ADD, "command token add "+b.Name+" "+token0.String(), "Add token", "")
-					ui.Printf("\n")
+					ui.Printf("    ")
+					cmn.AddAddressShortLink(ui.Terminal.Screen, pos.Token0)
+					ui.Printf(" ")
+					ui.Terminal.Screen.AddLink(gocui.ICON_ADD, "command token add "+b.Name+" "+pos.Token0.String(), "Add token", "")
 				}
 
-				t1 := w.GetTokenByAddress(b.Name, token1)
+				ui.Printf(" / ")
+
+				t1 := w.GetTokenByAddress(b.Name, pos.Token1)
 				if t1 != nil {
-					ui.Printf("    Token1: %s (%s)\n", t1.Symbol, t1.Name)
+					ui.Printf("%s (%s)", t1.Symbol, t1.Name)
 				} else {
-					ui.Printf("    Token1: %s ", token1.String())
-					ui.Terminal.Screen.AddLink(gocui.ICON_ADD, "command token add "+b.Name+" "+token1.String(), "Add token", "")
-					ui.Printf("\n")
+					cmn.AddAddressShortLink(ui.Terminal.Screen, pos.Token1)
+					ui.Printf(" ")
+					ui.Terminal.Screen.AddLink(gocui.ICON_ADD, "command token add "+b.Name+" "+pos.Token1.String(), "Add token", "")
 				}
 
-				ui.Printf("    Fee: %.2f%%\n", float64(fee.Uint64())/10000.)
-				ui.Printf("    Price Ticks: %s - %s\n", tickLower.String(), tickUpper.String())
-				ui.Printf("    Liquidity: %s\n", liquidity.String())
+				ui.Printf(" Fee: %.2f%%\n", float64(pos.Fee.Uint64())/10000.)
+				ui.Printf("    Price Ticks: %s / %s\n", pos.TickLower.String(), pos.TickUpper.String())
+				//ui.Printf("    Liquidity: %s\n", liquidity.String())
 				// ui.Printf("    FeeGrowthInside0LastX128: %s\n", feeGrowthInside0LastX128.String())
 				// ui.Printf("    FeeGrowthInside1LastX128: %s\n", feeGrowthInside1LastX128.String())
-				ui.Printf("    TokensOwed0: %s\n", tokensOwed0.String())
-				ui.Printf("    TokensOwed1: %s\n", tokensOwed1.String())
+				ui.Printf("    Owed: ")
+
+				if t0 != nil {
+					cmn.AddValueSymbolLink(ui.Terminal.Screen, pos.TokensOwed0, t0)
+				} else {
+					ui.Printf("%s", pos.TokensOwed0.String())
+				}
+
+				ui.Printf(" / ")
+
+				if t1 != nil {
+					cmn.AddValueSymbolLink(ui.Terminal.Screen, pos.TokensOwed1, t1)
+				} else {
+					ui.Printf("%s", pos.TokensOwed1.String())
+				}
+
+				// get factory
+				factory_resp := msg.Fetch("lp_v3", "get-factory", &bus.B_LP_V3_GetFactory{
+					ChainId:  pl.ChainId,
+					Provider: pl.Provider,
+				})
+
+				if factory_resp.Error != nil {
+					log.Error().Err(factory_resp.Error).Msg("get_factory")
+					return factory_resp.Error
+				}
+
+				factory, ok := factory_resp.Data.(common.Address)
+				if !ok {
+					log.Error().Msg("get_factory: invalid data")
+					return fmt.Errorf("get_factory: invalid data")
+				}
+
+				// get pool
+				pool_resp := msg.Fetch("lp_v3", "get-pool", &bus.B_LP_V3_GetPool{
+					ChainId: pl.ChainId,
+					Factory: factory,
+					Token0:  pos.Token0,
+					Token1:  pos.Token1,
+					Fee:     pos.Fee,
+				})
+
+				if pool_resp.Error != nil {
+					log.Error().Err(pool_resp.Error).Msg("get_pool")
+					return pool_resp.Error
+				}
+
+				pool, ok := pool_resp.Data.(common.Address)
+				if !ok {
+					log.Error().Msg("get_pool: invalid data")
+					return fmt.Errorf("get_pool: invalid data")
+				}
 
 				ui.Printf("\n")
 
 				ui.Flush()
+
+				err = w.AddLP_V3Position(&cmn.LP_V3_Position{
+					Address:   addr.Address,
+					ChainId:   pl.ChainId,
+					Provider:  pl.Provider,
+					NFT_Token: token,
+					Token0:    pos.Token0,
+					Token1:    pos.Token1,
+					Fee:       pos.Fee,
+					Pool:      pool,
+				})
+
+				if err != nil {
+					log.Error().Err(err).Msg("AddLP_V3_Position")
+					return err
+				}
+
 				found++
 			}
 
 		}
-
-		ui.Printf("\nFound %d LP v3 positions\n", found)
-
 	}
+
+	ui.Printf("\nFound %d LP v3 positions\n", found)
 
 	return nil
 }

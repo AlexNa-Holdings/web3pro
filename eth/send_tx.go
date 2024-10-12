@@ -30,9 +30,9 @@ func sendTx(msg *bus.Message) (string, error) {
 		return "", errors.New("no wallet")
 	}
 
-	b := w.GetBlockchain(req.Blockchain)
+	b := w.GetBlockchainById(req.ChainId)
 	if b == nil {
-		return "", fmt.Errorf("blockchain not found: %v", req.Blockchain)
+		return "", fmt.Errorf("blockchain not found: %v", req.ChainId)
 	}
 
 	from := w.GetAddress(req.From.String())
@@ -264,7 +264,7 @@ func BuildTx(b *cmn.Blockchain, s *cmn.Signer, from *cmn.Address, to common.Addr
 	maxFeePerGas = maxFeePerGas.Mul(maxFeePerGas, buffer)
 
 	tx := types.NewTx(&types.DynamicFeeTx{
-		ChainID:   big.NewInt(int64(b.ChainID)),
+		ChainID:   big.NewInt(int64(b.ChainId)),
 		Nonce:     nonce,
 		To:        &to,
 		Value:     amount,

@@ -165,27 +165,27 @@ type B_WsList_Response []B_WsList_Conn
 
 // ---------- eth ----------
 type B_EthSend struct { // send
-	Blockchain string
-	Token      string
-	From       common.Address
-	To         common.Address
-	Amount     *big.Int
+	ChainId int
+	Token   string
+	From    common.Address
+	To      common.Address
+	Amount  *big.Int
 }
 
 type B_EthSendTx struct { // send
-	Blockchain string
-	From       common.Address
-	To         common.Address
-	Amount     *big.Int
-	Data       []byte
+	ChainId int
+	From    common.Address
+	To      common.Address
+	Amount  *big.Int
+	Data    []byte
 }
 
 type B_EthCall struct { // send
-	Blockchain string
-	From       common.Address
-	To         common.Address
-	Amount     *big.Int
-	Data       []byte
+	ChainId int
+	From    common.Address
+	To      common.Address
+	Amount  *big.Int
+	Data    []byte
 }
 
 type B_EthSignTypedData_v4 struct { // sign-typed-data-v4
@@ -243,6 +243,44 @@ type B_ExplorerDownloadContract struct { // download-contract
 
 // ---------- lp_v3 ----------
 type B_LP_V3_Discover struct { // discover
-	Chain string
-	Name  string
+	ChainId int
+	Name    string
+}
+
+type B_LP_V3_GetPosition struct { // get-position
+	ChainId   int
+	Provider  common.Address
+	From      common.Address
+	NFT_Token *big.Int
+}
+
+type B_LP_V3_GetPosition_Response struct { // get-position_response
+	Nonce                                              *big.Int
+	Operator                                           common.Address
+	Token0                                             common.Address
+	Token1                                             common.Address
+	Fee                                                *big.Int
+	TickLower, TickUpper                               *big.Int
+	Liquidity                                          *big.Int
+	FeeGrowthInside0LastX128, FeeGrowthInside1LastX128 *big.Int
+	TokensOwed0, TokensOwed1                           *big.Int
+}
+
+type B_LP_V3_GetFactory struct { // get-factory
+	ChainId  int
+	Provider common.Address
+}
+
+type B_LP_V3_GetPool struct { // get-pool
+	ChainId  int
+	Provider common.Address
+	Factory  common.Address
+	Token0   common.Address
+	Token1   common.Address
+	Fee      *big.Int
+}
+
+type B_LP_V3_GetPrice struct { // get-price
+	ChainId int
+	Pool    common.Address
 }

@@ -1,6 +1,7 @@
 package cmn
 
 import (
+	"math/big"
 	"sync"
 	"time"
 
@@ -12,13 +13,14 @@ var StandardOnClickHotspot func(v *gocui.View, hs *gocui.Hotspot)
 var StandardOnOverHotspot func(v *gocui.View, hs *gocui.Hotspot)
 
 type Wallet struct {
-	Name            string        `json:"name"`
-	Blockchains     []*Blockchain `json:"blockchains"`
-	Signers         []*Signer     `json:"signers"`
-	Addresses       []*Address    `json:"addresses"`
-	Tokens          []*Token      `json:"tokens"`
-	Origins         []*Origin     `json:"origins"`
-	LP_V3_Providers []*LP_V3      `json:"lp_v3_providers"`
+	Name            string            `json:"name"`
+	Blockchains     []*Blockchain     `json:"blockchains"`
+	Signers         []*Signer         `json:"signers"`
+	Addresses       []*Address        `json:"addresses"`
+	Tokens          []*Token          `json:"tokens"`
+	Origins         []*Origin         `json:"origins"`
+	LP_V3_Providers []*LP_V3          `json:"lp_v3_providers"`
+	LP_V3_Positions []*LP_V3_Position `json:"lp_v3_positions"`
 	Contracts       map[common.Address]*Contract
 	AppsPaneOn      bool `json:"apps_pane_on"`
 
@@ -56,7 +58,7 @@ type Address struct {
 type Blockchain struct {
 	Name             string         `json:"name"`
 	Url              string         `json:"url"`
-	ChainID          int            `json:"chain_id"`
+	ChainId          int            `json:"chain_id"`
 	ExplorerUrl      string         `json:"explorer_url"`
 	ExplorerAPIUrl   string         `json:"explorer_api_url"`
 	ExplorerAPIToken string         `json:"explorer_api_token"`
@@ -80,12 +82,24 @@ type Token struct {
 	PriceFeeder    string         `json:"price_feeder"`
 	PriceFeedParam string         `json:"price_feed_id"`
 	Price          float64        `json:"price"`
-	PraceChange24  float64        `json:"price_change_24"`
+	PriceChange24  float64        `json:"price_change_24"`
 	PriceTimestamp time.Time      `json:"price_timestamp"` // Unix timestamp
 }
 
 type LP_V3 struct { // LP v3 Position Manager
-	Name       string         `json:"name"`
-	Address    common.Address `json:"address"`
-	Blockchain string         `json:"chain"`
+	Name     string         `json:"name"`
+	Provider common.Address `json:"provider"`
+	ChainId  int            `json:"chain_id"`
+	URL      string         `json:"url"`
+}
+
+type LP_V3_Position struct {
+	Address   common.Address `json:"address"`
+	ChainId   int            `json:"chain_id"`
+	Provider  common.Address `json:"provider"`
+	NFT_Token *big.Int       `json:"nft_token"`
+	Token0    common.Address `json:"token0"`
+	Token1    common.Address `json:"token1"`
+	Fee       *big.Int       `json:"fee"`
+	Pool      common.Address `json:"pool"`
 }

@@ -32,10 +32,10 @@ func estimateGas(msg *bus.Message) (string, error) {
 		return "", fmt.Errorf("address from not found: %v", req.From)
 	}
 
-	c, ok := cons[b.ChainID]
+	c, ok := cons[b.ChainId]
 	if !ok {
-		log.Error().Msgf("EstimateGas: Client not found for chainId: %d", b.ChainID)
-		return "", fmt.Errorf("client not found for chainId: %d", b.ChainID)
+		log.Error().Msgf("EstimateGas: Client not found for chainId: %d", b.ChainId)
+		return "", fmt.Errorf("client not found for chainId: %d", b.ChainId)
 	}
 
 	// estimate gas

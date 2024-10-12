@@ -9,14 +9,32 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-//go:embed NonfungiblePositionManager.json
-var V3_ABI_JSON []byte
-var V3_ABI abi.ABI
+//go:embed ABI/NonfungiblePositionManager.json
+var V3_MANAGER_JSON []byte
+var V3_MANAGER abi.ABI
+
+//go:embed ABI/v3Factory.json
+var V3_FACTORY_JSON []byte
+var V3_FACTORY abi.ABI
+
+//go:embed ABI/v3Pool.json
+var V3_POOL_JSON []byte
+var V3_POOL abi.ABI
 
 func Init() {
-	err := json.Unmarshal(V3_ABI_JSON, &V3_ABI)
+	err := json.Unmarshal(V3_MANAGER_JSON, &V3_MANAGER)
 	if err != nil {
 		log.Fatal().Msgf("Error unmarshaling V3_ABI_JSON ABI: %v\n", err)
+	}
+
+	err = json.Unmarshal(V3_FACTORY_JSON, &V3_FACTORY)
+	if err != nil {
+		log.Fatal().Msgf("Error unmarshaling V3_FACTORY_JSON ABI: %v\n", err)
+	}
+
+	err = json.Unmarshal(V3_POOL_JSON, &V3_POOL)
+	if err != nil {
+		log.Fatal().Msgf("Error unmarshaling V3_POOL_JSON ABI: %v\n", err)
 	}
 
 	go Loop()
@@ -39,6 +57,21 @@ func process(msg *bus.Message) {
 		case "discover":
 			err := discover(msg)
 			msg.Respond(nil, err)
+		case "get-position":
+			data, err := get_position(msg)
+			msg.Respond(data, err)
+		case "get-factory":
+			data, err := get_factory(msg)
+			msg.Respond(data, err)
+		case "get-pool":
+			data, err := get_pool(msg)
+			msg.Respond(data, err)
+		case "get-price": //getSqrtPriceX96
+			data, err := get_price(msg)
+			msg.Respond(data, err)
+		default:
+			log.Error().Msgf("lp_v3: unknown type: %v", msg.Type)
+
 		}
 	}
 }

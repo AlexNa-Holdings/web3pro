@@ -37,7 +37,7 @@ func signTx(msg *bus.Message) (*types.Transaction, error) {
 		return nil, fmt.Errorf("blockchain not found: %v", m.Chain)
 	}
 
-	ch_id := uint32(b.ChainID)
+	ch_id := uint32(b.ChainId)
 	to := m.Tx.To().Hex()
 
 	request := &trezorproto.EthereumSignTxEIP1559{

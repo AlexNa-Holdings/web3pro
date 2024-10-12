@@ -43,7 +43,7 @@ func signTx(msg *bus.Message) (*types.Transaction, error) {
 	}
 	payload = append(payload, serializePath(dp)...)
 
-	unsignedTxBytes, err := serializeTxForLedger(m.Tx, big.NewInt(int64(b.ChainID)))
+	unsignedTxBytes, err := serializeTxForLedger(m.Tx, big.NewInt(int64(b.ChainId)))
 	if err != nil {
 		log.Error().Err(err).Msg("SignTx: Failed to serialize transaction")
 
@@ -63,7 +63,7 @@ func signTx(msg *bus.Message) (*types.Transaction, error) {
 
 	// sig[64] -= byte(b.ChainID*2 + 35)
 
-	signedTx, err := m.Tx.WithSignature(types.NewCancunSigner(big.NewInt(int64(b.ChainID))), sig)
+	signedTx, err := m.Tx.WithSignature(types.NewCancunSigner(big.NewInt(int64(b.ChainId))), sig)
 	if err != nil {
 		log.Error().Err(err).Msg("signTx: Failed to sign transaction")
 		return nil, err

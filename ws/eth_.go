@@ -321,11 +321,11 @@ func sendTransaction(o *cmn.Origin, req RPCRequest, ctx *ConContext, res *RPCRes
 	}
 
 	send_res := bus.Fetch("eth", "send-tx", &bus.B_EthSendTx{
-		Blockchain: b.Name,
-		From:       from.Address,
-		To:         to,
-		Amount:     value,
-		Data:       data,
+		ChainId: b.ChainId,
+		From:    from.Address,
+		To:      to,
+		Amount:  value,
+		Data:    data,
 	})
 
 	if send_res.Error != nil {
@@ -405,11 +405,11 @@ func call(o *cmn.Origin, req RPCRequest, ctx *ConContext, res *RPCResponse) erro
 	}
 
 	send_res := bus.Fetch("eth", "call", &bus.B_EthCall{
-		Blockchain: b.Name,
-		From:       from.Address,
-		To:         to,
-		Amount:     value,
-		Data:       data,
+		ChainId: b.ChainId,
+		From:    from.Address,
+		To:      to,
+		Amount:  value,
+		Data:    data,
 	})
 
 	if send_res.Error != nil {

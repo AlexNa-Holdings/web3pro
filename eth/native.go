@@ -82,7 +82,7 @@ func BuildTxTransfer(b *cmn.Blockchain, s *cmn.Signer, from *cmn.Address, to com
 	maxFeePerGas = maxFeePerGas.Mul(maxFeePerGas, buffer)
 
 	tx := types.NewTx(&types.DynamicFeeTx{
-		ChainID:   big.NewInt(int64(b.ChainID)),
+		ChainID:   big.NewInt(int64(b.ChainId)),
 		Nonce:     nonce,
 		To:        &to,
 		Value:     amount,

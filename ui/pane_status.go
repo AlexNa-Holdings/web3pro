@@ -94,11 +94,11 @@ func (p *StatusPane) rebuidTemplate() {
 			}
 
 			change := ""
-			if t.PraceChange24 > 0 {
-				change = fmt.Sprintf(" <color fg:green>\uf0d8%.2f%%</color>", t.PraceChange24)
+			if t.PriceChange24 > 0 {
+				change = fmt.Sprintf(" <color fg:green>\uf0d8%.2f%%</color>", t.PriceChange24)
 			}
-			if t.PraceChange24 < 0 {
-				change = fmt.Sprintf(" <color fg:red>\uf0d7%.2f%%</color>", t.PraceChange24)
+			if t.PriceChange24 < 0 {
+				change = fmt.Sprintf(" <color fg:red>\uf0d7%.2f%%</color>", t.PriceChange24)
 			}
 
 			temp += fmt.Sprintf("<b>Chain:</b> %s | %s %s%s\n",

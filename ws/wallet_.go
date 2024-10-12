@@ -81,7 +81,7 @@ func switchEthereumChain(req RPCRequest) error {
 		return fmt.Errorf("blockchain not found: %v", chainID)
 	}
 
-	schain := fmt.Sprintf("%s (%d)", b.Name, b.ChainID)
+	schain := fmt.Sprintf("%s (%d)", b.Name, b.ChainId)
 
 	bus.Fetch("ui", "hail", &bus.B_Hail{
 		Title: "Switch Chain",

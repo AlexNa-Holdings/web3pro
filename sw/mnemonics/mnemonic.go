@@ -105,7 +105,7 @@ func process(msg *bus.Message) {
 					return
 				}
 
-				tx, err := mnemonics.SignTx(int64(b.ChainID), m.Tx, m.Path)
+				tx, err := mnemonics.SignTx(int64(b.ChainId), m.Tx, m.Path)
 				if err != nil {
 					log.Error().Msgf("Error signing transaction: %v", err)
 					msg.Respond(nil, err)

@@ -91,7 +91,7 @@ func initConnections() {
 	}
 
 	for _, b := range w.Blockchains {
-		if _, ok := cons[b.ChainID]; !ok {
+		if _, ok := cons[b.ChainId]; !ok {
 			openClient_locked(b)
 		}
 	}
@@ -108,17 +108,17 @@ func updateConnections() {
 
 	vetted := make(map[int]bool)
 	for _, b := range w.Blockchains {
-		vetted[b.ChainID] = true
+		vetted[b.ChainId] = true
 
-		c, ok := cons[b.ChainID]
+		c, ok := cons[b.ChainId]
 		if !ok {
 			openClient_locked(b)
 		} else {
 
 			if c.URL != b.Url {
 				//reconnect
-				cons[b.ChainID].Close()
-				bus.Send("eth", "disconnected", b.ChainID)
+				cons[b.ChainId].Close()
+				bus.Send("eth", "disconnected", b.ChainId)
 				openClient_locked(b)
 			}
 		}
@@ -144,9 +144,9 @@ func openClient_locked(b *cmn.Blockchain) error {
 		log.Error().Msgf("OpenClient: Cannot dial to (%s). Error:(%v)", b.Url, err)
 		return err
 	}
-	cons[b.ChainID] = &con{client, b.Url}
+	cons[b.ChainId] = &con{client, b.Url}
 	log.Trace().Msgf("OpenClient: Client opened to (%s)", b.Url)
-	bus.Send("eth", "connected", b.ChainID)
+	bus.Send("eth", "connected", b.ChainId)
 	return nil
 }
 
@@ -154,13 +154,13 @@ func getEthClient(b *cmn.Blockchain) (*ethclient.Client, error) {
 	consMutex.Lock()
 	defer consMutex.Unlock()
 
-	c, ok := cons[b.ChainID]
+	c, ok := cons[b.ChainId]
 	if !ok {
-		return nil, fmt.Errorf("OpenClient: Client not found for chainId (%d)", b.ChainID)
+		return nil, fmt.Errorf("OpenClient: Client not found for chainId (%d)", b.ChainId)
 	}
 
 	if c.Client == nil {
-		return nil, fmt.Errorf("OpenClient: Client is nil for chainId (%d)", b.ChainID)
+		return nil, fmt.Errorf("OpenClient: Client is nil for chainId (%d)", b.ChainId)
 	}
 
 	return c.Client, nil
@@ -253,7 +253,7 @@ func getTxByHash(msg *bus.Message) (*bus.B_EthTxByHash_Response, error) {
 	resp := bus.B_EthTxByHash_Response{
 		BlockHash:        blockHash.Hex(),
 		BlockNumber:      blockNumber.String(),
-		ChainID:          b.ChainID,
+		ChainID:          b.ChainId,
 		From:             from.Hex(),
 		Gas:              fmt.Sprintf("%d", tx.Gas()),
 		GasPrice:         tx.GasPrice().String(),

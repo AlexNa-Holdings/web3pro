@@ -22,9 +22,9 @@ func call(msg *bus.Message) (string, error) {
 		return "", errors.New("no wallet")
 	}
 
-	b := w.GetBlockchain(req.Blockchain)
+	b := w.GetBlockchainById(req.ChainId)
 	if b == nil {
-		return "", fmt.Errorf("blockchain not found: %v", req.Blockchain)
+		return "", fmt.Errorf("blockchain not found: %v", req.ChainId)
 	}
 
 	from := w.GetAddress(req.From.String())
@@ -32,10 +32,10 @@ func call(msg *bus.Message) (string, error) {
 		return "", fmt.Errorf("address from not found: %v", req.From)
 	}
 
-	c, ok := cons[b.ChainID]
+	c, ok := cons[b.ChainId]
 	if !ok {
-		log.Error().Msgf("SendSignedTx: Client not found for chainId: %d", b.ChainID)
-		return "", fmt.Errorf("client not found for chainId: %d", b.ChainID)
+		log.Error().Msgf("SendSignedTx: Client not found for chainId: %d", b.ChainId)
+		return "", fmt.Errorf("client not found for chainId: %d", b.ChainId)
 	}
 
 	call_msg := ethereum.CallMsg{
