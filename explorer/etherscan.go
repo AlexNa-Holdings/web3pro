@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
@@ -43,7 +44,7 @@ func DownloadContractABI(b *cmn.Blockchain, a common.Address) error {
 		return errors.New("blockchain has no explorer")
 	}
 
-	exu, _ := strings.CutSuffix(b.ExplorerUrl, "/")
+	exu, _ := strings.CutSuffix(b.ExplorerAPIUrl, "/")
 	URL := fmt.Sprintf("%s?module=contract&action=getabi&address=%s&apikey=%s", exu, a.Hex(), b.ExplorerAPIToken)
 
 	log.Trace().Msgf("Downloading ABI from %s", URL)
@@ -61,10 +62,28 @@ func DownloadContractABI(b *cmn.Blockchain, a common.Address) error {
 		return err
 	}
 
+	// Parse the JSON response
+	var result map[string]interface{}
+	if err := json.Unmarshal(body, &result); err != nil {
+		log.Error().Err(err).Msg("Error parsing JSON response")
+		return err
+	}
+
+	if result["status"] != "1" {
+		log.Error().Msgf("API error: %s", result["message"])
+		return fmt.Errorf("API error: %s", result["message"])
+	}
+
+	abi, ok := result["result"].(string)
+	if !ok {
+		log.Error().Msg("ABI not found in response")
+		return fmt.Errorf("ABI not found in response")
+	}
+
 	os.MkdirAll(cmn.DataFolder+"/abi", 0755)
 
 	path := cmn.DataFolder + "/abi/" + a.Hex() + ".json"
-	err = os.WriteFile(path, body, 0644)
+	err = os.WriteFile(path, []byte(abi), 0644)
 	if err != nil {
 		log.Error().Err(err).Msgf("Error saving ABI to %s", path)
 		return err
@@ -138,6 +157,12 @@ func DownloadContractCode(b *cmn.Blockchain, a common.Address) error {
 	if len(sourceCode) > 0 && sourceCode[0] == '{' {
 		// Parse the JSON string
 		var sourceCodeJSON map[string]interface{}
+
+		if strings.HasPrefix(sourceCode, "{{") {
+			sourceCode = strings.TrimPrefix(sourceCode, "{")
+			sourceCode = strings.TrimSuffix(sourceCode, "}")
+		}
+
 		if err := json.Unmarshal([]byte(sourceCode), &sourceCodeJSON); err != nil {
 			log.Error().Err(err).Msg("Error parsing SourceCode JSON")
 			return err
@@ -162,6 +187,14 @@ func DownloadContractCode(b *cmn.Blockchain, a common.Address) error {
 			}
 
 			filePath := fmt.Sprintf("%s/%s", dir, fileName)
+
+			fdir := filepath.Dir(filePath)
+			err = os.MkdirAll(fdir, 0755)
+			if err != nil {
+				log.Error().Err(err).Msgf("Error creating directories : %s", fdir)
+				return err
+			}
+
 			err = os.WriteFile(filePath, []byte(content), 0644)
 			if err != nil {
 				log.Error().Err(err).Msgf("Error saving source code to %s", filePath)
@@ -170,6 +203,14 @@ func DownloadContractCode(b *cmn.Blockchain, a common.Address) error {
 		}
 	} else {
 		filePath := fmt.Sprintf("%s/contract.sol", dir)
+
+		//create all the directories
+		err = os.MkdirAll(dir, 0755)
+		if err != nil {
+			log.Error().Err(err).Msgf("Error creating directories : %s", dir)
+			return err
+		}
+
 		err = os.WriteFile(filePath, []byte(sourceCode), 0644)
 		if err != nil {
 			log.Error().Err(err).Msgf("Error saving contract code to %s", filePath)

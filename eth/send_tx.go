@@ -360,13 +360,10 @@ func BuildHailToSendTxTemplate(b *cmn.Blockchain, from *cmn.Address, to common.A
 	}
 
 	toolbar := `<l text:'` + gocui.ICON_EDIT + `' action:'button edit_contract' tip:"Edit Contract">`
+	toolbar += `<l text:'` + gocui.ICON_DOWNLOAD + `' action:'button download_contract' tip:"Download Contract Code">`
 
-	if !cmn.IsContractDownloaded(to) {
-		toolbar += `<l text:'` + gocui.ICON_DOWNLOAD + `' action:'button download_contract' tip:"Download Contract Code">`
-	} else {
-
+	if cmn.IsContractDownloaded(to) {
 		action := "system \"" + cmn.Config.Editor + "\" \"" + cmn.DataFolder + "/contracts/" + to.String() + "\""
-
 		toolbar += `<l text:'` + gocui.ICON_VSC + `' action:'` + action + `' tip:"Open Contract Code">`
 	}
 

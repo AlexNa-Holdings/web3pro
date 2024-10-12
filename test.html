@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Encode Packed Test Page</title>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+</head>
+<body>
+    <h1>Encode Packed Test Page</h1>
+    <form id="encodePackedForm">
+        <label for="owner">Owner Address:</label>
+        <input type="text" id="owner" name="owner" value="0xAbCdEf1234567890abcdef1234567890abcdef12" required><br><br>
+
+        <label for="tickLower">Tick Lower (int24):</label>
+        <input type="number" id="tickLower" name="tickLower" value="-12345" required><br><br>
+
+        <label for="tickUpper">Tick Upper (int24):</label>
+        <input type="number" id="tickUpper" name="tickUpper" value="12345" required><br><br>
+
+        <button type="submit">Encode and Hash</button>
+    </form>
+
+    <h2>Results:</h2>
+    <p><strong>Packed Data:</strong> <span id="packedData"></span></p>
+    <p><strong>Keccak256 Hash:</strong> <span id="hash"></span></p>
+
+    <script>
+        document.getElementById('encodePackedForm').addEventListener('submit', async function (event) {
+            event.preventDefault();
+
+            const owner = document.getElementById('owner').value;
+            const tickLower = parseInt(document.getElementById('tickLower').value);
+            const tickUpper = parseInt(document.getElementById('tickUpper').value);
+
+            try {
+                const packedData = ethers.utils.solidityPack(
+                    ["address", "int24", "int24"],
+                    [owner, tickLower, tickUpper]
+                );
+
+                const hash = ethers.utils.keccak256(packedData);
+
+                document.getElementById('packedData').textContent = packedData;
+                document.getElementById('hash').textContent = hash;
+            } catch (error) {
+                console.error("Error encoding data:", error);
+                alert("An error occurred while encoding the data. Check the console for details.");
+            }
+        });
+    </script>
+</body>
+</html>

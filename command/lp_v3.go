@@ -281,9 +281,9 @@ func list(w *cmn.Wallet) {
 	for _, lp := range w.LP_V3_Positions {
 
 		// sanity check
-		if lp.Address.Cmp(common.Address{}) == 0 {
+		if lp.Owner.Cmp(common.Address{}) == 0 {
 			ui.PrintErrorf("No address, LP v3 position removed")
-			w.RemoveLP_V3Position(lp.Address, lp.ChainId, lp.Provider, lp.NFT_Token)
+			w.RemoveLP_V3Position(lp.Owner, lp.ChainId, lp.Provider, lp.NFT_Token)
 			log.Error().Msgf("No address, LP v3 position removed")
 			continue
 		}
@@ -291,7 +291,7 @@ func list(w *cmn.Wallet) {
 		b := w.GetBlockchainById(lp.ChainId)
 		if b == nil {
 			ui.PrintErrorf("Blockchain not found, V3 position removed: %d", lp.ChainId)
-			w.RemoveLP_V3Position(lp.Address, lp.ChainId, lp.Provider, lp.NFT_Token)
+			w.RemoveLP_V3Position(lp.Owner, lp.ChainId, lp.Provider, lp.NFT_Token)
 			log.Error().Msgf("Blockchain not found, V3 position removed: %d", lp.ChainId)
 			continue
 		}
@@ -299,21 +299,21 @@ func list(w *cmn.Wallet) {
 		lpp := w.GetLP_V3(lp.ChainId, lp.Provider)
 		if lpp == nil {
 			ui.PrintErrorf("Provider not found, V3 position removed: %s", lp.Provider.String())
-			w.RemoveLP_V3Position(lp.Address, lp.ChainId, lp.Provider, lp.NFT_Token)
+			w.RemoveLP_V3Position(lp.Owner, lp.ChainId, lp.Provider, lp.NFT_Token)
 			log.Error().Msgf("Provider not found, V3 position removed: %s", lp.Provider.String())
 			continue
 		}
 
-		a := w.GetAddress(lp.Address)
+		a := w.GetAddress(lp.Owner)
 		if a == nil {
-			ui.PrintErrorf("Address not found, V3 position removed: %s", lp.Address.String())
-			w.RemoveLP_V3Position(lp.Address, lp.ChainId, lp.Provider, lp.NFT_Token)
-			log.Error().Msgf("Address not found, V3 position removed: %s", lp.Address.String())
+			ui.PrintErrorf("Address not found, V3 position removed: %s", lp.Owner.String())
+			w.RemoveLP_V3Position(lp.Owner, lp.ChainId, lp.Provider, lp.NFT_Token)
+			log.Error().Msgf("Address not found, V3 position removed: %s", lp.Owner.String())
 			continue
 		}
 
-		// Fetch position
-		pos_resp := bus.Fetch("lp_v3", "get-position", &bus.B_LP_V3_GetPosition{
+		// Fetch nft position
+		pos_resp := bus.Fetch("lp_v3", "get-nft-position", &bus.B_LP_V3_GetNftPosition{
 			ChainId:   lp.ChainId,
 			Provider:  lp.Provider,
 			From:      w.CurrentAddress,
@@ -325,7 +325,27 @@ func list(w *cmn.Wallet) {
 			continue
 		}
 
-		pos, ok := pos_resp.Data.(*bus.B_LP_V3_GetPosition_Response)
+		nft_pos, ok := pos_resp.Data.(*bus.B_LP_V3_GetNftPosition_Response)
+		if !ok {
+			ui.PrintErrorf("Invalid data")
+			continue
+		}
+
+		// Fetch pool position
+		pool_pos_resp := bus.Fetch("lp_v3", "get-pool-position", &bus.B_LP_V3_GetPoolPosition{
+			ChainId:   lp.ChainId,
+			Provider:  lp.Provider,
+			Pool:      lp.Pool,
+			Owner:     lp.Owner,
+			TickLower: nft_pos.TickLower,
+			TickUpper: nft_pos.TickUpper})
+
+		if pool_pos_resp.Error != nil {
+			ui.PrintErrorf("Error fetching position: %v", pool_pos_resp.Error)
+			continue
+		}
+
+		pool_pos, ok := pos_resp.Data.(*bus.B_LP_V3_GetPoolPosition_Response)
 		if !ok {
 			ui.PrintErrorf("Invalid data")
 			continue
@@ -348,9 +368,9 @@ func list(w *cmn.Wallet) {
 			continue
 		}
 
-		amount0, amount1, in_range := calculateAmounts(pos.Liquidity, price,
-			getSqrtPriceX96FromTick(pos.TickLower.Int64()),
-			getSqrtPriceX96FromTick(pos.TickUpper.Int64()))
+		amount0, amount1, in_range := calculateAmounts(nft_pos.Liquidity, price,
+			getSqrtPriceX96FromTick(nft_pos.TickLower.Int64()),
+			getSqrtPriceX96FromTick(nft_pos.TickUpper.Int64()))
 
 		ui.Printf("%-16s ", lpp.Name+"|"+b.Currency)
 
@@ -388,11 +408,11 @@ func list(w *cmn.Wallet) {
 		cmn.AddValueLink(ui.Terminal.Screen, amount0, t0)
 		cmn.AddValueLink(ui.Terminal.Screen, amount1, t1)
 
-		cmn.AddValueLink(ui.Terminal.Screen, pos.TokensOwed0, t0)
-		cmn.AddValueLink(ui.Terminal.Screen, pos.TokensOwed1, t1)
+		cmn.AddValueLink(ui.Terminal.Screen, pool_pos.TokensOwed0, t0)
+		cmn.AddValueLink(ui.Terminal.Screen, pool_pos.TokensOwed1, t1)
 
-		dollars := t0.Float64(pos.TokensOwed0)*t0.Price +
-			t1.Float64(pos.TokensOwed1)*t1.Price
+		dollars := t0.Float64(nft_pos.TokensOwed0)*t0.Price +
+			t1.Float64(nft_pos.TokensOwed1)*t1.Price
 
 		cmn.AddDollarLink(ui.Terminal.Screen, dollars)
 

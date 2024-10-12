@@ -30,6 +30,15 @@ var PredefinedBlockchains []Blockchain = []Blockchain{
 		ExplorerUrl: "https://scan.v4.testnet.pulsechain.com/#/",
 		Currency:    "tPLS",
 	},
+	{
+		Name:           "Binance Smart Chain Mainnet",
+		Url:            "https://bsc-dataseed1.binance.org",
+		ChainId:        56,
+		ExplorerUrl:    "https://bscscan.com",
+		ExplorerAPIUrl: "https://api.bscscan.com/api",
+		Currency:       "BNB",
+		WTokenAddress:  common.HexToAddress("0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c"),
+	},
 
 	////------------------------------------------------------------------------------
 	////  The rest of the blockchains are not yet confirmed. If you have the bettter
@@ -42,14 +51,6 @@ var PredefinedBlockchains []Blockchain = []Blockchain{
 		ChainId:     43114,
 		ExplorerUrl: "https://snowtrace.io",
 		Currency:    "AVAX",
-	},
-	{
-		Name:          "Binance Smart Chain Mainnet",
-		Url:           "https://bsc-dataseed1.binance.org",
-		ChainId:       56,
-		ExplorerUrl:   "https://bscscan.com",
-		Currency:      "BNB",
-		WTokenAddress: common.HexToAddress("0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c"),
 	},
 	{
 		Name:        "Base",

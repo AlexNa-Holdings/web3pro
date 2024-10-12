@@ -102,7 +102,7 @@ func discover(msg *bus.Message) error {
 
 				token := cmn.Uint256FromHex(resp.Data.(string))
 
-				pos_resp := msg.Fetch("lp_v3", "get-position", &bus.B_LP_V3_GetPosition{
+				pos_resp := msg.Fetch("lp_v3", "get-nft-position", &bus.B_LP_V3_GetNftPosition{
 					ChainId:   pl.ChainId,
 					Provider:  pl.Provider,
 					From:      addr.Address,
@@ -114,7 +114,7 @@ func discover(msg *bus.Message) error {
 					return pos_resp.Error
 				}
 
-				pos, ok := pos_resp.Data.(*bus.B_LP_V3_GetPosition_Response)
+				pos, ok := pos_resp.Data.(*bus.B_LP_V3_GetNftPosition_Response)
 				if !ok {
 					log.Error().Msg("get_position: invalid data")
 					return fmt.Errorf("get_position: invalid data")
@@ -155,21 +155,21 @@ func discover(msg *bus.Message) error {
 				//ui.Printf("    Liquidity: %s\n", liquidity.String())
 				// ui.Printf("    FeeGrowthInside0LastX128: %s\n", feeGrowthInside0LastX128.String())
 				// ui.Printf("    FeeGrowthInside1LastX128: %s\n", feeGrowthInside1LastX128.String())
-				ui.Printf("    Owed: ")
+				// ui.Printf("    Owed: ")
 
-				if t0 != nil {
-					cmn.AddValueSymbolLink(ui.Terminal.Screen, pos.TokensOwed0, t0)
-				} else {
-					ui.Printf("%s", pos.TokensOwed0.String())
-				}
+				// if t0 != nil {
+				// 	cmn.AddValueSymbolLink(ui.Terminal.Screen, pos.TokensOwed0, t0)
+				// } else {
+				// 	ui.Printf("%s", pos.TokensOwed0.String())
+				// }
 
-				ui.Printf(" / ")
+				// ui.Printf(" / ")
 
-				if t1 != nil {
-					cmn.AddValueSymbolLink(ui.Terminal.Screen, pos.TokensOwed1, t1)
-				} else {
-					ui.Printf("%s", pos.TokensOwed1.String())
-				}
+				// if t1 != nil {
+				// 	cmn.AddValueSymbolLink(ui.Terminal.Screen, pos.TokensOwed1, t1)
+				// } else {
+				// 	ui.Printf("%s", pos.TokensOwed1.String())
+				// }
 
 				// get factory
 				factory_resp := msg.Fetch("lp_v3", "get-factory", &bus.B_LP_V3_GetFactory{
@@ -208,12 +208,15 @@ func discover(msg *bus.Message) error {
 					return fmt.Errorf("get_pool: invalid data")
 				}
 
+				ui.Printf("    Pool: ")
+				cmn.AddAddressShortLink(ui.Terminal.Screen, pool)
+
 				ui.Printf("\n")
 
 				ui.Flush()
 
 				err = w.AddLP_V3Position(&cmn.LP_V3_Position{
-					Address:   addr.Address,
+					Owner:     addr.Address,
 					ChainId:   pl.ChainId,
 					Provider:  pl.Provider,
 					NFT_Token: token,

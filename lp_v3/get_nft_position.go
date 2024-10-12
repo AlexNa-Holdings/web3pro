@@ -9,8 +9,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func get_position(msg *bus.Message) (*bus.B_LP_V3_GetPosition_Response, error) {
-	req, ok := msg.Data.(*bus.B_LP_V3_GetPosition)
+func get_nft_position(msg *bus.Message) (*bus.B_LP_V3_GetNftPosition_Response, error) {
+	req, ok := msg.Data.(*bus.B_LP_V3_GetNftPosition)
 	if !ok {
 		return nil, fmt.Errorf("get_position: invalid data: %v", msg.Data)
 	}
@@ -38,7 +38,7 @@ func get_position(msg *bus.Message) (*bus.B_LP_V3_GetPosition_Response, error) {
 		return nil, resp.Error
 	}
 
-	var r_data bus.B_LP_V3_GetPosition_Response
+	var r_data bus.B_LP_V3_GetNftPosition_Response
 
 	output, err := hexutil.Decode(resp.Data.(string))
 	if err != nil {

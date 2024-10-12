@@ -247,19 +247,34 @@ type B_LP_V3_Discover struct { // discover
 	Name    string
 }
 
-type B_LP_V3_GetPosition struct { // get-position
+type B_LP_V3_GetNftPosition struct { // get-nft-position
 	ChainId   int
 	Provider  common.Address
 	From      common.Address
 	NFT_Token *big.Int
 }
 
-type B_LP_V3_GetPosition_Response struct { // get-position_response
+type B_LP_V3_GetNftPosition_Response struct { // get-nft-position_response
 	Nonce                                              *big.Int
 	Operator                                           common.Address
 	Token0                                             common.Address
 	Token1                                             common.Address
 	Fee                                                *big.Int
+	TickLower, TickUpper                               *big.Int
+	Liquidity                                          *big.Int
+	FeeGrowthInside0LastX128, FeeGrowthInside1LastX128 *big.Int
+	TokensOwed0, TokensOwed1                           *big.Int
+}
+
+type B_LP_V3_GetPoolPosition struct { // get-pool-position
+	ChainId              int
+	Provider             common.Address
+	Pool                 common.Address
+	Owner                common.Address
+	TickLower, TickUpper *big.Int
+}
+
+type B_LP_V3_GetPoolPosition_Response struct { // get-pool-position_response
 	TickLower, TickUpper                               *big.Int
 	Liquidity                                          *big.Int
 	FeeGrowthInside0LastX128, FeeGrowthInside1LastX128 *big.Int

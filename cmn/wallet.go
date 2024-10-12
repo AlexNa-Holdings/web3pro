@@ -824,7 +824,7 @@ func (w *Wallet) RemoveLP_V3(chainId int, provider common.Address) error {
 
 func (w *Wallet) AddLP_V3Position(lp *LP_V3_Position) error {
 
-	if pos := w.GetLP_V3Position(lp.Address, lp.ChainId, lp.Provider, lp.NFT_Token); pos != nil {
+	if pos := w.GetLP_V3Position(lp.Owner, lp.ChainId, lp.Provider, lp.NFT_Token); pos != nil {
 		// update
 		pos.Token0 = lp.Token0
 		pos.Token1 = lp.Token1
@@ -838,7 +838,7 @@ func (w *Wallet) AddLP_V3Position(lp *LP_V3_Position) error {
 
 func (w *Wallet) GetLP_V3Position(addr common.Address, chainId int, provider common.Address, nft *big.Int) *LP_V3_Position {
 	for _, lp := range w.LP_V3_Positions {
-		if lp.Address.Cmp(addr) == 0 && lp.ChainId == chainId && lp.Provider == provider && lp.NFT_Token.Cmp(nft) == 0 {
+		if lp.Owner.Cmp(addr) == 0 && lp.ChainId == chainId && lp.Provider == provider && lp.NFT_Token.Cmp(nft) == 0 {
 			return lp
 		}
 	}
@@ -847,7 +847,7 @@ func (w *Wallet) GetLP_V3Position(addr common.Address, chainId int, provider com
 
 func (w *Wallet) RemoveLP_V3Position(addr common.Address, chainId int, provider common.Address, nft *big.Int) error {
 	for i, lp := range w.LP_V3_Positions {
-		if lp.Address.Cmp(addr) == 0 && lp.ChainId == chainId && lp.Provider == provider && lp.NFT_Token.Cmp(nft) == 0 {
+		if lp.Owner.Cmp(addr) == 0 && lp.ChainId == chainId && lp.Provider == provider && lp.NFT_Token.Cmp(nft) == 0 {
 			w.LP_V3_Positions = append(w.LP_V3_Positions[:i], w.LP_V3_Positions[i+1:]...)
 			return w.Save()
 		}

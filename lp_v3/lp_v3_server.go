@@ -57,8 +57,8 @@ func process(msg *bus.Message) {
 		case "discover":
 			err := discover(msg)
 			msg.Respond(nil, err)
-		case "get-position":
-			data, err := get_position(msg)
+		case "get-nft-position":
+			data, err := get_nft_position(msg)
 			msg.Respond(data, err)
 		case "get-factory":
 			data, err := get_factory(msg)
@@ -66,6 +66,10 @@ func process(msg *bus.Message) {
 		case "get-pool":
 			data, err := get_pool(msg)
 			msg.Respond(data, err)
+		case "get-pool-position":
+			data, err := get_pool_position(msg)
+			msg.Respond(data, err)
+
 		case "get-price": //getSqrtPriceX96
 			data, err := get_price(msg)
 			msg.Respond(data, err)

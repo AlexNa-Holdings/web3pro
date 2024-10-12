@@ -94,7 +94,7 @@ type LP_V3 struct { // LP v3 Position Manager
 }
 
 type LP_V3_Position struct {
-	Address   common.Address `json:"address"`
+	Owner     common.Address `json:"owner"`
 	ChainId   int            `json:"chain_id"`
 	Provider  common.Address `json:"provider"`
 	NFT_Token *big.Int       `json:"nft_token"`
