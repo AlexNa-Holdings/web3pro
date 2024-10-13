@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/big"
 	"os"
+	"reflect"
 	"strings"
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
@@ -15,6 +16,7 @@ import (
 	"github.com/ava-labs/coreth/accounts/abi"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/rs/zerolog/log"
 )
@@ -448,26 +450,28 @@ func editContract(m *bus.Message, v *gocui.View, address common.Address, on_clos
 }
 
 func buildCallDetails(w *cmn.Wallet, tx *types.Transaction, to common.Address) string {
-	r := `
-      Method: `
+	r := ""
 
 	if !cmn.IsContractDownloaded(to) {
 		return r + "(no ABI)"
 	}
 
-	// load and parse ABI
+	// Load and parse ABI
 	path := cmn.DataFolder + "/abi/" + to.String() + ".json"
 	abiJSON, err := os.ReadFile(path)
 	if err != nil {
 		return r + "(error reading ABI)"
 	}
 
-	parsedABI, err := abi.JSON(bytes.NewReader([]byte(abiJSON)))
+	parsedABI, err := abi.JSON(bytes.NewReader(abiJSON))
 	if err != nil {
 		return r + "(error parsing ABI)"
 	}
 
 	data := tx.Data()
+	if len(data) < 4 {
+		return r + "(insufficient data for function selector)"
+	}
 
 	// Extract the first 4 bytes for the function selector
 	functionSelector := data[:4]
@@ -487,8 +491,18 @@ func buildCallDetails(w *cmn.Wallet, tx *types.Transaction, to common.Address) s
 		return r + "(function not found)"
 	}
 
+	r += functionDetails(parsedABI, function, data)
+
+	return r
+}
+
+func functionDetails(parsedABI abi.ABI, function abi.Method, data []byte) string {
+
+	r := `
+      Method: `
+
 	r += fmt.Sprintf("<l text:'%v' tip:'Copy function name' action:'copy %v'>", function.Name, function.Name) + `
-  Parameters: 
+  Parameters: ` + cmn.TagLink(gocui.ICON_COPY, "copy "+hexutil.Encode(data[4:]), "Copy data") + ` 
 `
 	// Decode the parameters of the function
 	args := data[4:] // The rest of the data contains the function parameters
@@ -499,8 +513,109 @@ func buildCallDetails(w *cmn.Wallet, tx *types.Transaction, to common.Address) s
 
 	// Display the parameters
 	for i, param := range params {
-		r += fmt.Sprintf("-12%s: %v\n", function.Inputs[i].Name, param)
+		r += fmt.Sprintf("%12s: ", function.Inputs[i].Name)
+		switch function.Inputs[i].Type.T {
+		case abi.IntTy, abi.UintTy:
+			r += fmt.Sprintf("%v\n", param)
+		case abi.BoolTy:
+			r += fmt.Sprintf("%t\n", param)
+		case abi.StringTy:
+			r += fmt.Sprintf("%q\n", param)
+		case abi.AddressTy:
+			address := param.(common.Address)
+			r += cmn.TagAddressShortLink(address) + "\n"
+		case abi.FixedBytesTy, abi.BytesTy:
+			bytesValue := param.([]byte)
+			r += fmt.Sprintf("0x%x\n", bytesValue)
+		case abi.SliceTy, abi.ArrayTy:
+			// Handling array/slice of values
+			v := reflect.ValueOf(param)
+			if v.Len() > 0 &&
+				(v.Index(0).Kind() == reflect.Uint8 ||
+					v.Index(0).Kind() == reflect.Int8) {
+				// If it's a byte array, display as hex string
+				bytesValue := param.([]byte)
+				r += formatBytesAsHex(bytesValue)
+			} else {
+				r += "["
+				for j := 0; j < v.Len(); j++ {
+					if j > 0 {
+						r += ", "
+					}
+					elem := v.Index(j)
+					if elem.Kind() == reflect.Slice && elem.Type().Elem().Kind() == reflect.Uint8 {
+						var f abi.Method
+						found := false
+						if function.Name == "multicall" && len(elem.Interface().([]byte)) > 4 {
+							// Match the function selector to a function in the ABI
+							functionSelector := elem.Interface().([]byte)[:4]
+							for _, method := range parsedABI.Methods {
+								if bytes.Equal(functionSelector, method.ID) {
+									f = method
+									found = true
+									break
+								}
+							}
+						}
+
+						if found {
+							r += functionDetails(parsedABI, f, elem.Interface().([]byte))
+
+						} else {
+							r += formatBytesAsHex(elem.Interface().([]byte))
+						}
+					} else {
+						r += fmt.Sprintf("%v", elem.Interface())
+					}
+				}
+				r += "]\n"
+			}
+		case abi.TupleTy:
+			// Handling tuples, including structs
+			r += "(\n "
+			v := reflect.ValueOf(param)
+			for j := 0; j < v.NumField(); j++ {
+				if j > 0 {
+					r += ",\n "
+				}
+				field := v.Field(j)
+				r += fmt.Sprintf("%v", field.Interface())
+			}
+			r += ")\n"
+		case abi.HashTy:
+			hash := param.([32]byte)
+			r += fmt.Sprintf("0x%x\n", hash)
+		case abi.FixedPointTy:
+			r += fmt.Sprintf("%v (FixedPoint)\n", param)
+		case abi.FunctionTy:
+			functionData := param.([24]byte)
+			r += fmt.Sprintf("0x%x\n", functionData)
+		default:
+			r += "(unknown type)\n"
+		}
 	}
 
 	return r
+}
+
+func formatBytesAsHex(bytesValue []byte) string {
+	MAX_IN_LINE := 16
+
+	result := "\n"
+
+	for i := 0; i < len(bytesValue); i += MAX_IN_LINE {
+		end := i + MAX_IN_LINE
+		if end > len(bytesValue) {
+			end = len(bytesValue)
+		}
+
+		line := "0x"
+		if i > 0 {
+			line = ""
+			result += "\n  "
+		}
+		result += line + fmt.Sprintf("%x", bytesValue[i:end])
+	}
+
+	return result
 }

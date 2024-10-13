@@ -302,7 +302,8 @@ func web3Handler(w http.ResponseWriter, r *http.Request) {
 		Template: `<c><w>
 Allow connection from browser?
 
-` + browser + " " + version + `
+` + browser + `
+version: ` + version + `
 
 <button text:Ok> <button text:Cancel>
 
