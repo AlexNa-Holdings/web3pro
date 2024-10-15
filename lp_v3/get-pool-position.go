@@ -24,7 +24,7 @@ func get_pool_position(msg *bus.Message) (*bus.B_LP_V3_GetPoolPosition_Response,
 		return nil, fmt.Errorf("get_position: no wallet")
 	}
 
-	key, err := generatePositionKey(req.Owner, req.TickLower, req.TickUpper)
+	key, err := generatePositionKey(req.Provider, req.TickLower, req.TickUpper)
 	if err != nil {
 		log.Error().Err(err).Msg("generatePositionKey")
 		return nil, err
@@ -37,7 +37,7 @@ func get_pool_position(msg *bus.Message) (*bus.B_LP_V3_GetPoolPosition_Response,
 	}
 
 	log.Debug().Msgf("pool: %v", req.Pool)
-	log.Debug().Msgf("owner: %v", req.Owner)
+	log.Debug().Msgf("provider: %v", req.Provider)
 	log.Debug().Msgf("tickLower: %v", req.TickLower)
 	log.Debug().Msgf("tickUpper: %v", req.TickUpper)
 	log.Debug().Msgf("key: %v", hexutil.Encode(key[:]))
@@ -45,7 +45,7 @@ func get_pool_position(msg *bus.Message) (*bus.B_LP_V3_GetPoolPosition_Response,
 	resp := bus.Fetch("eth", "call", &bus.B_EthCall{
 		ChainId: req.ChainId,
 		To:      req.Pool,
-		From:    req.Owner,
+		From:    req.Provider,
 		Data:    data,
 	})
 

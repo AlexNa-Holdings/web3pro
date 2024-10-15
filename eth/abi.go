@@ -12,9 +12,18 @@ import (
 var ERC20_ABI_JSON []byte
 var ERC20_ABI abi.ABI
 
+//go:embed ABI/multicall2.json
+var MULTICALL2_ABI_JSON []byte
+var MULTICALL2_ABI abi.ABI
+
 func LoadABIs() {
 	err := json.Unmarshal(ERC20_ABI_JSON, &ERC20_ABI)
 	if err != nil {
 		log.Fatal().Msgf("Error unmarshaling ERC20 ABI: %v\n", err)
+	}
+
+	err = json.Unmarshal(MULTICALL2_ABI_JSON, &MULTICALL2_ABI)
+	if err != nil {
+		log.Fatal().Msgf("Error unmarshaling MULTICALL2 ABI: %v\n", err)
 	}
 }

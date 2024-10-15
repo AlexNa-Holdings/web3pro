@@ -838,7 +838,9 @@ func (w *Wallet) AddLP_V3Position(lp *LP_V3_Position) error {
 
 func (w *Wallet) GetLP_V3Position(addr common.Address, chainId int, provider common.Address, nft *big.Int) *LP_V3_Position {
 	for _, lp := range w.LP_V3_Positions {
-		if lp.Owner.Cmp(addr) == 0 && lp.ChainId == chainId && lp.Provider == provider && lp.NFT_Token.Cmp(nft) == 0 {
+		if lp.Owner.Cmp(addr) == 0 && lp.ChainId == chainId &&
+			lp.Provider.Cmp(provider) == 0 &&
+			lp.NFT_Token.Cmp(nft) == 0 {
 			return lp
 		}
 	}

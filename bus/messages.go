@@ -270,7 +270,6 @@ type B_LP_V3_GetPoolPosition struct { // get-pool-position
 	ChainId              int
 	Provider             common.Address
 	Pool                 common.Address
-	Owner                common.Address
 	TickLower, TickUpper *big.Int
 }
 
@@ -295,7 +294,21 @@ type B_LP_V3_GetPool struct { // get-pool
 	Fee      *big.Int
 }
 
-type B_LP_V3_GetPrice struct { // get-price
+type B_LP_V3_GetSlot0 struct { // get-price
 	ChainId int
 	Pool    common.Address
+}
+
+type B_LP_V3_GetSlot0_Response struct { // get-price_response
+	SqrtPriceX96 *big.Int
+	Tick         *big.Int
+}
+
+type B_LP_V3_GetFeeGrowth struct { // get-fee-grows
+	ChainId int
+	Pool    common.Address
+}
+
+type B_LP_V3_GetFeeGrowth_Response struct { // get-fee-grows_response
+	FeeGrowthGlobal0X128, FeeGrowthGlobal1X128 *big.Int
 }

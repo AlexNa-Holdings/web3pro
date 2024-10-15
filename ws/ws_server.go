@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"sync"
@@ -129,7 +130,7 @@ func startWS() {
 }
 
 func broadcastChainChanged(data any) {
-	url, ok := data.(string)
+	u, ok := data.(string)
 	if !ok {
 		log.Error().Msgf("ws_broadcast: Invalid data type: %v", data)
 		return
@@ -141,14 +142,14 @@ func broadcastChainChanged(data any) {
 		return
 	}
 
-	o := w.GetOrigin(url)
+	o := w.GetOrigin(u)
 	if o == nil {
-		log.Error().Msgf("ws_broadcast: Origin not found: %s", url)
+		log.Error().Msgf("ws_broadcast: Origin not found: %s", u)
 		return
 	}
 
 	for _, conn := range WSConnections {
-		a := conn.SM.getSubsForEvent(url, "chainChanged")
+		a := conn.SM.getSubsForEvent(u, "chainChanged")
 		for _, sub := range a {
 			conn.send(&RPCBroadcast{
 				JSONRPC: "2.0",
@@ -157,7 +158,7 @@ func broadcastChainChanged(data any) {
 					Subscription: sub.id,
 					Result:       fmt.Sprintf("0x%x", o.ChainId),
 				},
-				Web3ProOrigin: url,
+				Web3ProOrigin: u,
 			})
 		}
 	}
@@ -167,7 +168,7 @@ func broadcastAddressesChanged(data any) {
 
 	log.Debug().Msgf("broadcastAddressesChanged: %v", data)
 
-	url, ok := data.(string)
+	u, ok := data.(string)
 	if !ok {
 		log.Error().Msgf("ws_broadcast: Invalid data type: %v", data)
 		return
@@ -179,9 +180,9 @@ func broadcastAddressesChanged(data any) {
 		return
 	}
 
-	o := w.GetOrigin(url)
+	o := w.GetOrigin(u)
 	if o == nil {
-		log.Error().Msgf("ws_broadcast: Origin not found: %s", url)
+		log.Error().Msgf("ws_broadcast: Origin not found: %s", u)
 		return
 	}
 
@@ -191,7 +192,7 @@ func broadcastAddressesChanged(data any) {
 	}
 
 	for _, conn := range WSConnections {
-		a := conn.SM.getSubsForEvent(url, "accountsChanged")
+		a := conn.SM.getSubsForEvent(u, "accountsChanged")
 		for _, sub := range a {
 			conn.send(&RPCBroadcast{
 				JSONRPC: "2.0",
@@ -200,7 +201,7 @@ func broadcastAddressesChanged(data any) {
 					Subscription: sub.id,
 					Result:       addrs,
 				},
-				Web3ProOrigin: url,
+				Web3ProOrigin: u,
 			})
 		}
 	}
@@ -416,9 +417,20 @@ func (con *ConContext) send(data any) {
 	}
 }
 
-func getAllowedOrigin(url string) (*cmn.Origin, bool) {
+func getAllowedOrigin(u string) (*cmn.Origin, bool) {
 
-	log.Debug().Msgf("getAllowedOrigin: %s", url)
+	log.Debug().Msgf("getAllowedOrigin: %s", u)
+
+	su, err := url.Parse(u)
+	if err != nil {
+		log.Error().Err(err).Msgf("Failed to parse URL: %s", u)
+		return nil, false
+	}
+
+	if su.Scheme != "https" && su.Scheme != "http" {
+		log.Error().Msgf("Invalid scheme: %s", su.Scheme)
+		return nil, false
+	}
 
 	w := cmn.CurrentWallet
 	if w == nil {
@@ -426,14 +438,14 @@ func getAllowedOrigin(url string) (*cmn.Origin, bool) {
 	}
 
 	allowed := false
-	origin := w.GetOrigin(url)
+	origin := w.GetOrigin(u)
 	if origin == nil {
 		bus.Fetch("ui", "hail", &bus.B_Hail{
 			Title: "Connect Web Application",
 			Template: `<c><w>
 Allow to connect to this web application:
 
-<u><b>` + cmn.GetHostName(url) + `</b></u>
+<u><b>` + cmn.GetHostName(u) + `</b></u>
 
 and use the current chain & address?
 
@@ -447,13 +459,13 @@ and use the current chain & address?
 				}
 
 				origin = &cmn.Origin{
-					URL:       url,
+					URL:       u,
 					ChainId:   chain_id,
 					Addresses: []common.Address{w.CurrentAddress},
 				}
 
 				w.AddOrigin(origin)
-				w.CurrentOrigin = url
+				w.CurrentOrigin = u
 				err := w.Save()
 				if err != nil {
 					log.Error().Err(err).Msg("Failed to save wallet")

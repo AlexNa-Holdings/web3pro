@@ -152,7 +152,7 @@ func discover(msg *bus.Message) error {
 
 				ui.Printf(" Fee: %.2f%%\n", float64(pos.Fee.Uint64())/10000.)
 				ui.Printf("    Price Ticks: %s / %s\n", pos.TickLower.String(), pos.TickUpper.String())
-				//ui.Printf("    Liquidity: %s\n", liquidity.String())
+				ui.Printf("    Liquidity: %s\n", pos.Liquidity.String())
 				// ui.Printf("    FeeGrowthInside0LastX128: %s\n", feeGrowthInside0LastX128.String())
 				// ui.Printf("    FeeGrowthInside1LastX128: %s\n", feeGrowthInside1LastX128.String())
 				// ui.Printf("    Owed: ")

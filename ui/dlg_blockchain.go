@@ -56,6 +56,7 @@ func DlgBlockchain(name string) *gocui.Popup {
 				v.SetInput("explorer", bch.ExplorerUrl)
 				v.SetInput("api_token", bch.ExplorerAPIToken)
 				v.SetInput("currency", bch.Currency)
+				v.SetInput("multicall", bch.Multicall.String())
 				if bch.WTokenAddress != (common.Address{}) {
 					v.SetInput("wtoken_address", bch.WTokenAddress.String())
 				}
@@ -127,6 +128,8 @@ func DlgBlockchain(name string) *gocui.Popup {
 					explorer_api_url := v.GetInput("explorer_api_url")
 					explorer_api_type := v.GetInput("explorer_api_type")
 
+					multicall := v.GetInput("multicall")
+
 					wta := common.HexToAddress(wtoken_address)
 
 					if bch_index != -1 {
@@ -139,6 +142,7 @@ func DlgBlockchain(name string) *gocui.Popup {
 						cmn.CurrentWallet.Blockchains[bch_index].ExplorerApiType = explorer_api_type
 						cmn.CurrentWallet.Blockchains[bch_index].Currency = currency
 						cmn.CurrentWallet.Blockchains[bch_index].WTokenAddress = wta
+						cmn.CurrentWallet.Blockchains[bch_index].Multicall = common.HexToAddress(multicall)
 					} else {
 						cmn.CurrentWallet.Blockchains = append(cmn.CurrentWallet.Blockchains, &cmn.Blockchain{
 							Name:             name,
@@ -148,6 +152,7 @@ func DlgBlockchain(name string) *gocui.Popup {
 							ExplorerAPIToken: api_token,
 							Currency:         currency,
 							WTokenAddress:    wta,
+							Multicall:        common.HexToAddress(multicall),
 						})
 					}
 
@@ -172,6 +177,7 @@ func DlgBlockchain(name string) *gocui.Popup {
            ChainId: <input id:chainid size:16 value:""> 
           Currency: <input id:currency size:16 value:""> 
 Wrapped Token Addr: <input id:wtoken_address size:43 value:""> 
+Multicall Contract: <input id:multicall size:43 value:"">
 <line text:Explorer> 
                URL: <input id:explorer size:43 value:"">
            API URL: <input id:explorer_api_url size:43 value:""> 

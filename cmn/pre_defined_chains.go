@@ -12,6 +12,7 @@ var PredefinedBlockchains []Blockchain = []Blockchain{
 		ExplorerApiType: "etherscan",
 		WTokenAddress:   common.HexToAddress("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"),
 		Currency:        "ETH",
+		Multicall:       common.HexToAddress("0x5BA1e12693Dc8F9c48aAD8770482f4739bEeD696"),
 	},
 	{
 		Name:            "PulseChain",
@@ -22,6 +23,7 @@ var PredefinedBlockchains []Blockchain = []Blockchain{
 		ExplorerApiType: "blockscout",
 		Currency:        "PLS",
 		WTokenAddress:   common.HexToAddress("0xA1077a294dDE1B09bB078844df40758a5D0f9a27"),
+		Multicall:       common.HexToAddress("0x5BA1e12693Dc8F9c48aAD8770482f4739bEeD696"),
 	},
 	{
 		Name:        "PulseChain Testnet v4",
@@ -29,6 +31,7 @@ var PredefinedBlockchains []Blockchain = []Blockchain{
 		ChainId:     943,
 		ExplorerUrl: "https://scan.v4.testnet.pulsechain.com/#/",
 		Currency:    "tPLS",
+		Multicall:   common.HexToAddress("0x5BA1e12693Dc8F9c48aAD8770482f4739bEeD696"),
 	},
 	{
 		Name:           "Binance Smart Chain Mainnet",

@@ -69,10 +69,13 @@ func process(msg *bus.Message) {
 		case "get-pool-position":
 			data, err := get_pool_position(msg)
 			msg.Respond(data, err)
-
-		case "get-price": //getSqrtPriceX96
-			data, err := get_price(msg)
+		case "get-slot0":
+			data, err := get_slot0(msg)
 			msg.Respond(data, err)
+		case "get-fee-growth":
+			data, err := get_fee_growth(msg)
+			msg.Respond(data, err)
+
 		default:
 			log.Error().Msgf("lp_v3: unknown type: %v", msg.Type)
 

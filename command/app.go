@@ -128,10 +128,15 @@ func App_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 	if subcommand == "remove" || subcommand == "list" || subcommand == "add_addr" ||
 		subcommand == "remove_addr" || subcommand == "promote_addr" ||
 		subcommand == "chain" || subcommand == "set" {
+
+		sort.Slice(w.Origins, func(i, j int) bool {
+			return w.Origins[i].ShortName() < w.Origins[j].ShortName()
+		})
+
 		for _, o := range w.Origins {
 			if cmn.Contains(o.URL, origin) {
 				options = append(options, ui.ACOption{
-					Name:   o.URL,
+					Name:   fmt.Sprintf("%-12s %s", o.ShortName(), o.URL),
 					Result: command + " " + subcommand + " '" + o.URL + "'"})
 			}
 		}

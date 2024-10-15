@@ -16,7 +16,8 @@ import (
 
 type con struct {
 	*ethclient.Client
-	URL string
+	URL       string
+	Multicall *MultiCall
 }
 
 var cons map[int]*con // chainId -> client
@@ -48,8 +49,10 @@ func process(msg *bus.Message) {
 			hash, err := sendTx(msg)
 			msg.Respond(hash, err)
 		case "call":
-			data, err := call(msg)
-			msg.Respond(data, err)
+			processed, data, err := call(msg)
+			if processed {
+				msg.Respond(data, err)
+			} // else, it's a multicall
 		case "sign-typed-data-v4":
 			sig, err := signTypedDataV4(msg)
 			msg.Respond(sig, err)
@@ -144,7 +147,7 @@ func openClient_locked(b *cmn.Blockchain) error {
 		log.Error().Msgf("OpenClient: Cannot dial to (%s). Error:(%v)", b.Url, err)
 		return err
 	}
-	cons[b.ChainId] = &con{client, b.Url}
+	cons[b.ChainId] = &con{client, b.Url, NewMultiCall(b.ChainId, b.Multicall)}
 	log.Trace().Msgf("OpenClient: Client opened to (%s)", b.Url)
 	bus.Send("eth", "connected", b.ChainId)
 	return nil

@@ -65,6 +65,7 @@ type Blockchain struct {
 	ExplorerApiType  string         `json:"explorer_api_type"`
 	Currency         string         `json:"currency"`
 	WTokenAddress    common.Address `json:"wrapped_native_token_address"`
+	Multicall        common.Address `json:"multicall"`
 }
 
 var EXPLORER_API_TYPES = []string{"etherscan", "blockscout"}
