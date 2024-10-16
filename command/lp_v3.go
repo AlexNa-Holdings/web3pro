@@ -21,7 +21,8 @@ var lp_v3_subcommands = []string{
 	"list",
 }
 
-var Q128, _ = big.NewInt(0).SetString("100000000000000000000000000000000", 16)
+var Q128, _ = new(big.Int).SetString("100000000000000000000000000000000", 16)
+var TWO96 = new(big.Int).Exp(big.NewInt(2), big.NewInt(96), nil)
 
 func NewLP_V3Command() *Command {
 	return &Command{
@@ -278,7 +279,7 @@ func list(w *cmn.Wallet) {
 		return w.LP_V3_Positions[i].ChainId < w.LP_V3_Positions[j].ChainId
 	})
 
-	ui.Printf("Contract|Chain    Pair    On Liq0     Liq1     Gain0    Gain1     Gain$    Address\n")
+	ui.Printf("Contract|Chain    Pair    On Liq0     Liq1     Gain0    Gain1     Gain$    Fee%%  Address\n")
 
 	for _, lp := range w.LP_V3_Positions {
 
@@ -330,6 +331,13 @@ func list(w *cmn.Wallet) {
 		nft_pos, ok := pos_resp.Data.(*bus.B_LP_V3_GetNftPosition_Response)
 		if !ok {
 			ui.PrintErrorf("Invalid data")
+			continue
+		}
+
+		if nft_pos.Liquidity.Cmp(big.NewInt(0)) == 0 {
+			ui.PrintErrorf("No liquidity, V3 position removed")
+			w.RemoveLP_V3Position(lp.Owner, lp.ChainId, lp.Provider, lp.NFT_Token)
+			log.Error().Msgf("No liquidity, V3 position removed")
 			continue
 		}
 
@@ -426,63 +434,47 @@ func list(w *cmn.Wallet) {
 		cmn.AddValueLink(ui.Terminal.Screen, amount0, t0)
 		cmn.AddValueLink(ui.Terminal.Screen, amount1, t1)
 
-		log.Debug().Msgf("slot0.SqrtPriceX96: %s", slot0.SqrtPriceX96.String())
-		log.Debug().Msgf("slot0.Tick: %d", slot0.Tick)
+		log.Debug().Msgf("slot0.FeeProtocol: %X", slot0.FeeProtocol)
 
-		log.Debug().Msgf("fee_growth.FeeGrowthGlobal0X128: %s", fee_growth.FeeGrowthGlobal0X128.String())
-		log.Debug().Msgf("fee_growth.FeeGrowthGlobal1X128: %s", fee_growth.FeeGrowthGlobal1X128.String())
+		// Protocol fee for token0: lower 4 bits
+		protocolFeeToken0 := int(slot0.FeeProtocol & 0xF)
 
-		log.Debug().Msgf("nft_pos.TokensOwed0: %s", nft_pos.TokensOwed0.String())
-		log.Debug().Msgf("nft_pos.TokensOwed1: %s", nft_pos.TokensOwed1.String())
-		log.Debug().Msgf("nft_pos.FeeGrowthInside0LastX128: %s", nft_pos.FeeGrowthInside0LastX128.String())
-		log.Debug().Msgf("nft_pos.FeeGrowthInside1LastX128: %s", nft_pos.FeeGrowthInside1LastX128.String())
-		log.Debug().Msgf("nft_pos.Liquidity: %s", nft_pos.Liquidity.String())
-		log.Debug().Msgf("pool_pos.TokensOwed0: %s", pool_pos.TokensOwed0.String())
-		log.Debug().Msgf("pool_pos.TokensOwed1: %s", pool_pos.TokensOwed1.String())
-		log.Debug().Msgf("pool_pos.FeeGrowthInside0LastX128: %s", pool_pos.FeeGrowthInside0LastX128.String())
-		log.Debug().Msgf("pool_pos.FeeGrowthInside1LastX128: %s", pool_pos.FeeGrowthInside1LastX128.String())
+		// Protocol fee for token1: upper 4 bits (shift right by 4)
+		protocolFeeToken1 := int((slot0.FeeProtocol >> 4) & 0xF)
 
-		// // Calculate tokens owed for token0
-		// feeGrowthDiff0 := new(big.Int).Sub(fee_growth.FeeGrowthGlobal0X128, nft_pos.FeeGrowthInside0LastX128)
-		// tokensOwed0 := new(big.Int).Mul(feeGrowthDiff0, nft_pos.Liquidity)
-		// tokensOwed0.Div(tokensOwed0, Q128)
+		// Print the extracted protocol fees
+		log.Debug().Msgf("Protocol Fee for Token0: %d", protocolFeeToken0)
+		log.Debug().Msgf("Protocol Fee for Token1: %d", protocolFeeToken1)
 
-		// // Calculate tokens owed for token1
-		// feeGrowthDiff1 := new(big.Int).Sub(fee_growth.FeeGrowthGlobal1X128, nft_pos.FeeGrowthInside1LastX128)
-		// tokensOwed1 := new(big.Int).Mul(feeGrowthDiff1, nft_pos.Liquidity)
-		// tokensOwed1.Div(tokensOwed1, Q128)
-		tokensOwed0 := big.NewInt(0)
-		tokensOwed1 := big.NewInt(0)
-
-		// Calculate tokens owed for token0
-		if fee_growth.FeeGrowthGlobal0X128.Sign() > 0 && nft_pos.Liquidity.Sign() > 0 {
-			feeGrowthDiff0 := new(big.Int).Sub(fee_growth.FeeGrowthGlobal0X128, nft_pos.FeeGrowthInside0LastX128)
-			tokensOwed0 = new(big.Int).Mul(feeGrowthDiff0, nft_pos.Liquidity)
-			tokensOwed0.Div(tokensOwed0, Q128)
-			log.Debug().Msgf("Calculated tokensOwed0: %s", tokensOwed0.String())
-		} else {
-			log.Debug().Msg("Skipping token0 owed calculation due to zero fee growth or uninitialized state.")
-		}
-
-		// Calculate tokens owed for token1
-		if fee_growth.FeeGrowthGlobal1X128.Sign() > 0 && nft_pos.Liquidity.Sign() > 0 {
-			feeGrowthDiff1 := new(big.Int).Sub(fee_growth.FeeGrowthGlobal1X128, nft_pos.FeeGrowthInside1LastX128)
-			tokensOwed1 = new(big.Int).Mul(feeGrowthDiff1, nft_pos.Liquidity)
-			tokensOwed1.Div(tokensOwed1, Q128)
-			log.Debug().Msgf("Calculated tokensOwed1: %s", tokensOwed1.String())
-		} else {
-			log.Debug().Msg("Skipping token1 owed calculation due to zero fee growth or uninitialized state.")
-		}
+		tokensOwed0, tokensOwed1 := calculateFees(
+			fee_growth.FeeGrowthGlobal0X128, fee_growth.FeeGrowthGlobal1X128,
+			pool_pos.FeeGrowthInside0LastX128, pool_pos.FeeGrowthInside0LastX128, nft_pos.FeeGrowthInside0LastX128,
+			pool_pos.FeeGrowthInside1LastX128, pool_pos.FeeGrowthInside1LastX128, nft_pos.FeeGrowthInside1LastX128,
+			nft_pos.Liquidity, nft_pos.TickLower.Int64(), nft_pos.TickUpper.Int64(), slot0.Tick.Int64(),
+		)
 
 		cmn.AddValueLink(ui.Terminal.Screen, tokensOwed0, t0)
 		cmn.AddValueLink(ui.Terminal.Screen, tokensOwed1, t1)
 
-		dollars := t0.Float64(nft_pos.TokensOwed0)*t0.Price +
-			t1.Float64(nft_pos.TokensOwed1)*t1.Price
+		dollars := t0.Float64(tokensOwed0)*t0.Price +
+			t1.Float64(tokensOwed1)*t1.Price
 
 		cmn.AddDollarLink(ui.Terminal.Screen, dollars)
 
 		// cmn.AddAddressShortLink(ui.Terminal.Screen, a.Address)
+
+		pf0 := 0
+		if protocolFeeToken0 > 0 {
+			pf0 = 100 / protocolFeeToken0
+		}
+
+		pf1 := 0
+		if protocolFeeToken1 > 0 {
+			pf1 = 100 / protocolFeeToken1
+		}
+
+		ui.Printf("%2d/%2d ", pf0, pf1)
+
 		ui.Printf(" %s\n", a.Name)
 
 	}
@@ -492,25 +484,36 @@ func list(w *cmn.Wallet) {
 
 func getSqrtPriceX96FromTick(tick int64) *big.Int {
 	// Calculate 1.0001^tick as a float
-	price := math.Pow(1.0001, float64(tick))
+	price := math.Pow(1.0001, math.Abs(float64(tick)))
+
+	// If tick is negative, invert the price
+	if tick < 0 {
+		price = 1 / price
+	}
 
 	// Take the square root of the price
 	sqrtPrice := math.Sqrt(price)
 
 	// Multiply by 2^96 to convert to Q96 format
-	two96 := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(2), big.NewInt(96), nil))
+	two96 := new(big.Float).SetInt(TWO96)
 	sqrtPriceX96Float := new(big.Float).Mul(big.NewFloat(sqrtPrice), two96)
 
 	// Convert to *big.Int
 	sqrtPriceX96 := new(big.Int)
 	sqrtPriceX96Float.Int(sqrtPriceX96)
 
+	log.Debug().Msgf("getSqrtPriceX96FromTick: tick=%d, sqrtPriceX96=%s", tick, sqrtPriceX96.String())
+
 	return sqrtPriceX96
 }
 
 func calculateAmounts(liquidity, sqrtPriceX96, tickLowerSqrtPriceX96, tickUpperSqrtPriceX96 *big.Int) (*big.Int, *big.Int, bool) {
 	in_range := false
-	two96 := new(big.Int).Exp(big.NewInt(2), big.NewInt(96), nil)
+
+	log.Debug().Msgf("-------------- calculateAmounts --------------")
+	log.Debug().Msgf("liquidity: %s", liquidity.String())
+	log.Debug().Msgf("sqrtPriceX96: %s", sqrtPriceX96.String())
+	log.Debug().Msgf("tickLowerSqrtPriceX96: %s", tickLowerSqrtPriceX96.String())
 
 	amount0 := big.NewInt(0)
 	amount1 := big.NewInt(0)
@@ -518,17 +521,24 @@ func calculateAmounts(liquidity, sqrtPriceX96, tickLowerSqrtPriceX96, tickUpperS
 	// Check if sqrtPriceX96 is within tickLower and tickUpper
 	if sqrtPriceX96.Cmp(tickLowerSqrtPriceX96) <= 0 {
 		// Price is below the range: Only token0 is involved
-		numerator := new(big.Int).Sub(tickUpperSqrtPriceX96, tickLowerSqrtPriceX96)
-		numerator.Mul(numerator, liquidity)
+		log.Debug().Msg("Price below the range: calculating amount0")
 
-		denominator := new(big.Int).Mul(tickLowerSqrtPriceX96, tickUpperSqrtPriceX96)
-		amount0.Div(numerator, denominator)
+		amount0Numerator := new(big.Int).Sub(tickUpperSqrtPriceX96, tickLowerSqrtPriceX96)
+		amount0Numerator.Mul(amount0Numerator, liquidity)
+
+		// Keep precision high by multiplying first and dividing last
+		denominator0 := new(big.Int).Mul(tickLowerSqrtPriceX96, tickUpperSqrtPriceX96)
+
+		// Ensure numerator is multiplied by `2^96` to match precision
+		amount0Numerator.Mul(amount0Numerator, TWO96)
+		amount0.Div(amount0Numerator, denominator0)
 	} else if sqrtPriceX96.Cmp(tickUpperSqrtPriceX96) >= 0 {
 		// Price is above the range: Only token1 is involved
+		log.Debug().Msg("Price above the range: calculating amount1")
+
 		numerator := new(big.Int).Sub(tickUpperSqrtPriceX96, tickLowerSqrtPriceX96)
 		numerator.Mul(numerator, liquidity)
-
-		amount1.Mul(numerator, two96)
+		amount1.Div(numerator, TWO96)
 	} else {
 		in_range = true
 		// Price is within the range: Both tokens are involved
@@ -541,15 +551,88 @@ func calculateAmounts(liquidity, sqrtPriceX96, tickLowerSqrtPriceX96, tickUpperS
 		denominator0 := new(big.Int).Mul(sqrtPriceX96, tickUpperSqrtPriceX96)
 
 		// Ensure numerator is multiplied by `2^96` to match precision
-		amount0Numerator.Mul(amount0Numerator, two96)
+		amount0Numerator.Mul(amount0Numerator, TWO96)
 		amount0.Div(amount0Numerator, denominator0)
 
 		// Calculate amount1
 		amount1Numerator := new(big.Int).Sub(sqrtPriceX96, tickLowerSqrtPriceX96)
 		amount1Numerator.Mul(amount1Numerator, liquidity)
 
-		amount1.Div(amount1Numerator, two96)
+		amount1.Div(amount1Numerator, TWO96)
 	}
 
+	log.Debug().Msgf("amount0: %s", amount0.String())
+	log.Debug().Msgf("amount1: %s", amount1.String())
+	log.Debug().Msgf("--------------------")
+
 	return amount0, amount1, in_range
+}
+
+func calculateFees(
+	feeGrowthGlobal0, feeGrowthGlobal1, tickLowerFeeGrowthOutside0, tickUpperFeeGrowthOutside0, feeGrowthInside0,
+	tickLowerFeeGrowthOutside1, tickUpperFeeGrowthOutside1, feeGrowthInside1, liquidity *big.Int,
+	tickLower, tickUpper, tickCurrent int64,
+) (*big.Int, *big.Int) {
+
+	log.Debug().Msgf("-------------- calculateFees --------------")
+
+	// print all parameteres
+	log.Debug().Msgf("feeGrowthGlobal0: %s", feeGrowthGlobal0.String())
+	log.Debug().Msgf("feeGrowthGlobal1: %s", feeGrowthGlobal1.String())
+	log.Debug().Msgf("tickLowerFeeGrowthOutside0: %s", tickLowerFeeGrowthOutside0.String())
+	log.Debug().Msgf("tickUpperFeeGrowthOutside0: %s", tickUpperFeeGrowthOutside0.String())
+	log.Debug().Msgf("feeGrowthInside0: %s", feeGrowthInside0.String())
+	log.Debug().Msgf("tickLowerFeeGrowthOutside1: %s", tickLowerFeeGrowthOutside1.String())
+	log.Debug().Msgf("tickUpperFeeGrowthOutside1: %s", tickUpperFeeGrowthOutside1.String())
+	log.Debug().Msgf("feeGrowthInside1: %s", feeGrowthInside1.String())
+	log.Debug().Msgf("liquidity: %s", liquidity.String())
+	log.Debug().Msgf("tickLower: %d", tickLower)
+	log.Debug().Msgf("tickUpper: %d", tickUpper)
+	log.Debug().Msgf("tickCurrent: %d", tickCurrent)
+
+	var tickLowerFeeGrowthBelow0, tickLowerFeeGrowthBelow1, tickUpperFeeGrowthAbove0, tickUpperFeeGrowthAbove1 *big.Int
+
+	// Determine tickUpperFeeGrowthAbove values
+	if tickCurrent >= tickUpper {
+		log.Debug().Msg("tickCurrent >= tickUpper")
+		tickUpperFeeGrowthAbove0 = new(big.Int).Sub(feeGrowthGlobal0, tickUpperFeeGrowthOutside0)
+		tickUpperFeeGrowthAbove1 = new(big.Int).Sub(feeGrowthGlobal1, tickUpperFeeGrowthOutside1)
+	} else {
+		tickUpperFeeGrowthAbove0 = new(big.Int).Set(tickUpperFeeGrowthOutside0)
+		tickUpperFeeGrowthAbove1 = new(big.Int).Set(tickUpperFeeGrowthOutside1)
+	}
+
+	// Determine tickLowerFeeGrowthBelow values
+	if tickCurrent >= tickLower {
+		log.Debug().Msg("tickCurrent >= tickLower")
+		tickLowerFeeGrowthBelow0 = new(big.Int).Set(tickLowerFeeGrowthOutside0)
+		tickLowerFeeGrowthBelow1 = new(big.Int).Set(tickLowerFeeGrowthOutside1)
+	} else {
+		tickLowerFeeGrowthBelow0 = new(big.Int).Sub(feeGrowthGlobal0, tickLowerFeeGrowthOutside0)
+		tickLowerFeeGrowthBelow1 = new(big.Int).Sub(feeGrowthGlobal1, tickLowerFeeGrowthOutside1)
+	}
+
+	// Calculate fr_t1 values
+	frT10 := new(big.Int).Sub(new(big.Int).Sub(feeGrowthGlobal0, tickLowerFeeGrowthBelow0), tickUpperFeeGrowthAbove0)
+	frT11 := new(big.Int).Sub(new(big.Int).Sub(feeGrowthGlobal1, tickLowerFeeGrowthBelow1), tickUpperFeeGrowthAbove1)
+
+	// print all fr_t1 values
+	log.Debug().Msgf("frT10: %s", frT10.String())
+	log.Debug().Msgf("frT11: %s", frT11.String())
+
+	// Calculate uncollected fees
+	uncollectedFees0 := new(big.Int).Sub(frT10, feeGrowthInside0)
+	uncollectedFees0.Mul(uncollectedFees0, liquidity)
+	uncollectedFees0.Div(uncollectedFees0, Q128)
+
+	uncollectedFees1 := new(big.Int).Sub(frT11, feeGrowthInside1)
+	uncollectedFees1.Mul(uncollectedFees1, liquidity)
+	uncollectedFees1.Div(uncollectedFees1, Q128)
+
+	// print all uncollected fees
+	log.Debug().Msgf("uncollectedFees0: %s", uncollectedFees0.String())
+	log.Debug().Msgf("uncollectedFees1: %s", uncollectedFees1.String())
+	log.Debug().Msgf("--------------------")
+
+	return uncollectedFees0, uncollectedFees1
 }

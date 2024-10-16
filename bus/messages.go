@@ -302,6 +302,8 @@ type B_LP_V3_GetSlot0 struct { // get-price
 type B_LP_V3_GetSlot0_Response struct { // get-price_response
 	SqrtPriceX96 *big.Int
 	Tick         *big.Int
+	FeeProtocol  uint
+	Unlocked     bool
 }
 
 type B_LP_V3_GetFeeGrowth struct { // get-fee-grows

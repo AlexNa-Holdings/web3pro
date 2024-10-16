@@ -13,12 +13,12 @@ import (
 func get_slot0(msg *bus.Message) (*bus.B_LP_V3_GetSlot0_Response, error) {
 	req, ok := msg.Data.(*bus.B_LP_V3_GetSlot0)
 	if !ok {
-		return nil, fmt.Errorf("get_price: invalid data: %v", msg.Data)
+		return nil, fmt.Errorf("get_slot0: invalid data: %v", msg.Data)
 	}
 
 	w := cmn.CurrentWallet
 	if w == nil {
-		return nil, fmt.Errorf("get_price: no wallet")
+		return nil, fmt.Errorf("get_slot0: no wallet")
 	}
 
 	data, err := V3_POOL.Pack("slot0")
@@ -39,8 +39,6 @@ func get_slot0(msg *bus.Message) (*bus.B_LP_V3_GetSlot0_Response, error) {
 		return nil, resp.Error
 	}
 
-	log.Debug().Msgf("get_price: %v", req.Pool)
-
 	output, err := hexutil.Decode(resp.Data.(string))
 	if err != nil {
 		log.Error().Err(err).Msg("hexutil.Decode")
@@ -58,8 +56,16 @@ func get_slot0(msg *bus.Message) (*bus.B_LP_V3_GetSlot0_Response, error) {
 		return nil, err
 	}
 
+	if len(values) < 7 {
+		return nil, fmt.Errorf("invalid slot0 values: %v", values)
+	}
+
+	log.Debug().Msgf("---SLOT0: %v", values)
+
 	return &bus.B_LP_V3_GetSlot0_Response{
 		SqrtPriceX96: values[0].(*big.Int),
 		Tick:         values[1].(*big.Int),
+		FeeProtocol:  uint(values[5].(uint32)),
+		Unlocked:     values[6].(bool),
 	}, nil
 }
