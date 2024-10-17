@@ -87,6 +87,9 @@ func process(msg *bus.Message) {
 		case "get-tick":
 			data, err := get_tick(msg)
 			msg.Respond(data, err)
+		case "get-position-status":
+			data, err := get_position_status(msg)
+			msg.Respond(data, err)
 
 		default:
 			log.Error().Msgf("lp_v3: unknown type: %v", msg.Type)

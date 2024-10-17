@@ -2,7 +2,6 @@ package command
 
 import (
 	"fmt"
-	"math"
 	"math/big"
 	"sort"
 	"strconv"
@@ -280,11 +279,9 @@ func list(w *cmn.Wallet) {
 		return w.LP_V3_Positions[i].ChainId < w.LP_V3_Positions[j].ChainId
 	})
 
-	ui.Printf("Contract|Chain    Pair    On Liq0     Liq1     Gain0    Gain1     Gain$    Fee%%    Address\n")
+	ui.Printf("XCH|Chain     Pair    On Liq0     Liq1     Gain0    Gain1     Gain$    Fee%%    Address\n")
 
 	for _, lp := range w.LP_V3_Positions {
-
-		log.Debug().Msgf(">>>>>>>>>> lp token: %v", lp.NFT_Token)
 
 		// sanity check
 		if lp.Owner.Cmp(common.Address{}) == 0 {
@@ -318,20 +315,24 @@ func list(w *cmn.Wallet) {
 			continue
 		}
 
-		nft_pos, pool_pos, slot0, fee_growth, tickLower, tickUpper, err := getV3PositionInfo(lp)
-		if err != nil {
-			ui.PrintErrorf("Error fetching position info: %v", err)
+		p_res := bus.Fetch("lp_v3", "get-position-status", &bus.B_LP_V3_GetPositionStatus{
+			ChainId:   lp.ChainId,
+			Provider:  lp.Provider,
+			NFT_Token: lp.NFT_Token})
+		if p_res.Error != nil {
+			ui.PrintErrorf("Error fetching position status: %v", p_res.Error)
 			continue
 		}
 
-		ui.Printf("%-16s ", lpp.Name+"|"+b.Currency)
+		p, ok := p_res.Data.(*bus.B_LP_V3_GetPositionStatus_Response)
+		if !ok {
+			ui.PrintErrorf("Error fetching position status")
+			continue
+		}
 
+		ui.Printf("%-12s ", p.ProviderName)
 		t0 := w.GetTokenByAddress(b.Name, lp.Token0)
 		t1 := w.GetTokenByAddress(b.Name, lp.Token1)
-
-		amount0, amount1, in_range := calculateAmounts(nft_pos.Liquidity, slot0.SqrtPriceX96,
-			getSqrtPriceX96FromTick(nft_pos.TickLower),
-			getSqrtPriceX96FromTick(nft_pos.TickUpper))
 
 		if t0 != nil && t1 != nil {
 			ui.Printf("%9s", t0.Symbol+"/"+t1.Symbol)
@@ -339,8 +340,7 @@ func list(w *cmn.Wallet) {
 			if t0 != nil {
 				ui.Printf("%-5s", t0.Symbol)
 			} else {
-				cmn.AddAddressShortLink(ui.Terminal.Screen, lp.Token0)
-				ui.Terminal.Screen.AddLink(gocui.ICON_ADD, "command token add "+b.Name+" "+lp.Token0.String(), "Add token", "")
+				ui.Terminal.Screen.AddLink("???", "command token add "+b.Name+" "+lp.Token0.String(), "Add token", "")
 			}
 
 			ui.Printf("/")
@@ -348,379 +348,32 @@ func list(w *cmn.Wallet) {
 			if t1 != nil {
 				ui.Printf("%-5s", t1.Symbol)
 			} else {
-				cmn.AddAddressShortLink(ui.Terminal.Screen, lp.Token1)
-				ui.Terminal.Screen.AddLink(gocui.ICON_ADD, "command token add "+b.Name+" "+lp.Token1.String(), "Add token", "")
+				ui.Terminal.Screen.AddLink("???", "command token add "+b.Name+" "+lp.Token1.String(), "Add token", "")
 			}
 			ui.Printf(" %s\n", a.Name)
 			continue
 		}
 
-		if in_range {
+		if p.On {
 			ui.Printf(ui.F(gocui.ColorGreen) + gocui.ICON_LIGHT + ui.F(ui.Terminal.Screen.FgColor))
 		} else {
 			ui.Printf(ui.F(gocui.ColorRed) + gocui.ICON_LIGHT + ui.F(ui.Terminal.Screen.FgColor))
 		}
 
-		cmn.AddValueLink(ui.Terminal.Screen, amount0, t0)
-		cmn.AddValueLink(ui.Terminal.Screen, amount1, t1)
+		cmn.AddValueLink(ui.Terminal.Screen, p.Liquidity0, t0)
+		cmn.AddValueLink(ui.Terminal.Screen, p.Liquidity1, t1)
 
-		// Print the extracted protocol fees
-		log.Debug().Msgf("Protocol Fee for Token0: %f", slot0.FeeProtocol0)
-		log.Debug().Msgf("Protocol Fee for Token1: %f", slot0.FeeProtocol1)
+		cmn.AddValueLink(ui.Terminal.Screen, p.Gain0, t0)
+		cmn.AddValueLink(ui.Terminal.Screen, p.Gain1, t1)
 
-		tokensOwed0, tokensOwed1 := calculateFees(fee_growth, nft_pos, pool_pos, slot0, tickLower, tickUpper)
-
-		cmn.AddValueLink(ui.Terminal.Screen, tokensOwed0, t0)
-		cmn.AddValueLink(ui.Terminal.Screen, tokensOwed1, t1)
-
-		dollars := t0.Float64(tokensOwed0)*t0.Price +
-			t1.Float64(tokensOwed1)*t1.Price
-
-		cmn.AddDollarLink(ui.Terminal.Screen, dollars)
+		cmn.AddDollarLink(ui.Terminal.Screen, p.Dollars)
 
 		// cmn.AddAddressShortLink(ui.Terminal.Screen, a.Address)
 
-		ui.Printf("%2.1f/%2.1f ", slot0.FeeProtocol0, slot0.FeeProtocol1)
-
+		ui.Printf("%2.1f/%2.1f ", p.FeeProtocol0, p.FeeProtocol1)
 		ui.Printf(" %s\n", a.Name)
-
+		ui.Flush()
 	}
 
 	ui.Printf("\n")
-}
-
-func getSqrtPriceX96FromTick(tick int64) *big.Int {
-	// Calculate 1.0001^tick as a float
-	price := math.Pow(1.0001, math.Abs(float64(tick)))
-
-	// If tick is negative, invert the price
-	if tick < 0 {
-		price = 1 / price
-	}
-
-	// Take the square root of the price
-	sqrtPrice := math.Sqrt(price)
-
-	// Multiply by 2^96 to convert to Q96 format
-	two96 := new(big.Float).SetInt(TWO96)
-	sqrtPriceX96Float := new(big.Float).Mul(big.NewFloat(sqrtPrice), two96)
-
-	// Convert to *big.Int
-	sqrtPriceX96 := new(big.Int)
-	sqrtPriceX96Float.Int(sqrtPriceX96)
-
-	log.Debug().Msgf("getSqrtPriceX96FromTick: tick=%d, sqrtPriceX96=%s", tick, sqrtPriceX96.String())
-
-	return sqrtPriceX96
-}
-
-func calculateAmounts(liquidity, sqrtPriceX96, tickLowerSqrtPriceX96, tickUpperSqrtPriceX96 *big.Int) (*big.Int, *big.Int, bool) {
-	in_range := false
-
-	// log.Debug().Msgf("-------------- calculateAmounts --------------")
-	// log.Debug().Msgf("liquidity: %s", liquidity.String())
-	// log.Debug().Msgf("sqrtPriceX96: %s", sqrtPriceX96.String())
-	// log.Debug().Msgf("tickLowerSqrtPriceX96: %s", tickLowerSqrtPriceX96.String())
-
-	amount0 := big.NewInt(0)
-	amount1 := big.NewInt(0)
-
-	// Check if sqrtPriceX96 is within tickLower and tickUpper
-	if sqrtPriceX96.Cmp(tickLowerSqrtPriceX96) <= 0 {
-		// Price is below the range: Only token0 is involved
-		amount0Numerator := new(big.Int).Sub(tickUpperSqrtPriceX96, tickLowerSqrtPriceX96)
-		amount0Numerator.Mul(amount0Numerator, liquidity)
-
-		// Keep precision high by multiplying first and dividing last
-		denominator0 := new(big.Int).Mul(tickLowerSqrtPriceX96, tickUpperSqrtPriceX96)
-
-		// Ensure numerator is multiplied by `2^96` to match precision
-		amount0Numerator.Mul(amount0Numerator, TWO96)
-		amount0.Div(amount0Numerator, denominator0)
-	} else if sqrtPriceX96.Cmp(tickUpperSqrtPriceX96) >= 0 {
-		// Price is above the range: Only token1 is involved
-		numerator := new(big.Int).Sub(tickUpperSqrtPriceX96, tickLowerSqrtPriceX96)
-		numerator.Mul(numerator, liquidity)
-		amount1.Div(numerator, TWO96)
-	} else {
-		in_range = true
-		// Price is within the range: Both tokens are involved
-
-		// Calculate amount0
-		amount0Numerator := new(big.Int).Sub(tickUpperSqrtPriceX96, sqrtPriceX96)
-		amount0Numerator.Mul(amount0Numerator, liquidity)
-
-		// Keep precision high by multiplying first and dividing last
-		denominator0 := new(big.Int).Mul(sqrtPriceX96, tickUpperSqrtPriceX96)
-
-		// Ensure numerator is multiplied by `2^96` to match precision
-		amount0Numerator.Mul(amount0Numerator, TWO96)
-		amount0.Div(amount0Numerator, denominator0)
-
-		// Calculate amount1
-		amount1Numerator := new(big.Int).Sub(sqrtPriceX96, tickLowerSqrtPriceX96)
-		amount1Numerator.Mul(amount1Numerator, liquidity)
-
-		amount1.Div(amount1Numerator, TWO96)
-	}
-
-	// log.Debug().Msgf("amount0: %s", amount0.String())
-	// log.Debug().Msgf("amount1: %s", amount1.String())
-	// log.Debug().Msgf("--------------------")
-
-	return amount0, amount1, in_range
-}
-
-func getFeeGrowthInside(
-	nft *bus.B_LP_V3_GetNftPosition_Response,
-	growth *bus.B_LP_V3_GetFeeGrowth_Response,
-	pool *bus.B_LP_V3_GetPoolPosition_Response,
-	slot0 *bus.B_LP_V3_GetSlot0_Response,
-	tickLower *bus.B_LP_V3_GetTick_Response,
-	tickUpper *bus.B_LP_V3_GetTick_Response) (*big.Int, *big.Int) {
-
-	log.Debug().Msgf("-------------- calculateFeeGrowthInside --------------")
-
-	log.Debug().Msgf("tickLower.FeeGrowthOutside0X128: %s", tickLower.FeeGrowthOutside0X128.String())
-	log.Debug().Msgf("tickLower.FeeGrowthOutside1X128: %s", tickLower.FeeGrowthOutside1X128.String())
-
-	log.Debug().Msgf("tickUpper.FeeGrowthOutside0X128: %s", tickUpper.FeeGrowthOutside0X128.String())
-	log.Debug().Msgf("tickUpper.FeeGrowthOutside1X128: %s", tickUpper.FeeGrowthOutside1X128.String())
-
-	log.Debug().Msgf("nft.TickLower: %d", nft.TickLower)
-	log.Debug().Msgf("nft.TickUpper: %d", nft.TickUpper)
-
-	log.Debug().Msgf("slot0.Tick: %d", slot0.Tick)
-
-	// Calculate fee growth below for token0 and token1
-	feeGrowthBelow0 := new(big.Int)
-	feeGrowthBelow1 := new(big.Int)
-	if slot0.Tick >= nft.TickLower {
-		feeGrowthBelow0.Set(tickLower.FeeGrowthOutside0X128)
-		feeGrowthBelow1.Set(tickLower.FeeGrowthOutside1X128)
-	} else {
-		feeGrowthBelow0.Sub(growth.FeeGrowthGlobal0X128, tickLower.FeeGrowthOutside0X128)
-		feeGrowthBelow1.Sub(growth.FeeGrowthGlobal1X128, tickLower.FeeGrowthOutside1X128)
-	}
-
-	// Calculate fee growth above for token0 and token1
-	feeGrowthAbove0 := new(big.Int)
-	feeGrowthAbove1 := new(big.Int)
-	if slot0.Tick < nft.TickUpper {
-		feeGrowthAbove0.Set(tickUpper.FeeGrowthOutside0X128)
-		feeGrowthAbove1.Set(tickUpper.FeeGrowthOutside1X128)
-	} else {
-		feeGrowthAbove0.Sub(growth.FeeGrowthGlobal0X128, tickUpper.FeeGrowthOutside0X128)
-		feeGrowthAbove1.Sub(growth.FeeGrowthGlobal1X128, tickUpper.FeeGrowthOutside1X128)
-	}
-
-	// Calculate fee growth inside for token0 and token1
-	feeGrowthInside0 := new(big.Int).Sub(growth.FeeGrowthGlobal0X128, feeGrowthBelow0)
-	feeGrowthInside0.Sub(feeGrowthInside0, feeGrowthAbove0)
-
-	feeGrowthInside1 := new(big.Int).Sub(growth.FeeGrowthGlobal1X128, feeGrowthBelow1)
-	feeGrowthInside1.Sub(feeGrowthInside1, feeGrowthAbove1)
-
-	// Ensure fee growth inside is non-negative
-	if feeGrowthInside0.Sign() < 0 {
-		feeGrowthInside0.SetInt64(0)
-	}
-	if feeGrowthInside1.Sign() < 0 {
-		feeGrowthInside1.SetInt64(0)
-	}
-
-	// print fee growth inside values
-	log.Debug().Msgf("feeGrowthInside0: %s", feeGrowthInside0.String())
-	log.Debug().Msgf("feeGrowthInside1: %s", feeGrowthInside1.String())
-	log.Debug().Msgf("--------------------")
-
-	return feeGrowthInside0, feeGrowthInside1
-}
-
-func calculateFees(growth *bus.B_LP_V3_GetFeeGrowth_Response,
-	nft *bus.B_LP_V3_GetNftPosition_Response,
-	pool *bus.B_LP_V3_GetPoolPosition_Response,
-	slot0 *bus.B_LP_V3_GetSlot0_Response,
-	tickLower *bus.B_LP_V3_GetTick_Response,
-	tickUpper *bus.B_LP_V3_GetTick_Response) (*big.Int, *big.Int) {
-
-	log.Debug().Msgf("-------------- calculateFees --------------")
-
-	// print all parameters
-	log.Debug().Msgf("Liquidity: %s", nft.Liquidity.String())
-
-	log.Debug().Msgf("FeeGrowthGlobal0X128: %s", growth.FeeGrowthGlobal0X128.String())
-	log.Debug().Msgf("FeeGrowthGlobal1X128: %s", growth.FeeGrowthGlobal1X128.String())
-
-	log.Debug().Msgf("FeeGrowthInside0LastX128: %s", nft.FeeGrowthInside0LastX128.String())
-	log.Debug().Msgf("FeeGrowthInside1LastX128: %s", nft.FeeGrowthInside1LastX128.String())
-
-	// Calculate fee growth inside for token0 and token1
-	feeGrowthInside0, feeGrowthInside1 := getFeeGrowthInside(nft, growth, pool, slot0, tickLower, tickUpper)
-
-	// Ensure fee growth inside is non-negative
-	if feeGrowthInside0.Sign() < 0 {
-		feeGrowthInside0.SetInt64(0)
-	}
-	if feeGrowthInside1.Sign() < 0 {
-		feeGrowthInside1.SetInt64(0)
-	}
-
-	// Calculate uncollected fees for token0 and token1
-	uncollectedFees0 := new(big.Int).Sub(feeGrowthInside0, nft.FeeGrowthInside0LastX128)
-	uncollectedFees1 := new(big.Int).Sub(feeGrowthInside1, nft.FeeGrowthInside1LastX128)
-
-	// Ensure uncollected fees are non-negative
-	if uncollectedFees0.Sign() < 0 {
-		uncollectedFees0.SetInt64(0)
-	}
-	if uncollectedFees1.Sign() < 0 {
-		uncollectedFees1.SetInt64(0)
-	}
-
-	uncollectedFees0.Mul(uncollectedFees0, nft.Liquidity)
-	uncollectedFees1.Mul(uncollectedFees1, nft.Liquidity)
-
-	// Adjust with liquidity scaling
-	Q128 := new(big.Int).Lsh(big.NewInt(1), 128)
-	uncollectedFees0 = uncollectedFees0.Div(uncollectedFees0, Q128)
-	uncollectedFees1 = uncollectedFees1.Div(uncollectedFees1, Q128)
-
-	// print all uncollected fees
-	log.Debug().Msgf("uncollectedFees0: %s", uncollectedFees0.String())
-	log.Debug().Msgf("uncollectedFees1: %s", uncollectedFees1.String())
-	log.Debug().Msgf("--------------------")
-
-	return uncollectedFees0, uncollectedFees1
-}
-
-func getV3PositionInfo(lp *cmn.LP_V3_Position) (
-	*bus.B_LP_V3_GetNftPosition_Response,
-	*bus.B_LP_V3_GetPoolPosition_Response,
-	*bus.B_LP_V3_GetSlot0_Response,
-	*bus.B_LP_V3_GetFeeGrowth_Response,
-	*bus.B_LP_V3_GetTick_Response,
-	*bus.B_LP_V3_GetTick_Response,
-	error) {
-
-	w := cmn.CurrentWallet
-	if w == nil {
-		return nil, nil, nil, nil, nil, nil, fmt.Errorf("No wallet open")
-	}
-
-	// Fetch nft position
-	pos_resp := bus.Fetch("lp_v3", "get-nft-position", &bus.B_LP_V3_GetNftPosition{
-		ChainId:   lp.ChainId,
-		Provider:  lp.Provider,
-		From:      w.CurrentAddress,
-		NFT_Token: lp.NFT_Token,
-	})
-
-	if pos_resp.Error != nil {
-		ui.PrintErrorf("Error fetching position: %v", pos_resp.Error)
-		return nil, nil, nil, nil, nil, nil, pos_resp.Error
-	}
-
-	nft_pos, ok := pos_resp.Data.(*bus.B_LP_V3_GetNftPosition_Response)
-	if !ok {
-		ui.PrintErrorf("Invalid data")
-		return nil, nil, nil, nil, nil, nil, fmt.Errorf("Invalid data")
-	}
-
-	if nft_pos.Liquidity.Cmp(big.NewInt(0)) == 0 {
-		ui.PrintErrorf("No liquidity, V3 position removed")
-		w.RemoveLP_V3Position(lp.Owner, lp.ChainId, lp.Provider, lp.NFT_Token)
-		log.Error().Msgf("No liquidity, V3 position removed")
-		return nil, nil, nil, nil, nil, nil, fmt.Errorf("No liquidity")
-	}
-
-	// Fetch pool position
-	pool_pos_resp := bus.Fetch("lp_v3", "get-pool-position", &bus.B_LP_V3_GetPoolPosition{
-		ChainId:   lp.ChainId,
-		Provider:  lp.Provider,
-		Pool:      lp.Pool,
-		TickLower: nft_pos.TickLower,
-		TickUpper: nft_pos.TickUpper})
-
-	if pool_pos_resp.Error != nil {
-		ui.PrintErrorf("Error fetching position: %v", pool_pos_resp.Error)
-		return nil, nil, nil, nil, nil, nil, pool_pos_resp.Error
-	}
-
-	pool_pos, ok := pool_pos_resp.Data.(*bus.B_LP_V3_GetPoolPosition_Response)
-	if !ok {
-		ui.PrintErrorf("Invalid data")
-		return nil, nil, nil, nil, nil, nil, fmt.Errorf("Invalid data")
-	}
-
-	// Fetch slot0
-	price_resp := bus.Fetch("lp_v3", "get-slot0", &bus.B_LP_V3_GetSlot0{
-		ChainId: lp.ChainId,
-		Pool:    lp.Pool,
-	})
-
-	if price_resp.Error != nil {
-		ui.PrintErrorf("Error fetching price: %v", price_resp.Error)
-		return nil, nil, nil, nil, nil, nil, price_resp.Error
-	}
-
-	slot0, ok := price_resp.Data.(*bus.B_LP_V3_GetSlot0_Response)
-	if !ok {
-		ui.PrintErrorf("Invalid data")
-		return nil, nil, nil, nil, nil, nil, fmt.Errorf("Invalid data")
-	}
-
-	// Fetch fee growth
-	fee_growth_resp := bus.Fetch("lp_v3", "get-fee-growth", &bus.B_LP_V3_GetFeeGrowth{
-		ChainId: lp.ChainId,
-		Pool:    lp.Pool,
-	})
-
-	if fee_growth_resp.Error != nil {
-		ui.PrintErrorf("Error fetching fee growth: %v", fee_growth_resp.Error)
-		return nil, nil, nil, nil, nil, nil, fee_growth_resp.Error
-	}
-
-	fee_growth, ok := fee_growth_resp.Data.(*bus.B_LP_V3_GetFeeGrowth_Response)
-	if !ok {
-		ui.PrintErrorf("Invalid data")
-		return nil, nil, nil, nil, nil, nil, fmt.Errorf("Invalid data")
-	}
-
-	// Fetch lower and upper tick
-	tickLower_resp_resp := bus.Fetch("lp_v3", "get-tick", &bus.B_LP_V3_GetTick{
-		ChainId: lp.ChainId,
-		Pool:    lp.Pool,
-		Tick:    nft_pos.TickLower,
-	})
-
-	if tickLower_resp_resp.Error != nil {
-		ui.PrintErrorf("Error fetching tick: %v", tickLower_resp_resp.Error)
-		return nil, nil, nil, nil, nil, nil, tickLower_resp_resp.Error
-	}
-
-	tickLower, ok := tickLower_resp_resp.Data.(*bus.B_LP_V3_GetTick_Response)
-	if !ok {
-		ui.PrintErrorf("Invalid data")
-		return nil, nil, nil, nil, nil, nil, fmt.Errorf("Invalid data")
-	}
-
-	tickUpper_resp_resp := bus.Fetch("lp_v3", "get-tick", &bus.B_LP_V3_GetTick{
-		ChainId: lp.ChainId,
-		Pool:    lp.Pool,
-		Tick:    nft_pos.TickUpper,
-	})
-
-	if tickUpper_resp_resp.Error != nil {
-		ui.PrintErrorf("Error fetching tick: %v", tickUpper_resp_resp.Error)
-		return nil, nil, nil, nil, nil, nil, tickUpper_resp_resp.Error
-	}
-
-	tickUpper, ok := tickUpper_resp_resp.Data.(*bus.B_LP_V3_GetTick_Response)
-	if !ok {
-		ui.PrintErrorf("Invalid data")
-		return nil, nil, nil, nil, nil, nil, fmt.Errorf("Invalid data")
-	}
-
-	return nft_pos, pool_pos, slot0, fee_growth, tickLower, tickUpper, nil
 }

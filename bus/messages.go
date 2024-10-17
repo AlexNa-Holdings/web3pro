@@ -329,3 +329,21 @@ type B_LP_V3_GetTick_Response struct { // get-tick_response
 	SecondsOutside                               uint32
 	Initialized                                  bool
 }
+
+type B_LP_V3_GetPositionStatus struct { // get-position-status
+	ChainId   int
+	Provider  common.Address
+	NFT_Token *big.Int
+}
+
+type B_LP_V3_GetPositionStatus_Response struct { // get-position-status_response
+	On           bool
+	Liquidity0   *big.Int
+	Liquidity1   *big.Int
+	Gain0        *big.Int
+	Gain1        *big.Int
+	Dollars      float64
+	ProviderName string
+	FeeProtocol0 float32 // percentage
+	FeeProtocol1 float32 // percentage
+}

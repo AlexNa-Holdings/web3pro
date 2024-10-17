@@ -6,6 +6,7 @@ import (
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/rs/zerolog/log"
 )
@@ -16,20 +17,25 @@ func get_tick(msg *bus.Message) (*bus.B_LP_V3_GetTick_Response, error) {
 		return nil, fmt.Errorf("get_slot0: invalid data: %v", msg.Data)
 	}
 
+	return _get_tick(req.ChainId, req.Pool, req.Tick)
+}
+
+func _get_tick(chainId int, pool common.Address, tick int64) (*bus.B_LP_V3_GetTick_Response, error) {
+
 	w := cmn.CurrentWallet
 	if w == nil {
 		return nil, fmt.Errorf("get_slot0: no wallet")
 	}
 
-	data, err := V3_POOL_UNISWAP.Pack("ticks", big.NewInt(int64(req.Tick)))
+	data, err := V3_POOL_UNISWAP.Pack("ticks", big.NewInt(tick))
 	if err != nil {
 		log.Error().Err(err).Msg("V3_ABI.Pack positions")
 		return nil, err
 	}
 
 	resp := bus.Fetch("eth", "call", &bus.B_EthCall{
-		ChainId: req.ChainId,
-		To:      req.Pool,
+		ChainId: chainId,
+		To:      pool,
 		From:    w.CurrentAddress,
 		Data:    data,
 	})

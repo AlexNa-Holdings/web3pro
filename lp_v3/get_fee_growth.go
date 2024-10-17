@@ -6,6 +6,7 @@ import (
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/rs/zerolog/log"
 )
@@ -15,6 +16,11 @@ func get_fee_growth(msg *bus.Message) (*bus.B_LP_V3_GetFeeGrowth_Response, error
 	if !ok {
 		return nil, fmt.Errorf("get_fee_growth: invalid data: %v", msg.Data)
 	}
+
+	return _get_fee_growth(req.ChainId, req.Pool)
+}
+
+func _get_fee_growth(chain_id int, pool common.Address) (*bus.B_LP_V3_GetFeeGrowth_Response, error) {
 
 	w := cmn.CurrentWallet
 	if w == nil {
@@ -29,8 +35,8 @@ func get_fee_growth(msg *bus.Message) (*bus.B_LP_V3_GetFeeGrowth_Response, error
 	}
 
 	resp := bus.Fetch("eth", "call", &bus.B_EthCall{
-		ChainId: req.ChainId,
-		To:      req.Pool,
+		ChainId: chain_id,
+		To:      pool,
 		Data:    data,
 	})
 
@@ -63,8 +69,8 @@ func get_fee_growth(msg *bus.Message) (*bus.B_LP_V3_GetFeeGrowth_Response, error
 	}
 
 	resp = bus.Fetch("eth", "call", &bus.B_EthCall{
-		ChainId: req.ChainId,
-		To:      req.Pool,
+		ChainId: chain_id,
+		To:      pool,
 		Data:    data,
 	})
 

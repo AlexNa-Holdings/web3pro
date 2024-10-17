@@ -6,6 +6,7 @@ import (
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/rs/zerolog/log"
 )
@@ -15,6 +16,13 @@ func get_slot0(msg *bus.Message) (*bus.B_LP_V3_GetSlot0_Response, error) {
 	if !ok {
 		return nil, fmt.Errorf("get_slot0: invalid data: %v", msg.Data)
 	}
+
+	return _get_slot0(req.ChainId, req.Pool)
+}
+
+func _get_slot0(
+	chainId int,
+	pool common.Address) (*bus.B_LP_V3_GetSlot0_Response, error) {
 
 	w := cmn.CurrentWallet
 	if w == nil {
@@ -28,8 +36,8 @@ func get_slot0(msg *bus.Message) (*bus.B_LP_V3_GetSlot0_Response, error) {
 	}
 
 	resp := bus.Fetch("eth", "call", &bus.B_EthCall{
-		ChainId: req.ChainId,
-		To:      req.Pool,
+		ChainId: chainId,
+		To:      pool,
 		From:    w.CurrentAddress,
 		Data:    data,
 	})

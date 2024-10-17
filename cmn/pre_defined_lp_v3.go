@@ -11,12 +11,12 @@ type PD_V3 struct {
 var PrefedinedLP_V3 = map[int]([]PD_V3){
 	1: { // Ethereum
 		{
-			Name:    "Uniswap",
+			Name:    "Uni",
 			Address: common.HexToAddress("0xC36442b4a4522E871399CD717aBDD847Ab11FE88"),
 			URL:     "https://app.uniswap.org/swap",
 		},
 		{
-			Name:    "PancakeSwap",
+			Name:    "Pancake",
 			Address: common.HexToAddress("0x46A15B0b27311cedF172AB29E4f4766fbE7F4364"),
 			URL:     "https://pancakeswap.finance/swap&chin=eth",
 		},
@@ -35,7 +35,7 @@ var PrefedinedLP_V3 = map[int]([]PD_V3){
 	},
 	56: { // Binance Smart Chain
 		{
-			Name:    "PancakeSwap",
+			Name:    "Pancake",
 			Address: common.HexToAddress("0x46A15B0b27311cedF172AB29E4f4766fbE7F4364"),
 			URL:     "https://pancakeswap.finance/swap&chin=eth",
 		},

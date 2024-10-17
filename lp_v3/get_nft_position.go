@@ -6,6 +6,7 @@ import (
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/rs/zerolog/log"
 )
@@ -16,21 +17,29 @@ func get_nft_position(msg *bus.Message) (*bus.B_LP_V3_GetNftPosition_Response, e
 		return nil, fmt.Errorf("get_position: invalid data: %v", msg.Data)
 	}
 
+	return _get_nft_position(req.ChainId, req.Provider, req.From, req.NFT_Token)
+}
+
+func _get_nft_position(chain_id int,
+	provider common.Address,
+	from common.Address,
+	nft_token *big.Int) (*bus.B_LP_V3_GetNftPosition_Response, error) {
+
 	w := cmn.CurrentWallet
 	if w == nil {
 		return nil, fmt.Errorf("get_position: no wallet")
 	}
 
-	data, err := V3_MANAGER.Pack("positions", req.NFT_Token)
+	data, err := V3_MANAGER.Pack("positions", nft_token)
 	if err != nil {
 		log.Error().Err(err).Msg("V3_ABI.Pack positions")
 		return nil, err
 	}
 
 	resp := bus.Fetch("eth", "call", &bus.B_EthCall{
-		ChainId: req.ChainId,
-		To:      req.Provider,
-		From:    req.From,
+		ChainId: chain_id,
+		To:      provider,
+		From:    from,
 		Data:    data,
 	})
 
