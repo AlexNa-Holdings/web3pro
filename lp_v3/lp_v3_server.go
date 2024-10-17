@@ -17,9 +17,13 @@ var V3_MANAGER abi.ABI
 var V3_FACTORY_JSON []byte
 var V3_FACTORY abi.ABI
 
-//go:embed ABI/v3Pool.json
-var V3_POOL_JSON []byte
-var V3_POOL abi.ABI
+//go:embed ABI/v3Pool_uniswap.json
+var V3_POOL_UNISWAP_JSON []byte
+var V3_POOL_UNISWAP abi.ABI
+
+//go:embed ABI/v3Pool_pancake.json
+var V3_POOL_PANCAKE_JSON []byte
+var V3_POOL_PANCAKE abi.ABI
 
 func Init() {
 	err := json.Unmarshal(V3_MANAGER_JSON, &V3_MANAGER)
@@ -32,7 +36,12 @@ func Init() {
 		log.Fatal().Msgf("Error unmarshaling V3_FACTORY_JSON ABI: %v\n", err)
 	}
 
-	err = json.Unmarshal(V3_POOL_JSON, &V3_POOL)
+	err = json.Unmarshal(V3_POOL_UNISWAP_JSON, &V3_POOL_UNISWAP)
+	if err != nil {
+		log.Fatal().Msgf("Error unmarshaling V3_POOL_JSON ABI: %v\n", err)
+	}
+
+	err = json.Unmarshal(V3_POOL_PANCAKE_JSON, &V3_POOL_PANCAKE)
 	if err != nil {
 		log.Fatal().Msgf("Error unmarshaling V3_POOL_JSON ABI: %v\n", err)
 	}
@@ -74,6 +83,9 @@ func process(msg *bus.Message) {
 			msg.Respond(data, err)
 		case "get-fee-growth":
 			data, err := get_fee_growth(msg)
+			msg.Respond(data, err)
+		case "get-tick":
+			data, err := get_tick(msg)
 			msg.Respond(data, err)
 
 		default:

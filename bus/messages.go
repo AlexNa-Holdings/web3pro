@@ -260,7 +260,7 @@ type B_LP_V3_GetNftPosition_Response struct { // get-nft-position_response
 	Token0                                             common.Address
 	Token1                                             common.Address
 	Fee                                                *big.Int
-	TickLower, TickUpper                               *big.Int
+	TickLower, TickUpper                               int64
 	Liquidity                                          *big.Int
 	FeeGrowthInside0LastX128, FeeGrowthInside1LastX128 *big.Int
 	TokensOwed0, TokensOwed1                           *big.Int
@@ -270,11 +270,10 @@ type B_LP_V3_GetPoolPosition struct { // get-pool-position
 	ChainId              int
 	Provider             common.Address
 	Pool                 common.Address
-	TickLower, TickUpper *big.Int
+	TickLower, TickUpper int64
 }
 
 type B_LP_V3_GetPoolPosition_Response struct { // get-pool-position_response
-	TickLower, TickUpper                               *big.Int
 	Liquidity                                          *big.Int
 	FeeGrowthInside0LastX128, FeeGrowthInside1LastX128 *big.Int
 	TokensOwed0, TokensOwed1                           *big.Int
@@ -301,8 +300,9 @@ type B_LP_V3_GetSlot0 struct { // get-price
 
 type B_LP_V3_GetSlot0_Response struct { // get-price_response
 	SqrtPriceX96 *big.Int
-	Tick         *big.Int
-	FeeProtocol  uint
+	Tick         int64
+	FeeProtocol0 float32 // percentage
+	FeeProtocol1 float32 // percentage
 	Unlocked     bool
 }
 
@@ -313,4 +313,19 @@ type B_LP_V3_GetFeeGrowth struct { // get-fee-grows
 
 type B_LP_V3_GetFeeGrowth_Response struct { // get-fee-grows_response
 	FeeGrowthGlobal0X128, FeeGrowthGlobal1X128 *big.Int
+}
+
+type B_LP_V3_GetTick struct { // get-tick
+	ChainId int
+	Pool    common.Address
+	Tick    int64
+}
+
+type B_LP_V3_GetTick_Response struct { // get-tick_response
+	LiquidityGross, LiquidityNet                 *big.Int
+	FeeGrowthOutside0X128, FeeGrowthOutside1X128 *big.Int
+	TickCumulativeOutside                        *big.Int
+	SecondsPerLiquidityOutsideX128               *big.Int
+	SecondsOutside                               uint32
+	Initialized                                  bool
 }

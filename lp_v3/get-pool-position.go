@@ -3,7 +3,6 @@ package lp_v3
 import (
 	"bytes"
 	"fmt"
-	"math/big"
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
@@ -30,7 +29,7 @@ func get_pool_position(msg *bus.Message) (*bus.B_LP_V3_GetPoolPosition_Response,
 		return nil, err
 	}
 
-	data, err := V3_POOL.Pack("positions", key)
+	data, err := V3_POOL_UNISWAP.Pack("positions", key)
 	if err != nil {
 		log.Error().Err(err).Msg("V3_ABI.Pack positions")
 		return nil, err
@@ -61,7 +60,7 @@ func get_pool_position(msg *bus.Message) (*bus.B_LP_V3_GetPoolPosition_Response,
 		log.Error().Err(err).Msg("hexutil.Decode")
 		return nil, err
 	}
-	err = V3_POOL.UnpackIntoInterface(
+	err = V3_POOL_UNISWAP.UnpackIntoInterface(
 		&[]interface{}{
 			&r_data.Liquidity,
 			&r_data.FeeGrowthInside0LastX128,
@@ -79,7 +78,7 @@ func get_pool_position(msg *bus.Message) (*bus.B_LP_V3_GetPoolPosition_Response,
 }
 
 // Function to pack int24 values as 3-byte slices
-func int24ToBytes(value int32) ([]byte, error) {
+func int24ToBytes(value int64) ([]byte, error) {
 	// Ensure the value fits into int24 (-2^23 to 2^23-1)
 	if value < -8388608 || value > 8388607 {
 		return nil, fmt.Errorf("value out of int24 range")
@@ -96,39 +95,15 @@ func int24ToBytes(value int32) ([]byte, error) {
 	return buf, nil
 }
 
-// Function to convert *big.Int to int32 safely
-func bigIntToInt24(value *big.Int) (int32, error) {
-	if value == nil {
-		return 0, fmt.Errorf("nil big.Int value")
-	}
-
-	if value.BitLen() > 23 {
-		return 0, fmt.Errorf("value exceeds int24 range")
-	}
-
-	return int32(value.Int64()), nil
-}
-
 // Function to generate the keccak256 hash key as a common.Hash ([32]byte)
-func generatePositionKey(owner common.Address, tickLower, tickUpper *big.Int) (common.Hash, error) {
-	// Convert tickLower and tickUpper from *big.Int to int32
-	tickLowerInt, err := bigIntToInt24(tickLower)
-	if err != nil {
-		return common.Hash{}, err
-	}
-
-	tickUpperInt, err := bigIntToInt24(tickUpper)
-	if err != nil {
-		return common.Hash{}, err
-	}
-
+func generatePositionKey(owner common.Address, tickLower, tickUpper int64) (common.Hash, error) {
 	// Convert int24 values to byte slices
-	tickLowerBytes, err := int24ToBytes(tickLowerInt)
+	tickLowerBytes, err := int24ToBytes(tickLower)
 	if err != nil {
 		return common.Hash{}, err
 	}
 
-	tickUpperBytes, err := int24ToBytes(tickUpperInt)
+	tickUpperBytes, err := int24ToBytes(tickUpper)
 	if err != nil {
 		return common.Hash{}, err
 	}

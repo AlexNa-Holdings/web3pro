@@ -85,7 +85,7 @@ func LP_V3_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 				if cmn.Contains(chain.Name, bchain) {
 					options = append(options, ui.ACOption{
 						Name:   chain.Name,
-						Result: command + " " + subcommand + " '" + chain.Name + "' "})
+						Result: command + " " + subcommand + " " + strconv.Itoa(chain.ChainId) + " "})
 				}
 			}
 			return "blockchain", &options, bchain
@@ -179,6 +179,7 @@ func LP_V3_Process(c *Command, input string) {
 			ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command lp_v3 edit "+strconv.Itoa(lp.ChainId)+" '"+lp.Provider.Hex()+"' '"+lp.Name+"'", "Edit provider", "")
 			ui.Terminal.Screen.AddLink(gocui.ICON_DELETE, "command lp_v3 remove "+strconv.Itoa(lp.ChainId)+" '"+lp.Provider.Hex()+"'", "Remove provider", "")
 			cmn.AddAddressShortLink(ui.Terminal.Screen, lp.Provider)
+			ui.Printf("\n")
 		}
 
 		ui.Printf("\n")
@@ -208,7 +209,7 @@ func LP_V3_Process(c *Command, input string) {
 
 		lp := w.GetLP_V3_by_name(b.ChainId, addr)
 		if lp == nil {
-			lp := w.GetLP_V3(b.ChainId, common.HexToAddress(addr))
+			lp = w.GetLP_V3(b.ChainId, common.HexToAddress(addr))
 			if lp == nil {
 				err = fmt.Errorf("provider not found: %s", addr)
 				break
@@ -242,7 +243,7 @@ func LP_V3_Process(c *Command, input string) {
 
 		resp := bus.Fetch("lp_v3", "discover", bus.B_LP_V3_Discover{
 			ChainId: chain_id,
-			Name:    name,
+			Name:    addr,
 		})
 		if resp.Error != nil {
 			err = resp.Error
@@ -279,9 +280,11 @@ func list(w *cmn.Wallet) {
 		return w.LP_V3_Positions[i].ChainId < w.LP_V3_Positions[j].ChainId
 	})
 
-	ui.Printf("Contract|Chain    Pair    On Liq0     Liq1     Gain0    Gain1     Gain$    Fee%%  Address\n")
+	ui.Printf("Contract|Chain    Pair    On Liq0     Liq1     Gain0    Gain1     Gain$    Fee%%    Address\n")
 
 	for _, lp := range w.LP_V3_Positions {
+
+		log.Debug().Msgf(">>>>>>>>>> lp token: %v", lp.NFT_Token)
 
 		// sanity check
 		if lp.Owner.Cmp(common.Address{}) == 0 {
@@ -315,82 +318,9 @@ func list(w *cmn.Wallet) {
 			continue
 		}
 
-		// Fetch nft position
-		pos_resp := bus.Fetch("lp_v3", "get-nft-position", &bus.B_LP_V3_GetNftPosition{
-			ChainId:   lp.ChainId,
-			Provider:  lp.Provider,
-			From:      w.CurrentAddress,
-			NFT_Token: lp.NFT_Token,
-		})
-
-		if pos_resp.Error != nil {
-			ui.PrintErrorf("Error fetching position: %v", pos_resp.Error)
-			continue
-		}
-
-		nft_pos, ok := pos_resp.Data.(*bus.B_LP_V3_GetNftPosition_Response)
-		if !ok {
-			ui.PrintErrorf("Invalid data")
-			continue
-		}
-
-		if nft_pos.Liquidity.Cmp(big.NewInt(0)) == 0 {
-			ui.PrintErrorf("No liquidity, V3 position removed")
-			w.RemoveLP_V3Position(lp.Owner, lp.ChainId, lp.Provider, lp.NFT_Token)
-			log.Error().Msgf("No liquidity, V3 position removed")
-			continue
-		}
-
-		// Fetch pool position
-		pool_pos_resp := bus.Fetch("lp_v3", "get-pool-position", &bus.B_LP_V3_GetPoolPosition{
-			ChainId:   lp.ChainId,
-			Provider:  lp.Provider,
-			Pool:      lp.Pool,
-			TickLower: nft_pos.TickLower,
-			TickUpper: nft_pos.TickUpper})
-
-		if pool_pos_resp.Error != nil {
-			ui.PrintErrorf("Error fetching position: %v", pool_pos_resp.Error)
-			continue
-		}
-
-		pool_pos, ok := pool_pos_resp.Data.(*bus.B_LP_V3_GetPoolPosition_Response)
-		if !ok {
-			ui.PrintErrorf("Invalid data")
-			continue
-		}
-
-		// Fetch slot0
-		price_resp := bus.Fetch("lp_v3", "get-slot0", &bus.B_LP_V3_GetSlot0{
-			ChainId: lp.ChainId,
-			Pool:    lp.Pool,
-		})
-
-		if price_resp.Error != nil {
-			ui.PrintErrorf("Error fetching price: %v", price_resp.Error)
-			continue
-		}
-
-		slot0, ok := price_resp.Data.(*bus.B_LP_V3_GetSlot0_Response)
-		if !ok {
-			ui.PrintErrorf("Invalid data")
-			continue
-		}
-
-		// Fetch fee growth
-		fee_growth_resp := bus.Fetch("lp_v3", "get-fee-growth", &bus.B_LP_V3_GetFeeGrowth{
-			ChainId: lp.ChainId,
-			Pool:    lp.Pool,
-		})
-
-		if fee_growth_resp.Error != nil {
-			ui.PrintErrorf("Error fetching fee growth: %v", fee_growth_resp.Error)
-			continue
-		}
-
-		fee_growth, ok := fee_growth_resp.Data.(*bus.B_LP_V3_GetFeeGrowth_Response)
-		if !ok {
-			ui.PrintErrorf("Invalid data")
+		nft_pos, pool_pos, slot0, fee_growth, tickLower, tickUpper, err := getV3PositionInfo(lp)
+		if err != nil {
+			ui.PrintErrorf("Error fetching position info: %v", err)
 			continue
 		}
 
@@ -400,8 +330,8 @@ func list(w *cmn.Wallet) {
 		t1 := w.GetTokenByAddress(b.Name, lp.Token1)
 
 		amount0, amount1, in_range := calculateAmounts(nft_pos.Liquidity, slot0.SqrtPriceX96,
-			getSqrtPriceX96FromTick(nft_pos.TickLower.Int64()),
-			getSqrtPriceX96FromTick(nft_pos.TickUpper.Int64()))
+			getSqrtPriceX96FromTick(nft_pos.TickLower),
+			getSqrtPriceX96FromTick(nft_pos.TickUpper))
 
 		if t0 != nil && t1 != nil {
 			ui.Printf("%9s", t0.Symbol+"/"+t1.Symbol)
@@ -434,24 +364,11 @@ func list(w *cmn.Wallet) {
 		cmn.AddValueLink(ui.Terminal.Screen, amount0, t0)
 		cmn.AddValueLink(ui.Terminal.Screen, amount1, t1)
 
-		log.Debug().Msgf("slot0.FeeProtocol: %X", slot0.FeeProtocol)
-
-		// Protocol fee for token0: lower 4 bits
-		protocolFeeToken0 := int(slot0.FeeProtocol & 0xF)
-
-		// Protocol fee for token1: upper 4 bits (shift right by 4)
-		protocolFeeToken1 := int((slot0.FeeProtocol >> 4) & 0xF)
-
 		// Print the extracted protocol fees
-		log.Debug().Msgf("Protocol Fee for Token0: %d", protocolFeeToken0)
-		log.Debug().Msgf("Protocol Fee for Token1: %d", protocolFeeToken1)
+		log.Debug().Msgf("Protocol Fee for Token0: %f", slot0.FeeProtocol0)
+		log.Debug().Msgf("Protocol Fee for Token1: %f", slot0.FeeProtocol1)
 
-		tokensOwed0, tokensOwed1 := calculateFees(
-			fee_growth.FeeGrowthGlobal0X128, fee_growth.FeeGrowthGlobal1X128,
-			pool_pos.FeeGrowthInside0LastX128, pool_pos.FeeGrowthInside0LastX128, nft_pos.FeeGrowthInside0LastX128,
-			pool_pos.FeeGrowthInside1LastX128, pool_pos.FeeGrowthInside1LastX128, nft_pos.FeeGrowthInside1LastX128,
-			nft_pos.Liquidity, nft_pos.TickLower.Int64(), nft_pos.TickUpper.Int64(), slot0.Tick.Int64(),
-		)
+		tokensOwed0, tokensOwed1 := calculateFees(fee_growth, nft_pos, pool_pos, slot0, tickLower, tickUpper)
 
 		cmn.AddValueLink(ui.Terminal.Screen, tokensOwed0, t0)
 		cmn.AddValueLink(ui.Terminal.Screen, tokensOwed1, t1)
@@ -463,17 +380,7 @@ func list(w *cmn.Wallet) {
 
 		// cmn.AddAddressShortLink(ui.Terminal.Screen, a.Address)
 
-		pf0 := 0
-		if protocolFeeToken0 > 0 {
-			pf0 = 100 / protocolFeeToken0
-		}
-
-		pf1 := 0
-		if protocolFeeToken1 > 0 {
-			pf1 = 100 / protocolFeeToken1
-		}
-
-		ui.Printf("%2d/%2d ", pf0, pf1)
+		ui.Printf("%2.1f/%2.1f ", slot0.FeeProtocol0, slot0.FeeProtocol1)
 
 		ui.Printf(" %s\n", a.Name)
 
@@ -510,10 +417,10 @@ func getSqrtPriceX96FromTick(tick int64) *big.Int {
 func calculateAmounts(liquidity, sqrtPriceX96, tickLowerSqrtPriceX96, tickUpperSqrtPriceX96 *big.Int) (*big.Int, *big.Int, bool) {
 	in_range := false
 
-	log.Debug().Msgf("-------------- calculateAmounts --------------")
-	log.Debug().Msgf("liquidity: %s", liquidity.String())
-	log.Debug().Msgf("sqrtPriceX96: %s", sqrtPriceX96.String())
-	log.Debug().Msgf("tickLowerSqrtPriceX96: %s", tickLowerSqrtPriceX96.String())
+	// log.Debug().Msgf("-------------- calculateAmounts --------------")
+	// log.Debug().Msgf("liquidity: %s", liquidity.String())
+	// log.Debug().Msgf("sqrtPriceX96: %s", sqrtPriceX96.String())
+	// log.Debug().Msgf("tickLowerSqrtPriceX96: %s", tickLowerSqrtPriceX96.String())
 
 	amount0 := big.NewInt(0)
 	amount1 := big.NewInt(0)
@@ -521,8 +428,6 @@ func calculateAmounts(liquidity, sqrtPriceX96, tickLowerSqrtPriceX96, tickUpperS
 	// Check if sqrtPriceX96 is within tickLower and tickUpper
 	if sqrtPriceX96.Cmp(tickLowerSqrtPriceX96) <= 0 {
 		// Price is below the range: Only token0 is involved
-		log.Debug().Msg("Price below the range: calculating amount0")
-
 		amount0Numerator := new(big.Int).Sub(tickUpperSqrtPriceX96, tickLowerSqrtPriceX96)
 		amount0Numerator.Mul(amount0Numerator, liquidity)
 
@@ -534,8 +439,6 @@ func calculateAmounts(liquidity, sqrtPriceX96, tickLowerSqrtPriceX96, tickUpperS
 		amount0.Div(amount0Numerator, denominator0)
 	} else if sqrtPriceX96.Cmp(tickUpperSqrtPriceX96) >= 0 {
 		// Price is above the range: Only token1 is involved
-		log.Debug().Msg("Price above the range: calculating amount1")
-
 		numerator := new(big.Int).Sub(tickUpperSqrtPriceX96, tickLowerSqrtPriceX96)
 		numerator.Mul(numerator, liquidity)
 		amount1.Div(numerator, TWO96)
@@ -561,73 +464,127 @@ func calculateAmounts(liquidity, sqrtPriceX96, tickLowerSqrtPriceX96, tickUpperS
 		amount1.Div(amount1Numerator, TWO96)
 	}
 
-	log.Debug().Msgf("amount0: %s", amount0.String())
-	log.Debug().Msgf("amount1: %s", amount1.String())
-	log.Debug().Msgf("--------------------")
+	// log.Debug().Msgf("amount0: %s", amount0.String())
+	// log.Debug().Msgf("amount1: %s", amount1.String())
+	// log.Debug().Msgf("--------------------")
 
 	return amount0, amount1, in_range
 }
 
-func calculateFees(
-	feeGrowthGlobal0, feeGrowthGlobal1, tickLowerFeeGrowthOutside0, tickUpperFeeGrowthOutside0, feeGrowthInside0,
-	tickLowerFeeGrowthOutside1, tickUpperFeeGrowthOutside1, feeGrowthInside1, liquidity *big.Int,
-	tickLower, tickUpper, tickCurrent int64,
-) (*big.Int, *big.Int) {
+func getFeeGrowthInside(
+	nft *bus.B_LP_V3_GetNftPosition_Response,
+	growth *bus.B_LP_V3_GetFeeGrowth_Response,
+	pool *bus.B_LP_V3_GetPoolPosition_Response,
+	slot0 *bus.B_LP_V3_GetSlot0_Response,
+	tickLower *bus.B_LP_V3_GetTick_Response,
+	tickUpper *bus.B_LP_V3_GetTick_Response) (*big.Int, *big.Int) {
+
+	log.Debug().Msgf("-------------- calculateFeeGrowthInside --------------")
+
+	log.Debug().Msgf("tickLower.FeeGrowthOutside0X128: %s", tickLower.FeeGrowthOutside0X128.String())
+	log.Debug().Msgf("tickLower.FeeGrowthOutside1X128: %s", tickLower.FeeGrowthOutside1X128.String())
+
+	log.Debug().Msgf("tickUpper.FeeGrowthOutside0X128: %s", tickUpper.FeeGrowthOutside0X128.String())
+	log.Debug().Msgf("tickUpper.FeeGrowthOutside1X128: %s", tickUpper.FeeGrowthOutside1X128.String())
+
+	log.Debug().Msgf("nft.TickLower: %d", nft.TickLower)
+	log.Debug().Msgf("nft.TickUpper: %d", nft.TickUpper)
+
+	log.Debug().Msgf("slot0.Tick: %d", slot0.Tick)
+
+	// Calculate fee growth below for token0 and token1
+	feeGrowthBelow0 := new(big.Int)
+	feeGrowthBelow1 := new(big.Int)
+	if slot0.Tick >= nft.TickLower {
+		feeGrowthBelow0.Set(tickLower.FeeGrowthOutside0X128)
+		feeGrowthBelow1.Set(tickLower.FeeGrowthOutside1X128)
+	} else {
+		feeGrowthBelow0.Sub(growth.FeeGrowthGlobal0X128, tickLower.FeeGrowthOutside0X128)
+		feeGrowthBelow1.Sub(growth.FeeGrowthGlobal1X128, tickLower.FeeGrowthOutside1X128)
+	}
+
+	// Calculate fee growth above for token0 and token1
+	feeGrowthAbove0 := new(big.Int)
+	feeGrowthAbove1 := new(big.Int)
+	if slot0.Tick < nft.TickUpper {
+		feeGrowthAbove0.Set(tickUpper.FeeGrowthOutside0X128)
+		feeGrowthAbove1.Set(tickUpper.FeeGrowthOutside1X128)
+	} else {
+		feeGrowthAbove0.Sub(growth.FeeGrowthGlobal0X128, tickUpper.FeeGrowthOutside0X128)
+		feeGrowthAbove1.Sub(growth.FeeGrowthGlobal1X128, tickUpper.FeeGrowthOutside1X128)
+	}
+
+	// Calculate fee growth inside for token0 and token1
+	feeGrowthInside0 := new(big.Int).Sub(growth.FeeGrowthGlobal0X128, feeGrowthBelow0)
+	feeGrowthInside0.Sub(feeGrowthInside0, feeGrowthAbove0)
+
+	feeGrowthInside1 := new(big.Int).Sub(growth.FeeGrowthGlobal1X128, feeGrowthBelow1)
+	feeGrowthInside1.Sub(feeGrowthInside1, feeGrowthAbove1)
+
+	// Ensure fee growth inside is non-negative
+	if feeGrowthInside0.Sign() < 0 {
+		feeGrowthInside0.SetInt64(0)
+	}
+	if feeGrowthInside1.Sign() < 0 {
+		feeGrowthInside1.SetInt64(0)
+	}
+
+	// print fee growth inside values
+	log.Debug().Msgf("feeGrowthInside0: %s", feeGrowthInside0.String())
+	log.Debug().Msgf("feeGrowthInside1: %s", feeGrowthInside1.String())
+	log.Debug().Msgf("--------------------")
+
+	return feeGrowthInside0, feeGrowthInside1
+}
+
+func calculateFees(growth *bus.B_LP_V3_GetFeeGrowth_Response,
+	nft *bus.B_LP_V3_GetNftPosition_Response,
+	pool *bus.B_LP_V3_GetPoolPosition_Response,
+	slot0 *bus.B_LP_V3_GetSlot0_Response,
+	tickLower *bus.B_LP_V3_GetTick_Response,
+	tickUpper *bus.B_LP_V3_GetTick_Response) (*big.Int, *big.Int) {
 
 	log.Debug().Msgf("-------------- calculateFees --------------")
 
-	// print all parameteres
-	log.Debug().Msgf("feeGrowthGlobal0: %s", feeGrowthGlobal0.String())
-	log.Debug().Msgf("feeGrowthGlobal1: %s", feeGrowthGlobal1.String())
-	log.Debug().Msgf("tickLowerFeeGrowthOutside0: %s", tickLowerFeeGrowthOutside0.String())
-	log.Debug().Msgf("tickUpperFeeGrowthOutside0: %s", tickUpperFeeGrowthOutside0.String())
-	log.Debug().Msgf("feeGrowthInside0: %s", feeGrowthInside0.String())
-	log.Debug().Msgf("tickLowerFeeGrowthOutside1: %s", tickLowerFeeGrowthOutside1.String())
-	log.Debug().Msgf("tickUpperFeeGrowthOutside1: %s", tickUpperFeeGrowthOutside1.String())
-	log.Debug().Msgf("feeGrowthInside1: %s", feeGrowthInside1.String())
-	log.Debug().Msgf("liquidity: %s", liquidity.String())
-	log.Debug().Msgf("tickLower: %d", tickLower)
-	log.Debug().Msgf("tickUpper: %d", tickUpper)
-	log.Debug().Msgf("tickCurrent: %d", tickCurrent)
+	// print all parameters
+	log.Debug().Msgf("Liquidity: %s", nft.Liquidity.String())
 
-	var tickLowerFeeGrowthBelow0, tickLowerFeeGrowthBelow1, tickUpperFeeGrowthAbove0, tickUpperFeeGrowthAbove1 *big.Int
+	log.Debug().Msgf("FeeGrowthGlobal0X128: %s", growth.FeeGrowthGlobal0X128.String())
+	log.Debug().Msgf("FeeGrowthGlobal1X128: %s", growth.FeeGrowthGlobal1X128.String())
 
-	// Determine tickUpperFeeGrowthAbove values
-	if tickCurrent >= tickUpper {
-		log.Debug().Msg("tickCurrent >= tickUpper")
-		tickUpperFeeGrowthAbove0 = new(big.Int).Sub(feeGrowthGlobal0, tickUpperFeeGrowthOutside0)
-		tickUpperFeeGrowthAbove1 = new(big.Int).Sub(feeGrowthGlobal1, tickUpperFeeGrowthOutside1)
-	} else {
-		tickUpperFeeGrowthAbove0 = new(big.Int).Set(tickUpperFeeGrowthOutside0)
-		tickUpperFeeGrowthAbove1 = new(big.Int).Set(tickUpperFeeGrowthOutside1)
+	log.Debug().Msgf("FeeGrowthInside0LastX128: %s", nft.FeeGrowthInside0LastX128.String())
+	log.Debug().Msgf("FeeGrowthInside1LastX128: %s", nft.FeeGrowthInside1LastX128.String())
+
+	// Calculate fee growth inside for token0 and token1
+	feeGrowthInside0, feeGrowthInside1 := getFeeGrowthInside(nft, growth, pool, slot0, tickLower, tickUpper)
+
+	// Ensure fee growth inside is non-negative
+	if feeGrowthInside0.Sign() < 0 {
+		feeGrowthInside0.SetInt64(0)
+	}
+	if feeGrowthInside1.Sign() < 0 {
+		feeGrowthInside1.SetInt64(0)
 	}
 
-	// Determine tickLowerFeeGrowthBelow values
-	if tickCurrent >= tickLower {
-		log.Debug().Msg("tickCurrent >= tickLower")
-		tickLowerFeeGrowthBelow0 = new(big.Int).Set(tickLowerFeeGrowthOutside0)
-		tickLowerFeeGrowthBelow1 = new(big.Int).Set(tickLowerFeeGrowthOutside1)
-	} else {
-		tickLowerFeeGrowthBelow0 = new(big.Int).Sub(feeGrowthGlobal0, tickLowerFeeGrowthOutside0)
-		tickLowerFeeGrowthBelow1 = new(big.Int).Sub(feeGrowthGlobal1, tickLowerFeeGrowthOutside1)
+	// Calculate uncollected fees for token0 and token1
+	uncollectedFees0 := new(big.Int).Sub(feeGrowthInside0, nft.FeeGrowthInside0LastX128)
+	uncollectedFees1 := new(big.Int).Sub(feeGrowthInside1, nft.FeeGrowthInside1LastX128)
+
+	// Ensure uncollected fees are non-negative
+	if uncollectedFees0.Sign() < 0 {
+		uncollectedFees0.SetInt64(0)
+	}
+	if uncollectedFees1.Sign() < 0 {
+		uncollectedFees1.SetInt64(0)
 	}
 
-	// Calculate fr_t1 values
-	frT10 := new(big.Int).Sub(new(big.Int).Sub(feeGrowthGlobal0, tickLowerFeeGrowthBelow0), tickUpperFeeGrowthAbove0)
-	frT11 := new(big.Int).Sub(new(big.Int).Sub(feeGrowthGlobal1, tickLowerFeeGrowthBelow1), tickUpperFeeGrowthAbove1)
+	uncollectedFees0.Mul(uncollectedFees0, nft.Liquidity)
+	uncollectedFees1.Mul(uncollectedFees1, nft.Liquidity)
 
-	// print all fr_t1 values
-	log.Debug().Msgf("frT10: %s", frT10.String())
-	log.Debug().Msgf("frT11: %s", frT11.String())
-
-	// Calculate uncollected fees
-	uncollectedFees0 := new(big.Int).Sub(frT10, feeGrowthInside0)
-	uncollectedFees0.Mul(uncollectedFees0, liquidity)
-	uncollectedFees0.Div(uncollectedFees0, Q128)
-
-	uncollectedFees1 := new(big.Int).Sub(frT11, feeGrowthInside1)
-	uncollectedFees1.Mul(uncollectedFees1, liquidity)
-	uncollectedFees1.Div(uncollectedFees1, Q128)
+	// Adjust with liquidity scaling
+	Q128 := new(big.Int).Lsh(big.NewInt(1), 128)
+	uncollectedFees0 = uncollectedFees0.Div(uncollectedFees0, Q128)
+	uncollectedFees1 = uncollectedFees1.Div(uncollectedFees1, Q128)
 
 	// print all uncollected fees
 	log.Debug().Msgf("uncollectedFees0: %s", uncollectedFees0.String())
@@ -635,4 +592,135 @@ func calculateFees(
 	log.Debug().Msgf("--------------------")
 
 	return uncollectedFees0, uncollectedFees1
+}
+
+func getV3PositionInfo(lp *cmn.LP_V3_Position) (
+	*bus.B_LP_V3_GetNftPosition_Response,
+	*bus.B_LP_V3_GetPoolPosition_Response,
+	*bus.B_LP_V3_GetSlot0_Response,
+	*bus.B_LP_V3_GetFeeGrowth_Response,
+	*bus.B_LP_V3_GetTick_Response,
+	*bus.B_LP_V3_GetTick_Response,
+	error) {
+
+	w := cmn.CurrentWallet
+	if w == nil {
+		return nil, nil, nil, nil, nil, nil, fmt.Errorf("No wallet open")
+	}
+
+	// Fetch nft position
+	pos_resp := bus.Fetch("lp_v3", "get-nft-position", &bus.B_LP_V3_GetNftPosition{
+		ChainId:   lp.ChainId,
+		Provider:  lp.Provider,
+		From:      w.CurrentAddress,
+		NFT_Token: lp.NFT_Token,
+	})
+
+	if pos_resp.Error != nil {
+		ui.PrintErrorf("Error fetching position: %v", pos_resp.Error)
+		return nil, nil, nil, nil, nil, nil, pos_resp.Error
+	}
+
+	nft_pos, ok := pos_resp.Data.(*bus.B_LP_V3_GetNftPosition_Response)
+	if !ok {
+		ui.PrintErrorf("Invalid data")
+		return nil, nil, nil, nil, nil, nil, fmt.Errorf("Invalid data")
+	}
+
+	if nft_pos.Liquidity.Cmp(big.NewInt(0)) == 0 {
+		ui.PrintErrorf("No liquidity, V3 position removed")
+		w.RemoveLP_V3Position(lp.Owner, lp.ChainId, lp.Provider, lp.NFT_Token)
+		log.Error().Msgf("No liquidity, V3 position removed")
+		return nil, nil, nil, nil, nil, nil, fmt.Errorf("No liquidity")
+	}
+
+	// Fetch pool position
+	pool_pos_resp := bus.Fetch("lp_v3", "get-pool-position", &bus.B_LP_V3_GetPoolPosition{
+		ChainId:   lp.ChainId,
+		Provider:  lp.Provider,
+		Pool:      lp.Pool,
+		TickLower: nft_pos.TickLower,
+		TickUpper: nft_pos.TickUpper})
+
+	if pool_pos_resp.Error != nil {
+		ui.PrintErrorf("Error fetching position: %v", pool_pos_resp.Error)
+		return nil, nil, nil, nil, nil, nil, pool_pos_resp.Error
+	}
+
+	pool_pos, ok := pool_pos_resp.Data.(*bus.B_LP_V3_GetPoolPosition_Response)
+	if !ok {
+		ui.PrintErrorf("Invalid data")
+		return nil, nil, nil, nil, nil, nil, fmt.Errorf("Invalid data")
+	}
+
+	// Fetch slot0
+	price_resp := bus.Fetch("lp_v3", "get-slot0", &bus.B_LP_V3_GetSlot0{
+		ChainId: lp.ChainId,
+		Pool:    lp.Pool,
+	})
+
+	if price_resp.Error != nil {
+		ui.PrintErrorf("Error fetching price: %v", price_resp.Error)
+		return nil, nil, nil, nil, nil, nil, price_resp.Error
+	}
+
+	slot0, ok := price_resp.Data.(*bus.B_LP_V3_GetSlot0_Response)
+	if !ok {
+		ui.PrintErrorf("Invalid data")
+		return nil, nil, nil, nil, nil, nil, fmt.Errorf("Invalid data")
+	}
+
+	// Fetch fee growth
+	fee_growth_resp := bus.Fetch("lp_v3", "get-fee-growth", &bus.B_LP_V3_GetFeeGrowth{
+		ChainId: lp.ChainId,
+		Pool:    lp.Pool,
+	})
+
+	if fee_growth_resp.Error != nil {
+		ui.PrintErrorf("Error fetching fee growth: %v", fee_growth_resp.Error)
+		return nil, nil, nil, nil, nil, nil, fee_growth_resp.Error
+	}
+
+	fee_growth, ok := fee_growth_resp.Data.(*bus.B_LP_V3_GetFeeGrowth_Response)
+	if !ok {
+		ui.PrintErrorf("Invalid data")
+		return nil, nil, nil, nil, nil, nil, fmt.Errorf("Invalid data")
+	}
+
+	// Fetch lower and upper tick
+	tickLower_resp_resp := bus.Fetch("lp_v3", "get-tick", &bus.B_LP_V3_GetTick{
+		ChainId: lp.ChainId,
+		Pool:    lp.Pool,
+		Tick:    nft_pos.TickLower,
+	})
+
+	if tickLower_resp_resp.Error != nil {
+		ui.PrintErrorf("Error fetching tick: %v", tickLower_resp_resp.Error)
+		return nil, nil, nil, nil, nil, nil, tickLower_resp_resp.Error
+	}
+
+	tickLower, ok := tickLower_resp_resp.Data.(*bus.B_LP_V3_GetTick_Response)
+	if !ok {
+		ui.PrintErrorf("Invalid data")
+		return nil, nil, nil, nil, nil, nil, fmt.Errorf("Invalid data")
+	}
+
+	tickUpper_resp_resp := bus.Fetch("lp_v3", "get-tick", &bus.B_LP_V3_GetTick{
+		ChainId: lp.ChainId,
+		Pool:    lp.Pool,
+		Tick:    nft_pos.TickUpper,
+	})
+
+	if tickUpper_resp_resp.Error != nil {
+		ui.PrintErrorf("Error fetching tick: %v", tickUpper_resp_resp.Error)
+		return nil, nil, nil, nil, nil, nil, tickUpper_resp_resp.Error
+	}
+
+	tickUpper, ok := tickUpper_resp_resp.Data.(*bus.B_LP_V3_GetTick_Response)
+	if !ok {
+		ui.PrintErrorf("Invalid data")
+		return nil, nil, nil, nil, nil, nil, fmt.Errorf("Invalid data")
+	}
+
+	return nft_pos, pool_pos, slot0, fee_growth, tickLower, tickUpper, nil
 }

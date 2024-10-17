@@ -356,20 +356,12 @@ func call(o *cmn.Origin, req RPCRequest, ctx *ConContext, res *RPCResponse) erro
 		return fmt.Errorf("params must be an array of strings")
 	}
 
+	from := &cmn.Address{}
+
 	// Get the address
 	address, ok := tx_data["from"].(string)
-	if !ok {
-		return fmt.Errorf("from address not found")
-	}
-
-	from := w.GetAddress(address)
-	if from == nil {
-		return fmt.Errorf("address not found in wallet")
-	}
-
-	signer := w.GetSigner(from.Signer)
-	if signer == nil {
-		return fmt.Errorf("signer not found")
+	if ok {
+		from = w.GetAddress(address)
 	}
 
 	b := w.GetBlockchainById(o.ChainId)

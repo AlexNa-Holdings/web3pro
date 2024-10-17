@@ -21,7 +21,7 @@ func get_slot0(msg *bus.Message) (*bus.B_LP_V3_GetSlot0_Response, error) {
 		return nil, fmt.Errorf("get_slot0: no wallet")
 	}
 
-	data, err := V3_POOL.Pack("slot0")
+	data, err := V3_POOL_UNISWAP.Pack("slot0")
 	if err != nil {
 		log.Error().Err(err).Msg("V3_ABI.Pack positions")
 		return nil, err
@@ -45,10 +45,13 @@ func get_slot0(msg *bus.Message) (*bus.B_LP_V3_GetSlot0_Response, error) {
 		return nil, err
 	}
 
-	values, err := V3_POOL.Unpack("slot0", output)
+	values, err := V3_POOL_UNISWAP.Unpack("slot0", output)
 	if err != nil {
-		log.Error().Err(err).Msg("V3_POOL_ABI.Unpack slot0")
-		return nil, err
+		values, err = V3_POOL_PANCAKE.Unpack("slot0", output)
+		if err != nil {
+			log.Error().Err(err).Msg("V3_POOL_ABI.Unpack slot0")
+			return nil, err
+		}
 	}
 
 	if err != nil {
@@ -62,10 +65,54 @@ func get_slot0(msg *bus.Message) (*bus.B_LP_V3_GetSlot0_Response, error) {
 
 	log.Debug().Msgf("---SLOT0: %v", values)
 
+	sqrtPriceX96, ok := values[0].(*big.Int)
+	if !ok {
+		return nil, fmt.Errorf("invalid sqrtPriceX96: %v", values[0])
+	}
+
+	tick, ok := values[1].(*big.Int)
+	if !ok {
+		return nil, fmt.Errorf("invalid tick: %v", values[1])
+	}
+
+	feeProtocol0 := float32(0)
+	feeProtocol1 := float32(0)
+	feeProtocol8, ok := values[5].(uint8)
+	if ok {
+		if float32(feeProtocol8&0x0f) != 0 {
+			feeProtocol0 = 100. / float32(feeProtocol8&0x0f)
+		}
+
+		if float32((feeProtocol8>>4)&0x0f) != 0 {
+			feeProtocol1 = 100. / float32((feeProtocol8>>4)&0x0f)
+		}
+
+	} else {
+		feeProtocol32, ok := values[5].(uint32)
+		if ok {
+
+			if float32(feeProtocol32&0xffff) != 0 {
+				feeProtocol0 = 10000. / float32(feeProtocol32&0xffff)
+			}
+
+			if float32((feeProtocol32>>16)&0xffff) != 0 {
+				feeProtocol1 = 10000. / float32((feeProtocol32>>16)&0xffff)
+			}
+		} else {
+			return nil, fmt.Errorf("invalid feeProtocol: %v", values[5])
+		}
+	}
+
+	unlocked, ok := values[6].(bool)
+	if !ok {
+		return nil, fmt.Errorf("invalid unlocked: %v", values[6])
+	}
+
 	return &bus.B_LP_V3_GetSlot0_Response{
-		SqrtPriceX96: values[0].(*big.Int),
-		Tick:         values[1].(*big.Int),
-		FeeProtocol:  uint(values[5].(uint32)),
-		Unlocked:     values[6].(bool),
+		SqrtPriceX96: sqrtPriceX96,
+		Tick:         tick.Int64(),
+		FeeProtocol0: feeProtocol0,
+		FeeProtocol1: feeProtocol1,
+		Unlocked:     unlocked,
 	}, nil
 }

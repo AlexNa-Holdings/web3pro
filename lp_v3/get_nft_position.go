@@ -2,6 +2,7 @@ package lp_v3
 
 import (
 	"fmt"
+	"math/big"
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
@@ -46,6 +47,9 @@ func get_nft_position(msg *bus.Message) (*bus.B_LP_V3_GetNftPosition_Response, e
 		return nil, err
 	}
 
+	tick_l := new(big.Int)
+	tick_u := new(big.Int)
+
 	err = V3_MANAGER.UnpackIntoInterface(
 		&[]interface{}{
 			&r_data.Nonce,
@@ -53,8 +57,8 @@ func get_nft_position(msg *bus.Message) (*bus.B_LP_V3_GetNftPosition_Response, e
 			&r_data.Token0,
 			&r_data.Token1,
 			&r_data.Fee,
-			&r_data.TickLower,
-			&r_data.TickUpper,
+			&tick_l,
+			&tick_u,
 			&r_data.Liquidity,
 			&r_data.FeeGrowthInside0LastX128,
 			&r_data.FeeGrowthInside1LastX128,
@@ -66,6 +70,9 @@ func get_nft_position(msg *bus.Message) (*bus.B_LP_V3_GetNftPosition_Response, e
 		log.Error().Err(err).Msg("positionManagerABI.UnpackIntoInterface")
 		return nil, err
 	}
+
+	r_data.TickLower = tick_l.Int64()
+	r_data.TickUpper = tick_u.Int64()
 
 	return &r_data, nil
 }

@@ -27,5 +27,17 @@ var PrefedinedLP_V3 = map[int]([]PD_V3){
 			Address: common.HexToAddress("0x18A532b36A9F6B10b3FEC5BF225C00A0Ec89B79E"),
 			URL:     "https://v3.9inch.io/?chain=pulse",
 		},
+		{
+			Name:    "9mm",
+			Address: common.HexToAddress("0xCC05bf158202b4F461Ede8843d76dcd7Bbad07f2"),
+			URL:     "https://v3.9mm.pro",
+		},
+	},
+	56: { // Binance Smart Chain
+		{
+			Name:    "PancakeSwap",
+			Address: common.HexToAddress("0x46A15B0b27311cedF172AB29E4f4766fbE7F4364"),
+			URL:     "https://pancakeswap.finance/swap&chin=eth",
+		},
 	},
 }
