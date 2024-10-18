@@ -51,63 +51,78 @@ func Token_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 	p := cmn.SplitN(input, 5)
 	command, subcommand, param := p[0], p[1], p[2]
 
-	if !cmn.IsInArray(token_subcommands, subcommand) {
-		for _, sc := range token_subcommands {
-			if input == "" || strings.Contains(sc, subcommand) {
-				options = append(options, ui.ACOption{Name: sc, Result: command + " " + sc + " "})
-			}
-		}
-		return "action", &options, subcommand
+	last_param := len(p) - 1
+	for last_param > 0 && p[last_param] == "" {
+		last_param--
 	}
 
-	b := w.GetBlockchain(param)
-	token := p[3]
+	if strings.HasSuffix(input, " ") {
+		last_param++
+	}
 
-	if subcommand == "balance" && b != nil &&
-		(token == "" || (w.GetTokenByAddress(b.ChainId, common.HexToAddress(token)) == nil && w.GetTokenBySymbol(b.ChainId, token) == nil)) {
-		for _, t := range w.Tokens {
-			if t.ChainId != b.ChainId {
-				continue
-			}
-			if cmn.Contains(t.Symbol, token) || cmn.Contains(t.Address.String(), token) || cmn.Contains(t.Name, token) {
+	switch last_param {
+	case 0, 1:
 
-				id := t.Symbol
-				if !t.Unique {
-					id = t.Address.String()
+		if !cmn.IsInArray(token_subcommands, subcommand) {
+			for _, sc := range token_subcommands {
+				if input == "" || strings.Contains(sc, subcommand) {
+					options = append(options, ui.ACOption{Name: sc, Result: command + " " + sc + " "})
 				}
-
-				options = append(options, ui.ACOption{
-					Name:   fmt.Sprintf("%-6s %s", t.Symbol, t.GetPrintName()),
-					Result: command + " balance '" + b.Name + "' " + id + " "})
 			}
+			return "action", &options, subcommand
 		}
-		return "token", &options, token
-	}
 
-	adr := p[4]
-
-	if subcommand == "balance" && b != nil &&
-		(w.GetTokenByAddress(b.ChainId, common.HexToAddress(token)) != nil || w.GetTokenBySymbol(b.ChainId, token) != nil) {
-		for _, a := range w.Addresses {
-			if cmn.Contains(a.Name+a.Address.String(), adr) {
-				options = append(options, ui.ACOption{
-					Name:   cmn.ShortAddress(a.Address) + " " + a.Name,
-					Result: command + " balance '" + b.Name + "' " + token + " " + a.Address.String()})
+	case 2:
+		if subcommand == "list" || subcommand == "add" || subcommand == "remove" || subcommand == "balance" {
+			if param == "" || !strings.HasSuffix(input, " ") {
+				for _, chain := range w.Blockchains {
+					if cmn.Contains(chain.Name, param) {
+						options = append(options, ui.ACOption{
+							Name: chain.Name, Result: command + " " + subcommand + " '" + chain.Name + "' "})
+					}
+				}
 			}
+			return "blockchain", &options, param
 		}
-		return "address", &options, adr
-	}
 
-	if subcommand == "list" || subcommand == "add" || subcommand == "remove" || subcommand == "balance" {
-		if param == "" || !strings.HasSuffix(input, " ") {
-			for _, chain := range w.Blockchains {
-				if cmn.Contains(chain.Name, param) {
+	case 3:
+		b := w.GetBlockchain(param)
+		token := p[3]
+
+		if subcommand == "balance" && b != nil &&
+			(token == "" || (w.GetTokenByAddress(b.ChainId, common.HexToAddress(token)) == nil && w.GetTokenBySymbol(b.ChainId, token) == nil)) {
+			for _, t := range w.Tokens {
+				if t.ChainId != b.ChainId {
+					continue
+				}
+				if cmn.Contains(t.Symbol, token) || cmn.Contains(t.Address.String(), token) || cmn.Contains(t.Name, token) {
+
+					id := t.Symbol
+					if !t.Unique {
+						id = t.Address.String()
+					}
+
 					options = append(options, ui.ACOption{
-						Name: chain.Name, Result: command + " " + subcommand + " '" + chain.Name + "' "})
+						Name:   fmt.Sprintf("%-6s %s", t.Symbol, t.GetPrintName()),
+						Result: fmt.Sprintf("%s balance %d %s", command, b.ChainId, id)})
 				}
 			}
+			return "token", &options, token
 		}
-		return "blockchain", &options, param
+	case 4:
+		b := w.GetBlockchain(param)
+		t := w.GetToken(b.ChainId, p[3])
+
+		if subcommand == "balance" && b != nil && t != nil {
+			for _, a := range w.Addresses {
+				if cmn.Contains(a.Address.String(), p[4]) || cmn.Contains(a.Name, param) {
+					options = append(options, ui.ACOption{
+						Name:   cmn.ShortAddress(a.Address) + " " + a.Name,
+						Result: fmt.Sprintf("%s balance %s %s %s", command, p[2], p[3], a.Address.String())})
+				}
+			}
+			return "address", &options, param
+		}
 	}
 
 	return "", &options, ""

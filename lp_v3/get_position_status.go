@@ -11,6 +11,7 @@ import (
 )
 
 var Q128, _ = new(big.Int).SetString("100000000000000000000000000000000", 16)
+var Q256 = new(big.Int).Lsh(big.NewInt(1), 256)
 var TWO96 = new(big.Int).Exp(big.NewInt(2), big.NewInt(96), nil)
 
 func get_position_status(msg *bus.Message) (*bus.B_LP_V3_GetPositionStatus_Response, error) {
@@ -164,11 +165,6 @@ func getV3PositionInfo(lp *cmn.LP_V3_Position) (
 func calculateAmounts(liquidity, sqrtPriceX96, tickLowerSqrtPriceX96, tickUpperSqrtPriceX96 *big.Int) (*big.Int, *big.Int, bool) {
 	in_range := false
 
-	log.Debug().Msgf("-------------- calculateAmounts --------------")
-	log.Debug().Msgf("liquidity: %s", liquidity.String())
-	log.Debug().Msgf("sqrtPriceX96: %s", sqrtPriceX96.String())
-	log.Debug().Msgf("tickLowerSqrtPriceX96: %s", tickLowerSqrtPriceX96.String())
-
 	amount0 := big.NewInt(0)
 	amount1 := big.NewInt(0)
 
@@ -211,11 +207,16 @@ func calculateAmounts(liquidity, sqrtPriceX96, tickLowerSqrtPriceX96, tickUpperS
 		amount1.Div(amount1Numerator, TWO96)
 	}
 
-	log.Debug().Msgf("amount0: %s", amount0.String())
-	log.Debug().Msgf("amount1: %s", amount1.String())
-	log.Debug().Msgf("--------------------")
-
 	return amount0, amount1, in_range
+}
+
+// subIn256 handles overflows and underflows for 256-bit unsigned integers
+func subIn256(x, y *big.Int) *big.Int {
+	difference := new(big.Int).Sub(x, y)
+	if difference.Sign() < 0 {
+		return new(big.Int).Add(Q256, difference)
+	}
+	return difference
 }
 
 func getFeeGrowthInside(
@@ -225,18 +226,20 @@ func getFeeGrowthInside(
 	tickLower *bus.B_LP_V3_GetTick_Response,
 	tickUpper *bus.B_LP_V3_GetTick_Response) (*big.Int, *big.Int) {
 
-	log.Debug().Msgf("-------------- calculateFeeGrowthInside --------------")
+	// Calculate fee growth above for token0 and token1
+	feeGrowthAbove0 := new(big.Int)
+	feeGrowthAbove1 := new(big.Int)
+	if slot0.Tick >= nft.TickUpper {
+		log.Debug().Msgf("above: slot0.Tick >= nft.TickUpper")
+		feeGrowthAbove0 = subIn256(growth.FeeGrowthGlobal0X128, tickUpper.FeeGrowthOutside0X128)
+		feeGrowthAbove1 = subIn256(growth.FeeGrowthGlobal1X128, tickUpper.FeeGrowthOutside1X128)
 
-	log.Debug().Msgf("tickLower.FeeGrowthOutside0X128: %s", tickLower.FeeGrowthOutside0X128.String())
-	log.Debug().Msgf("tickLower.FeeGrowthOutside1X128: %s", tickLower.FeeGrowthOutside1X128.String())
+	} else {
+		log.Debug().Msgf("above: slot0.Tick < nft.TickUpper")
+		feeGrowthAbove0.Set(tickUpper.FeeGrowthOutside0X128)
+		feeGrowthAbove1.Set(tickUpper.FeeGrowthOutside1X128)
+	}
 
-	log.Debug().Msgf("tickUpper.FeeGrowthOutside0X128: %s", tickUpper.FeeGrowthOutside0X128.String())
-	log.Debug().Msgf("tickUpper.FeeGrowthOutside1X128: %s", tickUpper.FeeGrowthOutside1X128.String())
-
-	log.Debug().Msgf("nft.TickLower-nft.Upper: %d-%d", nft.TickLower, nft.TickUpper)
-	log.Debug().Msgf("slot0.Tick: %d", slot0.Tick)
-
-	// Calculate fee growth below for token0 and token1
 	feeGrowthBelow0 := new(big.Int)
 	feeGrowthBelow1 := new(big.Int)
 	if slot0.Tick >= nft.TickLower {
@@ -245,41 +248,16 @@ func getFeeGrowthInside(
 		feeGrowthBelow1.Set(tickLower.FeeGrowthOutside1X128)
 	} else {
 		log.Debug().Msgf("below: slot0.Tick < nft.TickLower")
-		feeGrowthBelow0.Sub(growth.FeeGrowthGlobal0X128, tickLower.FeeGrowthOutside0X128)
-		feeGrowthBelow1.Sub(growth.FeeGrowthGlobal1X128, tickLower.FeeGrowthOutside1X128)
+		feeGrowthBelow0 = subIn256(growth.FeeGrowthGlobal0X128, tickLower.FeeGrowthOutside0X128)
+		feeGrowthBelow1 = subIn256(growth.FeeGrowthGlobal1X128, tickLower.FeeGrowthOutside1X128)
 	}
-
-	// Calculate fee growth above for token0 and token1
-	feeGrowthAbove0 := new(big.Int)
-	feeGrowthAbove1 := new(big.Int)
-	if slot0.Tick < nft.TickUpper {
-		log.Debug().Msgf("above: slot0.Tick < nft.TickUpper")
-		feeGrowthAbove0.Set(tickUpper.FeeGrowthOutside0X128)
-		feeGrowthAbove1.Set(tickUpper.FeeGrowthOutside1X128)
-	} else {
-		log.Debug().Msgf("above: slot0.Tick >= nft.TickUpper")
-		feeGrowthAbove0.Sub(growth.FeeGrowthGlobal0X128, tickUpper.FeeGrowthOutside0X128)
-		feeGrowthAbove1.Sub(growth.FeeGrowthGlobal1X128, tickUpper.FeeGrowthOutside1X128)
-	}
-
-	log.Debug().Msgf("feeGrowthBelow0: %s", feeGrowthBelow0.String())
-	log.Debug().Msgf("feeGrowthBelow1: %s", feeGrowthBelow1.String())
-
-	log.Debug().Msgf("feeGrowthAbove0: %s", feeGrowthAbove0.String())
-	log.Debug().Msgf("feeGrowthAbove1: %s", feeGrowthAbove1.String())
 
 	// Calculate fee growth inside for token0 and token1
-	feeGrowthInside0 := new(big.Int).Sub(growth.FeeGrowthGlobal0X128, feeGrowthBelow0)
-	feeGrowthInside0.Sub(feeGrowthInside0, feeGrowthAbove0)
+	feeGrowthInside0 := subIn256(growth.FeeGrowthGlobal0X128, feeGrowthBelow0)
+	feeGrowthInside0 = subIn256(feeGrowthInside0, feeGrowthAbove0)
 
-	feeGrowthInside1 := new(big.Int).Sub(growth.FeeGrowthGlobal1X128, feeGrowthBelow1)
-	feeGrowthInside1.Sub(feeGrowthInside1, feeGrowthAbove1)
-
-	// Debug print before returning values
-	log.Debug().Msgf("feeGrowthInside0: %s", feeGrowthInside0.String())
-	log.Debug().Msgf("feeGrowthInside1: %s", feeGrowthInside1.String())
-
-	log.Debug().Msgf("--------------------")
+	feeGrowthInside1 := subIn256(growth.FeeGrowthGlobal1X128, feeGrowthBelow1)
+	feeGrowthInside1 = subIn256(feeGrowthInside1, feeGrowthAbove1)
 
 	return feeGrowthInside0, feeGrowthInside1
 }
@@ -290,39 +268,12 @@ func calculateFees(growth *bus.B_LP_V3_GetFeeGrowth_Response,
 	tickLower *bus.B_LP_V3_GetTick_Response,
 	tickUpper *bus.B_LP_V3_GetTick_Response) (*big.Int, *big.Int) {
 
-	log.Debug().Msgf("-------------- calculateFees --------------")
-
-	// print all parameters
-	log.Debug().Msgf("Liquidity: %s", nft.Liquidity.String())
-
-	log.Debug().Msgf("FeeGrowthGlobal0X128: %s", growth.FeeGrowthGlobal0X128.String())
-	log.Debug().Msgf("FeeGrowthGlobal1X128: %s", growth.FeeGrowthGlobal1X128.String())
-
-	log.Debug().Msgf("FeeGrowthInside0LastX128: %s", nft.FeeGrowthInside0LastX128.String())
-	log.Debug().Msgf("FeeGrowthInside1LastX128: %s", nft.FeeGrowthInside1LastX128.String())
-
 	// Calculate fee growth inside for token0 and token1
 	feeGrowthInside0, feeGrowthInside1 := getFeeGrowthInside(nft, growth, slot0, tickLower, tickUpper)
-
-	// // Ensure fee growth inside is non-negative
-	// if feeGrowthInside0.Sign() < 0 {
-	// 	feeGrowthInside0.SetInt64(0)
-	// }
-	// if feeGrowthInside1.Sign() < 0 {
-	// 	feeGrowthInside1.SetInt64(0)
-	// }
 
 	// Calculate uncollected fees for token0 and token1
 	uncollectedFees0 := new(big.Int).Sub(feeGrowthInside0, nft.FeeGrowthInside0LastX128)
 	uncollectedFees1 := new(big.Int).Sub(feeGrowthInside1, nft.FeeGrowthInside1LastX128)
-
-	// // Ensure uncollected fees are non-negative
-	// if uncollectedFees0.Sign() < 0 {
-	// 	uncollectedFees0.SetInt64(0)
-	// }
-	// if uncollectedFees1.Sign() < 0 {
-	// 	uncollectedFees1.SetInt64(0)
-	// }
 
 	uncollectedFees0.Mul(uncollectedFees0, nft.Liquidity)
 	uncollectedFees1.Mul(uncollectedFees1, nft.Liquidity)
@@ -331,11 +282,6 @@ func calculateFees(growth *bus.B_LP_V3_GetFeeGrowth_Response,
 	Q128 := new(big.Int).Lsh(big.NewInt(1), 128)
 	uncollectedFees0 = uncollectedFees0.Div(uncollectedFees0, Q128)
 	uncollectedFees1 = uncollectedFees1.Div(uncollectedFees1, Q128)
-
-	// print all uncollected fees
-	log.Debug().Msgf("uncollectedFees0: %s", uncollectedFees0.String())
-	log.Debug().Msgf("uncollectedFees1: %s", uncollectedFees1.String())
-	log.Debug().Msgf("--------------------")
 
 	return uncollectedFees0, uncollectedFees1
 }

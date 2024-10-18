@@ -42,43 +42,63 @@ func Price_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 	p := cmn.SplitN(input, 5)
 	command, subcommand, bchain, token := p[0], p[1], p[2], p[3]
 
-	if !cmn.IsInArray(price_subcommands, subcommand) {
-		for _, sc := range price_subcommands {
-			if input == "" || strings.Contains(sc, subcommand) {
-				options = append(options, ui.ACOption{Name: sc, Result: command + " " + sc + " "})
-			}
-		}
-		return "action", &options, subcommand
+	last_param := len(p) - 1
+	for last_param > 0 && p[last_param] == "" {
+		last_param--
 	}
 
-	if subcommand == "discover" {
+	if strings.HasSuffix(input, " ") {
+		last_param++
+	}
 
-		b := w.GetBlockchain(bchain)
+	switch last_param {
+	case 0, 1:
 
-		if token == "" && b == nil {
-			for _, b := range w.Blockchains {
-				if cmn.Contains(b.Name, bchain) {
-					options = append(options, ui.ACOption{Name: b.Name, Result: command + " " + subcommand + " '" + b.Name + "'"})
+		if !cmn.IsInArray(price_subcommands, subcommand) {
+			for _, sc := range price_subcommands {
+				if input == "" || strings.Contains(sc, subcommand) {
+					options = append(options, ui.ACOption{Name: sc, Result: command + " " + sc + " "})
 				}
 			}
-			return "blockchain", &options, bchain
+			return "action", &options, subcommand
 		}
+	case 2:
 
-		if b != nil && (token == "" || !strings.HasSuffix(input, " ")) {
-			for _, t := range w.Tokens {
-				if t.ChainId == b.ChainId && cmn.Contains(t.Name+t.Symbol, token) {
-					tn := t.Address.String()
-					if t.Unique {
-						tn = t.Symbol
+		if subcommand == "discover" {
+
+			b := w.GetBlockchain(bchain)
+
+			if token == "" && b == nil {
+				for _, b := range w.Blockchains {
+					if cmn.Contains(b.Name, bchain) {
+						options = append(options, ui.ACOption{Name: b.Name, Result: command + " " + subcommand + " '" + b.Name + "'"})
 					}
-
-					options = append(options, ui.ACOption{
-						Name:   fmt.Sprintf("%-6s %s", t.Symbol, t.GetPrintName()),
-						Result: command + " discover '" + bchain + "' " + tn + " "})
 				}
+				return "blockchain", &options, bchain
 			}
 		}
-		return "token", &options, token
+
+	case 3:
+		if subcommand == "discover" {
+
+			b := w.GetBlockchain(bchain)
+
+			if b != nil && (token == "" || !strings.HasSuffix(input, " ")) {
+				for _, t := range w.Tokens {
+					if t.ChainId == b.ChainId && cmn.Contains(t.Name+t.Symbol, token) {
+						tn := t.Address.String()
+						if t.Unique {
+							tn = t.Symbol
+						}
+
+						options = append(options, ui.ACOption{
+							Name:   fmt.Sprintf("%-6s %s", t.Symbol, t.GetPrintName()),
+							Result: command + " discover '" + bchain + "' " + tn + " "})
+					}
+				}
+			}
+			return "token", &options, token
+		}
 	}
 
 	return "", &options, ""

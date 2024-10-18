@@ -228,7 +228,7 @@ func (t *Token) GetPrintName() string {
 	if t.Native {
 		return "(native)"
 	}
-	return t.Symbol
+	return t.Name
 }
 
 func (b *Blockchain) ExplorerLink(address common.Address) string {
