@@ -153,7 +153,7 @@ func watchAssets(req RPCRequest) {
 		return
 	}
 
-	t := w.GetTokenByAddress(b.Name, common.HexToAddress(address))
+	t := w.GetTokenByAddress(b.ChainId, common.HexToAddress(address))
 	if t == nil {
 
 		bus.Fetch("ui", "hail", &bus.B_Hail{
@@ -182,7 +182,7 @@ to your wallet?
 					return false
 				}
 
-				err = w.AddToken(b.Name, common.HexToAddress(address), a_name, symbol, int(decimals))
+				err = w.AddToken(b.ChainId, common.HexToAddress(address), a_name, symbol, int(decimals))
 				if err != nil {
 					log.Error().Err(err).Msg("Failed to save wallet")
 					return false

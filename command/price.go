@@ -66,7 +66,7 @@ func Price_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 
 		if b != nil && (token == "" || !strings.HasSuffix(input, " ")) {
 			for _, t := range w.Tokens {
-				if t.Blockchain == bchain && cmn.Contains(t.Name+t.Symbol, token) {
+				if t.ChainId == b.ChainId && cmn.Contains(t.Name+t.Symbol, token) {
 					tn := t.Address.String()
 					if t.Unique {
 						tn = t.Symbol
@@ -107,7 +107,7 @@ func Price_Process(c *Command, input string) {
 			return
 		}
 
-		t := w.GetToken(bchain, token)
+		t := w.GetToken(b.ChainId, token)
 		if t == nil {
 			ui.PrintErrorf("Invalid token address")
 			return
@@ -161,7 +161,7 @@ func Price_Process(c *Command, input string) {
 			return
 		}
 
-		t := w.GetToken(bchain, token)
+		t := w.GetToken(b.ChainId, token)
 		if t == nil {
 			ui.PrintErrorf("Invalid token address")
 			return
@@ -181,7 +181,7 @@ func Price_Process(c *Command, input string) {
 		t.PriceFeedParam = param
 
 		if t.Native {
-			wt := w.GetToken(bchain, b.WTokenAddress.Hex())
+			wt := w.GetToken(b.ChainId, b.WTokenAddress.Hex())
 			if wt != nil {
 				wt.PriceFeeder = feeder
 				wt.PriceFeedParam = param

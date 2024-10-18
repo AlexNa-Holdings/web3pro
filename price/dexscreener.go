@@ -226,14 +226,21 @@ func DSUpdate(w *cmn.Wallet) (int, error) { // number of pairs updated
 		}
 		tokens_to_update := []*cmn.Token{}
 		for _, t := range w.Tokens {
-			if t.Blockchain == b.Name && t.PriceFeeder == "dexscreener" && !t.Native &&
+			if t.ChainId == b.ChainId && t.PriceFeeder == "dexscreener" && !t.Native &&
 				t.PriceFeedParam != "" && t.PriceTimestamp.Add(PRICE_UPDATE_PERIOD).Before(time.Now()) {
 				tokens_to_update = append(tokens_to_update, t)
 			}
 		}
 
 		pair_list := ""
+		added := make(map[string]bool)
 		for _, t := range tokens_to_update {
+
+			if added[t.PriceFeedParam] {
+				continue
+			}
+			added[t.PriceFeedParam] = true
+
 			if pair_list != "" {
 				pair_list += ","
 			}
@@ -247,24 +254,24 @@ func DSUpdate(w *cmn.Wallet) (int, error) { // number of pairs updated
 				return 0, fmt.Errorf("DSUpdate: failed to get pairs from dexscreener: %w", err)
 			}
 
-			if len(pairs) != len(tokens_to_update) {
-				log.Error().Msg("DSUpdate: number of pairs does not match number of tokens")
-				return 0, fmt.Errorf("DSUpdate: number of pairs does not match number of tokens")
-			}
+			for i, p := range pairs {
 
-			for i, t := range tokens_to_update {
-				t.Price = pairs[i].PriceUsd
-				t.PriceChange24 = pairs[i].PriceChange24
-				t.PriceTimestamp = time.Now()
+				for _, t := range tokens_to_update {
+					if t.PriceFeedParam == p.PairAddress {
 
-				//also update the wrapped token
-				wt, err := w.GetNativeToken(b)
-				if err == nil && wt.Address == t.Address {
-					wt.Price = pairs[i].PriceUsd
-					wt.PriceChange24 = pairs[i].PriceChange24
-					wt.PriceTimestamp = time.Now()
+						t.Price = pairs[i].PriceUsd
+						t.PriceChange24 = pairs[i].PriceChange24
+						t.PriceTimestamp = time.Now()
+					}
+
+					//also update the naitve token
+					wt, err := w.GetNativeToken(b)
+					if err == nil && wt.Address == t.Address {
+						wt.Price = pairs[i].PriceUsd
+						wt.PriceChange24 = pairs[i].PriceChange24
+						wt.PriceTimestamp = time.Now()
+					}
 				}
-
 			}
 
 			n_updated += len(pairs)

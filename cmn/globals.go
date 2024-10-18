@@ -23,8 +23,10 @@ type Wallet struct {
 	LP_V3_Positions []*LP_V3_Position `json:"lp_v3_positions"`
 	Contracts       map[common.Address]*Contract
 	AppsPaneOn      bool `json:"apps_pane_on"`
+	LP_V3PaneOn     bool `json:"lp_v3_pane_on"`
 
-	CurrentChain   string         `json:"current_chain"`
+	CurrentChain   string         `json:"current_chain"` // TODO delete
+	CurrentChainId int            `json:"current_chain_id"`
 	CurrentAddress common.Address `json:"current_address"`
 	CurrentOrigin  string         `json:"current_origin"`
 
@@ -73,7 +75,7 @@ var EXPLORER_API_TYPES = []string{"etherscan", "blockscout"}
 var KNOWN_SIGNER_TYPES = []string{"mnemonics", "ledger", "trezor"}
 
 type Token struct {
-	Blockchain     string         `json:"blockchain"`
+	ChainId        int            `json:"chain_id"`
 	Name           string         `json:"name"`
 	Symbol         string         `json:"symbol"`
 	Address        common.Address `json:"address"`

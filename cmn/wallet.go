@@ -60,6 +60,7 @@ func Open(name string, pass string) error {
 		}
 
 		CurrentWallet = w
+
 		bus.Send("wallet", "open", nil)
 	}
 	return err
@@ -82,7 +83,7 @@ func (w *Wallet) DeleteBlockchain(name string) error {
 	}
 
 	for i, t := range w.Tokens {
-		if t.Blockchain == name {
+		if t.ChainId == bd.ChainId {
 			w.Tokens = append(w.Tokens[:i], w.Tokens[i+1:]...)
 		}
 	}
@@ -105,7 +106,7 @@ func (w *Wallet) AuditNativeTokens() {
 	for _, b := range w.Blockchains { // audit native tokens
 		found := false
 		for _, t := range w.Tokens {
-			if t.Blockchain == b.Name && t.Native {
+			if t.ChainId == b.ChainId && t.Native {
 				t.Symbol = b.Currency
 				found = true
 				break
@@ -113,11 +114,11 @@ func (w *Wallet) AuditNativeTokens() {
 		}
 		if !found {
 			w.Tokens = append(w.Tokens, &Token{
-				Blockchain: b.Name,
-				Name:       b.Currency,
-				Symbol:     b.Currency,
-				Decimals:   18,
-				Native:     true,
+				ChainId:  b.ChainId,
+				Name:     b.Currency,
+				Symbol:   b.Currency,
+				Decimals: 18,
+				Native:   true,
 			})
 			eddited = true
 		}
@@ -125,13 +126,13 @@ func (w *Wallet) AuditNativeTokens() {
 
 	for _, b := range w.Blockchains { // audit wrapped native tokens
 		if b.WTokenAddress != (common.Address{}) {
-			wt := w.GetTokenByAddress(b.Name, b.WTokenAddress)
+			wt := w.GetTokenByAddress(b.ChainId, b.WTokenAddress)
 			if wt == nil {
 
 				nt, _ := w.GetNativeToken(b)
 
 				w.Tokens = append(w.Tokens, &Token{
-					Blockchain:     b.Name,
+					ChainId:        b.ChainId,
 					Address:        b.WTokenAddress,
 					Name:           "Wrapped " + b.Currency,
 					Symbol:         "W" + b.Currency,
@@ -147,7 +148,7 @@ func (w *Wallet) AuditNativeTokens() {
 
 	to_remove := []int{}
 	for i, t := range w.Tokens {
-		if t.Native && w.GetBlockchain(t.Blockchain) == nil {
+		if t.Native && w.GetBlockchainById(t.ChainId) == nil {
 			to_remove = append([]int{i}, to_remove...)
 			break
 		}
@@ -639,20 +640,20 @@ func (w *Wallet) GetAddressByName(n string) *Address {
 	return w.GetAddress(n)
 }
 
-func (w *Wallet) GetToken(b string, a string) *Token {
+func (w *Wallet) GetToken(chain int, a string) *Token {
 	if common.IsHexAddress(a) {
-		t := w.GetTokenByAddress(b, common.HexToAddress(a))
+		t := w.GetTokenByAddress(chain, common.HexToAddress(a))
 		if t != nil {
 			return t
 		}
 	}
 
-	return w.GetTokenBySymbol(b, a)
+	return w.GetTokenBySymbol(chain, a)
 }
 
 func (w *Wallet) GetNativeToken(b *Blockchain) (*Token, error) {
 	for _, t := range w.Tokens {
-		if t.Blockchain == b.Name && t.Native {
+		if t.ChainId == b.ChainId && t.Native {
 			return t, nil
 		}
 	}
@@ -661,17 +662,17 @@ func (w *Wallet) GetNativeToken(b *Blockchain) (*Token, error) {
 	return nil, errors.New("native token not found")
 }
 
-func (w *Wallet) AddToken(b string, a common.Address, n string, s string, d int) error {
-	if w.GetTokenByAddress(b, a) != nil {
+func (w *Wallet) AddToken(chain int, a common.Address, n string, s string, d int) error {
+	if w.GetTokenByAddress(chain, a) != nil {
 		return errors.New("token already exists")
 	}
 
 	t := &Token{
-		Blockchain: b,
-		Address:    a,
-		Name:       n,
-		Symbol:     s,
-		Decimals:   d,
+		ChainId:  chain,
+		Address:  a,
+		Name:     n,
+		Symbol:   s,
+		Decimals: d,
 	}
 
 	w.Tokens = append(w.Tokens, t)
@@ -680,9 +681,9 @@ func (w *Wallet) AddToken(b string, a common.Address, n string, s string, d int)
 	return w.Save()
 }
 
-func (w *Wallet) GetTokenByAddress(b string, a common.Address) *Token {
+func (w *Wallet) GetTokenByAddress(chain int, a common.Address) *Token {
 	if a.Cmp(common.Address{}) == 0 {
-		b := w.GetBlockchain(b)
+		b := w.GetBlockchainById(chain)
 		if b == nil {
 			return nil
 		}
@@ -693,15 +694,8 @@ func (w *Wallet) GetTokenByAddress(b string, a common.Address) *Token {
 		return t
 	}
 
-	// for _, t := range w.Tokens {
-	// 	if t.Blockchain == b && ((!t.Native && t.Address == a) ||
-	// 		(t.Native && a == common.Address{})) {
-	// 		return t
-	// 	}
-	// }
-
 	for _, t := range w.Tokens {
-		if t.Blockchain == b && (t.Address == a) {
+		if t.ChainId == chain && (t.Address == a) {
 			return t
 		}
 	}
@@ -709,9 +703,9 @@ func (w *Wallet) GetTokenByAddress(b string, a common.Address) *Token {
 	return nil
 }
 
-func (w *Wallet) GetTokenBySymbol(b string, s string) *Token {
+func (w *Wallet) GetTokenBySymbol(chain int, s string) *Token {
 	for _, t := range w.Tokens {
-		if t.Blockchain == b && t.Symbol == s {
+		if t.ChainId == chain && t.Symbol == s {
 			if !t.Unique {
 				return nil // Ambiguous
 			}
@@ -721,9 +715,9 @@ func (w *Wallet) GetTokenBySymbol(b string, s string) *Token {
 	return nil
 }
 
-func (w *Wallet) DeleteToken(b string, a common.Address) {
+func (w *Wallet) DeleteToken(chain int, a common.Address) {
 	for i, t := range w.Tokens {
-		if t.Blockchain == b && t.Address == a {
+		if t.ChainId == chain && t.Address == a {
 			w.Tokens = append(w.Tokens[:i], w.Tokens[i+1:]...)
 			return
 		}
@@ -733,10 +727,10 @@ func (w *Wallet) DeleteToken(b string, a common.Address) {
 func (w *Wallet) MarkUniqueTokens() {
 	for _, b := range w.Blockchains {
 		for i, t := range w.Tokens {
-			if t.Blockchain == b.Name {
+			if t.ChainId == b.ChainId {
 				t.Unique = true
 				for j := 0; j < i; j++ {
-					if w.Tokens[j].Blockchain == b.Name && w.Tokens[j].Symbol == t.Symbol {
+					if w.Tokens[j].ChainId == b.ChainId && w.Tokens[j].Symbol == t.Symbol {
 						t.Unique = false
 						w.Tokens[j].Unique = false
 						break

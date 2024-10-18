@@ -20,7 +20,7 @@ type con struct {
 	Multicall *MultiCall
 }
 
-var cons map[int]*con // chainId -> client
+var cons map[int]*con = make(map[int]*con) // chainId -> client
 var consMutex = sync.Mutex{}
 
 func Init() {

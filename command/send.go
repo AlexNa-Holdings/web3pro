@@ -50,7 +50,7 @@ func Send_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 
 	var t *cmn.Token
 	if b != nil {
-		t = w.GetToken(b.Name, token)
+		t = w.GetToken(b.ChainId, token)
 	}
 
 	switch last_param {
@@ -66,7 +66,7 @@ func Send_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 		if b != nil {
 
 			for _, t := range w.Tokens {
-				if t.Blockchain != b.Name {
+				if t.ChainId != b.ChainId {
 					continue
 				}
 				if cmn.Contains(t.Symbol, token) || cmn.Contains(t.Address.String(), token) || cmn.Contains(t.Name, token) {
@@ -130,7 +130,7 @@ func Send_Process(c *Command, input string) {
 		return
 	}
 
-	t := w.GetToken(b.Name, token)
+	t := w.GetToken(b.ChainId, token)
 	if t == nil {
 		ui.PrintErrorf("Token not found: %s", token)
 		return

@@ -129,7 +129,7 @@ func discover(msg *bus.Message) error {
 				cmn.AddAddressShortLink(ui.Terminal.Screen, pos.Operator)
 				ui.Printf("\n")
 
-				t0 := w.GetTokenByAddress(b.Name, pos.Token0)
+				t0 := w.GetTokenByAddress(b.ChainId, pos.Token0)
 				if t0 != nil {
 					ui.Printf("    %s (%s)", t0.Symbol, t0.Name)
 				} else {
@@ -141,7 +141,7 @@ func discover(msg *bus.Message) error {
 
 				ui.Printf(" / ")
 
-				t1 := w.GetTokenByAddress(b.Name, pos.Token1)
+				t1 := w.GetTokenByAddress(b.ChainId, pos.Token1)
 				if t1 != nil {
 					ui.Printf("%s (%s)", t1.Symbol, t1.Name)
 				} else {

@@ -44,6 +44,8 @@ func get_position_status(msg *bus.Message) (*bus.B_LP_V3_GetPositionStatus_Respo
 		return nil, err
 	}
 
+	log.Debug().Msgf(">>>>>> nft_pos: NFT_Token=%s", lp.NFT_Token.String())
+
 	amount0, amount1, in_range := calculateAmounts(nft_pos.Liquidity, slot0.SqrtPriceX96,
 		getSqrtPriceX96FromTick(nft_pos.TickLower),
 		getSqrtPriceX96FromTick(nft_pos.TickUpper))
@@ -51,13 +53,13 @@ func get_position_status(msg *bus.Message) (*bus.B_LP_V3_GetPositionStatus_Respo
 	tokensOwed0, tokensOwed1 := calculateFees(fee_growth, nft_pos, slot0, tickLower, tickUpper)
 
 	dollar0 := 0.
-	t0 := w.GetTokenByAddress(b.Name, nft_pos.Token0)
+	t0 := w.GetTokenByAddress(b.ChainId, nft_pos.Token0)
 	if t0 != nil {
 		dollar0 = t0.Float64(tokensOwed0) * t0.Price
 	}
 
 	dollar1 := 0.
-	t1 := w.GetTokenByAddress(b.Name, nft_pos.Token1)
+	t1 := w.GetTokenByAddress(b.ChainId, nft_pos.Token1)
 	if t1 != nil {
 		dollar1 = t1.Float64(tokensOwed1) * t1.Price
 	}
@@ -66,6 +68,8 @@ func get_position_status(msg *bus.Message) (*bus.B_LP_V3_GetPositionStatus_Respo
 
 	return &bus.B_LP_V3_GetPositionStatus_Response{
 		On:           in_range,
+		Token0:       nft_pos.Token0,
+		Token1:       nft_pos.Token1,
 		Liquidity0:   amount0,
 		Liquidity1:   amount1,
 		Gain0:        tokensOwed0,
@@ -74,6 +78,9 @@ func get_position_status(msg *bus.Message) (*bus.B_LP_V3_GetPositionStatus_Respo
 		ProviderName: pn,
 		FeeProtocol0: slot0.FeeProtocol0,
 		FeeProtocol1: slot0.FeeProtocol1,
+		Owner:        lp.Owner,
+		ChainId:      req.ChainId,
+		Provider:     req.Provider,
 	}, nil
 
 }
@@ -157,10 +164,10 @@ func getV3PositionInfo(lp *cmn.LP_V3_Position) (
 func calculateAmounts(liquidity, sqrtPriceX96, tickLowerSqrtPriceX96, tickUpperSqrtPriceX96 *big.Int) (*big.Int, *big.Int, bool) {
 	in_range := false
 
-	// log.Debug().Msgf("-------------- calculateAmounts --------------")
-	// log.Debug().Msgf("liquidity: %s", liquidity.String())
-	// log.Debug().Msgf("sqrtPriceX96: %s", sqrtPriceX96.String())
-	// log.Debug().Msgf("tickLowerSqrtPriceX96: %s", tickLowerSqrtPriceX96.String())
+	log.Debug().Msgf("-------------- calculateAmounts --------------")
+	log.Debug().Msgf("liquidity: %s", liquidity.String())
+	log.Debug().Msgf("sqrtPriceX96: %s", sqrtPriceX96.String())
+	log.Debug().Msgf("tickLowerSqrtPriceX96: %s", tickLowerSqrtPriceX96.String())
 
 	amount0 := big.NewInt(0)
 	amount1 := big.NewInt(0)
@@ -204,9 +211,9 @@ func calculateAmounts(liquidity, sqrtPriceX96, tickLowerSqrtPriceX96, tickUpperS
 		amount1.Div(amount1Numerator, TWO96)
 	}
 
-	// log.Debug().Msgf("amount0: %s", amount0.String())
-	// log.Debug().Msgf("amount1: %s", amount1.String())
-	// log.Debug().Msgf("--------------------")
+	log.Debug().Msgf("amount0: %s", amount0.String())
+	log.Debug().Msgf("amount1: %s", amount1.String())
+	log.Debug().Msgf("--------------------")
 
 	return amount0, amount1, in_range
 }
@@ -226,18 +233,18 @@ func getFeeGrowthInside(
 	log.Debug().Msgf("tickUpper.FeeGrowthOutside0X128: %s", tickUpper.FeeGrowthOutside0X128.String())
 	log.Debug().Msgf("tickUpper.FeeGrowthOutside1X128: %s", tickUpper.FeeGrowthOutside1X128.String())
 
-	log.Debug().Msgf("nft.TickLower: %d", nft.TickLower)
-	log.Debug().Msgf("nft.TickUpper: %d", nft.TickUpper)
-
+	log.Debug().Msgf("nft.TickLower-nft.Upper: %d-%d", nft.TickLower, nft.TickUpper)
 	log.Debug().Msgf("slot0.Tick: %d", slot0.Tick)
 
 	// Calculate fee growth below for token0 and token1
 	feeGrowthBelow0 := new(big.Int)
 	feeGrowthBelow1 := new(big.Int)
 	if slot0.Tick >= nft.TickLower {
+		log.Debug().Msgf("below: slot0.Tick >= nft.TickLower")
 		feeGrowthBelow0.Set(tickLower.FeeGrowthOutside0X128)
 		feeGrowthBelow1.Set(tickLower.FeeGrowthOutside1X128)
 	} else {
+		log.Debug().Msgf("below: slot0.Tick < nft.TickLower")
 		feeGrowthBelow0.Sub(growth.FeeGrowthGlobal0X128, tickLower.FeeGrowthOutside0X128)
 		feeGrowthBelow1.Sub(growth.FeeGrowthGlobal1X128, tickLower.FeeGrowthOutside1X128)
 	}
@@ -246,12 +253,20 @@ func getFeeGrowthInside(
 	feeGrowthAbove0 := new(big.Int)
 	feeGrowthAbove1 := new(big.Int)
 	if slot0.Tick < nft.TickUpper {
+		log.Debug().Msgf("above: slot0.Tick < nft.TickUpper")
 		feeGrowthAbove0.Set(tickUpper.FeeGrowthOutside0X128)
 		feeGrowthAbove1.Set(tickUpper.FeeGrowthOutside1X128)
 	} else {
+		log.Debug().Msgf("above: slot0.Tick >= nft.TickUpper")
 		feeGrowthAbove0.Sub(growth.FeeGrowthGlobal0X128, tickUpper.FeeGrowthOutside0X128)
 		feeGrowthAbove1.Sub(growth.FeeGrowthGlobal1X128, tickUpper.FeeGrowthOutside1X128)
 	}
+
+	log.Debug().Msgf("feeGrowthBelow0: %s", feeGrowthBelow0.String())
+	log.Debug().Msgf("feeGrowthBelow1: %s", feeGrowthBelow1.String())
+
+	log.Debug().Msgf("feeGrowthAbove0: %s", feeGrowthAbove0.String())
+	log.Debug().Msgf("feeGrowthAbove1: %s", feeGrowthAbove1.String())
 
 	// Calculate fee growth inside for token0 and token1
 	feeGrowthInside0 := new(big.Int).Sub(growth.FeeGrowthGlobal0X128, feeGrowthBelow0)
@@ -260,17 +275,10 @@ func getFeeGrowthInside(
 	feeGrowthInside1 := new(big.Int).Sub(growth.FeeGrowthGlobal1X128, feeGrowthBelow1)
 	feeGrowthInside1.Sub(feeGrowthInside1, feeGrowthAbove1)
 
-	// Ensure fee growth inside is non-negative
-	if feeGrowthInside0.Sign() < 0 {
-		feeGrowthInside0.SetInt64(0)
-	}
-	if feeGrowthInside1.Sign() < 0 {
-		feeGrowthInside1.SetInt64(0)
-	}
-
-	// print fee growth inside values
+	// Debug print before returning values
 	log.Debug().Msgf("feeGrowthInside0: %s", feeGrowthInside0.String())
 	log.Debug().Msgf("feeGrowthInside1: %s", feeGrowthInside1.String())
+
 	log.Debug().Msgf("--------------------")
 
 	return feeGrowthInside0, feeGrowthInside1
@@ -296,25 +304,25 @@ func calculateFees(growth *bus.B_LP_V3_GetFeeGrowth_Response,
 	// Calculate fee growth inside for token0 and token1
 	feeGrowthInside0, feeGrowthInside1 := getFeeGrowthInside(nft, growth, slot0, tickLower, tickUpper)
 
-	// Ensure fee growth inside is non-negative
-	if feeGrowthInside0.Sign() < 0 {
-		feeGrowthInside0.SetInt64(0)
-	}
-	if feeGrowthInside1.Sign() < 0 {
-		feeGrowthInside1.SetInt64(0)
-	}
+	// // Ensure fee growth inside is non-negative
+	// if feeGrowthInside0.Sign() < 0 {
+	// 	feeGrowthInside0.SetInt64(0)
+	// }
+	// if feeGrowthInside1.Sign() < 0 {
+	// 	feeGrowthInside1.SetInt64(0)
+	// }
 
 	// Calculate uncollected fees for token0 and token1
 	uncollectedFees0 := new(big.Int).Sub(feeGrowthInside0, nft.FeeGrowthInside0LastX128)
 	uncollectedFees1 := new(big.Int).Sub(feeGrowthInside1, nft.FeeGrowthInside1LastX128)
 
-	// Ensure uncollected fees are non-negative
-	if uncollectedFees0.Sign() < 0 {
-		uncollectedFees0.SetInt64(0)
-	}
-	if uncollectedFees1.Sign() < 0 {
-		uncollectedFees1.SetInt64(0)
-	}
+	// // Ensure uncollected fees are non-negative
+	// if uncollectedFees0.Sign() < 0 {
+	// 	uncollectedFees0.SetInt64(0)
+	// }
+	// if uncollectedFees1.Sign() < 0 {
+	// 	uncollectedFees1.SetInt64(0)
+	// }
 
 	uncollectedFees0.Mul(uncollectedFees0, nft.Liquidity)
 	uncollectedFees1.Mul(uncollectedFees1, nft.Liquidity)

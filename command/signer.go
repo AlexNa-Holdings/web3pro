@@ -229,7 +229,7 @@ func Signer_Process(c *Command, input string) {
 			if w.CurrentChain != "" {
 				b := w.GetBlockchain(w.CurrentChain)
 				if b != nil {
-					t := w.GetTokenByAddress(w.CurrentChain, common.Address{0})
+					t := w.GetTokenByAddress(w.CurrentChainId, common.Address{0})
 					if t != nil {
 						balance, err := eth.BalanceOf(b, t, a)
 						if err == nil {

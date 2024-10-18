@@ -337,6 +337,11 @@ type B_LP_V3_GetPositionStatus struct { // get-position-status
 }
 
 type B_LP_V3_GetPositionStatus_Response struct { // get-position-status_response
+	Owner        common.Address
+	ChainId      int
+	Token0       common.Address
+	Token1       common.Address
+	Provider     common.Address
 	On           bool
 	Liquidity0   *big.Int
 	Liquidity1   *big.Int

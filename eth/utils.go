@@ -13,8 +13,8 @@ import (
 )
 
 func BalanceOf(b *cmn.Blockchain, t *cmn.Token, address common.Address) (*big.Int, error) {
-	if b.Name != t.Blockchain {
-		return nil, fmt.Errorf("BalanceOf: Token (%s) is not from blockchain (%s)", t.Name, b.Name)
+	if b.ChainId != t.ChainId {
+		return nil, fmt.Errorf("BalanceOf: Token (%s) is not from blockchain (%d)", t.Name, b.ChainId)
 	}
 
 	if t.Native {

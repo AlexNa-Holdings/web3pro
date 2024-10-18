@@ -30,7 +30,7 @@ func send(msg *bus.Message) error {
 		return fmt.Errorf("blockchain not found: %v", req.ChainId)
 	}
 
-	t := w.GetToken(b.Name, req.Token)
+	t := w.GetToken(b.ChainId, req.Token)
 	if t == nil {
 		return fmt.Errorf("token not found: %v", req.Token)
 	}

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/big"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
@@ -63,9 +64,9 @@ func Token_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 	token := p[3]
 
 	if subcommand == "balance" && b != nil &&
-		(token == "" || (w.GetTokenByAddress(b.Name, common.HexToAddress(token)) == nil && w.GetTokenBySymbol(b.Name, token) == nil)) {
+		(token == "" || (w.GetTokenByAddress(b.ChainId, common.HexToAddress(token)) == nil && w.GetTokenBySymbol(b.ChainId, token) == nil)) {
 		for _, t := range w.Tokens {
-			if t.Blockchain != b.Name {
+			if t.ChainId != b.ChainId {
 				continue
 			}
 			if cmn.Contains(t.Symbol, token) || cmn.Contains(t.Address.String(), token) || cmn.Contains(t.Name, token) {
@@ -86,7 +87,7 @@ func Token_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 	adr := p[4]
 
 	if subcommand == "balance" && b != nil &&
-		(w.GetTokenByAddress(b.Name, common.HexToAddress(token)) != nil || w.GetTokenBySymbol(b.Name, token) != nil) {
+		(w.GetTokenByAddress(b.ChainId, common.HexToAddress(token)) != nil || w.GetTokenBySymbol(b.ChainId, token) != nil) {
 		for _, a := range w.Addresses {
 			if cmn.Contains(a.Name+a.Address.String(), adr) {
 				options = append(options, ui.ACOption{
@@ -153,7 +154,7 @@ func Token_Process(c *Command, input string) {
 			return
 		}
 
-		if w.GetTokenByAddress(bchain.Name, addr) != nil {
+		if w.GetTokenByAddress(bchain.ChainId, addr) != nil {
 			ui.PrintErrorf("Token already exists: %s", address)
 			return
 		}
@@ -164,7 +165,7 @@ func Token_Process(c *Command, input string) {
 			return
 		}
 
-		err = w.AddToken(bchain.Name, addr, name, symbol, decimals)
+		err = w.AddToken(bchain.ChainId, addr, name, symbol, decimals)
 		if err != nil {
 			ui.PrintErrorf("Error adding token: %v", err)
 			return
@@ -192,7 +193,21 @@ func Token_Process(c *Command, input string) {
 
 		addr := common.HexToAddress(address)
 
-		t := w.GetTokenByAddress(chain, addr)
+		b := w.GetBlockchain(chain)
+		if b == nil {
+			chain_id, err := strconv.Atoi(chain)
+			if err != nil {
+				ui.PrintErrorf("Invalid blockchain: %s", chain)
+				return
+			}
+			b := w.GetBlockchainById(chain_id)
+			if b == nil {
+				ui.PrintErrorf("Blockchain not found: %s", chain)
+				return
+			}
+		}
+
+		t := w.GetTokenByAddress(b.ChainId, addr)
 		if t == nil {
 			ui.PrintErrorf("Token not found: %s", address)
 			return
@@ -205,7 +220,7 @@ func Token_Process(c *Command, input string) {
 <c> `+t.Name+`
 <c> `+t.Symbol+"? \n",
 			func() {
-				w.DeleteToken(chain, addr)
+				w.DeleteToken(b.ChainId, addr)
 				w.MarkUniqueTokens()
 				w.Save()
 				ui.Notification.Show("Token removed")
@@ -214,24 +229,26 @@ func Token_Process(c *Command, input string) {
 
 		chain := p[2]
 
+		lb := w.GetBlockchain(chain)
+
 		ui.Printf("\nTokens:\n")
 
 		// Sort the tokens by Blockchain and Symbol
 		sort.Slice(w.Tokens, func(i, j int) bool {
-			if w.Tokens[i].Blockchain == w.Tokens[j].Blockchain {
+			if w.Tokens[i].ChainId == w.Tokens[j].ChainId {
 				return w.Tokens[i].Symbol < w.Tokens[j].Symbol
 			}
-			return w.Tokens[i].Blockchain < w.Tokens[j].Blockchain
+			return w.Tokens[i].ChainId < w.Tokens[j].ChainId
 		})
 
 		for _, t := range w.Tokens {
-			if chain != "" && t.Blockchain != chain {
+			if chain != "" && lb != nil && t.ChainId != lb.ChainId {
 				continue
 			}
 
-			b := w.GetBlockchain(t.Blockchain)
+			b := w.GetBlockchainById(t.ChainId)
 			if b == nil {
-				log.Error().Msgf("Blockchain not found: %s", t.Blockchain)
+				log.Error().Msgf("Blockchain not found: %d", t.ChainId)
 				continue
 			}
 
@@ -245,7 +262,7 @@ func Token_Process(c *Command, input string) {
 
 			if !t.Native {
 				ui.Terminal.Screen.AddLink(gocui.ICON_LINK, "open "+b.ExplorerLink(t.Address), b.ExplorerLink(t.Address), "")
-				ui.Terminal.Screen.AddLink(gocui.ICON_DELETE, "command token remove '"+t.Blockchain+"' '"+t.Address.String()+"'", "Remove token", "")
+				ui.Terminal.Screen.AddLink(gocui.ICON_DELETE, "command token remove "+strconv.Itoa(t.ChainId)+" '"+t.Address.String()+"'", "Remove token", "")
 			} else {
 				ui.Printf("    ")
 			}
@@ -264,7 +281,7 @@ func Token_Process(c *Command, input string) {
 
 			ui.Printf(" ")
 
-			ui.Printf("%s | %s", t.Blockchain, t.Name)
+			ui.Printf("%s | %s", b.Name, t.Name)
 			ui.Printf("\n")
 		}
 
@@ -279,10 +296,18 @@ func Token_Process(c *Command, input string) {
 			return
 		}
 
-		bchain := w.GetBlockchain(chain)
-		if bchain == nil {
-			ui.PrintErrorf("Blockchain not found: %s", chain)
-			return
+		b := w.GetBlockchain(chain)
+		if b == nil {
+			chain_id, err := strconv.Atoi(chain)
+			if err != nil {
+				ui.PrintErrorf("Invalid blockchain: %s", chain)
+				return
+			}
+			b := w.GetBlockchainById(chain_id)
+			if b == nil {
+				ui.PrintErrorf("Blockchain not found: %s", chain)
+				return
+			}
 		}
 
 		if token == "" {
@@ -290,9 +315,9 @@ func Token_Process(c *Command, input string) {
 			return
 		}
 
-		t := w.GetTokenBySymbol(chain, token)
+		t := w.GetTokenBySymbol(b.ChainId, token)
 		if t == nil {
-			t = w.GetTokenByAddress(chain, common.HexToAddress(token))
+			t = w.GetTokenByAddress(b.ChainId, common.HexToAddress(token))
 		}
 
 		if t == nil {
@@ -321,7 +346,7 @@ func Token_Process(c *Command, input string) {
 				continue
 			}
 
-			balance, err := eth.BalanceOf(bchain, t, a.Address)
+			balance, err := eth.BalanceOf(b, t, a.Address)
 			if err != nil {
 				ui.PrintErrorf("Error getting balance: %v", err)
 				return

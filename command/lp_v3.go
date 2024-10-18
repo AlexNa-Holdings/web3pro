@@ -16,7 +16,7 @@ import (
 )
 
 var lp_v3_subcommands = []string{
-	"on", "off", "add", "remove", "discover", "providers",
+	"on", "off", "add", "edit", "remove", "discover", "providers",
 	"list",
 }
 
@@ -37,6 +37,7 @@ Commands:
   providers				    - List v3 providers
   add [CHAIN] [ADDR] [NAME] - Add v3 provider
   remove [CHAIN] [ADDR]     - Remove v3 provider
+  edit [CHAIN] [ADDR]       - Edit v3 provider
   discover [CHAIN] [Name]   - Discover v3 positions
   on                        - Open v3 window
   off                       - Close w3 window
@@ -79,7 +80,8 @@ func LP_V3_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 			return "action", &options, subcommand
 		}
 	case 2:
-		if subcommand == "add" || subcommand == "remove" || subcommand == "discover" {
+		if subcommand == "add" || subcommand == "remove" ||
+			subcommand == "discover" || subcommand == "edit" {
 			for _, chain := range w.Blockchains {
 				if cmn.Contains(chain.Name, bchain) {
 					options = append(options, ui.ACOption{
@@ -104,7 +106,7 @@ func LP_V3_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 			}
 		}
 
-		if subcommand == "discover" {
+		if subcommand == "discover" || subcommand == "edit" {
 			for _, lp := range w.LP_V3_Providers {
 				if cmn.Contains(lp.Name, addr) {
 					options = append(options, ui.ACOption{
@@ -174,7 +176,7 @@ func LP_V3_Process(c *Command, input string) {
 				break
 			}
 
-			ui.Printf("%d %12s %s ", i+1, b.Name, lp.Name)
+			ui.Printf("%d %-12s %-12s ", i+1, b.Name, lp.Name)
 			ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command lp_v3 edit "+strconv.Itoa(lp.ChainId)+" '"+lp.Provider.Hex()+"' '"+lp.Name+"'", "Edit provider", "")
 			ui.Terminal.Screen.AddLink(gocui.ICON_DELETE, "command lp_v3 remove "+strconv.Itoa(lp.ChainId)+" '"+lp.Provider.Hex()+"'", "Remove provider", "")
 			cmn.AddAddressShortLink(ui.Terminal.Screen, lp.Provider)
@@ -247,6 +249,12 @@ func LP_V3_Process(c *Command, input string) {
 		if resp.Error != nil {
 			err = resp.Error
 		}
+	case "on":
+		w.LP_V3PaneOn = true
+		err = w.Save()
+	case "off":
+		w.LP_V3PaneOn = false
+		err = w.Save()
 
 	default:
 		err = fmt.Errorf("unknown command: %s", subcommand)
@@ -279,7 +287,7 @@ func list(w *cmn.Wallet) {
 		return w.LP_V3_Positions[i].ChainId < w.LP_V3_Positions[j].ChainId
 	})
 
-	ui.Printf("XCH|Chain     Pair    On Liq0     Liq1     Gain0    Gain1     Gain$    Fee%%    Address\n")
+	ui.Printf("Xch@Chain     Pair    On Liq0     Liq1     Gain0    Gain1     Gain$    Fee%%    Address\n")
 
 	for _, lp := range w.LP_V3_Positions {
 
@@ -330,9 +338,13 @@ func list(w *cmn.Wallet) {
 			continue
 		}
 
-		ui.Printf("%-12s ", p.ProviderName)
-		t0 := w.GetTokenByAddress(b.Name, lp.Token0)
-		t1 := w.GetTokenByAddress(b.Name, lp.Token1)
+		ui.Terminal.Screen.AddLink(
+			fmt.Sprintf("%-12s ", p.ProviderName),
+			"open "+lpp.URL,
+			lpp.URL, "")
+
+		t0 := w.GetTokenByAddress(p.ChainId, lp.Token0)
+		t1 := w.GetTokenByAddress(p.ChainId, lp.Token1)
 
 		if t0 != nil && t1 != nil {
 			ui.Printf("%9s", t0.Symbol+"/"+t1.Symbol)
@@ -350,8 +362,6 @@ func list(w *cmn.Wallet) {
 			} else {
 				ui.Terminal.Screen.AddLink("???", "command token add "+b.Name+" "+lp.Token1.String(), "Add token", "")
 			}
-			ui.Printf(" %s\n", a.Name)
-			continue
 		}
 
 		if p.On {

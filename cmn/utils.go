@@ -479,7 +479,7 @@ func ConfirmEIP712Template(data apitypes.TypedData) string {
 			info.Blockchain = w.GetBlockchainById(chain_id)
 			ta := AddressFromAny(data.Domain.VerifyingContract)
 			if info.Blockchain != nil {
-				info.Token = w.GetTokenByAddress(info.Blockchain.Name, ta)
+				info.Token = w.GetTokenByAddress(info.Blockchain.ChainId, ta)
 			}
 			info.Value = BigIntFromAny(data.Message["value"])
 			owner := AddressFromAny(data.Message["owner"])

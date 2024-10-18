@@ -78,8 +78,8 @@ func GetERC20TokenInfo(b *cmn.Blockchain, address common.Address) (string, strin
 
 func GetERC20Balance(b *cmn.Blockchain, t *cmn.Token, address common.Address) (*big.Int, error) {
 
-	if t.Blockchain != b.Name {
-		log.Error().Msgf("GetERC20Balance: Token blockchain mismatch. Token:(%s) Blockchain:(%s)", t.Blockchain, b.Name)
+	if t.ChainId != b.ChainId {
+		log.Error().Msgf("GetERC20Balance: Token blockchain mismatch. Token:(%d) Blockchain:(%d)", t.ChainId, b.ChainId)
 		return nil, nil
 	}
 
@@ -121,8 +121,8 @@ func GetERC20Balance(b *cmn.Blockchain, t *cmn.Token, address common.Address) (*
 func BuildTxERC20Transfer(b *cmn.Blockchain, t *cmn.Token, s *cmn.Signer, from *cmn.Address,
 	to common.Address, amount *big.Int) (*types.Transaction, error) {
 
-	if t.Blockchain != b.Name {
-		log.Error().Msgf("BuildTxERC20Transfer: Token blockchain mismatch. Token:(%s) Blockchain:(%s)", t.Blockchain, b.Name)
+	if t.ChainId != b.ChainId {
+		log.Error().Msgf("BuildTxERC20Transfer: Token blockchain mismatch. Token:(%d) Blockchain:(%d)", t.ChainId, b.ChainId)
 		return nil, errors.New("token blockchain mismatch")
 	}
 
