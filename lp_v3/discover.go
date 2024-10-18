@@ -224,6 +224,8 @@ func discover(msg *bus.Message) error {
 					Token1:    pos.Token1,
 					Fee:       pos.Fee,
 					Pool:      pool,
+					TickLower: pos.TickLower,
+					TickUpper: pos.TickUpper,
 				})
 
 				if err != nil {

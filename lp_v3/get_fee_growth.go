@@ -45,21 +45,11 @@ func _get_fee_growth(chain_id int, pool common.Address) (*bus.B_LP_V3_GetFeeGrow
 		return nil, resp.Error
 	}
 
-	output, err := hexutil.Decode(resp.Data.(string))
+	output0, err := hexutil.Decode(resp.Data.(string))
 	if err != nil {
 		log.Error().Err(err).Msg("hexutil.Decode")
 		return nil, err
 	}
-
-	values, err := V3_POOL_UNISWAP.Unpack("feeGrowthGlobal0X128", output)
-	if err != nil {
-		log.Error().Err(err).Msg("V3_POOL_ABI.Unpack slot0")
-		return nil, err
-	}
-
-	fee0 := values[0].(*big.Int)
-
-	log.Debug().Msgf("---FEE_0: %v", fee0)
 
 	// request feeGrowthGlobal1X128
 	data, err = V3_POOL_UNISWAP.Pack("feeGrowthGlobal1X128")
@@ -79,13 +69,26 @@ func _get_fee_growth(chain_id int, pool common.Address) (*bus.B_LP_V3_GetFeeGrow
 		return nil, resp.Error
 	}
 
-	output, err = hexutil.Decode(resp.Data.(string))
+	output1, err := hexutil.Decode(resp.Data.(string))
 	if err != nil {
 		log.Error().Err(err).Msg("hexutil.Decode")
 		return nil, err
 	}
 
-	values, err = V3_POOL_UNISWAP.Unpack("feeGrowthGlobal1X128", output)
+	return unpackFeeGrowth(output0, output1)
+}
+
+func unpackFeeGrowth(output0, outout1 []byte) (*bus.B_LP_V3_GetFeeGrowth_Response, error) {
+
+	values, err := V3_POOL_UNISWAP.Unpack("feeGrowthGlobal0X128", output0)
+	if err != nil {
+		log.Error().Err(err).Msg("V3_POOL_ABI.Unpack slot0")
+		return nil, err
+	}
+
+	fee0 := values[0].(*big.Int)
+
+	values, err = V3_POOL_UNISWAP.Unpack("feeGrowthGlobal1X128", outout1)
 	if err != nil {
 		log.Error().Err(err).Msg("V3_POOL_ABI.Unpack slot0")
 		return nil, err

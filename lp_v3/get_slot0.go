@@ -53,6 +53,11 @@ func _get_slot0(
 		return nil, err
 	}
 
+	return unpackSlot0(output)
+}
+
+func unpackSlot0(output []byte) (*bus.B_LP_V3_GetSlot0_Response, error) {
+
 	values, err := V3_POOL_UNISWAP.Unpack("slot0", output)
 	if err != nil {
 		values, err = V3_POOL_PANCAKE.Unpack("slot0", output)

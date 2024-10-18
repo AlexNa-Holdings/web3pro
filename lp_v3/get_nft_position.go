@@ -48,18 +48,22 @@ func _get_nft_position(chain_id int,
 		return nil, resp.Error
 	}
 
-	var r_data bus.B_LP_V3_GetNftPosition_Response
-
 	output, err := hexutil.Decode(resp.Data.(string))
 	if err != nil {
 		log.Error().Err(err).Msg("hexutil.Decode")
 		return nil, err
 	}
 
+	return unpackNftPosition(output)
+}
+
+func unpackNftPosition(output []byte) (*bus.B_LP_V3_GetNftPosition_Response, error) {
+	var r_data bus.B_LP_V3_GetNftPosition_Response
+
 	tick_l := new(big.Int)
 	tick_u := new(big.Int)
 
-	err = V3_MANAGER.UnpackIntoInterface(
+	err := V3_MANAGER.UnpackIntoInterface(
 		&[]interface{}{
 			&r_data.Nonce,
 			&r_data.Operator,

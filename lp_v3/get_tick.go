@@ -51,6 +51,11 @@ func _get_tick(chainId int, pool common.Address, tick int64) (*bus.B_LP_V3_GetTi
 		return nil, err
 	}
 
+	return unpackTick(output)
+}
+
+func unpackTick(output []byte) (*bus.B_LP_V3_GetTick_Response, error) {
+
 	// Unpack the data into an interface slice
 	values, err := V3_POOL_UNISWAP.Unpack("ticks", output)
 	if err != nil {

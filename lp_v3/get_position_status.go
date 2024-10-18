@@ -7,6 +7,7 @@ import (
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog/log"
 )
 
@@ -124,6 +125,15 @@ func getV3PositionInfo(lp *cmn.LP_V3_Position) (
 		return nil, nil, nil, nil, nil, fmt.Errorf("no wallet")
 	}
 
+	b := w.GetBlockchainById(lp.ChainId)
+	if b == nil {
+		return nil, nil, nil, nil, nil, fmt.Errorf("no blockchain")
+	}
+
+	if b.Multicall != (common.Address{}) {
+		return mc_getV3PositionInfo(lp)
+	}
+
 	nft_pos, err := _get_nft_position(lp.ChainId, lp.Provider, w.CurrentAddress, lp.NFT_Token)
 	if err != nil {
 		return nil, nil, nil, nil, nil, err
@@ -132,16 +142,6 @@ func getV3PositionInfo(lp *cmn.LP_V3_Position) (
 	slot0, err := _get_slot0(lp.ChainId, lp.Pool)
 	if err != nil {
 		return nil, nil, nil, nil, nil, err
-	}
-
-	// Fetch fee growth
-	fee_growth_resp := bus.Fetch("lp_v3", "get-fee-growth", &bus.B_LP_V3_GetFeeGrowth{
-		ChainId: lp.ChainId,
-		Pool:    lp.Pool,
-	})
-
-	if fee_growth_resp.Error != nil {
-		return nil, nil, nil, nil, nil, fee_growth_resp.Error
 	}
 
 	fee_growth, err := _get_fee_growth(lp.ChainId, lp.Pool)
@@ -284,4 +284,125 @@ func calculateFees(growth *bus.B_LP_V3_GetFeeGrowth_Response,
 	uncollectedFees1 = uncollectedFees1.Div(uncollectedFees1, Q128)
 
 	return uncollectedFees0, uncollectedFees1
+}
+
+func mc_getV3PositionInfo(lp *cmn.LP_V3_Position) (
+	*bus.B_LP_V3_GetNftPosition_Response,
+	*bus.B_LP_V3_GetSlot0_Response,
+	*bus.B_LP_V3_GetFeeGrowth_Response,
+	*bus.B_LP_V3_GetTick_Response,
+	*bus.B_LP_V3_GetTick_Response,
+	error) {
+
+	w := cmn.CurrentWallet
+	if w == nil {
+		return nil, nil, nil, nil, nil, fmt.Errorf("no wallet")
+	}
+
+	data_positions, err := V3_MANAGER.Pack("positions", lp.NFT_Token)
+	if err != nil {
+		log.Error().Err(err).Msg("V3_ABI.Pack positions")
+		return nil, nil, nil, nil, nil, err
+	}
+
+	data_slot0, err := V3_POOL_UNISWAP.Pack("slot0")
+	if err != nil {
+		log.Error().Err(err).Msg("V3_POOL_UNISWAP.Pack slot0")
+		return nil, nil, nil, nil, nil, err
+	}
+
+	data_global0, err := V3_POOL_UNISWAP.Pack("feeGrowthGlobal0X128")
+	if err != nil {
+		log.Error().Err(err).Msg("V3_POOL_UNISWAP.Pack feeGrowthGlobal0X128")
+		return nil, nil, nil, nil, nil, err
+	}
+
+	data_global1, err := V3_POOL_UNISWAP.Pack("feeGrowthGlobal1X128")
+	if err != nil {
+		log.Error().Err(err).Msg("V3_POOL_UNISWAP.Pack feeGrowthGlobal1X128")
+		return nil, nil, nil, nil, nil, err
+	}
+
+	data_tick_lower, err := V3_POOL_UNISWAP.Pack("ticks", big.NewInt(lp.TickLower))
+	if err != nil {
+		log.Error().Err(err).Msg("V3_POOL_UNISWAP.Pack ticks")
+		return nil, nil, nil, nil, nil, err
+	}
+
+	data_tick_upper, err := V3_POOL_UNISWAP.Pack("ticks", big.NewInt(lp.TickUpper))
+	if err != nil {
+		log.Error().Err(err).Msg("V3_POOL_UNISWAP.Pack ticks")
+		return nil, nil, nil, nil, nil, err
+	}
+
+	// Use multicall
+	calls := []bus.B_EthMultiCall_Call{
+		{
+			To:   lp.Provider,
+			Data: data_positions,
+		},
+		{
+			To:   lp.Pool,
+			Data: data_slot0,
+		},
+		{
+			To:   lp.Pool,
+			Data: data_global0,
+		},
+		{
+			To:   lp.Pool,
+			Data: data_global1,
+		},
+		{
+			To:   lp.Pool,
+			Data: data_tick_lower,
+		},
+		{
+			To:   lp.Pool,
+			Data: data_tick_upper,
+		},
+	}
+
+	resp := bus.Fetch("eth", "multi-call", &bus.B_EthMultiCall{
+		ChainId: lp.ChainId,
+		Calls:   calls,
+	})
+
+	if resp.Error != nil {
+		log.Error().Err(resp.Error).Msg("multicall error")
+		return nil, nil, nil, nil, nil, resp.Error
+	}
+
+	results := resp.Data.([][]byte)
+	if len(results) != len(calls) {
+		return nil, nil, nil, nil, nil, fmt.Errorf("unexpected number of results from multicall")
+	}
+
+	// Unpack all the results
+	nft_pos, err := unpackNftPosition(results[0])
+	if err != nil {
+		return nil, nil, nil, nil, nil, err
+	}
+
+	slot0, err := unpackSlot0(results[1])
+	if err != nil {
+		return nil, nil, nil, nil, nil, err
+	}
+
+	feeGrowth, err := unpackFeeGrowth(results[2], results[3])
+	if err != nil {
+		return nil, nil, nil, nil, nil, err
+	}
+
+	tickLower, err := unpackTick(results[4])
+	if err != nil {
+		return nil, nil, nil, nil, nil, err
+	}
+
+	tickUpper, err := unpackTick(results[5])
+	if err != nil {
+		return nil, nil, nil, nil, nil, err
+	}
+
+	return nft_pos, slot0, feeGrowth, tickLower, tickUpper, nil
 }

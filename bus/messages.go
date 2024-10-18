@@ -188,6 +188,18 @@ type B_EthCall struct { // send
 	Data    []byte
 }
 
+type B_EthMultiCall_Call struct {
+	To   common.Address
+	Data []byte
+}
+
+type B_EthMultiCall struct { // send
+	ChainId int
+	From    common.Address
+	Amount  *big.Int
+	Calls   []B_EthMultiCall_Call
+}
+
 type B_EthSignTypedData_v4 struct { // sign-typed-data-v4
 	Blockchain string
 	Address    common.Address

@@ -105,4 +105,6 @@ type LP_V3_Position struct {
 	Token1    common.Address `json:"token1"`
 	Fee       *big.Int       `json:"fee"`
 	Pool      common.Address `json:"pool"`
+	TickLower int64          `json:"tick_lower"`
+	TickUpper int64          `json:"tick_upper"`
 }
