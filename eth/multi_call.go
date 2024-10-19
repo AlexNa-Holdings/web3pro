@@ -71,12 +71,16 @@ func multiCall(msg *bus.Message) ([][]byte, error) {
 		return nil, err
 	}
 
-	// Unpack the return data
-	var returnData [][]byte
-	err = MULTICALL2_ABI.UnpackIntoInterface(&returnData, "aggregate", output)
+	values, err := MULTICALL2_ABI.Unpack("aggregate", output)
 	if err != nil {
-		log.Error().Msgf("multicall: Cannot unpack multicall data. Error:(%v)", err)
+		log.Error().Msgf("multicall: Cannot unpack aggregate data. Error: (%v)", err)
 		return nil, err
+	}
+
+	returnData, ok := values[1].([][]byte)
+	if !ok {
+		log.Error().Msgf("multicall: Cannot convert return data to [][]byte")
+		return nil, errors.New("cannot convert return data to [][]byte")
 	}
 
 	return returnData, nil

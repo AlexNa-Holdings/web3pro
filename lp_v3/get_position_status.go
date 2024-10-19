@@ -226,6 +226,20 @@ func getFeeGrowthInside(
 	tickLower *bus.B_LP_V3_GetTick_Response,
 	tickUpper *bus.B_LP_V3_GetTick_Response) (*big.Int, *big.Int) {
 
+	log.Debug().Msgf("---get fee growth inside---")
+
+	log.Debug().Msgf("nft.TickLower=%d, nft.TickUpper=%d", nft.TickLower, nft.TickUpper)
+	log.Debug().Msgf("slot0.Tick=%d", slot0.Tick)
+
+	log.Debug().Msgf("growth.FeeGrowthGlobal0X128=%s", growth.FeeGrowthGlobal0X128.String())
+	log.Debug().Msgf("growth.FeeGrowthGlobal1X128=%s", growth.FeeGrowthGlobal1X128.String())
+
+	log.Debug().Msgf("tickLower.FeeGrowthOutside0X128=%s", tickLower.FeeGrowthOutside0X128.String())
+	log.Debug().Msgf("tickLower.FeeGrowthOutside1X128=%s", tickLower.FeeGrowthOutside1X128.String())
+
+	log.Debug().Msgf("tickUpper.FeeGrowthOutside0X128=%s", tickUpper.FeeGrowthOutside0X128.String())
+	log.Debug().Msgf("tickUpper.FeeGrowthOutside1X128=%s", tickUpper.FeeGrowthOutside1X128.String())
+
 	// Calculate fee growth above for token0 and token1
 	feeGrowthAbove0 := new(big.Int)
 	feeGrowthAbove1 := new(big.Int)
@@ -240,6 +254,9 @@ func getFeeGrowthInside(
 		feeGrowthAbove1.Set(tickUpper.FeeGrowthOutside1X128)
 	}
 
+	log.Debug().Msgf("feeGrowthAbove0=%s", feeGrowthAbove0.String())
+	log.Debug().Msgf("feeGrowthAbove1=%s", feeGrowthAbove1.String())
+
 	feeGrowthBelow0 := new(big.Int)
 	feeGrowthBelow1 := new(big.Int)
 	if slot0.Tick >= nft.TickLower {
@@ -252,12 +269,18 @@ func getFeeGrowthInside(
 		feeGrowthBelow1 = subIn256(growth.FeeGrowthGlobal1X128, tickLower.FeeGrowthOutside1X128)
 	}
 
+	log.Debug().Msgf("feeGrowthBelow0=%s", feeGrowthBelow0.String())
+	log.Debug().Msgf("feeGrowthBelow1=%s", feeGrowthBelow1.String())
+
 	// Calculate fee growth inside for token0 and token1
 	feeGrowthInside0 := subIn256(growth.FeeGrowthGlobal0X128, feeGrowthBelow0)
 	feeGrowthInside0 = subIn256(feeGrowthInside0, feeGrowthAbove0)
 
 	feeGrowthInside1 := subIn256(growth.FeeGrowthGlobal1X128, feeGrowthBelow1)
 	feeGrowthInside1 = subIn256(feeGrowthInside1, feeGrowthAbove1)
+
+	log.Debug().Msgf("feeGrowthInside0=%s", feeGrowthInside0.String())
+	log.Debug().Msgf("feeGrowthInside1=%s", feeGrowthInside1.String())
 
 	return feeGrowthInside0, feeGrowthInside1
 }
