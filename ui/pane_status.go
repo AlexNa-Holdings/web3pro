@@ -32,12 +32,14 @@ func (p *StatusPane) GetTemplate() string {
 	return p.Template
 }
 
-func (p *StatusPane) SetView(x0, y0, x1, y1 int) {
-	v, err := Gui.SetView("status", x0, y0, x1, y1, 0)
+func (p *StatusPane) SetView(x0, y0, x1, y1 int, overlap byte) {
+	v, err := Gui.SetView("status", x0, y0, x1, y1, overlap)
 	if err != nil {
 		if !errors.Is(err, gocui.ErrUnknownView) {
 			log.Error().Err(err).Msgf("SetView error: %s", err)
 		}
+		p.PaneDescriptor.View = v
+		v.FrameRunes = RUNES
 		v.Title = "Status"
 		v.Autoscroll = false
 		v.ScrollBar = true
@@ -48,9 +50,7 @@ func (p *StatusPane) SetView(x0, y0, x1, y1 int) {
 		v.OnOverHotspot = ProcessOnOverHotspot
 		v.OnClickHotspot = ProcessOnClickHotspot
 		p.rebuidTemplate()
-
 	}
-	p.PaneDescriptor.View = v
 }
 
 func StatusLoop() {

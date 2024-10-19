@@ -39,7 +39,7 @@ func (p *HailPaneType) GetTemplate() string {
 	return ""
 }
 
-func (p *HailPaneType) SetView(x0, y0, x1, y1 int) {
+func (p *HailPaneType) SetView(x0, y0, x1, y1 int, overlap byte) {
 	var err error
 
 	if ActiveRequest == nil {
@@ -48,12 +48,14 @@ func (p *HailPaneType) SetView(x0, y0, x1, y1 int) {
 
 	active_hail := ActiveRequest.Data.(*bus.B_Hail)
 
-	v, err := Gui.SetView("hail", x0, y0, x1, y1, 0)
+	v, err := Gui.SetView("hail", x0, y0, x1, y1, overlap)
 	if err != nil {
 		if !errors.Is(err, gocui.ErrUnknownView) {
 			log.Error().Err(err).Msgf("SetView error: %s", err)
 		}
 
+		p.PaneDescriptor.View = v
+		v.FrameRunes = RUNES
 		v.Title = "Hail"
 		if active_hail.Title != "" {
 			v.Title = active_hail.Title
@@ -131,7 +133,6 @@ func (p *HailPaneType) SetView(x0, y0, x1, y1 int) {
 		}
 
 	}
-	p.PaneDescriptor.View = v
 }
 
 func add(m *bus.Message) bool { // returns if on top

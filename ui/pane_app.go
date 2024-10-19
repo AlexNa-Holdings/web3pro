@@ -31,15 +31,15 @@ func (p *AppPane) GetTemplate() string {
 	return p.Template
 }
 
-func (p *AppPane) SetView(x0, y0, x1, y1 int) {
-	v, err := Gui.SetView("app", x0, y0, x1, y1, 0)
+func (p *AppPane) SetView(x0, y0, x1, y1 int, overlap byte) {
+	v, err := Gui.SetView("app", x0, y0, x1, y1, overlap)
 	if err != nil {
 		if !errors.Is(err, gocui.ErrUnknownView) {
 			log.Error().Err(err).Msgf("SetView error: %s", err)
 		}
 
-		log.Debug().Msg("SetView: apps")
-
+		p.PaneDescriptor.View = v
+		v.FrameRunes = RUNES
 		v.Title = "Application"
 		v.ScrollBar = true
 		v.OnResize = func(v *gocui.View) {
@@ -49,9 +49,7 @@ func (p *AppPane) SetView(x0, y0, x1, y1 int) {
 		v.OnOverHotspot = ProcessOnOverHotspot
 		v.OnClickHotspot = ProcessOnClickHotspot
 		p.rebuidTemplate()
-
 	}
-	p.PaneDescriptor.View = v
 }
 
 func AppsLoop() {

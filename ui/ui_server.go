@@ -14,6 +14,8 @@ var Gui *gocui.Gui
 var Is_ready = false
 var Is_ready_wg sync.WaitGroup
 
+var RUNES = []rune{'─', '│', '┌', '┐', '└', '┘', '├', '┤', '┬', '┴', '┼'}
+
 func Init() {
 	var err error
 

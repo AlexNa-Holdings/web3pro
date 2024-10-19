@@ -10,7 +10,7 @@ import (
 var panesMutex = &sync.Mutex{}
 
 type Pane interface {
-	SetView(int, int, int, int)
+	SetView(int, int, int, int, byte)
 	GetDesc() *PaneDescriptor
 	GetTemplate() string
 }

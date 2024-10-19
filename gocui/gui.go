@@ -249,6 +249,7 @@ func (g *Gui) SetView(name string, x0, y0, x1, y1 int, overlaps byte) (*View, er
 		v.x1 = x1
 		v.y1 = y1
 		v.tainted = true
+		v.Overlaps = overlaps
 
 		if resized {
 			if v.gui.popup != nil { // close select list on any view resized

@@ -137,13 +137,39 @@ func Layout(g *gocui.Gui) error {
 
 		// set the views
 		x0 := 0
-		for i, d := range row {
+		for j, d := range row {
+
+			var overlap byte
+			if i < len(rows)-1 && len(rows) > 1 {
+				overlap |= gocui.BOTTOM
+			}
+
+			if i > 0 {
+				overlap |= gocui.TOP
+			}
+
+			if j < len(row)-1 && len(row) > 1 {
+				overlap |= gocui.RIGHT
+			}
+
+			if j > 0 {
+				overlap |= gocui.LEFT
+			}
+
 			if row_height == 0 {
-				pane_map[d].SetView(0, 0, 1, 1)
+				pane_map[d].SetView(0, 0, 1, 1, overlap)
 			} else {
-				x1 := x0 + widths[i] - 1
+				x1 := x0 + widths[j] - 1
+				ox := 0
+				if overlap&gocui.RIGHT != 0 {
+					ox = 1
+				}
 				y1 := row_y + row_height - 1
-				pane_map[d].SetView(x0, row_y, x1, y1)
+				oy := 0
+				if overlap&gocui.BOTTOM != 0 {
+					oy = 1
+				}
+				pane_map[d].SetView(x0, row_y, x1+ox, y1+oy, overlap)
 				x0 = x1 + 1
 			}
 		}

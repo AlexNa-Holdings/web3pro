@@ -16,6 +16,8 @@ type LP_V3Pane struct {
 	Template string
 }
 
+var lp_info_list []*bus.B_LP_V3_GetPositionStatus_Response = make([]*bus.B_LP_V3_GetPositionStatus_Response, 0)
+
 var LP_V3 LP_V3Pane = LP_V3Pane{
 	PaneDescriptor: PaneDescriptor{
 		MinWidth:  60,
@@ -32,24 +34,27 @@ func (p *LP_V3Pane) GetTemplate() string {
 	return p.Template
 }
 
-func (p *LP_V3Pane) SetView(x0, y0, x1, y1 int) {
-	v, err := Gui.SetView("v3", x0, y0, x1, y1, 0)
+func (p *LP_V3Pane) SetView(x0, y0, x1, y1 int, overlap byte) {
+	v, err := Gui.SetView("v3", x0, y0, x1, y1, overlap)
 	if err != nil {
 		if !errors.Is(err, gocui.ErrUnknownView) {
 			log.Error().Err(err).Msgf("SetView error: %s", err)
 		}
 
+		p.PaneDescriptor.View = v
+		v.FrameRunes = RUNES
 		v.Title = "LP v3"
 		v.ScrollBar = true
 		v.OnResize = func(v *gocui.View) {
-			updateV3Template()
+			v.RenderTemplate(p.Template)
 			v.ScrollTop()
 		}
 		v.OnOverHotspot = ProcessOnOverHotspot
 		v.OnClickHotspot = ProcessOnClickHotspot
-		v.Write([]byte("Loading..."))
+
+		p.Template = p.rebuidTemplate()
+		v.RenderTemplate(p.Template)
 	}
-	p.PaneDescriptor.View = v
 }
 
 func LP_V3Loop() {
@@ -57,52 +62,40 @@ func LP_V3Loop() {
 	defer bus.Unsubscribe(ch)
 
 	for msg := range ch {
-		go processV3(msg)
+		go LP_V3.processV3(msg)
 	}
 }
 
-func processV3(msg *bus.Message) {
+func (p *LP_V3Pane) processV3(msg *bus.Message) {
 	switch msg.Topic {
 	case "wallet":
 		switch msg.Type {
 		case "open", "saved":
-			updateV3Template()
+			p.updateList()
 		}
 	case "price":
 		switch msg.Type {
 		case "updated":
-			updateV3Template()
+			p.updateList()
 		}
 	}
 }
-func updateV3Template() {
-	LP_V3.Template = LP_V3.rebuidTemplate()
-	Gui.Update(func(g *gocui.Gui) error {
-		if LP_V3.View != nil {
-			LP_V3.View.RenderTemplate(LP_V3.Template)
-		}
-		return nil
-	})
-}
 
-func (p *LP_V3Pane) rebuidTemplate() string {
-	temp := "<w>"
+func (p *LP_V3Pane) updateList() {
+	if !p.On {
+		return
+	}
 
 	w := cmn.CurrentWallet
 	if w == nil {
-		return temp + "No wallet selected"
-	}
-
-	o := w.GetOrigin(w.CurrentOrigin)
-	if o == nil {
-		return temp + "No origin selected"
+		return
 	}
 
 	if len(w.LP_V3_Positions) == 0 {
-		return temp + "(no positions)"
+		return
 	}
 
-	list := make([]bus.B_LP_V3_GetPositionStatus_Response, 0)
+	list := make([]*bus.B_LP_V3_GetPositionStatus_Response, 0)
 
 	for _, pos := range w.LP_V3_Positions {
 		sr := bus.Fetch("lp_v3", "get-position-status", &bus.B_LP_V3_GetPositionStatus{
@@ -116,7 +109,7 @@ func (p *LP_V3Pane) rebuidTemplate() string {
 			continue
 		}
 
-		list = append(list, *sr.Data.(*bus.B_LP_V3_GetPositionStatus_Response))
+		list = append(list, sr.Data.(*bus.B_LP_V3_GetPositionStatus_Response))
 	}
 
 	sort.Slice(list, func(i, j int) bool {
@@ -135,9 +128,37 @@ func (p *LP_V3Pane) rebuidTemplate() string {
 		}
 	})
 
-	temp += "Xch@Chain     Pair   On Liq0     Liq1     Gain0    Gain1     Gain$    Fee%%    Address\n"
+	lp_info_list = list
 
-	for i, p := range list {
+	if LP_V3.View != nil {
+		Gui.Update(func(g *gocui.Gui) error {
+			if LP_V3.View != nil {
+				p.Template = LP_V3.rebuidTemplate()
+				LP_V3.View.RenderTemplate(p.Template)
+				LP_V3.View.ScrollTop()
+			}
+			return nil
+		})
+	}
+}
+
+func (p *LP_V3Pane) rebuidTemplate() string {
+	w := cmn.CurrentWallet
+	if w == nil {
+		return "no open wallet"
+	}
+
+	if len(w.LP_V3_Positions) == 0 {
+		return "(no positions)"
+	}
+
+	if len(lp_info_list) == 0 {
+		return "loading..."
+	}
+
+	temp := "Xch@Chain     Pair   On Liq0     Liq1     Gain0    Gain1     Gain$    Fee%%    Address\n"
+
+	for i, p := range lp_info_list {
 
 		provider := w.GetLP_V3(p.ChainId, p.Provider)
 		if provider == nil {
@@ -197,7 +218,7 @@ func (p *LP_V3Pane) rebuidTemplate() string {
 		temp += fmt.Sprintf("%2.1f/%2.1f ", p.FeeProtocol0, p.FeeProtocol1)
 		temp += fmt.Sprintf(" %s", owner.Name)
 
-		if i < len(list)-1 {
+		if i < len(lp_info_list)-1 {
 			temp += "\n"
 		}
 

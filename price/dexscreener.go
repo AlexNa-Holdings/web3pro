@@ -99,6 +99,12 @@ func extractBlockchainFromURL(pairURL string) (string, error) {
 }
 
 func DSListPairs(chain_id int, tokenAddr string) ([]Pair, error) {
+
+	chain_name, ok := chain_names[chain_id]
+	if !ok {
+		return nil, fmt.Errorf("unknown chain id: %d", chain_id)
+	}
+
 	url := fmt.Sprintf("https://api.dexscreener.com/latest/dex/tokens/%s", tokenAddr)
 	resp, err := http.Get(url)
 	if err != nil {
@@ -118,11 +124,6 @@ func DSListPairs(chain_id int, tokenAddr string) ([]Pair, error) {
 	var response DSResponse
 	if err := json.Unmarshal(body, &response); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal JSON response: %w", err)
-	}
-
-	chain_name, ok := chain_names[chain_id]
-	if !ok {
-		return nil, fmt.Errorf("unknown chain id: %d", chain_id)
 	}
 
 	pairs := []Pair{}

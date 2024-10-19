@@ -103,9 +103,11 @@ func (p *TerminalPane) SetPrefixView(x0, y0, x1, y1 int) {
 	p.Prefix = v
 }
 
-func (p *TerminalPane) SetView(x0, y0, x1, y1 int) {
-	v, err := Gui.SetView("terminal", x0, y0, x1, y1, 0)
+func (p *TerminalPane) SetView(x0, y0, x1, y1 int, overlap byte) {
+	v, err := Gui.SetView("terminal", x0, y0, x1, y1, overlap)
 	if err != nil {
+		p.PaneDescriptor.View = v
+		v.FrameRunes = RUNES
 		if !errors.Is(err, gocui.ErrUnknownView) {
 			log.Error().Err(err).Msgf("SetView error: %s", err)
 		}
@@ -121,7 +123,6 @@ func (p *TerminalPane) SetView(x0, y0, x1, y1 int) {
 	if p.AutoCompleteOn {
 		p.layoutAutocomplete(p.ACTitle, p.ACOptions, p.ACHighlite)
 	}
-	p.PaneDescriptor.View = v
 }
 
 func (t *TerminalPane) SetCommandPrefix(prefix string) {
