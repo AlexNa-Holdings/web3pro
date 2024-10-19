@@ -332,6 +332,10 @@ func TagShortDollarLink(val float64) string {
 	return fmt.Sprintf("<l text:'%s' action:'copy %.15f' tip:'%.15f'>", FmtFloat64D(val, false), val, val)
 }
 
+func TagDollarLink(val float64) string {
+	return fmt.Sprintf("<l text:'%s' action:'copy %.15f' tip:'%.15f'>", FmtFloat64D(val, true), val, val)
+}
+
 func TagValueLink(val *big.Int, t *Token) string {
 	if t == nil {
 		return ""

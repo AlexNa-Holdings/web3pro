@@ -33,7 +33,7 @@ func (p *LP_V3Pane) GetTemplate() string {
 }
 
 func (p *LP_V3Pane) SetView(x0, y0, x1, y1 int) {
-	v, err := Gui.SetView("app", x0, y0, x1, y1, 0)
+	v, err := Gui.SetView("v3", x0, y0, x1, y1, 0)
 	if err != nil {
 		if !errors.Is(err, gocui.ErrUnknownView) {
 			log.Error().Err(err).Msgf("SetView error: %s", err)
@@ -42,13 +42,12 @@ func (p *LP_V3Pane) SetView(x0, y0, x1, y1 int) {
 		v.Title = "LP v3"
 		v.ScrollBar = true
 		v.OnResize = func(v *gocui.View) {
-			v.RenderTemplate(p.Template)
+			updateV3Template()
 			v.ScrollTop()
 		}
 		v.OnOverHotspot = ProcessOnOverHotspot
 		v.OnClickHotspot = ProcessOnClickHotspot
-		p.rebuidTemplate()
-
+		v.Write([]byte("Loading..."))
 	}
 	p.PaneDescriptor.View = v
 }
@@ -58,31 +57,32 @@ func LP_V3Loop() {
 	defer bus.Unsubscribe(ch)
 
 	for msg := range ch {
-		switch msg.Topic {
-		case "wallet":
-			switch msg.Type {
-			case "open", "saved":
-				App.Template = App.rebuidTemplate()
-				Gui.Update(func(g *gocui.Gui) error {
-					if App.View != nil {
-						App.View.RenderTemplate(App.Template)
-					}
-					return nil
-				})
-			}
-		case "price":
-			switch msg.Type {
-			case "updated":
-				App.Template = App.rebuidTemplate()
-				Gui.Update(func(g *gocui.Gui) error {
-					if App.View != nil {
-						App.View.RenderTemplate(App.Template)
-					}
-					return nil
-				})
-			}
+		go processV3(msg)
+	}
+}
+
+func processV3(msg *bus.Message) {
+	switch msg.Topic {
+	case "wallet":
+		switch msg.Type {
+		case "open", "saved":
+			updateV3Template()
+		}
+	case "price":
+		switch msg.Type {
+		case "updated":
+			updateV3Template()
 		}
 	}
+}
+func updateV3Template() {
+	LP_V3.Template = LP_V3.rebuidTemplate()
+	Gui.Update(func(g *gocui.Gui) error {
+		if LP_V3.View != nil {
+			LP_V3.View.RenderTemplate(LP_V3.Template)
+		}
+		return nil
+	})
 }
 
 func (p *LP_V3Pane) rebuidTemplate() string {
@@ -105,7 +105,7 @@ func (p *LP_V3Pane) rebuidTemplate() string {
 	list := make([]bus.B_LP_V3_GetPositionStatus_Response, 0)
 
 	for _, pos := range w.LP_V3_Positions {
-		sr := bus.Fetch("lp_v3", "get_position_status", &bus.B_LP_V3_GetPositionStatus{
+		sr := bus.Fetch("lp_v3", "get-position-status", &bus.B_LP_V3_GetPositionStatus{
 			ChainId:   pos.ChainId,
 			Provider:  pos.Provider,
 			NFT_Token: pos.NFT_Token,
@@ -127,7 +127,7 @@ func (p *LP_V3Pane) rebuidTemplate() string {
 				return list[i].ProviderName < list[j].ProviderName
 			}
 		} else {
-			if list[i].Dollars < list[j].Dollars {
+			if list[i].Dollars > list[j].Dollars {
 				return true
 			} else {
 				return false
@@ -135,9 +135,9 @@ func (p *LP_V3Pane) rebuidTemplate() string {
 		}
 	})
 
-	temp += "Xch@Chain     Pair    On Liq0     Liq1     Gain0    Gain1     Gain$    Fee%%    Address\n"
+	temp += "Xch@Chain     Pair   On Liq0     Liq1     Gain0    Gain1     Gain$    Fee%%    Address\n"
 
-	for _, p := range list {
+	for i, p := range list {
 
 		provider := w.GetLP_V3(p.ChainId, p.Provider)
 		if provider == nil {
@@ -154,7 +154,10 @@ func (p *LP_V3Pane) rebuidTemplate() string {
 			continue
 		}
 
-		temp += cmn.TagLink(p.ProviderName, "open "+provider.URL, "open "+provider.URL)
+		temp += cmn.TagLink(
+			fmt.Sprintf("%-12s", p.ProviderName),
+			"open "+provider.URL,
+			"open "+provider.URL)
 
 		t0 := w.GetTokenByAddress(p.ChainId, p.Token0)
 		t1 := w.GetTokenByAddress(p.ChainId, p.Token1)
@@ -189,10 +192,14 @@ func (p *LP_V3Pane) rebuidTemplate() string {
 		temp += cmn.TagValueLink(p.Gain0, t0)
 		temp += cmn.TagValueLink(p.Gain1, t1)
 
-		temp += cmn.TagShortDollarLink(p.Dollars)
+		temp += cmn.TagDollarLink(p.Dollars)
 
 		temp += fmt.Sprintf("%2.1f/%2.1f ", p.FeeProtocol0, p.FeeProtocol1)
-		temp += fmt.Sprintf(" %s\n", owner.Name)
+		temp += fmt.Sprintf(" %s", owner.Name)
+
+		if i < len(list)-1 {
+			temp += "\n"
+		}
 
 	}
 	return temp
