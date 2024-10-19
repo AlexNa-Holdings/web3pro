@@ -2,6 +2,7 @@ package command
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
@@ -71,7 +72,8 @@ func Price_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 			if token == "" && b == nil {
 				for _, b := range w.Blockchains {
 					if cmn.Contains(b.Name, bchain) {
-						options = append(options, ui.ACOption{Name: b.Name, Result: command + " " + subcommand + " '" + b.Name + "'"})
+						options = append(options,
+							ui.ACOption{Name: b.Name, Result: command + " " + subcommand + " " + strconv.Itoa(b.ChainId) + " "})
 					}
 				}
 				return "blockchain", &options, bchain
@@ -148,6 +150,11 @@ func Price_Process(c *Command, input string) {
 		pairs, err := price.GetPairs(b.ChainId, a.Hex())
 		if err != nil {
 			ui.PrintErrorf("Error discovering trading pairs: %v", err)
+			return
+		}
+
+		if len(pairs) == 0 {
+			ui.Printf("No trading pairs found\n")
 			return
 		}
 
