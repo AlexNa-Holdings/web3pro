@@ -183,7 +183,7 @@ func Price_Process(c *Command, input string) {
 			return
 		}
 
-		ui.Printf("\n   Feeder            Pair     Liquidity    Price       ID\n")
+		ui.Printf("\n   Feeder            Pair    Liquidity    Price       ID\n")
 
 		for _, p := range pi_list {
 			ui.Printf("%-14s ", p.PriceFeeder)

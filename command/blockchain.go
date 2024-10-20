@@ -95,14 +95,10 @@ func Blockchain_Process(c *Command, input string) {
 
 	switch subcommand {
 	case "add":
-		if b_name == "" {
-			ui.PrintErrorf("Usage: blockchain add [blockchain]")
-			return
-		}
-
-		if b_name == "custom" {
+		if b_name == "custom" || b_name == "" {
 			bus.Send("ui", "popup", ui.DlgBlockchain(""))
 		} else {
+
 			// check if such blockchain already added
 			for _, b := range w.Blockchains {
 				if b.Name == b_name {
@@ -156,7 +152,6 @@ func Blockchain_Process(c *Command, input string) {
 <c>Are you sure you want to remove 
 <c>blockchain '`+b_name+"' ?\n",
 					func() {
-
 						err := w.DeleteBlockchain(b_name)
 						if err != nil {
 							ui.PrintErrorf("Failed to save wallet: %s", err)
