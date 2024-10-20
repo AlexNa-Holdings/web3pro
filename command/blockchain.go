@@ -208,7 +208,7 @@ func Blockchain_Process(c *Command, input string) {
 			return
 		}
 
-		if w.GetBlockchain(b_name) == nil {
+		if w.GetBlockchainByName(b_name) == nil {
 			ui.PrintErrorf("Blockchain %s not found", b_name)
 			return
 		}

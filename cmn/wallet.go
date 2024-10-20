@@ -36,7 +36,7 @@ func Open(name string, pass string) error {
 		w.writeMutex = sync.Mutex{}
 
 		w.AuditNativeTokens()
-		if w.CurrentChain == "" || w.GetBlockchain(w.CurrentChain) == nil {
+		if w.CurrentChain == "" || w.GetBlockchainByName(w.CurrentChain) == nil {
 			if len(w.Blockchains) > 0 {
 				w.CurrentChain = w.Blockchains[0].Name
 			} else {
@@ -70,7 +70,7 @@ func (w *Wallet) DeleteBlockchain(name string) error {
 	w.writeMutex.Lock()
 	defer w.writeMutex.Unlock()
 
-	bd := w.GetBlockchain(name)
+	bd := w.GetBlockchainByName(name)
 	if bd == nil {
 		return errors.New("blockchain not found")
 	}
@@ -102,6 +102,16 @@ func (w *Wallet) DeleteBlockchain(name string) error {
 func (w *Wallet) AuditNativeTokens() {
 
 	eddited := false
+
+	// remove doubles
+	for i, t := range w.Tokens {
+		for j, tt := range w.Tokens {
+			if i != j && t.ChainId == tt.ChainId && t.Symbol == tt.Symbol {
+				w.Tokens = append(w.Tokens[:j], w.Tokens[j+1:]...)
+				eddited = true
+			}
+		}
+	}
 
 	for _, b := range w.Blockchains { // audit native tokens
 		found := false
@@ -148,7 +158,7 @@ func (w *Wallet) AuditNativeTokens() {
 
 	to_remove := []int{}
 	for i, t := range w.Tokens {
-		if t.Native && w.GetBlockchainById(t.ChainId) == nil {
+		if t.Native && w.GetBlockchain(t.ChainId) == nil {
 			to_remove = append([]int{i}, to_remove...)
 			break
 		}
@@ -166,7 +176,7 @@ func (w *Wallet) AuditNativeTokens() {
 	}
 }
 
-func (w *Wallet) GetBlockchain(n string) *Blockchain {
+func (w *Wallet) GetBlockchainByName(n string) *Blockchain {
 	for _, b := range w.Blockchains {
 		if b.Name == n {
 			return b
@@ -186,7 +196,7 @@ func (w *Wallet) GetBlockchain(n string) *Blockchain {
 	return nil
 }
 
-func (w *Wallet) GetBlockchainById(id int) *Blockchain {
+func (w *Wallet) GetBlockchain(id int) *Blockchain {
 	for _, b := range w.Blockchains {
 		if b.ChainId == id {
 			return b
@@ -345,7 +355,7 @@ func (w *Wallet) SetOriginChain(url string, ch string) error {
 		return errors.New("origin not found")
 	}
 
-	b := w.GetBlockchain(ch)
+	b := w.GetBlockchainByName(ch)
 	if b == nil {
 		return errors.New("blockchain not found")
 	}
@@ -683,7 +693,7 @@ func (w *Wallet) AddToken(chain int, a common.Address, n string, s string, d int
 
 func (w *Wallet) GetTokenByAddress(chain int, a common.Address) *Token {
 	if a.Cmp(common.Address{}) == 0 {
-		b := w.GetBlockchainById(chain)
+		b := w.GetBlockchain(chain)
 		if b == nil {
 			return nil
 		}

@@ -227,7 +227,7 @@ func Signer_Process(c *Command, input string) {
 			ui.Printf(" ")
 
 			if w.CurrentChain != "" {
-				b := w.GetBlockchain(w.CurrentChain)
+				b := w.GetBlockchainByName(w.CurrentChain)
 				if b != nil {
 					t := w.GetTokenByAddress(w.CurrentChainId, common.Address{0})
 					if t != nil {

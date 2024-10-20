@@ -178,7 +178,7 @@ func signTypedData_v4(o *cmn.Origin, req RPCRequest, ctx *ConContext, res *RPCRe
 		return fmt.Errorf("params[1] is neither a string nor a map[string]interface{}")
 	}
 
-	b := w.GetBlockchainById(o.ChainId)
+	b := w.GetBlockchain(o.ChainId)
 	if b == nil {
 		return fmt.Errorf("blockchain not found")
 	}
@@ -228,7 +228,7 @@ func sign(o *cmn.Origin, req RPCRequest, ctx *ConContext, res *RPCResponse) erro
 		return fmt.Errorf("signer not found")
 	}
 
-	b := w.GetBlockchainById(o.ChainId)
+	b := w.GetBlockchain(o.ChainId)
 	if b == nil {
 		return fmt.Errorf("blockchain not found")
 	}
@@ -288,7 +288,7 @@ func sendTransaction(o *cmn.Origin, req RPCRequest, ctx *ConContext, res *RPCRes
 		return fmt.Errorf("signer not found")
 	}
 
-	b := w.GetBlockchainById(o.ChainId)
+	b := w.GetBlockchain(o.ChainId)
 	if b == nil {
 		return fmt.Errorf("blockchain not found")
 	}
@@ -364,7 +364,7 @@ func call(o *cmn.Origin, req RPCRequest, ctx *ConContext, res *RPCResponse) erro
 		from = w.GetAddress(address)
 	}
 
-	b := w.GetBlockchainById(o.ChainId)
+	b := w.GetBlockchain(o.ChainId)
 	if b == nil {
 		return fmt.Errorf("blockchain not found")
 	}
@@ -448,7 +448,7 @@ func estimateGas(o *cmn.Origin, req RPCRequest, ctx *ConContext, res *RPCRespons
 		return fmt.Errorf("signer not found")
 	}
 
-	b := w.GetBlockchainById(o.ChainId)
+	b := w.GetBlockchain(o.ChainId)
 	if b == nil {
 		return fmt.Errorf("blockchain not found")
 	}
@@ -502,7 +502,7 @@ func getBlockNumber(o *cmn.Origin, req RPCRequest, ctx *ConContext, res *RPCResp
 		return fmt.Errorf("no wallet found")
 	}
 
-	b := w.GetBlockchainById(o.ChainId)
+	b := w.GetBlockchain(o.ChainId)
 	if b == nil {
 		return fmt.Errorf("blockchain not found")
 	}
@@ -539,7 +539,7 @@ func getTransactionByHash(o *cmn.Origin, req RPCRequest, ctx *ConContext, res *R
 		return fmt.Errorf("tx_hash must be a string")
 	}
 
-	b := w.GetBlockchainById(o.ChainId)
+	b := w.GetBlockchain(o.ChainId)
 	if b == nil {
 		return fmt.Errorf("blockchain not found")
 	}

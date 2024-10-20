@@ -107,7 +107,7 @@ func (p *TerminalPane) SetView(x0, y0, x1, y1 int, overlap byte) {
 	v, err := Gui.SetView("terminal", x0, y0, x1, y1, overlap)
 	if err != nil {
 		p.PaneDescriptor.View = v
-		v.FrameRunes = RUNES
+		v.JoinedFrame = true
 		if !errors.Is(err, gocui.ErrUnknownView) {
 			log.Error().Err(err).Msgf("SetView error: %s", err)
 		}

@@ -89,6 +89,8 @@ type Token struct {
 	PriceTimestamp time.Time      `json:"price_timestamp"` // Unix timestamp
 }
 
+var KNOWN_FEEDERS = []string{"dexscreener", "coinmarketcap"}
+
 type LP_V3 struct { // LP v3 Position Manager
 	Name     string         `json:"name"`
 	Provider common.Address `json:"provider"`

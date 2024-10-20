@@ -39,7 +39,7 @@ func (p *AppPane) SetView(x0, y0, x1, y1 int, overlap byte) {
 		}
 
 		p.PaneDescriptor.View = v
-		v.FrameRunes = RUNES
+		v.JoinedFrame = true
 		v.Title = "Application"
 		v.ScrollBar = true
 		v.OnResize = func(v *gocui.View) {
@@ -110,7 +110,7 @@ func (p *AppPane) rebuidTemplate() string {
 		"Set the app")
 
 	temp += "\n<b>Chain: </b>"
-	b := w.GetBlockchainById(o.ChainId)
+	b := w.GetBlockchain(o.ChainId)
 	bname := "unknown"
 	if b != nil {
 		bname = b.Name

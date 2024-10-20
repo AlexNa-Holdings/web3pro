@@ -82,6 +82,12 @@ type Gui struct {
 	// The position of the mouse
 	mouseX, mouseY int
 
+	// joined frame
+	JoinedFrame        bool
+	JoinedFrameFgColor Attribute
+	JoinedFrameBgColor Attribute
+	JoinedFrameRunes   []rune
+
 	// BgColor and FgColor allow to configure the background and foreground
 	// colors of the GUI.
 	BgColor, FgColor, FrameColor Attribute
@@ -178,6 +184,11 @@ func NewGui(mode OutputMode, supportOverlaps bool) (*Gui, error) {
 	g.BgColor, g.FgColor, g.FrameColor, g.InputBgColor = ColorDefault, ColorDefault, ColorDefault, ColorDefault
 	g.SelBgColor, g.SelFgColor, g.SelFrameColor = ColorDefault, ColorDefault, ColorDefault
 	g.HelpFgColor, g.HelpBgColor = ColorDefault, ColorDefault
+
+	// AN
+	g.JoinedFrame = false
+	g.JoinedFrameFgColor = ColorDefault
+	g.JoinedFrameRunes = []rune{'─', '│', '┌', '┐', '└', '┘', '├', '┤', '┬', '┴', '┼'}
 
 	// SupportOverlaps is true when we allow for view edges to overlap with other
 	// view edges
@@ -651,40 +662,26 @@ func (g *Gui) flush() error {
 			}
 		}
 	}
+
+	if g.JoinedFrame {
+		if err := g.drawJoinedFrame(); err != nil {
+			return err
+		}
+	}
+
 	for _, v := range g.views {
 		if !v.Visible || v.y1 < v.y0 {
 			continue
 		}
 		if v.Frame {
-			// var fgColor, bgColor, frameColor Attribute
 
-			// AN
-			// if g.Highlight && v == g.currentView {
-			// 	fgColor = v.SelFgColor
-			// 	bgColor = v.SelBgColor
-			// 	frameColor = g.SelFrameColor
-			// } else{
-			// bgColor = g.BgColor
-			// if v.TitleColor != ColorDefault {
-			// 	fgColor = v.TitleColor
-			// } else {
-			// 	fgColor = g.FgColor
-			// }
-			// if v.FrameColor != ColorDefault {
-			// 	frameColor = v.FrameColor
-			// } else {
-			// 	frameColor = g.FrameColor
-			// }
-			// }
-
-			// fgColor = v.FgColor
-			// frameColor = v.FrameColor
-
-			if err := g.drawFrameEdges(v, v.FrameColor, v.BgColor); err != nil {
-				return err
-			}
-			if err := g.drawFrameCorners(v, v.FrameColor, v.BgColor); err != nil {
-				return err
+			if !g.JoinedFrame || !v.JoinedFrame {
+				if err := g.drawFrameEdges(v, v.FrameColor, v.BgColor); err != nil {
+					return err
+				}
+				if err := g.drawFrameCorners(v, v.FrameColor, v.BgColor); err != nil {
+					return err
+				}
 			}
 			if v.Title != "" {
 				if err := g.drawTitle(v, v.FrameColor, v.BgColor, v.SubTitleBgColor); err != nil {

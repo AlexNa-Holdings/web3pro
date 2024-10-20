@@ -34,6 +34,7 @@ type SConfig struct {
 	PriceFeed              string        `yaml:"price_feed"`               // price feed
 	PriceUpdatePeriod      string        `yaml:"price_update_period"`      // price update period
 	Editor                 string        `yaml:"editor"`                   // editor
+	CMCKey                 string        `yaml:"cmc_key"`                  // CoinMarketCap API key
 }
 
 var Config *SConfig = &SConfig{ //Default config
@@ -44,7 +45,6 @@ var Config *SConfig = &SConfig{ //Default config
 	BusHardTimeout:         5 * time.Minute,
 	USBLog:                 false,
 	USBBackgroundEnumerate: true,
-	PriceFeed:              "dexscreener",
 	PriceUpdatePeriod:      "15m",
 	Editor:                 "code",
 }

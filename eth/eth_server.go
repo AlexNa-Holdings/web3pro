@@ -180,7 +180,7 @@ func blockNumber(msg *bus.Message) (string, error) {
 		return "", fmt.Errorf("no wallet")
 	}
 
-	b := w.GetBlockchain(req.Blockchain)
+	b := w.GetBlockchainByName(req.Blockchain)
 	if b == nil {
 		return "", fmt.Errorf("blockchain not found: %v", req.Blockchain)
 	}
@@ -211,7 +211,7 @@ func getTxByHash(msg *bus.Message) (*bus.B_EthTxByHash_Response, error) {
 		return nil, fmt.Errorf("no wallet")
 	}
 
-	b := w.GetBlockchain(req.Blockchain)
+	b := w.GetBlockchainByName(req.Blockchain)
 	if b == nil {
 		return nil, fmt.Errorf("blockchain not found: %v", req.Blockchain)
 	}

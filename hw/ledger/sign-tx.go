@@ -20,7 +20,7 @@ func signTx(msg *bus.Message) (*types.Transaction, error) {
 		return nil, fmt.Errorf("SignTx: no wallet")
 	}
 
-	b := w.GetBlockchain(m.Chain)
+	b := w.GetBlockchainByName(m.Chain)
 	if b == nil {
 		return nil, fmt.Errorf("SignTx: blockchain not found: %v", m.Chain)
 	}

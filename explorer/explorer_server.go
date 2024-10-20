@@ -53,7 +53,7 @@ func download(m *bus.B_ExplorerDownloadContract) error {
 		return errors.New("no wallet")
 	}
 
-	b := w.GetBlockchain(m.Blockchain)
+	b := w.GetBlockchainByName(m.Blockchain)
 	if b == nil {
 		return errors.New("no blockchain")
 	}

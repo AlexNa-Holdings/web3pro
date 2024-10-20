@@ -32,9 +32,9 @@ func signTx(msg *bus.Message) (*types.Transaction, error) {
 		return nil, err
 	}
 
-	b := w.GetBlockchain(m.Chain)
+	b := w.GetBlockchainByName(m.Chain)
 	if b == nil {
-		return nil, fmt.Errorf("blockchain not found: %v", m.Chain)
+		return nil, fmt.Errorf("sign_tx: blockchain not found: %v", m.Chain)
 	}
 
 	ch_id := uint32(b.ChainId)

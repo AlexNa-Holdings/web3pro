@@ -38,16 +38,10 @@ func DlgBlockchain(name string) *gocui.Popup {
 	}
 
 	return &gocui.Popup{
-		Title: title,
-		OnOverHotspot: func(v *gocui.View, hs *gocui.Hotspot) {
-			if hs != nil {
-				Bottom.Printf(hs.Tip)
-			} else {
-				Bottom.Printf("")
-			}
-		},
+		Title:         title,
+		OnOverHotspot: cmn.StandardOnOverHotspot,
 		OnOpen: func(v *gocui.View) {
-			v.SetList("explorer_api_type", cmn.EXPLORER_API_TYPES)
+			v.SetSelectList("explorer_api_type", cmn.EXPLORER_API_TYPES)
 			if bch_index != -1 {
 				bch := cmn.CurrentWallet.Blockchains[bch_index]
 				v.SetInput("name", bch.Name)

@@ -23,9 +23,9 @@ func multiCall(msg *bus.Message) ([][]byte, error) {
 		return nil, errors.New("no wallet")
 	}
 
-	b := w.GetBlockchainById(req.ChainId)
+	b := w.GetBlockchain(req.ChainId)
 	if b == nil {
-		return nil, fmt.Errorf("blockchain not found: %v", req.ChainId)
+		return nil, fmt.Errorf("multi_call: blockchain not found: %v", req.ChainId)
 	}
 
 	if b.Multicall == (common.Address{}) {

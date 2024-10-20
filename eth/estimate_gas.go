@@ -22,9 +22,9 @@ func estimateGas(msg *bus.Message) (string, error) {
 		return "", errors.New("no wallet")
 	}
 
-	b := w.GetBlockchain(req.Blockchain)
+	b := w.GetBlockchainByName(req.Blockchain)
 	if b == nil {
-		return "", fmt.Errorf("blockchain not found: %v", req.Blockchain)
+		return "", fmt.Errorf("estimate_gas: blockchain not found: %v", req.Blockchain)
 	}
 
 	from := w.GetAddress(req.From.String())

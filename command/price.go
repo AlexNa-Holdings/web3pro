@@ -40,7 +40,7 @@ func Price_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 	w := cmn.CurrentWallet
 
 	options := []ui.ACOption{}
-	p := cmn.SplitN(input, 5)
+	p := cmn.SplitN(input, 6)
 	command, subcommand, bchain, token := p[0], p[1], p[2], p[3]
 
 	last_param := len(p) - 1
@@ -65,9 +65,9 @@ func Price_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 		}
 	case 2:
 
-		if subcommand == "discover" {
+		if subcommand == "discover" || subcommand == "set_feeder" {
 
-			b := w.GetBlockchain(bchain)
+			b := w.GetBlockchainByName(bchain)
 
 			if token == "" && b == nil {
 				for _, b := range w.Blockchains {
@@ -81,11 +81,11 @@ func Price_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 		}
 
 	case 3:
-		if subcommand == "discover" {
+		if subcommand == "discover" || subcommand == "set_feeder" {
 
-			b := w.GetBlockchain(bchain)
+			b := w.GetBlockchainByName(bchain)
 
-			if b != nil && (token == "" || !strings.HasSuffix(input, " ")) {
+			if b != nil {
 				for _, t := range w.Tokens {
 					if t.ChainId == b.ChainId && cmn.Contains(t.Name+t.Symbol, token) {
 						tn := t.Address.String()
@@ -95,11 +95,30 @@ func Price_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 
 						options = append(options, ui.ACOption{
 							Name:   fmt.Sprintf("%-6s %s", t.Symbol, t.GetPrintName()),
-							Result: command + " discover '" + bchain + "' " + tn + " "})
+							Result: command + " " + subcommand + " " + strconv.Itoa(b.ChainId) + " " + tn + " "})
 					}
 				}
 			}
 			return "token", &options, token
+		}
+	case 4:
+		if subcommand == "set_feeder" {
+			b := w.GetBlockchainByName(bchain)
+
+			if b != nil && p[4] == "" {
+				t := w.GetToken(b.ChainId, token)
+				if t != nil {
+					for _, f := range cmn.KNOWN_FEEDERS {
+						if cmn.Contains(f, p[4]) {
+							options = append(options, ui.ACOption{
+								Name:   f,
+								Result: command + " set_feeder " + strconv.Itoa(b.ChainId) + " '" + token + "' '" + f + "' "})
+						}
+					}
+					return "feeder", &options, p[4]
+
+				}
+			}
 		}
 	}
 
@@ -123,7 +142,7 @@ func Price_Process(c *Command, input string) {
 			return
 		}
 
-		b := w.GetBlockchain(bchain)
+		b := w.GetBlockchainByName(bchain)
 		if b == nil {
 			ui.PrintErrorf("Invalid blockchain")
 			return
@@ -182,7 +201,7 @@ func Price_Process(c *Command, input string) {
 	case "set_feeder":
 		bchain, token, feeder, param := p[2], p[3], p[4], p[5]
 
-		b := w.GetBlockchain(bchain)
+		b := w.GetBlockchainByName(bchain)
 		if b == nil {
 			ui.PrintErrorf("Invalid blockchain")
 			return
@@ -194,7 +213,7 @@ func Price_Process(c *Command, input string) {
 			return
 		}
 
-		if !cmn.IsInArray(price.KNOWN_FEEDERS, feeder) {
+		if !cmn.IsInArray(cmn.KNOWN_FEEDERS, feeder) {
 			ui.PrintErrorf("Invalid feeder")
 			return
 		}

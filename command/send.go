@@ -46,7 +46,7 @@ func Send_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 		last_param++
 	}
 
-	b := w.GetBlockchain(bchain)
+	b := w.GetBlockchainByName(bchain)
 
 	var t *cmn.Token
 	if b != nil {
@@ -124,9 +124,9 @@ func Send_Process(c *Command, input string) {
 	//execute command
 	bchain, token, from, to, amount := p[1], p[2], p[3], p[4], p[5]
 
-	b := w.GetBlockchain(bchain)
+	b := w.GetBlockchainByName(bchain)
 	if b == nil {
-		ui.PrintErrorf("Blockchain not found: %s", bchain)
+		ui.PrintErrorf("send_process: Blockchain not found: %s", bchain)
 		return
 	}
 

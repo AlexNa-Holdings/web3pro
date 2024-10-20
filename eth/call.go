@@ -22,9 +22,9 @@ func call(msg *bus.Message) (string, error) {
 		return "", errors.New("no wallet")
 	}
 
-	b := w.GetBlockchainById(req.ChainId)
+	b := w.GetBlockchain(req.ChainId)
 	if b == nil {
-		return "", fmt.Errorf("blockchain not found: %v", req.ChainId)
+		return "", fmt.Errorf("call: blockchain not found: %v", req.ChainId)
 	}
 
 	c, ok := cons[b.ChainId]

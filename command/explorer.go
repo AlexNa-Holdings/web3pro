@@ -113,7 +113,7 @@ func Explorer_Process(c *Command, input string) {
 
 	switch subcommand {
 	case "download":
-		b := w.GetBlockchain(bchain)
+		b := w.GetBlockchainByName(bchain)
 		if b == nil {
 			ui.PrintErrorf("Explorer_Process: blockchain not found: %v", bchain)
 			return

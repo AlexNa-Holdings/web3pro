@@ -60,7 +60,7 @@ cancel and verify the device.
 				}
 			}
 
-			v.SetList("copyof", names)
+			v.SetSelectList("copyof", names)
 		},
 		OnClickHotspot: func(v *gocui.View, hs *gocui.Hotspot) {
 

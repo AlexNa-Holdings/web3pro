@@ -76,9 +76,9 @@ func switchEthereumChain(req RPCRequest) error {
 		return fmt.Errorf("invalid chainId: %v", sID)
 	}
 
-	b := w.GetBlockchainById(int(chainID))
+	b := w.GetBlockchain(int(chainID))
 	if b == nil {
-		return fmt.Errorf("blockchain not found: %v", chainID)
+		return fmt.Errorf("switch_chain: blockchain not found: %v", chainID)
 	}
 
 	schain := fmt.Sprintf("%s (%d)", b.Name, b.ChainId)
@@ -147,9 +147,9 @@ func watchAssets(req RPCRequest) {
 		return
 	}
 
-	b := w.GetBlockchainById(o.ChainId)
+	b := w.GetBlockchain(o.ChainId)
 	if b == nil {
-		log.Error().Msgf("Blockchain not found: %v", o.ChainId)
+		log.Error().Msgf("watch_asset: Blockchain not found: %v", o.ChainId)
 		return
 	}
 

@@ -55,7 +55,7 @@ func (p *HailPaneType) SetView(x0, y0, x1, y1 int, overlap byte) {
 		}
 
 		p.PaneDescriptor.View = v
-		v.FrameRunes = RUNES
+		v.JoinedFrame = true
 		v.Title = "Hail"
 		if active_hail.Title != "" {
 			v.Title = active_hail.Title

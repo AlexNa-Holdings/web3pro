@@ -31,7 +31,7 @@ func get_position_status(msg *bus.Message) (*bus.B_LP_V3_GetPositionStatus_Respo
 		return nil, fmt.Errorf("get_position_status: no lp")
 	}
 
-	b := w.GetBlockchainById(req.ChainId)
+	b := w.GetBlockchain(req.ChainId)
 	if b == nil {
 		return nil, fmt.Errorf("get_position_status: no blockchain")
 	}
@@ -125,7 +125,7 @@ func getV3PositionInfo(lp *cmn.LP_V3_Position) (
 		return nil, nil, nil, nil, nil, fmt.Errorf("no wallet")
 	}
 
-	b := w.GetBlockchainById(lp.ChainId)
+	b := w.GetBlockchain(lp.ChainId)
 	if b == nil {
 		return nil, nil, nil, nil, nil, fmt.Errorf("no blockchain")
 	}

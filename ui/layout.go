@@ -113,7 +113,7 @@ func Layout(g *gocui.Gui) error {
 				template := pane_map[d].GetTemplate()
 				if template != "" {
 					n_lines := gocui.EstimateTemplateLines(template, widths[i]-1)
-					height := n_lines + 2
+					height := n_lines + 1
 					if d.MaxHeight > 0 {
 						height = min(d.MaxHeight, height)
 					}

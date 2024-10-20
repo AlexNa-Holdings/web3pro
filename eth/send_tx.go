@@ -32,9 +32,9 @@ func sendTx(msg *bus.Message) (string, error) {
 		return "", errors.New("no wallet")
 	}
 
-	b := w.GetBlockchainById(req.ChainId)
+	b := w.GetBlockchain(req.ChainId)
 	if b == nil {
-		return "", fmt.Errorf("blockchain not found: %v", req.ChainId)
+		return "", fmt.Errorf("send_tx: blockchain not found: %v", req.ChainId)
 	}
 
 	from := w.GetAddress(req.From.String())

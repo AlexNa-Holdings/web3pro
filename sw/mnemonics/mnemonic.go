@@ -91,10 +91,10 @@ func process(msg *bus.Message) {
 			}
 
 			if m.Type == "mnemonics" {
-				b := w.GetBlockchain(m.Chain)
+				b := w.GetBlockchainByName(m.Chain)
 				if b == nil {
 					log.Error().Msgf("Error getting blockchain: %v", m.Chain)
-					msg.Respond(nil, fmt.Errorf("blockchain not found: %v", m.Chain))
+					msg.Respond(nil, fmt.Errorf("mnemonics: blockchain not found: %v", m.Chain))
 					return
 				}
 

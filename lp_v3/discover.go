@@ -27,7 +27,7 @@ func discover(msg *bus.Message) error {
 
 	chain_id := 0
 
-	b := w.GetBlockchainById(req.ChainId)
+	b := w.GetBlockchain(req.ChainId)
 	if b != nil {
 		chain_id = b.ChainId
 	}
@@ -46,9 +46,9 @@ func discover(msg *bus.Message) error {
 			continue
 		}
 
-		b := w.GetBlockchainById(pl.ChainId)
+		b := w.GetBlockchain(pl.ChainId)
 		if b == nil {
-			log.Error().Msgf("Blockchain not found: %d", pl.ChainId)
+			log.Error().Msgf("discover: Blockchain not found: %d", pl.ChainId)
 			continue
 		}
 

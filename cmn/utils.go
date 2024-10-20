@@ -480,7 +480,7 @@ func ConfirmEIP712Template(data apitypes.TypedData) string {
 		if data.PrimaryType == "Permit" {
 			// collect all info about the permit
 
-			info.Blockchain = w.GetBlockchainById(chain_id)
+			info.Blockchain = w.GetBlockchain(chain_id)
 			ta := AddressFromAny(data.Domain.VerifyingContract)
 			if info.Blockchain != nil {
 				info.Token = w.GetTokenByAddress(info.Blockchain.ChainId, ta)

@@ -34,6 +34,9 @@ func Init() {
 		log.Fatal().Msgf("error creating gocui: %v", err)
 	}
 	Gui.Mouse = true
+	Gui.JoinedFrame = true
+	Gui.JoinedFrameRunes = []rune{'═', '║', '╔', '╗', '╚', '╝', '╠', '╣', '╦', '╩', '╬'}
+
 	Gui.Cursor = true
 	Gui.Highlight = true
 	SetTheme(cmn.Config.Theme)

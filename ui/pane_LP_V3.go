@@ -42,7 +42,7 @@ func (p *LP_V3Pane) SetView(x0, y0, x1, y1 int, overlap byte) {
 		}
 
 		p.PaneDescriptor.View = v
-		v.FrameRunes = RUNES
+		v.JoinedFrame = true
 		v.Title = "LP v3"
 		v.ScrollBar = true
 		v.OnResize = func(v *gocui.View) {
@@ -165,7 +165,7 @@ func (p *LP_V3Pane) rebuidTemplate() string {
 			continue
 		}
 
-		b := w.GetBlockchainById(p.ChainId)
+		b := w.GetBlockchain(p.ChainId)
 		if b == nil {
 			continue
 		}
@@ -207,11 +207,29 @@ func (p *LP_V3Pane) rebuidTemplate() string {
 			temp += "<color fg:red>" + gocui.ICON_LIGHT + "</color>"
 		}
 
-		temp += cmn.TagValueLink(p.Liquidity0, t0)
-		temp += cmn.TagValueLink(p.Liquidity1, t1)
+		if t0 != nil {
+			temp += cmn.TagValueLink(p.Liquidity0, t0)
+		} else {
+			temp += "         "
+		}
 
-		temp += cmn.TagValueLink(p.Gain0, t0)
-		temp += cmn.TagValueLink(p.Gain1, t1)
+		if t1 != nil {
+			temp += cmn.TagValueLink(p.Liquidity1, t1)
+		} else {
+			temp += "         "
+		}
+
+		if t0 != nil {
+			temp += cmn.TagValueLink(p.Gain0, t0)
+		} else {
+			temp += "         "
+		}
+
+		if t1 != nil {
+			temp += cmn.TagValueLink(p.Gain1, t1)
+		} else {
+			temp += "         "
+		}
 
 		temp += cmn.TagDollarLink(p.Dollars)
 

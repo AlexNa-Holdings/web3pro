@@ -267,8 +267,10 @@ from the web application
 		}
 	case "on":
 		w.AppsPaneOn = true
+		ui.App.ShowPane()
 		err = w.Save()
 	case "off":
+		ui.App.HidePane()
 		w.AppsPaneOn = false
 		err = w.Save()
 	case "chain":

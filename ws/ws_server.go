@@ -453,7 +453,7 @@ and use the current chain & address?
 			OnOk: func(m *bus.Message) bool {
 
 				chain_id := 1
-				b := w.GetBlockchain(w.CurrentChain)
+				b := w.GetBlockchainByName(w.CurrentChain)
 				if b != nil {
 					chain_id = b.ChainId
 				}

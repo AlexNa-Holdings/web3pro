@@ -102,6 +102,9 @@ func SetTheme(theme string) {
 	Gui.HelpFgColor = t.HelpFgColor
 	Gui.HelpBgColor = t.HelpBgColor
 
+	Gui.JoinedFrameBgColor = t.BgColor
+	Gui.JoinedFrameFgColor = t.FrameColor
+
 	Theme = &t
 
 	cmn.Config.Theme = theme

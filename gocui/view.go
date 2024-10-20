@@ -157,6 +157,9 @@ type View struct {
 	// If Frame is true, a border will be drawn around the view.
 	Frame bool
 
+	// If Frame is true, FrameColor allows to configure the color of the Frame.
+	JoinedFrame bool
+
 	// FrameColor allow to configure the color of the Frame when it is not highlighted.
 	FrameColor Attribute
 
@@ -1659,7 +1662,7 @@ func (v *View) SetInput(id, value string) {
 	}
 }
 
-func (v *View) SetList(id string, list []string) {
+func (v *View) SetSelectList(id string, list []string) {
 	for _, c := range v.Controls {
 		if c.Type == C_SELECT && c.ID == id {
 			c.Items = list

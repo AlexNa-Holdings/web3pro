@@ -25,7 +25,7 @@ func send(msg *bus.Message) error {
 		return errors.New("no wallet")
 	}
 
-	b := w.GetBlockchainById(req.ChainId)
+	b := w.GetBlockchain(req.ChainId)
 	if b == nil {
 		return fmt.Errorf("blockchain not found: %v", req.ChainId)
 	}

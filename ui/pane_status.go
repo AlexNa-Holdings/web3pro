@@ -39,7 +39,7 @@ func (p *StatusPane) SetView(x0, y0, x1, y1 int, overlap byte) {
 			log.Error().Err(err).Msgf("SetView error: %s", err)
 		}
 		p.PaneDescriptor.View = v
-		v.FrameRunes = RUNES
+		v.JoinedFrame = true
 		v.Title = "Status"
 		v.Autoscroll = false
 		v.ScrollBar = true
@@ -83,7 +83,7 @@ func (p *StatusPane) rebuidTemplate() {
 
 	if cmn.CurrentWallet != nil {
 		w := cmn.CurrentWallet
-		b := w.GetBlockchain(w.CurrentChain)
+		b := w.GetBlockchainByName(w.CurrentChain)
 		a := w.GetAddress(w.CurrentAddress.String())
 
 		if b != nil {

@@ -94,7 +94,7 @@ func LP_V3_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 		}
 	case 3:
 		if subcommand == "add" {
-			b := w.GetBlockchain(bchain)
+			b := w.GetBlockchainByName(bchain)
 			if b != nil {
 				for _, lp := range cmn.PrefedinedLP_V3[b.ChainId] {
 					options = append(options, ui.ACOption{
@@ -118,7 +118,7 @@ func LP_V3_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 		}
 
 		if subcommand == "remove" {
-			b := w.GetBlockchain(bchain)
+			b := w.GetBlockchainByName(bchain)
 			if b != nil {
 				for _, lp := range w.LP_V3_Providers {
 					if lp.ChainId == b.ChainId && cmn.Contains(lp.Name, addr) {
@@ -169,9 +169,9 @@ func LP_V3_Process(c *Command, input string) {
 		})
 
 		for i, lp := range w.LP_V3_Providers {
-			b := w.GetBlockchainById(lp.ChainId)
+			b := w.GetBlockchain(lp.ChainId)
 			if b == nil {
-				ui.PrintErrorf("Blockchain not found: %d", lp.ChainId)
+				ui.PrintErrorf("LP_V3_Process:Blockchain not found: %d", lp.ChainId)
 				w.RemoveLP_V3(lp.ChainId, lp.Provider)
 				break
 			}
@@ -186,25 +186,25 @@ func LP_V3_Process(c *Command, input string) {
 		ui.Printf("\n")
 
 	case "add":
-		b := w.GetBlockchain(chain)
+		b := w.GetBlockchainByName(chain)
 		if b == nil {
-			err = fmt.Errorf("blockchain not found: %s", chain)
+			err = fmt.Errorf("LP_V3_Process: blockchain not found: %s", chain)
 			break
 		}
 
 		bus.Send("ui", "popup", ui.DlgLP_V3_add(b, addr, name, url))
 	case "edit":
-		b := w.GetBlockchain(chain)
+		b := w.GetBlockchainByName(chain)
 		if b == nil {
-			err = fmt.Errorf("blockchain not found: %s", chain)
+			err = fmt.Errorf("LP_V3_Process: blockchain not found: %s", chain)
 			break
 		}
 
 		bus.Send("ui", "popup", ui.DlgLP_V3_edit(b, addr, name, url))
 	case "remove":
-		b := w.GetBlockchain(chain)
+		b := w.GetBlockchainByName(chain)
 		if b == nil {
-			err = fmt.Errorf("blockchain not found: %s", chain)
+			err = fmt.Errorf("LP_V3_Process: blockchain not found: %s", chain)
 			break
 		}
 
@@ -237,7 +237,7 @@ func LP_V3_Process(c *Command, input string) {
 
 	case "discover":
 		chain_id := 0
-		b := w.GetBlockchain(chain)
+		b := w.GetBlockchainByName(chain)
 		if b != nil {
 			chain_id = b.ChainId
 		}
@@ -250,12 +250,13 @@ func LP_V3_Process(c *Command, input string) {
 			err = resp.Error
 		}
 	case "on":
+		ui.LP_V3.ShowPane()
 		w.LP_V3PaneOn = true
 		err = w.Save()
 	case "off":
+		ui.LP_V3.HidePane()
 		w.LP_V3PaneOn = false
 		err = w.Save()
-
 	default:
 		err = fmt.Errorf("unknown command: %s", subcommand)
 	}
@@ -299,7 +300,7 @@ func list(w *cmn.Wallet) {
 			continue
 		}
 
-		b := w.GetBlockchainById(lp.ChainId)
+		b := w.GetBlockchain(lp.ChainId)
 		if b == nil {
 			ui.PrintErrorf("Blockchain not found, V3 position removed: %d", lp.ChainId)
 			w.RemoveLP_V3Position(lp.Owner, lp.ChainId, lp.Provider, lp.NFT_Token)
@@ -370,11 +371,29 @@ func list(w *cmn.Wallet) {
 			ui.Printf(ui.F(gocui.ColorRed) + gocui.ICON_LIGHT + ui.F(ui.Terminal.Screen.FgColor))
 		}
 
-		cmn.AddValueLink(ui.Terminal.Screen, p.Liquidity0, t0)
-		cmn.AddValueLink(ui.Terminal.Screen, p.Liquidity1, t1)
+		if t0 != nil {
+			cmn.AddValueLink(ui.Terminal.Screen, p.Liquidity0, t0)
+		} else {
+			ui.Printf("                  ")
+		}
 
-		cmn.AddValueLink(ui.Terminal.Screen, p.Gain0, t0)
-		cmn.AddValueLink(ui.Terminal.Screen, p.Gain1, t1)
+		if t1 != nil {
+			cmn.AddValueLink(ui.Terminal.Screen, p.Liquidity1, t1)
+		} else {
+			ui.Printf("                  ")
+		}
+
+		if t0 != nil {
+			cmn.AddValueLink(ui.Terminal.Screen, p.Gain0, t0)
+		} else {
+			ui.Printf("                  ")
+		}
+
+		if t1 != nil {
+			cmn.AddValueLink(ui.Terminal.Screen, p.Gain1, t1)
+		} else {
+			ui.Printf("                  ")
+		}
 
 		cmn.AddDollarLink(ui.Terminal.Screen, p.Dollars)
 

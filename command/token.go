@@ -16,7 +16,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-var token_subcommands = []string{"remove", "add", "balance", "list"}
+var token_subcommands = []string{"remove", "edit", "add", "balance", "list"}
 
 func NewTokenCommand() *Command {
 	return &Command{
@@ -73,7 +73,7 @@ func Token_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 		}
 
 	case 2:
-		if subcommand == "list" || subcommand == "add" || subcommand == "remove" || subcommand == "balance" {
+		if subcommand == "list" || subcommand == "add" || subcommand == "remove" || subcommand == "balance" || subcommand == "edit" {
 			if param == "" || !strings.HasSuffix(input, " ") {
 				for _, chain := range w.Blockchains {
 					if cmn.Contains(chain.Name, param) {
@@ -86,7 +86,7 @@ func Token_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 		}
 
 	case 3:
-		b := w.GetBlockchain(param)
+		b := w.GetBlockchainByName(param)
 		token := p[3]
 
 		if subcommand == "balance" && b != nil &&
@@ -110,7 +110,7 @@ func Token_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 			return "token", &options, token
 		}
 	case 4:
-		b := w.GetBlockchain(param)
+		b := w.GetBlockchainByName(param)
 		t := w.GetToken(b.ChainId, p[3])
 
 		if subcommand == "balance" && b != nil && t != nil {
@@ -163,7 +163,7 @@ func Token_Process(c *Command, input string) {
 		}
 
 		addr := common.HexToAddress(address)
-		bchain := w.GetBlockchain(chain)
+		bchain := w.GetBlockchainByName(chain)
 		if bchain == nil {
 			ui.PrintErrorf("Blockchain not found: %s", chain)
 			return
@@ -208,16 +208,16 @@ func Token_Process(c *Command, input string) {
 
 		addr := common.HexToAddress(address)
 
-		b := w.GetBlockchain(chain)
+		b := w.GetBlockchainByName(chain)
 		if b == nil {
 			chain_id, err := strconv.Atoi(chain)
 			if err != nil {
 				ui.PrintErrorf("Invalid blockchain: %s", chain)
 				return
 			}
-			b := w.GetBlockchainById(chain_id)
+			b := w.GetBlockchain(chain_id)
 			if b == nil {
-				ui.PrintErrorf("Blockchain not found: %s", chain)
+				ui.PrintErrorf("token_process: Blockchain not found: %s", chain)
 				return
 			}
 		}
@@ -244,7 +244,7 @@ func Token_Process(c *Command, input string) {
 
 		chain := p[2]
 
-		lb := w.GetBlockchain(chain)
+		lb := w.GetBlockchainByName(chain)
 
 		ui.Printf("\nTokens:\n")
 
@@ -261,7 +261,7 @@ func Token_Process(c *Command, input string) {
 				continue
 			}
 
-			b := w.GetBlockchainById(t.ChainId)
+			b := w.GetBlockchain(t.ChainId)
 			if b == nil {
 				log.Error().Msgf("Blockchain not found: %d", t.ChainId)
 				continue
@@ -274,6 +274,8 @@ func Token_Process(c *Command, input string) {
 			} else {
 				ui.Printf("          ")
 			}
+
+			ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command token edit "+strconv.Itoa(t.ChainId)+" "+t.Address.String()+" ", "Edit token", "")
 
 			if !t.Native {
 				ui.Terminal.Screen.AddLink(gocui.ICON_LINK, "open "+b.ExplorerLink(t.Address), b.ExplorerLink(t.Address), "")
@@ -311,14 +313,14 @@ func Token_Process(c *Command, input string) {
 			return
 		}
 
-		b := w.GetBlockchain(chain)
+		b := w.GetBlockchainByName(chain)
 		if b == nil {
 			chain_id, err := strconv.Atoi(chain)
 			if err != nil {
 				ui.PrintErrorf("Invalid blockchain: %s", chain)
 				return
 			}
-			b := w.GetBlockchainById(chain_id)
+			b := w.GetBlockchain(chain_id)
 			if b == nil {
 				ui.PrintErrorf("Blockchain not found: %s", chain)
 				return
@@ -411,6 +413,40 @@ func Token_Process(c *Command, input string) {
 			cmn.AddDollarValueLink(ui.Terminal.Screen, total_balance, t)
 			ui.Printf("\n")
 		}
+	case "edit":
+		chain := p[2]
+		token := p[3]
+
+		b := w.GetBlockchainByName(chain)
+		if b == nil {
+			chain_id, err := strconv.Atoi(chain)
+			if err != nil {
+				ui.PrintErrorf("Invalid blockchain: %s", chain)
+				return
+			}
+			b := w.GetBlockchain(chain_id)
+			if b == nil {
+				ui.PrintErrorf("Blockchain not found: %s", chain)
+				return
+			}
+		}
+
+		if token == "" {
+			ui.PrintErrorf("Usage: token balance %s [TOKEN/ADDRESS] [ADDRESS]", chain)
+			return
+		}
+
+		t := w.GetTokenBySymbol(b.ChainId, token)
+		if t == nil {
+			t = w.GetTokenByAddress(b.ChainId, common.HexToAddress(token))
+		}
+
+		if t == nil {
+			ui.PrintErrorf("Token not found (or ambiguous): %s", token)
+			return
+		}
+
+		bus.Send("ui", "popup", ui.DlgTokenEdit(t))
 
 	default:
 		ui.PrintErrorf("Invalid subcommand: %s", subcommand)

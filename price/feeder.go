@@ -19,8 +19,6 @@ type Pair struct {
 	Liquidity     float64
 }
 
-var KNOWN_FEEDERS = []string{"dexscreener"}
-
 var INIT_DELAY = 10 * time.Second
 var PRICE_UPDATE_PERIOD time.Duration
 
