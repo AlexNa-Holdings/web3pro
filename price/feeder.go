@@ -9,14 +9,15 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-type Pair struct {
+type PriceInfo struct {
 	PriceFeeder   string
-	PairAddress   string
+	PairID        string
 	BaseToken     string
 	QuoteToken    string
 	PriceUsd      float64
 	PriceChange24 float64
 	Liquidity     float64
+	URL           string
 }
 
 var INIT_DELAY = 10 * time.Second
@@ -44,12 +45,22 @@ func Init() {
 	}()
 }
 
-func GetPairs(chain_id int, tokenAddr string) ([]Pair, error) {
+func GetPriceInfoList(chain_id int, tokenAddr string) ([]PriceInfo, error) {
 
-	list, err := DSListPairs(chain_id, tokenAddr)
+	ds_list, err := DS_GetPriceInfoList(chain_id, tokenAddr)
 	if err != nil {
 		return nil, err
 	}
+
+	var cmc_list []PriceInfo
+	if cmn.Config.CMC_API_KEY != "" {
+		cmc_list, err = CMC_GetPriceInfoList(chain_id, tokenAddr)
+		if err != nil {
+			log.Debug().Msgf("GetPriceInfoList: failed to get price info from CoinMarketCap: %v", err)
+		}
+	}
+
+	list := append(ds_list, cmc_list...)
 
 	sort.Slice(
 		list,
@@ -62,21 +73,23 @@ func GetPairs(chain_id int, tokenAddr string) ([]Pair, error) {
 }
 
 func Update(w *cmn.Wallet) error {
-	n, err := DSUpdate(w)
+	n_ds, err := DS_Update(w)
 	if err != nil {
 		log.Error().Msgf("Update: failed to update from dexscreener: %v", err)
-		return err
 	}
 
-	if n > 0 {
+	n_cmc, err := CMC_Update(w)
+	if err != nil {
+		log.Error().Msgf("Update: failed to update from CoinMarketCap: %v", err)
+	}
 
+	if n_ds+n_cmc > 0 {
 		err = w.Save()
 		if err != nil {
 			log.Error().Msgf("Update: failed to save wallet: %v", err)
 		}
 
 		bus.Send("price", "updated", nil)
-
 		bus.Send("ui", "notify", "Token prices updated")
 	}
 

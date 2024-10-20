@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/AlexNa-Holdings/web3pro/cmn"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog/log"
 )
 
@@ -98,7 +99,7 @@ func extractBlockchainFromURL(pairURL string) (string, error) {
 	return "", fmt.Errorf("invalid URL format")
 }
 
-func DSListPairs(chain_id int, tokenAddr string) ([]Pair, error) {
+func DS_GetPriceInfoList(chain_id int, tokenAddr string) ([]PriceInfo, error) {
 
 	chain_name, ok := chain_names[chain_id]
 	if !ok {
@@ -126,7 +127,7 @@ func DSListPairs(chain_id int, tokenAddr string) ([]Pair, error) {
 		return nil, fmt.Errorf("failed to unmarshal JSON response: %w", err)
 	}
 
-	pairs := []Pair{}
+	pairs := []PriceInfo{}
 	for _, pair := range response.Pairs {
 
 		chain, err := extractBlockchainFromURL(pair.URL)
@@ -144,20 +145,21 @@ func DSListPairs(chain_id int, tokenAddr string) ([]Pair, error) {
 		}
 
 		pairs = append(pairs,
-			Pair{
+			PriceInfo{
 				PriceFeeder: "dexscreener",
-				PairAddress: pair.PairAddress,
+				PairID:      pair.PairAddress,
 				BaseToken:   pair.BaseToken.Symbol,
 				QuoteToken:  pair.QuoteToken.Symbol,
 				PriceUsd:    price,
 				Liquidity:   pair.Liquidity.USD,
+				URL:         "https://dexscreener.com/" + chain + "/" + pair.PairAddress,
 			})
 	}
 
 	return pairs, nil
 }
 
-func DSGetPairs(chain_id int, pairList string) ([]Pair, error) {
+func DSGetPairs(chain_id int, pairList string) ([]PriceInfo, error) {
 
 	chain_name, ok := chain_names[chain_id]
 	if !ok {
@@ -185,7 +187,7 @@ func DSGetPairs(chain_id int, pairList string) ([]Pair, error) {
 		return nil, fmt.Errorf("failed to unmarshal JSON response: %w", err)
 	}
 
-	pairs := []Pair{}
+	pairs := []PriceInfo{}
 	for _, pair := range response.Pairs {
 
 		chain, err := extractBlockchainFromURL(pair.URL)
@@ -203,9 +205,9 @@ func DSGetPairs(chain_id int, pairList string) ([]Pair, error) {
 		}
 
 		pairs = append(pairs,
-			Pair{
+			PriceInfo{
 				PriceFeeder:   "dexscreener",
-				PairAddress:   pair.PairAddress,
+				PairID:        pair.PairAddress,
 				BaseToken:     pair.BaseToken.Symbol,
 				QuoteToken:    pair.QuoteToken.Symbol,
 				PriceUsd:      price,
@@ -217,7 +219,7 @@ func DSGetPairs(chain_id int, pairList string) ([]Pair, error) {
 	return pairs, nil
 }
 
-func DSUpdate(w *cmn.Wallet) (int, error) { // number of pairs updated
+func DS_Update(w *cmn.Wallet) (int, error) { // number of pairs updated
 	n_updated := 0
 
 	for _, b := range w.Blockchains {
@@ -227,8 +229,7 @@ func DSUpdate(w *cmn.Wallet) (int, error) { // number of pairs updated
 		}
 		tokens_to_update := []*cmn.Token{}
 		for _, t := range w.Tokens {
-			if t.ChainId == b.ChainId && t.PriceFeeder == "dexscreener" && !t.Native &&
-				t.PriceFeedParam != "" && t.PriceTimestamp.Add(PRICE_UPDATE_PERIOD).Before(time.Now()) {
+			if t.ChainId == b.ChainId && t.PriceFeeder == "dexscreener" && t.PriceFeedParam != "" {
 				tokens_to_update = append(tokens_to_update, t)
 			}
 		}
@@ -258,27 +259,45 @@ func DSUpdate(w *cmn.Wallet) (int, error) { // number of pairs updated
 			for i, p := range pairs {
 
 				for _, t := range tokens_to_update {
-					if t.PriceFeedParam == p.PairAddress {
+					b := w.GetBlockchain(t.ChainId)
+					if b == nil {
+						continue
+					}
 
+					if t.PriceFeedParam == p.PairID {
 						t.Price = pairs[i].PriceUsd
 						t.PriceChange24 = pairs[i].PriceChange24
 						t.PriceTimestamp = time.Now()
-					}
+						n_updated++
 
-					//also update the naitve token
-					wt, err := w.GetNativeToken(b)
-					if err == nil && wt.Address == t.Address {
-						wt.Price = pairs[i].PriceUsd
-						wt.PriceChange24 = pairs[i].PriceChange24
-						wt.PriceTimestamp = time.Now()
+						if t.Native {
+							// update wrapped token price if needed
+							if b.WTokenAddress != (common.Address{}) {
+								wrapped_t := w.GetTokenByAddress(b.ChainId, b.WTokenAddress)
+								if wrapped_t != nil && wrapped_t.PriceFeedParam == "" {
+									wrapped_t.Price = p.PriceUsd
+									wrapped_t.PriceChange24 = p.PriceChange24
+									wrapped_t.PriceTimestamp = time.Now()
+									n_updated++
+								}
+							}
+						} else {
+							// update native token price if needed
+							if b.WTokenAddress.Cmp(t.Address) == 0 {
+								native_t, err := w.GetNativeToken(b)
+								if err != nil && native_t != nil && native_t.PriceFeedParam == "" {
+									native_t.Price = p.PriceUsd
+									native_t.PriceChange24 = p.PriceChange24
+									native_t.PriceTimestamp = time.Now()
+									n_updated++
+								}
+							}
+						}
+
 					}
 				}
 			}
-
-			n_updated += len(pairs)
 		}
-
 	}
-
 	return n_updated, nil
 }

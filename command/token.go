@@ -284,7 +284,7 @@ func Token_Process(c *Command, input string) {
 				ui.Printf("    ")
 			}
 
-			if t.PriceFeeder == "" {
+			if t.PriceFeeder == "" || t.PriceFeedParam == "" {
 				ui.Terminal.Screen.AddLink(gocui.ICON_FEED, "command p discover '"+b.Name+"' '"+t.Address.String()+"'", "Discover price", "")
 			} else {
 				ui.Printf("  ")
@@ -296,10 +296,7 @@ func Token_Process(c *Command, input string) {
 				cmn.AddAddressShortLink(ui.Terminal.Screen, t.Address)
 			}
 
-			ui.Printf(" ")
-
-			ui.Printf("%s | %s", b.Name, t.Name)
-			ui.Printf("\n")
+			ui.Printf(" %-12s %-s\n", b.Name, t.Name)
 		}
 
 		ui.Printf("\n")

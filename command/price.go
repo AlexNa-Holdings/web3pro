@@ -2,6 +2,7 @@ package command
 
 import (
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -11,9 +12,10 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/price"
 	"github.com/AlexNa-Holdings/web3pro/ui"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/rs/zerolog/log"
 )
 
-var price_subcommands = []string{"set_feeder", "discover", "update"}
+var price_subcommands = []string{"set_feeder", "discover", "update", "list"}
 
 func NewPriceCommand() *Command {
 	return &Command{
@@ -24,6 +26,8 @@ Usage:
 
   discover [BLOCKCHAIN] [TOKEN_ADDR]                   - Discover trading pairs for token
   set_feeder [BLOCKCHAIN] [PAIR_ADDR] [FEEDER] [PARAM} - Set price feeder for trading pair
+  update                                               - Update price feeders
+  list                                                 - List price feeders
 
 		`,
 		Help:             `Price Feeder`,
@@ -126,19 +130,21 @@ func Price_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 }
 
 func Price_Process(c *Command, input string) {
-	if cmn.CurrentWallet == nil {
+	w := cmn.CurrentWallet
+	if w == nil {
+		ui.PrintErrorf("No wallet open")
 		return
 	}
-
-	w := cmn.CurrentWallet
 
 	p := cmn.SplitN(input, 6)
 	subcommand, bchain, token := p[1], p[2], p[3]
 
 	switch subcommand {
-	case "discover", "":
+	case "list", "":
+		list_price_feeders(w)
+	case "discover":
 		if token == "" {
-			ui.Printf("USAGE: discover [TOKEN_ADDR]\n")
+			ui.Printf("USAGE: discover [CHAIN] [TOKEN_ADDR]\n")
 			return
 		}
 
@@ -166,25 +172,24 @@ func Price_Process(c *Command, input string) {
 		ui.Printf("Feeder type: %s\n", t.PriceFeeder)
 		ui.Printf("Feeder Param: %s\n", t.PriceFeedParam)
 
-		pairs, err := price.GetPairs(b.ChainId, a.Hex())
+		pi_list, err := price.GetPriceInfoList(b.ChainId, a.Hex())
 		if err != nil {
 			ui.PrintErrorf("Error discovering trading pairs: %v", err)
 			return
 		}
 
-		if len(pairs) == 0 {
+		if len(pi_list) == 0 {
 			ui.Printf("No trading pairs found\n")
 			return
 		}
 
-		ui.Printf("\n   Feeder      Pair Addr    Liquidity  Price\n")
+		ui.Printf("\n   Feeder            Pair     Liquidity    Price       ID\n")
 
-		for i, p := range pairs {
-			ui.Printf("%2d %10s ", i+1, p.PriceFeeder)
-			cmn.AddAddressShortLink(ui.Terminal.Screen, common.Address(common.FromHex(p.PairAddress)))
+		for _, p := range pi_list {
+			ui.Printf("%-14s ", p.PriceFeeder)
+			ui.Printf(" %4s/%-5s ", p.BaseToken, p.QuoteToken)
 			ui.Printf(" %s", cmn.FmtFloat64D(p.Liquidity, true))
 			ui.Printf(" %s", cmn.FmtFloat64D(p.PriceUsd, true))
-			ui.Printf(" %s/%s ", p.BaseToken, p.QuoteToken)
 
 			tn := t.Address.String()
 			if t.Unique {
@@ -192,8 +197,11 @@ func Price_Process(c *Command, input string) {
 			}
 
 			ui.Terminal.Screen.AddLink(gocui.ICON_FEED, "command price set_feeder '"+bchain+"' "+
-				tn+" "+p.PriceFeeder+" '"+p.PairAddress+"'",
+				tn+" "+p.PriceFeeder+" '"+p.PairID+"'",
 				"Connect price feeder to trading pair", "")
+			ui.Terminal.Screen.AddLink(gocui.ICON_LINK, "open "+p.URL, p.URL, "")
+
+			ui.Printf(" %s ", p.PairID)
 
 			ui.Printf("\n")
 
@@ -263,4 +271,66 @@ func Price_Process(c *Command, input string) {
 		ui.PrintErrorf("Invalid subcommand: %s", subcommand)
 
 	}
+}
+
+func list_price_feeders(w *cmn.Wallet) {
+
+	sort.Slice(w.Tokens, func(i, j int) bool {
+		if w.Tokens[i].PriceFeeder == w.Tokens[j].PriceFeeder {
+			return w.Tokens[i].PriceFeedParam < w.Tokens[j].PriceFeedParam
+		} else {
+			return w.Tokens[i].PriceFeeder < w.Tokens[j].PriceFeeder
+		}
+	})
+
+	for _, t := range w.Tokens {
+		if t.PriceFeeder == "" {
+			continue
+		}
+
+		b := w.GetBlockchain(t.ChainId)
+		if b == nil {
+			log.Error().Msgf("Blockchain not found: %d", t.ChainId)
+			continue
+		}
+
+		sp := t.PriceFeedParam
+		if len(sp) > 12 {
+			sp = sp[:9] + "..."
+		}
+
+		url := price.GetUrl(t.PriceFeeder, t.ChainId, t.PriceFeedParam)
+
+		ui.Terminal.Screen.AddLink(
+			fmt.Sprintf("%-14s %-12s", t.PriceFeeder, sp),
+			"open "+url,
+			url, "")
+
+		ui.Printf(" %-8s ", t.Symbol)
+
+		if t.Price != 0. {
+			cmn.AddDollarLink(ui.Terminal.Screen, t.Price)
+		} else {
+			ui.Printf("          ")
+		}
+
+		ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command token edit "+strconv.Itoa(t.ChainId)+" "+t.Address.String()+" ", "Edit token", "")
+
+		if t.PriceFeeder == "" {
+			ui.Terminal.Screen.AddLink(gocui.ICON_FEED, "command p discover '"+b.Name+"' '"+t.Address.String()+"'", "Discover price", "")
+		} else {
+			ui.Printf("  ")
+		}
+
+		if t.Native {
+			ui.Printf("Native     ")
+		} else {
+			cmn.AddAddressShortLink(ui.Terminal.Screen, t.Address)
+		}
+
+		ui.Printf(" %-12s %-s\n", b.Name, t.Name)
+	}
+
+	ui.Printf("\n")
+
 }
