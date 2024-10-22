@@ -270,16 +270,17 @@ func Signer_Process(c *Command, input string) {
 					`
 <c> Are you sure you want to remove 
 <c> signer '`+p1+"' ?\n",
-					func() {
+					func() bool {
 						cmn.CurrentWallet.Signers = append(cmn.CurrentWallet.Signers[:i], cmn.CurrentWallet.Signers[i+1:]...)
 
 						err := cmn.CurrentWallet.Save()
 						if err != nil {
 							ui.PrintErrorf("Failed to save wallet: %s", err)
-							return
+							return false
 						}
 
 						ui.Printf("\nSigner %s removed\n", p1)
+						return true
 					}))
 				return
 			}
@@ -292,15 +293,16 @@ func Signer_Process(c *Command, input string) {
 <c> Are you sure you want to remove 
 <c> signer's copy '`+p1+"' ?\n",
 
-						func() {
+						func() bool {
 							s.Copies = append(s.Copies[:j], s.Copies[j+1:]...)
 
 							err := cmn.CurrentWallet.Save()
 							if err != nil {
 								ui.PrintErrorf("Failed to save wallet: %s", err)
-								return
+								return false
 							}
 							ui.Printf("\nSigner's copy %s removed\n", p1)
+							return true
 						}))
 					return
 				}
@@ -319,7 +321,7 @@ func Signer_Process(c *Command, input string) {
 		bus.Send("ui", "popup", ui.DlgConfirm(
 			"Promote signer",
 			`Are you sure you want to promote signer '`+p1+"' to main signer?\n",
-			func() {
+			func() bool {
 				// move all the addresses to the new main signer
 				for _, a := range cmn.CurrentWallet.Addresses {
 					if a.Signer == s.Name {
@@ -335,10 +337,11 @@ func Signer_Process(c *Command, input string) {
 				err := cmn.CurrentWallet.Save()
 				if err != nil {
 					ui.PrintErrorf("\nFailed to save wallet: %s\n", err)
-					return
+					return false
 				}
 
 				ui.Printf("\nSigner %s promoted\n", p1)
+				return true
 			}))
 
 	case "edit":

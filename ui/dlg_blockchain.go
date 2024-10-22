@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/AlexNa-Holdings/web3pro/cmn"
@@ -8,32 +9,30 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-// name == ""  mreans add new custom blockchain
-func DlgBlockchain(name string) *gocui.Popup {
+// chain_id = 0  means add new custom blockchain
+func DlgBlockchain(chain_id int) *gocui.Popup {
 
-	if cmn.CurrentWallet == nil {
+	w := cmn.CurrentWallet
+	if w == nil {
 		Notification.ShowError("No wallet open")
 		return nil
 	}
 
-	bch_index := -1
+	chain_line := ""
+	if chain_id == 0 {
+		chain_line = `           ChainId: <input id:chainid size:16 value:""> `
+	} else {
+		chain_line = fmt.Sprintf("           ChainId: %d ", chain_id)
+	}
 
-	if name != "" {
-		for i, bch := range cmn.CurrentWallet.Blockchains {
-			if bch.Name == name {
-				bch_index = i
-				break
-			}
-		}
-
-		if bch_index == -1 {
-			Notification.ShowErrorf("Blockchain %s not found", name)
-			return nil
-		}
+	b := w.GetBlockchain(chain_id)
+	if chain_id != 0 && b == nil {
+		Notification.ShowErrorf("Blockchain id %d not found", chain_id)
+		return nil
 	}
 
 	title := "Add Blockchain"
-	if name != "" {
+	if chain_id != 0 {
 		title = "Edit Blockchain"
 	}
 
@@ -42,20 +41,21 @@ func DlgBlockchain(name string) *gocui.Popup {
 		OnOverHotspot: cmn.StandardOnOverHotspot,
 		OnOpen: func(v *gocui.View) {
 			v.SetSelectList("explorer_api_type", cmn.EXPLORER_API_TYPES)
-			if bch_index != -1 {
-				bch := cmn.CurrentWallet.Blockchains[bch_index]
-				v.SetInput("name", bch.Name)
-				v.SetInput("rpc", bch.Url)
-				v.SetInput("chainid", strconv.Itoa(int(bch.ChainId)))
-				v.SetInput("explorer", bch.ExplorerUrl)
-				v.SetInput("api_token", bch.ExplorerAPIToken)
-				v.SetInput("currency", bch.Currency)
-				v.SetInput("multicall", bch.Multicall.String())
-				if bch.WTokenAddress != (common.Address{}) {
-					v.SetInput("wtoken_address", bch.WTokenAddress.String())
+			if b != nil {
+				v.SetInput("name", b.Name)
+				v.SetInput("rpc", b.Url)
+				v.SetInput("chainid", strconv.Itoa(chain_id))
+				v.SetInput("explorer", b.ExplorerUrl)
+				v.SetInput("api_token", b.ExplorerAPIToken)
+				v.SetInput("currency", b.Currency)
+				if b.Multicall != (common.Address{}) {
+					v.SetInput("multicall", b.Multicall.String())
 				}
-				v.SetInput("explorer_api_url", bch.ExplorerAPIUrl)
-				v.SetInput("explorer_api_type", bch.ExplorerApiType)
+				if b.WTokenAddress != (common.Address{}) {
+					v.SetInput("wtoken_address", b.WTokenAddress.String())
+				}
+				v.SetInput("explorer_api_url", b.ExplorerAPIUrl)
+				v.SetInput("explorer_api_type", b.ExplorerApiType)
 			}
 		},
 		OnClickHotspot: func(v *gocui.View, hs *gocui.Hotspot) {
@@ -69,11 +69,10 @@ func DlgBlockchain(name string) *gocui.Popup {
 						break
 					}
 
-					for i, bch := range cmn.CurrentWallet.Blockchains {
-						if bch.Name == name && (i == -1 || i != bch_index) {
-							Notification.ShowErrorf("Blockchain %s already exists", name)
-							break
-						}
+					bn := w.GetBlockchainByName(name)
+					if bn != nil && (chain_id == 0 || bn.ChainId != chain_id) {
+						Notification.ShowErrorf("Blockchain %s already exists", name)
+						break
 					}
 
 					rpc := v.GetInput("rpc")
@@ -81,19 +80,6 @@ func DlgBlockchain(name string) *gocui.Popup {
 					if len(rpc) == 0 {
 						Notification.ShowError("RPC URL cannot be empty")
 						break
-					}
-
-					chainid, err := strconv.Atoi(v.GetInput("chainid"))
-					if err != nil || chainid <= 0 {
-						Notification.ShowError("Invalid ChainId")
-						break
-					}
-
-					for i, bch := range cmn.CurrentWallet.Blockchains {
-						if bch.ChainId == chainid && (i == -1 || i != bch_index) {
-							Notification.ShowErrorf("Chain id %d already used by %s", chainid, bch.Name)
-							break
-						}
 					}
 
 					explorer := v.GetInput("explorer")
@@ -126,32 +112,47 @@ func DlgBlockchain(name string) *gocui.Popup {
 
 					wta := common.HexToAddress(wtoken_address)
 
-					if bch_index != -1 {
-						cmn.CurrentWallet.Blockchains[bch_index].Name = name
-						cmn.CurrentWallet.Blockchains[bch_index].Url = rpc
-						cmn.CurrentWallet.Blockchains[bch_index].ChainId = chainid
-						cmn.CurrentWallet.Blockchains[bch_index].ExplorerUrl = explorer
-						cmn.CurrentWallet.Blockchains[bch_index].ExplorerAPIToken = api_token
-						cmn.CurrentWallet.Blockchains[bch_index].ExplorerAPIUrl = explorer_api_url
-						cmn.CurrentWallet.Blockchains[bch_index].ExplorerApiType = explorer_api_type
-						cmn.CurrentWallet.Blockchains[bch_index].Currency = currency
-						cmn.CurrentWallet.Blockchains[bch_index].WTokenAddress = wta
-						cmn.CurrentWallet.Blockchains[bch_index].Multicall = common.HexToAddress(multicall)
+					var err error
+					if chain_id != 0 {
+						err = w.EditBlockchain(&cmn.Blockchain{
+							Name:             name,
+							Url:              rpc,
+							ChainId:          chain_id,
+							ExplorerUrl:      explorer,
+							ExplorerAPIToken: api_token,
+							ExplorerAPIUrl:   explorer_api_url,
+							ExplorerApiType:  explorer_api_type,
+							Currency:         currency,
+							WTokenAddress:    wta,
+							Multicall:        common.HexToAddress(multicall),
+						})
 					} else {
-						cmn.CurrentWallet.Blockchains = append(cmn.CurrentWallet.Blockchains, &cmn.Blockchain{
+						var chainid int
+						chainid, err = strconv.Atoi(v.GetInput("chainid"))
+						if err != nil || chainid <= 0 {
+							Notification.ShowError("Invalid ChainId")
+							break
+						}
+
+						if w.GetBlockchain(chainid) != nil {
+							Notification.ShowErrorf("ChainId %d already exists", chainid)
+							break
+						}
+
+						err = w.AddBlockchain(&cmn.Blockchain{
 							Name:             name,
 							Url:              rpc,
 							ChainId:          chainid,
 							ExplorerUrl:      explorer,
 							ExplorerAPIToken: api_token,
+							ExplorerAPIUrl:   explorer_api_url,
+							ExplorerApiType:  explorer_api_type,
 							Currency:         currency,
 							WTokenAddress:    wta,
 							Multicall:        common.HexToAddress(multicall),
 						})
 					}
 
-					cmn.CurrentWallet.AuditNativeTokens()
-					err = cmn.CurrentWallet.Save()
 					if err != nil {
 						Notification.ShowErrorf("Failed to save wallet: %s", err)
 						return
@@ -168,7 +169,7 @@ func DlgBlockchain(name string) *gocui.Popup {
 		Template: `
               Name: <input id:name size:32 value:""> 
                RPC: <input id:rpc size:43 value:""> 
-           ChainId: <input id:chainid size:16 value:""> 
+` + chain_line + `
           Currency: <input id:currency size:16 value:""> 
 Wrapped Token Addr: <input id:wtoken_address size:43 value:""> 
 Multicall Contract: <input id:multicall size:43 value:"">

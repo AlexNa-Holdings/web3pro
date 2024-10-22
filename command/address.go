@@ -119,15 +119,16 @@ func Address_Process(c *Command, input string) {
 <c>Are you sure you want to remove address:
 <c> `+a.Name+`
 <c> `+a.Address.String()+"? \n",
-					func() {
+					func() bool {
 						w.Addresses = append(w.Addresses[:i], w.Addresses[i+1:]...)
 
 						err := w.Save()
 						if err != nil {
 							ui.PrintErrorf("Error saving wallet: %v", err)
-							return
+							return false
 						}
 						ui.Notification.Show("Address removed")
+						return true
 					}))
 
 				return

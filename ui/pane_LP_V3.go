@@ -20,7 +20,7 @@ var lp_info_list []*bus.B_LP_V3_GetPositionStatus_Response = make([]*bus.B_LP_V3
 
 var LP_V3 LP_V3Pane = LP_V3Pane{
 	PaneDescriptor: PaneDescriptor{
-		MinWidth:  60,
+		MinWidth:  90,
 		MinHeight: 2,
 		MaxHeight: 30,
 	},
@@ -95,6 +95,8 @@ func (p *LP_V3Pane) updateList() {
 		return
 	}
 
+	total_gain := 0.0
+
 	list := make([]*bus.B_LP_V3_GetPositionStatus_Response, 0)
 
 	for _, pos := range w.LP_V3_Positions {
@@ -109,7 +111,14 @@ func (p *LP_V3Pane) updateList() {
 			continue
 		}
 
-		list = append(list, sr.Data.(*bus.B_LP_V3_GetPositionStatus_Response))
+		resp, ok := sr.Data.(*bus.B_LP_V3_GetPositionStatus_Response)
+		if !ok {
+			log.Error().Msg("get_position_status")
+			continue
+		}
+
+		total_gain += resp.Dollars
+		list = append(list, resp)
 	}
 
 	sort.Slice(list, func(i, j int) bool {
@@ -140,6 +149,11 @@ func (p *LP_V3Pane) updateList() {
 			return nil
 		})
 	}
+
+	if LP_V3.View != nil {
+		LP_V3.View.Subtitle = fmt.Sprintf("NPos:%d Gain:$%.2f", len(list), total_gain)
+	}
+
 }
 
 func (p *LP_V3Pane) rebuidTemplate() string {

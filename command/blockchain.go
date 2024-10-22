@@ -96,7 +96,7 @@ func Blockchain_Process(c *Command, input string) {
 	switch subcommand {
 	case "add":
 		if b_name == "custom" || b_name == "" {
-			bus.Send("ui", "popup", ui.DlgBlockchain(""))
+			bus.Send("ui", "popup", ui.DlgBlockchain(0))
 		} else {
 
 			// check if such blockchain already added
@@ -111,10 +111,7 @@ func Blockchain_Process(c *Command, input string) {
 				if b.Name == b_name {
 
 					bch := b
-					w.Blockchains = append(w.Blockchains, &bch)
-
-					w.AuditNativeTokens()
-					err := w.Save()
+					err := w.AddBlockchain(&bch)
 					if err != nil {
 						ui.PrintErrorf("Failed to save wallet: %s", err)
 						return
@@ -151,14 +148,15 @@ func Blockchain_Process(c *Command, input string) {
 					`
 <c>Are you sure you want to remove 
 <c>blockchain '`+b_name+"' ?\n",
-					func() {
+					func() bool {
 						err := w.DeleteBlockchain(b_name)
 						if err != nil {
 							ui.PrintErrorf("Failed to save wallet: %s", err)
-							return
+							return false
 						}
 
 						ui.Printf("\nBlockchain %s removed\n", b_name)
+						return true
 					}))
 				return
 			}
@@ -189,14 +187,14 @@ func Blockchain_Process(c *Command, input string) {
 			return
 		}
 
-		for _, b := range w.Blockchains {
-			if b.Name == b_name {
-				bus.Send("ui", "popup", ui.DlgBlockchain(b_name))
-				return
-			}
+		b := w.GetBlockchainByName(b_name)
+		if b == nil {
+			ui.PrintErrorf("Blockchain %s not found", b_name)
+			return
 		}
 
-		ui.PrintErrorf("Blockchain %s not found", b_name)
+		bus.Send("ui", "popup", ui.DlgBlockchain(b.ChainId))
+
 	case "set":
 		if b_name == "" {
 			ui.PrintErrorf("Usage: blockchain use [blockchain]")

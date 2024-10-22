@@ -30,12 +30,11 @@ func Open(name string, pass string) error {
 
 	w, err := openFromFile(DataFolder+"/wallets/"+name, pass)
 
-	if err == nil {
-		w.filePath = DataFolder + "/wallets/" + name
-		w.password = pass
-		w.writeMutex = sync.Mutex{}
+	w.writeMutex.Lock()
+	defer w.writeMutex.Unlock()
 
-		w.AuditNativeTokens()
+	if err == nil {
+		w._locked_AuditNativeTokens()
 		if w.CurrentChain == "" || w.GetBlockchainByName(w.CurrentChain) == nil {
 			if len(w.Blockchains) > 0 {
 				w.CurrentChain = w.Blockchains[0].Name
@@ -93,13 +92,12 @@ func (w *Wallet) DeleteBlockchain(name string) error {
 			w.LP_V3_Providers = append(w.LP_V3_Providers[:i], w.LP_V3_Providers[i+1:]...)
 		}
 	}
+	w._locked_AuditNativeTokens()
 
-	w.AuditNativeTokens()
-
-	return w.Save()
+	return w._locked_Save()
 }
 
-func (w *Wallet) AuditNativeTokens() {
+func (w *Wallet) _locked_AuditNativeTokens() {
 
 	eddited := false
 
@@ -169,10 +167,10 @@ func (w *Wallet) AuditNativeTokens() {
 		eddited = true
 	}
 
-	w.MarkUniqueTokens()
+	w._locked_MarkUniqueTokens()
 
 	if eddited {
-		w.Save()
+		w._locked_Save()
 	}
 }
 
@@ -209,6 +207,10 @@ func (w *Wallet) Save() error {
 	return SaveToFile(w, w.filePath, w.password)
 }
 
+func (w *Wallet) _locked_Save() error {
+	return _locked_SaveToFile(w, w.filePath, w.password)
+}
+
 func Exists(name string) bool {
 	_, err := os.Stat(DataFolder + "/wallets/" + name)
 	return !os.IsNotExist(err)
@@ -221,8 +223,9 @@ func Create(name, pass string) error {
 }
 
 func (w *Wallet) RemoveOrigin(url string) error {
-
 	w.writeMutex.Lock()
+	defer w.writeMutex.Unlock()
+
 	deleted := false
 	for i, o := range w.Origins {
 		if o.URL == url {
@@ -240,7 +243,7 @@ func (w *Wallet) RemoveOrigin(url string) error {
 
 	if deleted {
 		bus.Send("wallet", "origin-changed", url)
-		return w.Save()
+		return w._locked_Save()
 	}
 
 	return errors.New("origin not found")
@@ -256,6 +259,9 @@ func (w *Wallet) GetOrigin(url string) *Origin {
 }
 
 func (w *Wallet) AddOrigin(o *Origin) error {
+	w.writeMutex.Lock()
+	defer w.writeMutex.Unlock()
+
 	if w.GetOrigin(o.URL) != nil {
 		log.Error().Msgf("Origin already exists: %s\n", o.URL)
 		return fmt.Errorf("origin already exists: %s", o.URL)
@@ -280,10 +286,13 @@ func (w *Wallet) AddOrigin(o *Origin) error {
 	w.writeMutex.Unlock()
 
 	bus.Send("wallet", "origin-changed", o.URL)
-	return w.Save()
+	return w._locked_Save()
 }
 
 func (w *Wallet) RemoveOriginAddress(url string, a string) error {
+	w.writeMutex.Lock()
+	defer w.writeMutex.Unlock()
+
 	o := w.GetOrigin(url)
 	if o == nil {
 		return errors.New("origin not found")
@@ -308,7 +317,7 @@ func (w *Wallet) RemoveOriginAddress(url string, a string) error {
 	}
 
 	bus.Send("wallet", "origin-addresses-changed", url)
-	return w.Save()
+	return w._locked_Save()
 }
 
 func (o *Origin) IsAllowed(a common.Address) bool {
@@ -321,6 +330,9 @@ func (o *Origin) IsAllowed(a common.Address) bool {
 }
 
 func (w *Wallet) AddOriginAddress(url string, a string) error {
+	w.writeMutex.Lock()
+	defer w.writeMutex.Unlock()
+
 	o := w.GetOrigin(url)
 	if o == nil {
 		return errors.New("origin not found")
@@ -332,7 +344,6 @@ func (w *Wallet) AddOriginAddress(url string, a string) error {
 	}
 
 	found := false
-	w.writeMutex.Lock()
 	for _, na := range o.Addresses {
 		if na == addr.Address {
 			found = true
@@ -342,14 +353,16 @@ func (w *Wallet) AddOriginAddress(url string, a string) error {
 	if !found {
 		o.Addresses = append(o.Addresses, addr.Address)
 	}
-	w.writeMutex.Unlock()
 
 	bus.Send("wallet", "origin-addresses-changed", url)
 
-	return w.Save()
+	return w._locked_Save()
 }
 
 func (w *Wallet) SetOriginChain(url string, ch string) error {
+	w.writeMutex.Lock()
+	defer w.writeMutex.Unlock()
+
 	o := w.GetOrigin(url)
 	if o == nil {
 		return errors.New("origin not found")
@@ -364,10 +377,13 @@ func (w *Wallet) SetOriginChain(url string, ch string) error {
 
 	bus.Send("wallet", "origin-chain-changed", url)
 
-	return w.Save()
+	return w._locked_Save()
 }
 
 func (w *Wallet) SetOrigin(url string) error {
+	w.writeMutex.Lock()
+	defer w.writeMutex.Unlock()
+
 	o := w.GetOrigin(url)
 	if o == nil {
 		return errors.New("origin not found")
@@ -375,10 +391,13 @@ func (w *Wallet) SetOrigin(url string) error {
 
 	w.CurrentOrigin = url
 
-	return w.Save()
+	return w._locked_Save()
 }
 
 func (w *Wallet) PromoteOriginAddress(url string, a string) error {
+	w.writeMutex.Lock()
+	defer w.writeMutex.Unlock()
+
 	o := w.GetOrigin(url)
 	if o == nil {
 		return errors.New("origin not found")
@@ -389,7 +408,6 @@ func (w *Wallet) PromoteOriginAddress(url string, a string) error {
 		return errors.New("address not found")
 	}
 
-	w.writeMutex.Lock()
 	found := false
 	for i, na := range o.Addresses {
 		if na == addr.Address {
@@ -401,7 +419,6 @@ func (w *Wallet) PromoteOriginAddress(url string, a string) error {
 			break
 		}
 	}
-	w.writeMutex.Unlock()
 
 	if !found {
 		return errors.New("address not found")
@@ -409,7 +426,7 @@ func (w *Wallet) PromoteOriginAddress(url string, a string) error {
 
 	bus.Send("wallet", "origin-addresses-changed", url)
 
-	return w.Save()
+	return w._locked_Save()
 }
 
 func WalletList() []string {
@@ -481,6 +498,11 @@ func SaveToFile(w *Wallet, file, pass string) error {
 	w.writeMutex.Lock()
 	defer w.writeMutex.Unlock()
 
+	return _locked_SaveToFile(w, file, pass)
+}
+
+func _locked_SaveToFile(w *Wallet, file, pass string) error {
+
 	jsonData, err := json.Marshal(w)
 	if err != nil {
 		log.Error().Msgf("Error marshaling JSON: %v\n", err)
@@ -531,7 +553,12 @@ func openFromFile(file string, pass string) (*Wallet, error) {
 		return nil, err
 	}
 
-	w := &Wallet{}
+	w := &Wallet{
+		filePath:   file,
+		password:   pass,
+		writeMutex: sync.Mutex{},
+	}
+
 	err = json.Unmarshal(decrypted, w)
 	if err != nil {
 		log.Error().Msgf("Error unmarshaling JSON: %v\n", err)
@@ -673,6 +700,9 @@ func (w *Wallet) GetNativeToken(b *Blockchain) (*Token, error) {
 }
 
 func (w *Wallet) AddToken(chain int, a common.Address, n string, s string, d int) error {
+	w.writeMutex.Lock()
+	defer w.writeMutex.Unlock()
+
 	if w.GetTokenByAddress(chain, a) != nil {
 		return errors.New("token already exists")
 	}
@@ -686,9 +716,9 @@ func (w *Wallet) AddToken(chain int, a common.Address, n string, s string, d int
 	}
 
 	w.Tokens = append(w.Tokens, t)
-	w.MarkUniqueTokens()
+	w._locked_MarkUniqueTokens()
 
-	return w.Save()
+	return w._locked_Save()
 }
 
 func (w *Wallet) GetTokenByAddress(chain int, a common.Address) *Token {
@@ -725,16 +755,23 @@ func (w *Wallet) GetTokenBySymbol(chain int, s string) *Token {
 	return nil
 }
 
-func (w *Wallet) DeleteToken(chain int, a common.Address) {
+func (w *Wallet) DeleteToken(chain int, a common.Address) error {
+	w.writeMutex.Lock()
+	defer w.writeMutex.Unlock()
+
 	for i, t := range w.Tokens {
 		if t.ChainId == chain && t.Address == a {
 			w.Tokens = append(w.Tokens[:i], w.Tokens[i+1:]...)
-			return
+
+			w._locked_MarkUniqueTokens()
+			return w._locked_Save()
 		}
 	}
+
+	return errors.New("token not found")
 }
 
-func (w *Wallet) MarkUniqueTokens() {
+func (w *Wallet) _locked_MarkUniqueTokens() {
 	for _, b := range w.Blockchains {
 		for i, t := range w.Tokens {
 			if t.ChainId == b.ChainId {
@@ -776,6 +813,49 @@ func (w *Wallet) UntrustContract(addr common.Address) error {
 	return w.Save()
 }
 
+func (w *Wallet) AddBlockchain(b *Blockchain) error {
+	w.writeMutex.Lock()
+	defer w.writeMutex.Unlock()
+
+	if w.GetBlockchain(b.ChainId) != nil {
+		return errors.New("blockchain already exists")
+	}
+
+	if w.GetBlockchainByName(b.Name) != nil {
+		return errors.New("blockchain with the same name already exists")
+	}
+
+	w.Blockchains = append(w.Blockchains, b)
+
+	w._locked_AuditNativeTokens()
+
+	return w._locked_Save()
+}
+
+func (w *Wallet) EditBlockchain(ub *Blockchain) error {
+	w.writeMutex.Lock()
+	defer w.writeMutex.Unlock()
+
+	b := w.GetBlockchain(ub.ChainId)
+	if b == nil {
+		return errors.New("blockchain not found")
+	}
+
+	b.Name = ub.Name
+	b.Url = ub.Url
+	b.Currency = ub.Currency
+	b.ExplorerUrl = ub.ExplorerUrl
+	b.ExplorerAPIToken = ub.ExplorerAPIToken
+	b.ExplorerAPIUrl = ub.ExplorerAPIUrl
+	b.WTokenAddress = ub.WTokenAddress
+	b.Multicall = ub.Multicall
+
+	w._locked_AuditNativeTokens()
+
+	return w._locked_Save()
+
+}
+
 func (w *Wallet) AddLP_V3(lp *LP_V3) error {
 	if w.GetLP_V3(lp.ChainId, lp.Provider) != nil {
 		return errors.New("provider already exists")
@@ -808,6 +888,9 @@ func (w *Wallet) GetLP_V3_by_name(chainId int, name string) *LP_V3 {
 }
 
 func (w *Wallet) RemoveLP_V3(chainId int, provider common.Address) error {
+	w.writeMutex.Lock()
+	defer w.writeMutex.Unlock()
+
 	for i, lp := range w.LP_V3_Providers {
 		if lp.ChainId == chainId && lp.Provider == provider {
 			w.LP_V3_Providers = append(w.LP_V3_Providers[:i], w.LP_V3_Providers[i+1:]...)
@@ -819,7 +902,7 @@ func (w *Wallet) RemoveLP_V3(chainId int, provider common.Address) error {
 				}
 			}
 
-			return w.Save()
+			return w._locked_Save()
 		}
 	}
 
@@ -827,6 +910,8 @@ func (w *Wallet) RemoveLP_V3(chainId int, provider common.Address) error {
 }
 
 func (w *Wallet) AddLP_V3Position(lp *LP_V3_Position) error {
+	w.writeMutex.Lock()
+	defer w.writeMutex.Unlock()
 
 	if pos := w.GetLP_V3Position(lp.ChainId, lp.Provider, lp.NFT_Token); pos != nil {
 		// update
@@ -838,7 +923,7 @@ func (w *Wallet) AddLP_V3Position(lp *LP_V3_Position) error {
 	} else {
 		w.LP_V3_Positions = append(w.LP_V3_Positions, lp)
 	}
-	return w.Save()
+	return w._locked_Save()
 }
 
 func (w *Wallet) GetLP_V3Position(chainId int, provider common.Address, nft *big.Int) *LP_V3_Position {
@@ -853,10 +938,13 @@ func (w *Wallet) GetLP_V3Position(chainId int, provider common.Address, nft *big
 }
 
 func (w *Wallet) RemoveLP_V3Position(addr common.Address, chainId int, provider common.Address, nft *big.Int) error {
+	w.writeMutex.Lock()
+	defer w.writeMutex.Unlock()
+
 	for i, lp := range w.LP_V3_Positions {
 		if lp.Owner.Cmp(addr) == 0 && lp.ChainId == chainId && lp.Provider == provider && lp.NFT_Token.Cmp(nft) == 0 {
 			w.LP_V3_Positions = append(w.LP_V3_Positions[:i], w.LP_V3_Positions[i+1:]...)
-			return w.Save()
+			return w._locked_Save()
 		}
 	}
 	return errors.New("position not found")

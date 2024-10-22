@@ -6,7 +6,7 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 )
 
-func DlgConfirm(title string, text string, action func()) *gocui.Popup {
+func DlgConfirm(title string, text string, action func() bool) *gocui.Popup {
 	return &gocui.Popup{
 		Title: title,
 		OnOpen: func(v *gocui.View) {
@@ -18,9 +18,14 @@ func DlgConfirm(title string, text string, action func()) *gocui.Popup {
 				switch strings.ToLower(hs.Value) {
 				case "button ok":
 					if action != nil {
-						action()
+						if action() {
+							Gui.HidePopup()
+						}
+					} else {
+						Gui.HidePopup()
 					}
-					Gui.HidePopup()
+
+					Flush()
 
 				case "button cancel":
 					Gui.HidePopup()

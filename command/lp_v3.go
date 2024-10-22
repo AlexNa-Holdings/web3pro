@@ -226,13 +226,14 @@ func LP_V3_Process(c *Command, input string) {
  Blockchain:`+b.Name+`
     Address:`+lp.Provider.String()+`
 `,
-			func() {
+			func() bool {
 				err := w.RemoveLP_V3(b.ChainId, lp.Provider)
 				if err != nil {
 					ui.PrintErrorf("Error removing provider: %v", err)
-					return
+					return false
 				}
 				ui.Notification.Show("Provider removed")
+				return true
 			}))
 
 	case "discover":

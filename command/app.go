@@ -224,18 +224,19 @@ func App_Process(c *Command, input string) {
 <c>Are you sure you want to deny access for the web application
 `+origin+`?
 `,
-			func() {
+			func() bool {
 				err := w.RemoveOrigin(origin)
 				if err != nil {
 					ui.PrintErrorf("Error removing origin: %v", err)
-					return
+					return false
 				}
 				err = w.Save()
 				if err != nil {
 					ui.PrintErrorf("Error saving wallet: %v", err)
-					return
+					return false
 				}
 				bus.Send("ui", "notify", "Web application removed: "+origin)
+				return true
 			}))
 
 	case "remove_addr":
@@ -247,13 +248,14 @@ from the web application
 <b>`+origin+`</b>?
 `,
 
-			func() {
+			func() bool {
 				err := w.RemoveOriginAddress(origin, addr)
 				if err != nil {
 					ui.PrintErrorf("Error saving wallet: %v", err)
-					return
+					return false
 				}
 				bus.Send("ui", "notify", "Address removed: "+addr)
+				return true
 			}))
 	case "add_addr":
 		err = w.AddOriginAddress(origin, addr)

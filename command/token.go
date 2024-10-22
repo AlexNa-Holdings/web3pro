@@ -234,11 +234,10 @@ func Token_Process(c *Command, input string) {
 <c>Are you sure you want to remove token:
 <c> `+t.Name+`
 <c> `+t.Symbol+"? \n",
-			func() {
+			func() bool {
 				w.DeleteToken(b.ChainId, addr)
-				w.MarkUniqueTokens()
-				w.Save()
 				ui.Notification.Show("Token removed")
+				return true
 			}))
 	case "list", "":
 
