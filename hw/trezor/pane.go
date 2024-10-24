@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/ui"
 	"github.com/rs/zerolog/log"
@@ -83,7 +84,23 @@ func (p *TrezorPane) SetView(x0, y0, x1, y1 int, overlap byte) {
 }
 
 func (p *TrezorPane) rebuidTemplate() {
-	temp := "<w>Trezor"
+	temp := "<w>"
+
+	if p.Trezor != nil {
+		temp += fmt.Sprintf("Firmware: %d.%d\n", *p.Trezor.MajorVersion, *p.Trezor.MinorVersion)
+
+		temp += fmt.Sprintf("      SN: %s\n",
+			cmn.TagLink(*p.Trezor.DeviceId, "copy serial number", "copy "+*p.Trezor.DeviceId))
+
+		temp += "Features: "
+
+		if p.Trezor.PassphraseAlwaysOnDevice != nil && *p.Trezor.PassphraseAlwaysOnDevice {
+			temp += cmn.TagLink(gocui.ICON_CHECK, "Passphrase support", "command ???")
+		} else {
+			temp += cmn.TagLink(gocui.ICON_UNCHECK, "Passphrase support", "command ???")
+		}
+		temp += " Password support\n"
+	}
 
 	p.Template = temp
 }

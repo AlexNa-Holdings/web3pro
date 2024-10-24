@@ -14,17 +14,17 @@ import (
 
 type LP_V3Pane struct {
 	PaneDescriptor
-	Template string
-	On       bool
+	On bool
 }
 
 var lp_info_list []*bus.B_LP_V3_GetPositionStatus_Response = make([]*bus.B_LP_V3_GetPositionStatus_Response, 0)
 
 var LP_V3 LP_V3Pane = LP_V3Pane{
 	PaneDescriptor: PaneDescriptor{
-		MinWidth:  90,
-		MinHeight: 2,
-		MaxHeight: 30,
+		MinWidth:               90,
+		MinHeight:              2,
+		MaxHeight:              30,
+		SupportCachedHightCalc: true,
 	},
 }
 
@@ -41,7 +41,7 @@ func (p *LP_V3Pane) GetDesc() *PaneDescriptor {
 }
 
 func (p *LP_V3Pane) EstimateLines(w int) int {
-	return gocui.EstimateTemplateLines(p.Template, w)
+	return gocui.EstimateTemplateLines(p.GetTemplate(), w)
 }
 
 func (p *LP_V3Pane) SetView(x0, y0, x1, y1 int, overlap byte) {
@@ -56,14 +56,14 @@ func (p *LP_V3Pane) SetView(x0, y0, x1, y1 int, overlap byte) {
 		v.Title = "LP v3"
 		v.ScrollBar = true
 		v.OnResize = func(v *gocui.View) {
-			v.RenderTemplate(p.Template)
+			v.RenderTemplate(p.GetTemplate())
 			v.ScrollTop()
 		}
 		v.OnOverHotspot = ProcessOnOverHotspot
 		v.OnClickHotspot = ProcessOnClickHotspot
 
-		p.Template = p.rebuidTemplate()
-		v.RenderTemplate(p.Template)
+		p.SetTemplate(p.rebuidTemplate())
+		v.RenderTemplate(p.GetTemplate())
 	}
 }
 
@@ -159,8 +159,8 @@ func (p *LP_V3Pane) updateList() {
 	if LP_V3.View != nil {
 		Gui.Update(func(g *gocui.Gui) error {
 			if LP_V3.View != nil {
-				p.Template = LP_V3.rebuidTemplate()
-				LP_V3.View.RenderTemplate(p.Template)
+				p.SetTemplate(LP_V3.rebuidTemplate())
+				LP_V3.View.RenderTemplate(p.GetTemplate())
 				LP_V3.View.ScrollTop()
 			}
 			return nil

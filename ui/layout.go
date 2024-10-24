@@ -120,7 +120,7 @@ func Layout(g *gocui.Gui) error {
 			row_height = hight_left
 		} else {
 			for i, d := range row {
-				n_lines := pane_map[d].EstimateLines(widths[i] - 1)
+				n_lines := FastEstimateLines(pane_map[d], widths[i]-1)
 				if n_lines > 0 {
 					height := n_lines + 1
 					if d.MaxHeight > 0 {

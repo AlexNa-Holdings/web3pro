@@ -14,14 +14,14 @@ import (
 
 type StatusPane struct {
 	PaneDescriptor
-	Template string
-	On       bool
+	On bool
 }
 
 var Status StatusPane = StatusPane{
 	PaneDescriptor: PaneDescriptor{
-		MinWidth:  45,
-		MinHeight: 1,
+		MinWidth:               45,
+		MinHeight:              1,
+		SupportCachedHightCalc: true,
 	},
 }
 
@@ -38,7 +38,7 @@ func (p *StatusPane) SetOn(on bool) {
 }
 
 func (p *StatusPane) EstimateLines(w int) int {
-	return gocui.EstimateTemplateLines(p.Template, w)
+	return gocui.EstimateTemplateLines(p.GetTemplate(), w)
 }
 
 func (p *StatusPane) SetView(x0, y0, x1, y1 int, overlap byte) {
@@ -53,7 +53,7 @@ func (p *StatusPane) SetView(x0, y0, x1, y1 int, overlap byte) {
 		v.Autoscroll = false
 		v.ScrollBar = true
 		v.OnResize = func(v *gocui.View) {
-			v.RenderTemplate(p.Template)
+			v.RenderTemplate(p.GetTemplate())
 			v.ScrollTop()
 		}
 		v.OnOverHotspot = ProcessOnOverHotspot
@@ -148,39 +148,11 @@ func (p *StatusPane) rebuidTemplate() {
 		}
 	}
 
-	// connected devices
-	cd := ""
-	r := bus.Fetch("signer", "list", &bus.B_SignerList{Type: "ledger"})
-	if r.Error == nil {
-		if res, ok := r.Data.(*bus.B_SignerList_Response); ok {
-			for i, n := range res.Names {
-				if i > 0 {
-					cd += ", "
-				}
-				cd = fmt.Sprintf("%s(L)", n)
-			}
-		}
-	}
-	r = bus.Fetch("signer", "list", &bus.B_SignerList{Type: "trezor"})
-	if r.Error == nil {
-		if res, ok := r.Data.(*bus.B_SignerList_Response); ok {
-			for i, n := range res.Names {
-				if i > 0 {
-					cd += ", "
-				}
-				cd = fmt.Sprintf("%s(T)", n)
-			}
-		}
-	}
-	if cd != "" {
-		temp += fmt.Sprintf("<b>     HW:</b> %s\n", cd)
-	}
-
-	p.Template = temp
+	p.SetTemplate(temp)
 
 	Gui.Update(func(g *gocui.Gui) error {
 		if Status.View != nil {
-			Status.View.RenderTemplate(p.Template)
+			Status.View.RenderTemplate(p.GetTemplate())
 		}
 		return nil
 	})

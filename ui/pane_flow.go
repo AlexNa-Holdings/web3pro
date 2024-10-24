@@ -17,9 +17,10 @@ func NewFlow(o Orientation, panes []Pane, descr *PaneDescriptor) *PaneFlow {
 
 	if descr == nil {
 		descr = &PaneDescriptor{
-			MinWidth:  30,
-			MinHeight: 1,
-			MaxHeight: 20,
+			MinWidth:               30,
+			MinHeight:              1,
+			MaxHeight:              20,
+			SupportCachedHightCalc: false,
 		}
 	}
 
@@ -137,7 +138,7 @@ func (p *PaneFlow) spread_horizontaly(width int) []int {
 	return ws
 }
 
-func (p *PaneFlow) spread_vertically(height int) []int {
+func (p *PaneFlow) spread_vertically(width, height int) []int {
 
 	hs := make([]int, len(p.Panes))
 	total_height := 0
@@ -145,7 +146,7 @@ func (p *PaneFlow) spread_vertically(height int) []int {
 
 	for i, pane := range p.Panes {
 		if pane.IsOn() {
-			hs[i] = pane.EstimateLines(height)
+			hs[i] = pane.EstimateLines(width)
 			total_height += hs[i]
 			last = i
 		} else {
@@ -194,7 +195,7 @@ func (p *PaneFlow) SetView(x0, y0, x1, y1 int, overlap byte) {
 			}
 		}
 	} else {
-		heights := p.spread_vertically(y1 - y0)
+		heights := p.spread_vertically(x1-x0, y1-y0)
 
 		y := y0
 		for i, pane := range p.Panes {

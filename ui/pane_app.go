@@ -12,15 +12,15 @@ import (
 
 type AppPane struct {
 	PaneDescriptor
-	Template string
-	On       bool
+	On bool
 }
 
 var App AppPane = AppPane{
 	PaneDescriptor: PaneDescriptor{
-		MinWidth:  45,
-		MinHeight: 1,
-		MaxHeight: 20,
+		MinWidth:               45,
+		MinHeight:              1,
+		MaxHeight:              20,
+		SupportCachedHightCalc: true,
 	},
 }
 
@@ -29,7 +29,8 @@ func (p *AppPane) GetDesc() *PaneDescriptor {
 }
 
 func (p *AppPane) EstimateLines(w int) int {
-	return gocui.EstimateTemplateLines(p.Template, w)
+
+	return gocui.EstimateTemplateLines(p.GetTemplate(), w)
 }
 
 func (p *AppPane) IsOn() bool {
@@ -52,7 +53,7 @@ func (p *AppPane) SetView(x0, y0, x1, y1 int, overlap byte) {
 		v.Title = "Web Application"
 		v.ScrollBar = true
 		v.OnResize = func(v *gocui.View) {
-			v.RenderTemplate(p.Template)
+			v.RenderTemplate(p.GetTemplate())
 			v.ScrollTop()
 		}
 		v.OnOverHotspot = ProcessOnOverHotspot
@@ -70,10 +71,10 @@ func AppsLoop() {
 		case "wallet":
 			switch msg.Type {
 			case "open", "saved":
-				App.Template = App.rebuidTemplate()
+				App.SetTemplate(App.rebuidTemplate())
 				Gui.Update(func(g *gocui.Gui) error {
 					if App.View != nil {
-						App.View.RenderTemplate(App.Template)
+						App.View.RenderTemplate(App.GetTemplate())
 					}
 					return nil
 				})
@@ -81,10 +82,10 @@ func AppsLoop() {
 		case "price":
 			switch msg.Type {
 			case "updated":
-				App.Template = App.rebuidTemplate()
+				App.SetTemplate(App.rebuidTemplate())
 				Gui.Update(func(g *gocui.Gui) error {
 					if App.View != nil {
-						App.View.RenderTemplate(App.Template)
+						App.View.RenderTemplate(App.GetTemplate())
 					}
 					return nil
 				})

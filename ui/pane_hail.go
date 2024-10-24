@@ -19,9 +19,10 @@ type HailPaneType struct {
 
 var HailPane HailPaneType = HailPaneType{
 	PaneDescriptor: PaneDescriptor{
-		MinWidth:    40,
-		MinHeight:   1,
-		fixed_width: true,
+		MinWidth:               40,
+		MinHeight:              1,
+		fixed_width:            true,
+		SupportCachedHightCalc: false,
 	},
 }
 

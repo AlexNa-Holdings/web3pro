@@ -41,8 +41,9 @@ var Terminal TerminalPane = TerminalPane{
 	AutoCompleteOn: false,
 	On:             true,
 	PaneDescriptor: PaneDescriptor{
-		MinWidth:  10000, // 10000 is a hack to make it take all the space
-		MinHeight: 1,
+		MinWidth:               10000, // 10000 is a hack to make it take all the space
+		MinHeight:              1,
+		SupportCachedHightCalc: false,
 	},
 }
 
