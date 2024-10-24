@@ -8,14 +8,16 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/hw/trezor/trezorproto"
+	"github.com/AlexNa-Holdings/web3pro/ui"
 	"github.com/rs/zerolog/log"
 )
 
 // connected Trezor
 type Trezor struct {
+	*trezorproto.Features
 	USB_ID string
 	Name   string
-	*trezorproto.Features
+	Pane   *TrezorPane
 }
 
 var trezors = []*Trezor{}
@@ -140,6 +142,7 @@ func remove(usb_id string) {
 		if t.USB_ID == usb_id {
 			bus.Send("ui", "notify", fmt.Sprintf("Trezor disconnected: %s", t.Name))
 			trezors = append(trezors[:i], trezors[i+1:]...)
+			ui.TopLeftFlow.RemovePane(t.Pane)
 			return
 		}
 	}

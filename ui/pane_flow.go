@@ -211,3 +211,18 @@ func (p *PaneFlow) SetView(x0, y0, x1, y1 int, overlap byte) {
 	}
 
 }
+
+func (p *PaneFlow) AddPane(pane Pane) {
+	p.Panes = append(p.Panes, pane)
+	Flush()
+}
+
+func (p *PaneFlow) RemovePane(pane Pane) {
+	for i, pi := range p.Panes {
+		if pi == pane {
+			p.Panes = append(p.Panes[:i], p.Panes[i+1:]...)
+			return
+		}
+	}
+	Flush()
+}

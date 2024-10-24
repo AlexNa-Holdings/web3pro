@@ -10,16 +10,18 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+var TopLeftFlow = NewFlow(
+	FlowVertical,
+	[]Pane{
+		&Status,
+	},
+	&PaneDescriptor{
+		MinWidth:  45,
+		MinHeight: 1,
+	})
+
 var panes = []Pane{
-	NewFlow(
-		FlowVertical,
-		[]Pane{
-			&Status,
-		},
-		&PaneDescriptor{
-			MinWidth:  45,
-			MinHeight: 1,
-		}),
+	TopLeftFlow,
 	&HailPane,
 	&App,
 	&LP_V3,

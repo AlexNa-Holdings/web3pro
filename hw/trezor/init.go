@@ -5,6 +5,7 @@ import (
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/hw/trezor/trezorproto"
+	"github.com/AlexNa-Holdings/web3pro/ui"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/protobuf/proto"
 )
@@ -36,6 +37,9 @@ func init_trezor(usb_id string) (*Trezor, error) {
 
 	bus.Send("signer", "connected", &bus.B_SignerConnected{Type: TRZ, Name: t.Name})
 	log.Trace().Msgf("Initialized trezor dev: %v\n", t.Name)
+
+	t.Pane = NewTrezorPane(t)
+	ui.TopLeftFlow.AddPane(t.Pane)
 
 	return t, nil
 }
