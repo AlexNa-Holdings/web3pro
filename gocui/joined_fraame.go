@@ -9,8 +9,6 @@ func (g *Gui) drawJoinedFrame() error {
 		return nil
 	}
 
-	runeH, runeV := g.JoinedFrameRunes[0], g.JoinedFrameRunes[1]
-
 	fg, bg := g.JoinedFrameFgColor, g.JoinedFrameBgColor
 
 	for _, v := range g.views {
@@ -23,14 +21,12 @@ func (g *Gui) drawJoinedFrame() error {
 				continue
 			}
 			if v.y0 > -1 && v.y0 < g.maxY {
-				if err := g.SetRune(x, v.y0, runeH, fg, bg); err != nil {
-					return err
-				}
+				xy := XY(x, v.y0)
+				intersections[xy] = intersections[xy] | LEFT | RIGHT
 			}
 			if v.y1 > -1 && v.y1 < g.maxY {
-				if err := g.SetRune(x, v.y1, runeH, fg, bg); err != nil {
-					return err
-				}
+				xy := XY(x, v.y1)
+				intersections[xy] = intersections[xy] | LEFT | RIGHT
 			}
 		}
 		for y := v.y0 + 1; y < v.y1 && y < g.maxY; y++ {
@@ -38,14 +34,12 @@ func (g *Gui) drawJoinedFrame() error {
 				continue
 			}
 			if v.x0 > -1 && v.x0 < g.maxX {
-				if err := g.SetRune(v.x0, y, runeV, fg, bg); err != nil {
-					return err
-				}
+				xy := XY(v.x0, y)
+				intersections[xy] = intersections[xy] | TOP | BOTTOM
 			}
 			if v.x1 > -1 && v.x1 < g.maxX {
-				if err := g.SetRune(v.x1, y, runeV, fg, bg); err != nil {
-					return err
-				}
+				xy := XY(v.x1, y)
+				intersections[xy] = intersections[xy] | TOP | BOTTOM
 			}
 		}
 

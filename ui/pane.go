@@ -12,11 +12,12 @@ var panesMutex = &sync.Mutex{}
 type Pane interface {
 	SetView(int, int, int, int, byte)
 	GetDesc() *PaneDescriptor
-	GetTemplate() string
+	EstimateLines(int) int
+	IsOn() bool
+	SetOn(bool)
 }
 
 type PaneDescriptor struct {
-	On          bool
 	MinWidth    int
 	MinHeight   int
 	MaxHeight   int
@@ -25,23 +26,25 @@ type PaneDescriptor struct {
 	View        *gocui.View
 }
 
-func (p *PaneDescriptor) ShowPane() {
+func ShowPane(p Pane) {
 	panesMutex.Lock()
 	defer panesMutex.Unlock()
 
-	p.On = true
+	p.SetOn(true)
 }
 
-func (p *PaneDescriptor) HidePane() {
+func HidePane(p Pane) {
 	panesMutex.Lock()
 	defer panesMutex.Unlock()
 
-	p.On = false
+	p.SetOn(false)
 
-	if p.View != nil {
-		Gui.DeleteView(p.View.Name())
-		log.Debug().Msgf("Deleted view %s", p.View.Name())
-		p.View = nil
+	d := p.GetDesc()
+
+	if d.View != nil {
+		Gui.DeleteView(d.View.Name())
+		log.Debug().Msgf("Deleted view %s", d.View.Name())
+		d.View = nil
 	}
 
 	Flush()

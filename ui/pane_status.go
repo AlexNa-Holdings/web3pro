@@ -15,11 +15,12 @@ import (
 type StatusPane struct {
 	PaneDescriptor
 	Template string
+	On       bool
 }
 
 var Status StatusPane = StatusPane{
 	PaneDescriptor: PaneDescriptor{
-		MinWidth:  30,
+		MinWidth:  45,
 		MinHeight: 1,
 	},
 }
@@ -28,8 +29,16 @@ func (p *StatusPane) GetDesc() *PaneDescriptor {
 	return &p.PaneDescriptor
 }
 
-func (p *StatusPane) GetTemplate() string {
-	return p.Template
+func (p *StatusPane) IsOn() bool {
+	return p.On
+}
+
+func (p *StatusPane) SetOn(on bool) {
+	p.On = on
+}
+
+func (p *StatusPane) EstimateLines(w int) int {
+	return gocui.EstimateTemplateLines(p.Template, w)
 }
 
 func (p *StatusPane) SetView(x0, y0, x1, y1 int, overlap byte) {
@@ -98,10 +107,10 @@ func (p *StatusPane) rebuidTemplate() {
 				change = fmt.Sprintf(" <color fg:green>\uf0d8%.2f%%</color>", t.PriceChange24)
 			}
 			if t.PriceChange24 < 0 {
-				change = fmt.Sprintf(" <color fg:red>\uf0d7%.2f%%</color>", t.PriceChange24)
+				change = fmt.Sprintf(" <color fg:red>\uf0d7%.2f%%</color>", -t.PriceChange24)
 			}
 
-			temp += fmt.Sprintf("<b>Chain:</b> %s | %s %s%s\n",
+			temp += fmt.Sprintf("<b>  Chain:</b> %s | %s %s%s\n",
 				b.Name, t.Symbol,
 				cmn.TagShortDollarLink(t.Price),
 				change)
@@ -125,17 +134,17 @@ func (p *StatusPane) rebuidTemplate() {
 					if err != nil {
 						log.Error().Err(err).Msg("Status: GetNativeToken")
 					} else {
-						balance = fmt.Sprintf(" | %s", cmn.TagShortValueSymbolLink(blnc, t))
+						balance = cmn.TagShortValueSymbolLink(blnc, t)
 
 						if t.Price > 0 {
-							dollars = fmt.Sprintf(" | %s", cmn.TagShortDollarValueLink(blnc, t))
+							dollars = fmt.Sprintf(" %s", cmn.TagShortDollarValueLink(blnc, t))
 						}
 					}
 				}
 			}
 
-			temp += fmt.Sprintf("<b> Addr:</b> %s %s%s%s\n",
-				cmn.TagAddressShortLink(w.CurrentAddress), an, balance, dollars)
+			temp += fmt.Sprintf("<b>   Addr:</b> %s %s\n", cmn.TagAddressShortLink(w.CurrentAddress), an)
+			temp += fmt.Sprintf("<b>Balance:</b> %s%s\n", balance, dollars)
 		}
 	}
 
@@ -164,7 +173,7 @@ func (p *StatusPane) rebuidTemplate() {
 		}
 	}
 	if cd != "" {
-		temp += fmt.Sprintf("<b>   HW:</b> %s\n", cd)
+		temp += fmt.Sprintf("<b>     HW:</b> %s\n", cd)
 	}
 
 	p.Template = temp

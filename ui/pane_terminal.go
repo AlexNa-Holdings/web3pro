@@ -24,6 +24,7 @@ type TerminalPane struct {
 	FormattedPrefix  string
 	AutoCompleteFunc func(string) (string, *[]ACOption, string)
 	History          []string
+	On               bool
 }
 
 type ACOption struct {
@@ -38,10 +39,10 @@ var Terminal TerminalPane = TerminalPane{
 	History:        []string{},
 	ACOptions:      &[]ACOption{},
 	AutoCompleteOn: false,
+	On:             true,
 	PaneDescriptor: PaneDescriptor{
 		MinWidth:  10000, // 10000 is a hack to make it take all the space
 		MinHeight: 1,
-		On:        true,
 	},
 }
 
@@ -49,8 +50,16 @@ func (p *TerminalPane) GetDesc() *PaneDescriptor {
 	return &p.PaneDescriptor
 }
 
-func (p *TerminalPane) GetTemplate() string {
-	return ""
+func (p *TerminalPane) EstimateLines(w int) int {
+	return 0
+}
+
+func (p *TerminalPane) IsOn() bool {
+	return p.On
+}
+
+func (p *TerminalPane) SetOn(on bool) {
+	p.On = on
 }
 
 func (p *TerminalPane) SetScreenView(x0, y0, x1, y1 int) {

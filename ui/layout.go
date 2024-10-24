@@ -11,7 +11,15 @@ import (
 )
 
 var panes = []Pane{
-	&Status,
+	NewFlow(
+		FlowVertical,
+		[]Pane{
+			&Status,
+		},
+		&PaneDescriptor{
+			MinWidth:  45,
+			MinHeight: 1,
+		}),
 	&HailPane,
 	&App,
 	&LP_V3,
@@ -30,7 +38,7 @@ func Layout(g *gocui.Gui) error {
 	for _, p := range panes {
 		d := p.GetDesc()
 		pane_map[d] = p
-		if d.On {
+		if p.IsOn() {
 			pd = append(pd, d)
 		}
 	}
@@ -110,9 +118,8 @@ func Layout(g *gocui.Gui) error {
 			row_height = hight_left
 		} else {
 			for i, d := range row {
-				template := pane_map[d].GetTemplate()
-				if template != "" {
-					n_lines := gocui.EstimateTemplateLines(template, widths[i]-1)
+				n_lines := pane_map[d].EstimateLines(widths[i] - 1)
+				if n_lines > 0 {
 					height := n_lines + 1
 					if d.MaxHeight > 0 {
 						height = min(d.MaxHeight, height)

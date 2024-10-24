@@ -14,6 +14,7 @@ import (
 
 type HailPaneType struct {
 	PaneDescriptor
+	On bool
 }
 
 var HailPane HailPaneType = HailPaneType{
@@ -28,15 +29,23 @@ var ActiveRequest *bus.Message
 var HailQueue []*bus.Message
 var HQMutex = &sync.Mutex{}
 
+func (p *HailPaneType) IsOn() bool {
+	return p.On
+}
+
+func (p *HailPaneType) SetOn(on bool) {
+	p.On = on
+}
+
 func (p *HailPaneType) GetDesc() *PaneDescriptor {
 	return &p.PaneDescriptor
 }
 
-func (p *HailPaneType) GetTemplate() string {
+func (p *HailPaneType) EstimateLines(w int) int {
 	if ActiveRequest != nil {
-		return ActiveRequest.Data.(*bus.B_Hail).Template
+		return gocui.EstimateTemplateLines(ActiveRequest.Data.(*bus.B_Hail).Template, w)
 	}
-	return ""
+	return 0
 }
 
 func (p *HailPaneType) SetView(x0, y0, x1, y1 int, overlap byte) {
@@ -218,7 +227,7 @@ func remove(m *bus.Message) {
 		} else {
 			Gui.DeleteView("hail")
 			HailPane.View = nil
-			HailPane.PaneDescriptor.HidePane()
+			HidePane(&HailPane)
 		}
 	}
 }
@@ -255,7 +264,7 @@ func (p *HailPaneType) open(m *bus.Message) {
 	ActiveRequest = m
 
 	if HailPane.View == nil {
-		HailPane.PaneDescriptor.ShowPane()
+		ShowPane(&HailPane)
 	}
 
 	if HailPane.View != nil && hail.Template != "" {

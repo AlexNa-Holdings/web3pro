@@ -251,11 +251,11 @@ func LP_V3_Process(c *Command, input string) {
 			err = resp.Error
 		}
 	case "on":
-		ui.LP_V3.ShowPane()
+		ui.ShowPane(&ui.LP_V3)
 		w.LP_V3PaneOn = true
 		err = w.Save()
 	case "off":
-		ui.LP_V3.HidePane()
+		ui.HidePane(&ui.LP_V3)
 		w.LP_V3PaneOn = false
 		err = w.Save()
 	default:
@@ -291,12 +291,14 @@ func list(w *cmn.Wallet) {
 
 	ui.Printf("Xch@Chain     Pair    On Liq0     Liq1     Gain0    Gain1     Gain$    Fee%%    Address\n")
 
+	to_delete := make([]*cmn.LP_V3_Position, 0)
+
 	for _, lp := range w.LP_V3_Positions {
 
 		// sanity check
 		if lp.Owner.Cmp(common.Address{}) == 0 {
 			ui.PrintErrorf("No address, LP v3 position removed")
-			w.RemoveLP_V3Position(lp.Owner, lp.ChainId, lp.Provider, lp.NFT_Token)
+			to_delete = append(to_delete, lp)
 			log.Error().Msgf("No address, LP v3 position removed")
 			continue
 		}
@@ -304,7 +306,7 @@ func list(w *cmn.Wallet) {
 		b := w.GetBlockchain(lp.ChainId)
 		if b == nil {
 			ui.PrintErrorf("Blockchain not found, V3 position removed: %d", lp.ChainId)
-			w.RemoveLP_V3Position(lp.Owner, lp.ChainId, lp.Provider, lp.NFT_Token)
+			to_delete = append(to_delete, lp)
 			log.Error().Msgf("Blockchain not found, V3 position removed: %d", lp.ChainId)
 			continue
 		}
@@ -312,7 +314,7 @@ func list(w *cmn.Wallet) {
 		lpp := w.GetLP_V3(lp.ChainId, lp.Provider)
 		if lpp == nil {
 			ui.PrintErrorf("Provider not found, V3 position removed: %s", lp.Provider.String())
-			w.RemoveLP_V3Position(lp.Owner, lp.ChainId, lp.Provider, lp.NFT_Token)
+			to_delete = append(to_delete, lp)
 			log.Error().Msgf("Provider not found, V3 position removed: %s", lp.Provider.String())
 			continue
 		}
@@ -337,6 +339,11 @@ func list(w *cmn.Wallet) {
 		p, ok := p_res.Data.(*bus.B_LP_V3_GetPositionStatus_Response)
 		if !ok {
 			ui.PrintErrorf("Error fetching position status")
+			continue
+		}
+
+		if p.Liquidity0.Cmp(big.NewInt(0)) == 0 && p.Liquidity1.Cmp(big.NewInt(0)) == 0 {
+			to_delete = append(to_delete, lp)
 			continue
 		}
 
@@ -403,6 +410,10 @@ func list(w *cmn.Wallet) {
 		ui.Printf("%2.1f/%2.1f ", p.FeeProtocol0, p.FeeProtocol1)
 		ui.Printf(" %s\n", a.Name)
 		ui.Flush()
+	}
+
+	for _, lp := range to_delete {
+		w.RemoveLP_V3Position(lp.Owner, lp.ChainId, lp.Provider, lp.NFT_Token)
 	}
 
 	ui.Printf("\n")

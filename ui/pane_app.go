@@ -13,11 +13,12 @@ import (
 type AppPane struct {
 	PaneDescriptor
 	Template string
+	On       bool
 }
 
 var App AppPane = AppPane{
 	PaneDescriptor: PaneDescriptor{
-		MinWidth:  30,
+		MinWidth:  45,
 		MinHeight: 1,
 		MaxHeight: 20,
 	},
@@ -27,8 +28,16 @@ func (p *AppPane) GetDesc() *PaneDescriptor {
 	return &p.PaneDescriptor
 }
 
-func (p *AppPane) GetTemplate() string {
-	return p.Template
+func (p *AppPane) EstimateLines(w int) int {
+	return gocui.EstimateTemplateLines(p.Template, w)
+}
+
+func (p *AppPane) IsOn() bool {
+	return p.On
+}
+
+func (p *AppPane) SetOn(on bool) {
+	p.On = on
 }
 
 func (p *AppPane) SetView(x0, y0, x1, y1 int, overlap byte) {
@@ -40,7 +49,7 @@ func (p *AppPane) SetView(x0, y0, x1, y1 int, overlap byte) {
 
 		p.PaneDescriptor.View = v
 		v.JoinedFrame = true
-		v.Title = "Application"
+		v.Title = "Web Application"
 		v.ScrollBar = true
 		v.OnResize = func(v *gocui.View) {
 			v.RenderTemplate(p.Template)

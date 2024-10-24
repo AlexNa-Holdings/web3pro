@@ -3,6 +3,7 @@ package ui
 import (
 	"errors"
 	"fmt"
+	"math/big"
 	"sort"
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
@@ -14,6 +15,7 @@ import (
 type LP_V3Pane struct {
 	PaneDescriptor
 	Template string
+	On       bool
 }
 
 var lp_info_list []*bus.B_LP_V3_GetPositionStatus_Response = make([]*bus.B_LP_V3_GetPositionStatus_Response, 0)
@@ -26,12 +28,20 @@ var LP_V3 LP_V3Pane = LP_V3Pane{
 	},
 }
 
+func (p *LP_V3Pane) IsOn() bool {
+	return p.On
+}
+
+func (p *LP_V3Pane) SetOn(on bool) {
+	p.On = on
+}
+
 func (p *LP_V3Pane) GetDesc() *PaneDescriptor {
 	return &p.PaneDescriptor
 }
 
-func (p *LP_V3Pane) GetTemplate() string {
-	return p.Template
+func (p *LP_V3Pane) EstimateLines(w int) int {
+	return gocui.EstimateTemplateLines(p.Template, w)
 }
 
 func (p *LP_V3Pane) SetView(x0, y0, x1, y1 int, overlap byte) {
@@ -98,6 +108,7 @@ func (p *LP_V3Pane) updateList() {
 	total_gain := 0.0
 
 	list := make([]*bus.B_LP_V3_GetPositionStatus_Response, 0)
+	to_delete := make([]*cmn.LP_V3_Position, 0)
 
 	for _, pos := range w.LP_V3_Positions {
 		sr := bus.Fetch("lp_v3", "get-position-status", &bus.B_LP_V3_GetPositionStatus{
@@ -114,6 +125,12 @@ func (p *LP_V3Pane) updateList() {
 		resp, ok := sr.Data.(*bus.B_LP_V3_GetPositionStatus_Response)
 		if !ok {
 			log.Error().Msg("get_position_status")
+			continue
+		}
+
+		big0 := big.NewInt(0)
+		if resp.Liquidity0.Cmp(big0) == 0 && resp.Liquidity1.Cmp(big0) == 0 {
+			to_delete = append(to_delete, pos)
 			continue
 		}
 
@@ -152,6 +169,10 @@ func (p *LP_V3Pane) updateList() {
 
 	if LP_V3.View != nil {
 		LP_V3.View.Subtitle = fmt.Sprintf("NPos:%d Gain:$%.2f", len(list), total_gain)
+	}
+
+	for _, pos := range to_delete {
+		w.RemoveLP_V3Position(pos.Owner, pos.ChainId, pos.Provider, pos.NFT_Token)
 	}
 
 }

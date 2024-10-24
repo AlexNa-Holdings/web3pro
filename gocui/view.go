@@ -1674,6 +1674,10 @@ func (v *View) SetSelectList(id string, list []string) {
 func EstimateTemplateLines(template string, width int) int {
 	n_lines := 0
 
+	if template == "" {
+		return 0
+	}
+
 	if width < 3 {
 		return 0 // no space to render
 	}

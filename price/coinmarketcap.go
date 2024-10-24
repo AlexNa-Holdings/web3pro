@@ -105,41 +105,48 @@ func CMC_GetPriceInfoList(chain_id int, tokenAddr string) ([]PriceInfo, error) {
 		return nil, fmt.Errorf("token not found")
 	}
 
-	url := fmt.Sprintf("%s/cryptocurrency/map?symbol=%s&sort=cmc_rank", CMC_API, t.Symbol)
-
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create GET request: %w", err)
-	}
-
-	req.Header.Add("X-CMC_PRO_API_KEY", cmn.Config.CMC_API_KEY)
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to make GET request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read response body: %w", err)
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("received non-OK HTTP status: %s", resp.Status)
-	}
-
-	var response CMCMapResponse
-
-	if err := json.Unmarshal(body, &response); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal JSON response: %w", err)
-	}
-
-	// create th elist of slugs
 	slags := []string{}
-	for _, crypto := range response.Data {
-		slags = append(slags, crypto.Slug)
+
+	// treat some known tokens
+	if b.ChainId == 1 && t.Native {
+		slags = append(slags, "ethereum")
+	} else {
+
+		url := fmt.Sprintf("%s/cryptocurrency/map?symbol=%s&sort=cmc_rank", CMC_API, t.Symbol)
+
+		req, err := http.NewRequest("GET", url, nil)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create GET request: %w", err)
+		}
+
+		req.Header.Add("X-CMC_PRO_API_KEY", cmn.Config.CMC_API_KEY)
+
+		client := &http.Client{}
+		resp, err := client.Do(req)
+		if err != nil {
+			return nil, fmt.Errorf("failed to make GET request: %w", err)
+		}
+		defer resp.Body.Close()
+
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read response body: %w", err)
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("received non-OK HTTP status: %s", resp.Status)
+		}
+
+		var response CMCMapResponse
+
+		if err := json.Unmarshal(body, &response); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal JSON response: %w", err)
+		}
+
+		// create the list of slugs
+		for _, crypto := range response.Data {
+			slags = append(slags, crypto.Slug)
+		}
 	}
 
 	// get the latest prices

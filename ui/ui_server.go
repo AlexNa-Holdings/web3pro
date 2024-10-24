@@ -135,26 +135,26 @@ func process(msg *bus.Message) {
 			Notification.ShowEx(text, true)
 		}
 	case "open": // open wallet
-		Status.ShowPane()
+		ShowPane(&Status)
 		if cmn.CurrentWallet != nil {
 			if cmn.CurrentWallet.AppsPaneOn {
-				App.ShowPane()
+				ShowPane(&App)
 			} else {
-				App.HidePane()
+				HidePane(&App)
 			}
 
 			if cmn.CurrentWallet.LP_V3PaneOn {
-				LP_V3.ShowPane()
+				ShowPane(&LP_V3)
 			} else {
-				LP_V3.HidePane()
+				HidePane(&LP_V3)
 			}
 		}
 	case "saved": // save wallet
 		if cmn.CurrentWallet != nil {
 			if cmn.CurrentWallet.AppsPaneOn {
-				App.ShowPane()
+				ShowPane(&App)
 			} else {
-				App.HidePane()
+				HidePane(&App)
 			}
 		}
 	}

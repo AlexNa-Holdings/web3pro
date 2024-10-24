@@ -274,6 +274,14 @@ func Token_Process(c *Command, input string) {
 				ui.Printf("          ")
 			}
 
+			if t.PriceChange24 > 0 {
+				ui.Printf(ui.F(gocui.ColorGreen)+"\uf0d8%2.2f%% "+ui.F(ui.Terminal.Screen.FgColor), t.PriceChange24)
+			} else if t.PriceChange24 < 0 {
+				ui.Printf(ui.F(gocui.ColorRed)+"\uf0d7%2.2f%% "+ui.F(ui.Terminal.Screen.FgColor), -t.PriceChange24)
+			} else {
+				ui.Printf("       ")
+			}
+
 			ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command token edit "+strconv.Itoa(t.ChainId)+" "+t.Address.String()+" ", "Edit token", "")
 
 			if !t.Native {

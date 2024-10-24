@@ -11,7 +11,6 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/price"
 	"github.com/AlexNa-Holdings/web3pro/ui"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog/log"
 )
 
@@ -162,17 +161,13 @@ func Price_Process(c *Command, input string) {
 
 		ui.Printf("\nDiscovering trading pairs for token\n")
 		ui.Printf("Token name: %s\n", t.GetPrintName())
-		a := t.Address
-		if t.Native {
-			a = common.HexToAddress(b.WTokenAddress.Hex())
-			ui.Printf("Wrapped Token Address: %s\n", a.Hex())
-		} else {
-			ui.Printf("Token Address: %s\n", a.Hex())
+		if !t.Native {
+			ui.Printf("Token Address: %s\n", t.Address.Hex())
 		}
 		ui.Printf("Feeder type: %s\n", t.PriceFeeder)
 		ui.Printf("Feeder Param: %s\n", t.PriceFeedParam)
 
-		pi_list, err := price.GetPriceInfoList(b.ChainId, a.Hex())
+		pi_list, err := price.GetPriceInfoList(b.ChainId, t.Address.Hex())
 		if err != nil {
 			ui.PrintErrorf("Error discovering trading pairs: %v", err)
 			return
