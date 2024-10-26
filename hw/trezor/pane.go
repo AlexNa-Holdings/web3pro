@@ -252,13 +252,13 @@ func (p *TrezorPane) rebuidTemplate() {
 <button text:Cancel>`
 	default:
 		if p.Trezor != nil {
+			temp += fmt.Sprintf("      SN: %s\n",
+				cmn.TagLink(*p.Trezor.DeviceId, "copy "+*p.Trezor.DeviceId, "Copy SN"))
+
 			temp += fmt.Sprintf("Firmware: %d.%d.%d\n",
 				*p.Trezor.MajorVersion,
 				*p.Trezor.MinorVersion,
 				*p.Trezor.PatchVersion)
-
-			temp += fmt.Sprintf("      SN: %s\n",
-				cmn.TagLink(*p.Trezor.DeviceId, "copy "+*p.Trezor.DeviceId, "Copy SN"))
 
 			if cmn.CurrentWallet != nil {
 				temp += "Features: "
