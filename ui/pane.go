@@ -64,6 +64,9 @@ func (d *PaneDescriptor) SetTemplate(t string) {
 }
 
 func FastEstimateLines(p Pane, w int) int {
+
+	//	return p.EstimateLines(w) // DEBUG
+
 	d := p.GetDesc()
 
 	if !d.SupportCachedHightCalc {

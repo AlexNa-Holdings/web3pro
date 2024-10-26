@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
+	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/ava-labs/coreth/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
@@ -62,7 +63,17 @@ func signTypedData_v4(msg *bus.Message) (string, error) {
 
 	log.Trace().Msgf("LEDGER: SIGN TYPED DATA: PATH %s", m.Path)
 
-	reply, err := call(ledger.USB_ID, &SIGN_MSG_APDU, payload, generalHail, 5)
+	save_mode := ledger.Pane.Mode
+	save_template := ledger.Pane.GetTemplate()
+	defer func() {
+		ledger.Pane.SetTemplate(save_template)
+		ledger.Pane.SetMode(save_mode)
+	}()
+
+	ledger.Pane.SetTemplate("<w><c>\n<blink>" + gocui.ICON_ALERT + "</blink>Please sign the message on the device\n")
+	ledger.Pane.SetMode("template")
+
+	reply, err := call(ledger.USB_ID, &SIGN_MSG_APDU, payload)
 	if err != nil {
 		log.Error().Err(err).Msgf("SignTypedData: Error signing typed data: %s", m.Path)
 		return "", err
@@ -172,7 +183,7 @@ func SendStructFieldDef(msg *bus.Message, ledger *Ledger, field apitypes.Type) e
 
 	log.Trace().Msgf("LEDGER: STRUCT DEFINITION: FIELD %s", field.Name)
 
-	_, err := call(ledger.USB_ID, &STRUCT_DEF_FIELD, data, generalHail, 5)
+	_, err := call(ledger.USB_ID, &STRUCT_DEF_FIELD, data)
 	if err != nil {
 		log.Error().Err(err).Msgf("SendStructFieldDef: Error setting struct field: %s", field.Name)
 		return err
@@ -226,7 +237,7 @@ func SendStructDefinition(msg *bus.Message, ledger *Ledger, typedData apitypes.T
 
 		log.Trace().Msgf("LEDGER: STRUCT DEFINITION: Name %s", typeName)
 
-		_, err := call(ledger.USB_ID, &STRUCT_DEF_NAME, []byte(typeName), generalHail, 5)
+		_, err := call(ledger.USB_ID, &STRUCT_DEF_NAME, []byte(typeName))
 		if err != nil {
 			log.Error().Err(err).Msgf("SignTypedData: Error setting struct name: %s", typeName)
 			return err
@@ -249,7 +260,7 @@ func SendRootStruct(msg *bus.Message, ledger *Ledger, rootStructName string) err
 
 	log.Trace().Msgf("LEDGER: ROOT STRUCT: Name %s", rootStructName)
 
-	_, err := call(ledger.USB_ID, &STRUCT_IMPL_ROOT, []byte(rootStructName), generalHail, 5)
+	_, err := call(ledger.USB_ID, &STRUCT_IMPL_ROOT, []byte(rootStructName))
 	if err != nil {
 		log.Error().Err(err).Msgf("SignTypedData: Error setting root struct: %s", rootStructName)
 		return err
@@ -351,7 +362,7 @@ func SendFieldValue(msg *bus.Message, ledger *Ledger, value interface{}, typeStr
 
 	log.Trace().Msgf("LEDGER: FIELD VALUE: Type %s", typeStr)
 
-	_, err := call(ledger.USB_ID, &STRUCT_IMPL_FIELD, data, generalHail, 5)
+	_, err := call(ledger.USB_ID, &STRUCT_IMPL_FIELD, data)
 	if err != nil {
 		log.Error().Err(err).Msgf("SendFieldValue: Error sending field value payload: %s", typeStr)
 		return err
@@ -428,7 +439,7 @@ func SendMessagePayloads(msg *bus.Message, ledger *Ledger, typedData apitypes.Ty
 				arrayPayload := make([]byte, 1)
 				arrayPayload[0] = byte(len(arrayValues))
 
-				_, err := call(ledger.USB_ID, &STRUCT_IMPL_ARRAY, arrayPayload, generalHail, 5)
+				_, err := call(ledger.USB_ID, &STRUCT_IMPL_ARRAY, arrayPayload)
 				if err != nil {
 					log.Error().Err(err).Msgf("SendMessagePayloads: Error setting struct array: %s", field.Name)
 					return err
@@ -488,7 +499,7 @@ func SendMessagePayloads(msg *bus.Message, ledger *Ledger, typedData apitypes.Ty
 				arrayPayload := make([]byte, 1)
 				arrayPayload[0] = byte(len(arrayValues))
 
-				_, err := call(ledger.USB_ID, &STRUCT_IMPL_ARRAY, arrayPayload, generalHail, 5)
+				_, err := call(ledger.USB_ID, &STRUCT_IMPL_ARRAY, arrayPayload)
 				if err != nil {
 					log.Error().Err(err).Msgf("SendMessagePayloads: Error setting struct array: %s", field.Name)
 					return err

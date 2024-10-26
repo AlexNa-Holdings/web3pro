@@ -2,6 +2,7 @@ package bus
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -342,4 +343,35 @@ func timer_reset(id int) {
 		t.lapsed = t.HardLimit
 	}
 	t.starTime = time.Now()
+}
+
+func TimerLoop(seconds int, every int, f func() (any, error, bool)) (any, error) {
+
+	start := time.Now()
+	duration := 60 * time.Second
+
+	ch := Subscribe("timer")
+	defer Unsubscribe(ch)
+
+	for msg := range ch {
+		if msg.RespondTo != 0 {
+			continue // ignore responses
+		}
+
+		if msg.Type == "tick" {
+
+			if time.Now().After(start.Add(duration)) {
+				break
+			}
+
+			if tick%every == 0 {
+				data, err, done := f()
+				if done {
+					return data, err
+				}
+			}
+		}
+
+	}
+	return nil, fmt.Errorf("timeout")
 }

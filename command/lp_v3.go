@@ -403,7 +403,7 @@ func list(w *cmn.Wallet) {
 			ui.Printf("                  ")
 		}
 
-		cmn.AddDollarLink(ui.Terminal.Screen, p.Dollars)
+		cmn.AddDollarLink(ui.Terminal.Screen, p.Gain0Dollars+p.Gain1Dollars)
 
 		// cmn.AddAddressShortLink(ui.Terminal.Screen, a.Address)
 

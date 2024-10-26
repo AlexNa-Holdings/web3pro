@@ -233,8 +233,8 @@ func (p *TrezorPane) rebuidTemplate() {
 	temp := ""
 	switch p.Mode {
 	case "pin":
-		temp += "<c>Enter PIN\n"
-		temp += "<l id:pin text:'____________'> <button text:'\U000f006e ' id:back>\n\n"
+		temp += "<c>\n"
+		temp += "<b>Enter PIN: </b><l id:pin text:'____________'> <button text:'\U000f006e ' id:back>\n\n"
 
 		ids := []int{7, 8, 9, 4, 5, 6, 1, 2, 3}
 
@@ -244,7 +244,7 @@ func (p *TrezorPane) rebuidTemplate() {
 				temp += "\n\n"
 			}
 		}
-		temp += "<button text:OK> <button text:Cancel>"
+		temp += "<button text:OK> <button text:Cancel>\n"
 	case "pass":
 		temp += `<c><w>
 <button text:Standard color:g.HelpFgColor bgcolor:g.HelpBgColor id:standard> <button text:Hidden color:g.HelpFgColor bgcolor:g.HelpBgColor id:hidden> 
@@ -252,22 +252,22 @@ func (p *TrezorPane) rebuidTemplate() {
 <button text:Cancel>`
 	default:
 		if p.Trezor != nil {
-			temp += fmt.Sprintf("      SN: %s\n",
+			temp += fmt.Sprintf("<b>      SN:</b> %s\n",
 				cmn.TagLink(*p.Trezor.DeviceId, "copy "+*p.Trezor.DeviceId, "Copy SN"))
 
-			temp += fmt.Sprintf("Firmware: %d.%d.%d\n",
+			temp += fmt.Sprintf("<b>Firmware:</b> %d.%d.%d\n",
 				*p.Trezor.MajorVersion,
 				*p.Trezor.MinorVersion,
 				*p.Trezor.PatchVersion)
 
 			if cmn.CurrentWallet != nil {
-				temp += "Features: "
+				temp += "<b>Features:</b> "
 				if !p.Trezor.isSkipPassword() {
 					temp += cmn.TagLink(gocui.ICON_CHECK, "skip_password_off", "Set passphrase off")
 				} else {
 					temp += cmn.TagLink(gocui.ICON_UNCHECK, "skip_password_on", "Set passphrase on")
 				}
-				temp += " Use Passphrase"
+				temp += "Use Passphrase"
 			}
 		}
 	}

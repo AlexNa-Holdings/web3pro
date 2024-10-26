@@ -9,13 +9,17 @@ import (
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
+	"github.com/AlexNa-Holdings/web3pro/gocui"
+	"github.com/AlexNa-Holdings/web3pro/ui"
 	"github.com/rs/zerolog/log"
 )
 
 // connected Ledger
 type Ledger struct {
-	USB_ID string
-	Name   string
+	USB_ID  string
+	Name    string
+	Product string
+	Pane    *LedgerPane
 }
 
 type APDU struct {
@@ -169,6 +173,7 @@ func remove(usb_id string) {
 
 	for i, t := range ledgers {
 		if t.USB_ID == usb_id {
+			ui.TopLeftFlow.RemovePane(t.Pane)
 			bus.Send("ui", "notify", fmt.Sprintf("Ledger disconnected: %s", t.Name))
 			ledgers = append(ledgers[:i], ledgers[i+1:]...)
 			return
@@ -194,6 +199,9 @@ func connected(m *bus.B_UsbConnected) {
 
 	add(t)
 
+	t.Pane = NewLedgerPane(t)
+	ui.TopLeftFlow.AddPane(t.Pane)
+
 	n, err := getName(m.USB_ID)
 	if err != nil {
 		log.Error().Err(err).Msg("Error initializing ledger")
@@ -201,6 +209,9 @@ func connected(m *bus.B_UsbConnected) {
 	}
 
 	t.Name = n
+	t.Product = m.Product
+	t.Pane.rebuidTemplate()
+
 	bus.Send("signer", "connected", &bus.B_SignerConnected{Type: LDG, Name: t.Name})
 	bus.Send("ui", "notify", fmt.Sprintf("Ledger connected: %s", t.Name))
 }
@@ -317,7 +328,7 @@ func provide_eth_app(usb_id string, needed_app string) error {
 
 	log.Debug().Msgf("provide_eth_app: %s %s", usb_id, needed_app)
 
-	r, err := call(usb_id, &GET_INFO_APDU, nil, generalHail, 5)
+	r, err := call(usb_id, &GET_INFO_APDU, nil)
 	if err != nil {
 		log.Error().Err(err).Msgf("provide_eth_app: Error getting device name: %s", usb_id)
 		return err
@@ -329,17 +340,33 @@ func provide_eth_app(usb_id string, needed_app string) error {
 		return err
 	}
 
+	ledger := find_by_usb_id(usb_id)
+	if ledger == nil {
+		return fmt.Errorf("no device found with usb_id %s", usb_id)
+	}
+
 	log.Trace().Msgf("provide_eth_app: Name: %s, Version: %s", name, ver)
 
 	if name != needed_app {
+
+		save_mode := ledger.Pane.Mode
+		save_template := ledger.Pane.GetTemplate()
+		defer func() {
+			ledger.Pane.SetTemplate(save_template)
+			ledger.Pane.SetMode(save_mode)
+		}()
+
+		ledger.Pane.SetTemplate("<w><c>\n<blink>" + gocui.ICON_ALERT + "</blink> Please alllow the Ethereum app on your Ledger device\n")
+		ledger.Pane.SetMode("template")
+
 		if needed_app == "BOLOS" {
-			_, err := call(usb_id, &QUIT_APP_APDU, nil, generalHail, 5)
+			_, err := call(usb_id, &QUIT_APP_APDU, nil)
 			if err != nil {
 				log.Error().Err(err).Msgf("provide_eth_app: Error quitting app: %s", usb_id)
 				return err
 			}
 		} else {
-			_, err := call(usb_id, &LAUNCH_APP_APDU, []byte(needed_app), generalHail, 0)
+			_, err := call(usb_id, &LAUNCH_APP_APDU, []byte(needed_app))
 			if err != nil {
 				log.Error().Err(err).Msgf("provide_eth_app: Error quitting app: %s", usb_id)
 				return err

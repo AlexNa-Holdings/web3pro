@@ -54,35 +54,48 @@ func get_position_status(msg *bus.Message) (*bus.B_LP_V3_GetPositionStatus_Respo
 
 	tokensOwed0, tokensOwed1 := calculateFees(fee_growth, nft_pos, slot0, tickLower, tickUpper)
 
-	dollar0 := 0.
+	Gain0Dollars := 0.
 	t0 := w.GetTokenByAddress(b.ChainId, nft_pos.Token0)
 	if t0 != nil {
-		dollar0 = t0.Float64(tokensOwed0) * t0.Price
+		Gain0Dollars = t0.Float64(tokensOwed0) * t0.Price
 	}
 
-	dollar1 := 0.
+	Gain1Dollars := 0.
 	t1 := w.GetTokenByAddress(b.ChainId, nft_pos.Token1)
 	if t1 != nil {
-		dollar1 = t1.Float64(tokensOwed1) * t1.Price
+		Gain1Dollars = t1.Float64(tokensOwed1) * t1.Price
+	}
+
+	Liquidity0Dollars := 0.
+	if t0 != nil {
+		Liquidity0Dollars = t0.Float64(amount0) * t0.Price
+	}
+
+	Liquidity1Dollars := 0.
+	if t1 != nil {
+		Liquidity1Dollars = t1.Float64(amount1) * t1.Price
 	}
 
 	pn := fmt.Sprintf("%s@%s", p.Name, b.Currency)
 
 	return &bus.B_LP_V3_GetPositionStatus_Response{
-		On:           in_range,
-		Token0:       nft_pos.Token0,
-		Token1:       nft_pos.Token1,
-		Liquidity0:   amount0,
-		Liquidity1:   amount1,
-		Gain0:        tokensOwed0,
-		Gain1:        tokensOwed1,
-		Dollars:      dollar0 + dollar1,
-		ProviderName: pn,
-		FeeProtocol0: slot0.FeeProtocol0,
-		FeeProtocol1: slot0.FeeProtocol1,
-		Owner:        lp.Owner,
-		ChainId:      req.ChainId,
-		Provider:     req.Provider,
+		On:                in_range,
+		Token0:            nft_pos.Token0,
+		Token1:            nft_pos.Token1,
+		Liquidity0:        amount0,
+		Liquidity1:        amount1,
+		Liquidity0Dollars: Liquidity0Dollars,
+		Liquidity1Dollars: Liquidity1Dollars,
+		Gain0:             tokensOwed0,
+		Gain1:             tokensOwed1,
+		Gain0Dollars:      Gain0Dollars,
+		Gain1Dollars:      Gain1Dollars,
+		ProviderName:      pn,
+		FeeProtocol0:      slot0.FeeProtocol0,
+		FeeProtocol1:      slot0.FeeProtocol1,
+		Owner:             lp.Owner,
+		ChainId:           req.ChainId,
+		Provider:          req.Provider,
 	}, nil
 
 }

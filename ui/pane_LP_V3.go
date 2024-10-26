@@ -106,6 +106,7 @@ func (p *LP_V3Pane) updateList() {
 	}
 
 	total_gain := 0.0
+	total_liq := 0.0
 
 	list := make([]*bus.B_LP_V3_GetPositionStatus_Response, 0)
 	to_delete := make([]*cmn.LP_V3_Position, 0)
@@ -134,19 +135,20 @@ func (p *LP_V3Pane) updateList() {
 			continue
 		}
 
-		total_gain += resp.Dollars
+		total_gain += resp.Gain0Dollars + resp.Gain1Dollars
+		total_liq += resp.Liquidity0Dollars + resp.Liquidity1Dollars
 		list = append(list, resp)
 	}
 
 	sort.Slice(list, func(i, j int) bool {
-		if list[i].Dollars == list[j].Dollars {
+		if list[i].Gain0Dollars+list[i].Gain1Dollars == list[j].Gain0Dollars+list[j].Gain1Dollars {
 			if list[i].ProviderName == list[j].ProviderName {
 				return list[i].Owner.Hex() < list[j].Owner.Hex()
 			} else {
 				return list[i].ProviderName < list[j].ProviderName
 			}
 		} else {
-			if list[i].Dollars > list[j].Dollars {
+			if list[i].Gain0Dollars+list[i].Gain1Dollars > list[j].Gain0Dollars+list[j].Gain1Dollars {
 				return true
 			} else {
 				return false
@@ -168,7 +170,9 @@ func (p *LP_V3Pane) updateList() {
 	}
 
 	if LP_V3.View != nil {
-		LP_V3.View.Subtitle = fmt.Sprintf("NPos:%d Gain:$%.2f", len(list), total_gain)
+		LP_V3.View.Subtitle = fmt.Sprintf("NPos:%d $%s \uf0d8$%s", len(list),
+			cmn.FormatFloatWithCommas(total_liq),
+			cmn.FormatFloatWithCommas(total_gain))
 	}
 
 	for _, pos := range to_delete {
@@ -191,7 +195,7 @@ func (p *LP_V3Pane) rebuidTemplate() string {
 		return "loading..."
 	}
 
-	temp := "Xch@Chain     Pair   On Liq0     Liq1     Gain0    Gain1     Gain$    Fee%%    Address\n"
+	temp := "Xch@Chain     Pair   On Liq0     Liq1     Gain0    Gain1     Gain$    Fee%%   Address\n"
 
 	for i, p := range lp_info_list {
 
@@ -266,7 +270,7 @@ func (p *LP_V3Pane) rebuidTemplate() string {
 			temp += "         "
 		}
 
-		temp += cmn.TagDollarLink(p.Dollars)
+		temp += cmn.TagDollarLink(p.Gain0Dollars + p.Gain1Dollars)
 
 		temp += fmt.Sprintf("%2.1f/%2.1f ", p.FeeProtocol0, p.FeeProtocol1)
 		temp += fmt.Sprintf(" %s", owner.Name)

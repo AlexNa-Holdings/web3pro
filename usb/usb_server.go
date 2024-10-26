@@ -18,8 +18,8 @@ import (
 var ctx *gousb.Context
 
 type USB_DEV struct {
-	Type        string
 	USB_ID      string
+	Vendor      string
 	Device      *gousb.Device
 	Config      *gousb.Config
 	Interface   *gousb.Interface
@@ -412,14 +412,16 @@ func enumerate() {
 				log.Trace().Msgf("Device %s Reconnected.", sid)
 			}
 		} else {
+			v, p := ResolveVendorProduct(uint16(desc.Vendor), uint16(desc.Product))
+			log.Trace().Msgf("Device %s connected: %s %s", sid, v, p)
+
 			addUSBDevice(sid, &USB_DEV{
+				Vendor:    v,
 				USB_ID:    sid,
 				Device:    nil,
 				connected: true,
 			})
 
-			v, p := ResolveVendorProduct(uint16(desc.Vendor), uint16(desc.Product))
-			log.Trace().Msgf("Device %s connected: %s %s", sid, v, p)
 			bus.Send("usb", "connected", &bus.B_UsbConnected{
 				USB_ID:  sid,
 				Vendor:  v,
@@ -459,12 +461,28 @@ func enumerate() {
 
 	n_just_disconnected := 0
 	usb_devices_mutex.Lock()
+
+	delete_immediately := []*USB_DEV{}
+
 	for _, dev := range usb_devices {
 		if !dev.connected {
-			n_just_disconnected++
+
+			if dev.Vendor != "Ledger" {
+				delete_immediately = append(delete_immediately, dev)
+			} else { // delay disconnect
+				n_just_disconnected++
+			}
 		}
 	}
 	usb_devices_mutex.Unlock()
+
+	for _, dev := range delete_immediately {
+		log.Trace().Msgf("Device %s disconnected", dev.USB_ID)
+		bus.Send("usb", "disconnected", &bus.B_UsbDisconnected{
+			USB_ID: dev.USB_ID,
+		})
+		removeUSBDevice(dev.USB_ID)
+	}
 
 	if n_just_disconnected == 0 {
 		setRate(RATE_SLOW)

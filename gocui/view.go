@@ -45,6 +45,7 @@ const (
 	ICON_LIGHT    = "\U000f06e8 "
 	ICON_CHECK    = "\U000f0134 "
 	ICON_UNCHECK  = "\U000f0130 "
+	ICON_ALERT    = "\U000f0028 "
 )
 
 const REGEX_TAGS = `<(/?\w+)((?:\s+\w+(?::(?:[^>\s]+|"[^"]*"|'[^']*'))?\s*)*)>`

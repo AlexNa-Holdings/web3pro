@@ -27,6 +27,16 @@ func get_addresses(m *bus.B_SignerGetAddresses) (*bus.B_SignerGetAddresses_Respo
 	rd.Addresses = []common.Address{}
 	rd.Paths = []string{}
 
+	save_mode := ledger.Pane.Mode
+	save_template := ledger.Pane.GetTemplate()
+	defer func() {
+		ledger.Pane.SetTemplate(save_template)
+		ledger.Pane.SetMode(save_mode)
+	}()
+
+	ledger.Pane.SetTemplate(generalTemplate)
+	ledger.Pane.SetMode("template")
+
 	for i := 0; i < m.Count; i++ {
 		path := fmt.Sprintf(m.Path, m.StartFrom+i)
 
@@ -37,7 +47,7 @@ func get_addresses(m *bus.B_SignerGetAddresses) (*bus.B_SignerGetAddresses_Respo
 
 		data := serializePath(bipPath)
 
-		r, err := call(ledger.USB_ID, &GET_ADDRESS_APDU, data, generalHail, 5)
+		r, err := call(ledger.USB_ID, &GET_ADDRESS_APDU, data)
 		if err != nil {
 			log.Error().Err(err).Msgf("Init: Error getting device name: %s", ledger.USB_ID)
 			return rd, err

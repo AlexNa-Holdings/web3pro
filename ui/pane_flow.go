@@ -221,6 +221,8 @@ func (p *PaneFlow) AddPane(pane Pane) {
 func (p *PaneFlow) RemovePane(pane Pane) {
 	for i, pi := range p.Panes {
 		if pi == pane {
+			Gui.DeleteView(pi.GetDesc().View.Name())
+			pi.GetDesc().View = nil
 			p.Panes = append(p.Panes[:i], p.Panes[i+1:]...)
 			return
 		}

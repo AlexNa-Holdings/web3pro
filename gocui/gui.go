@@ -900,7 +900,8 @@ func (g *Gui) drawTitle(v *View, fgColor, bgColor, stBgColor Attribute) error {
 	}
 
 	//Suffix
-	if x >= 0 && x < g.maxX {
+
+	if x >= 0 && x < g.maxX && x < v.x1 {
 
 		bg := bgColor
 		if v.Subtitle != "" {
@@ -930,7 +931,7 @@ func (g *Gui) drawSubtitle(v *View, fgColor Attribute, bgColor Attribute) error 
 	text := " " + v.Subtitle + " "
 
 	for _, ch := range text {
-		if x >= v.x1 {
+		if x >= v.x1 || x >= g.maxX {
 			break
 		}
 		if err := g.SetRune(x, v.y0, ch, fgColor|v.SubTitleAttrib, bgColor); err != nil {
@@ -940,7 +941,7 @@ func (g *Gui) drawSubtitle(v *View, fgColor Attribute, bgColor Attribute) error 
 	}
 
 	//Suffix
-	if x >= 0 && x < g.maxX {
+	if x >= 0 && x < g.maxX && x < v.x1 {
 		if err := g.SetRune(x, v.y0, '\ue0b4', bgColor, v.BgColor); err != nil {
 			return err
 		}

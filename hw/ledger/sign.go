@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
+	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/ava-labs/coreth/accounts"
 	"github.com/rs/zerolog/log"
 )
@@ -37,7 +38,17 @@ func sign(msg *bus.Message) (string, error) {
 
 	log.Trace().Msgf("LEDGER: SIGN MESSAGE: PATH %s", m.Path)
 
-	reply, err := call(ledger.USB_ID, &SIGN_MSG_PERSONAL_APDU, payload, generalHail, 5)
+	save_mode := ledger.Pane.Mode
+	save_template := ledger.Pane.GetTemplate()
+	defer func() {
+		ledger.Pane.SetTemplate(save_template)
+		ledger.Pane.SetMode(save_mode)
+	}()
+
+	ledger.Pane.SetTemplate("<w><c>\n<blink>" + gocui.ICON_ALERT + "</blink>Please sign the message on your device\n")
+	ledger.Pane.SetMode("template")
+
+	reply, err := call(ledger.USB_ID, &SIGN_MSG_PERSONAL_APDU, payload)
 	if err != nil {
 		log.Error().Err(err).Msgf("SignTypedData: Error signing typed data: %s", m.Path)
 		return "", err

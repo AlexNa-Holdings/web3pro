@@ -66,7 +66,7 @@ var StatusCodes = map[int]string{
 	0x9850: "MAX_VALUE_REACHED",
 }
 
-func rawCall(usb_id string, apdu *APDU, data []byte, hail *bus.B_Hail, hail_delay int) ([]byte, error) {
+func rawCall(usb_id string, apdu *APDU, data []byte) ([]byte, error) {
 	// Construct the message payload, possibly split into multiple chunks
 	buf := make([]byte, 2, 7+len(data))
 
@@ -94,10 +94,10 @@ func rawCall(usb_id string, apdu *APDU, data []byte, hail *bus.B_Hail, hail_dela
 		// Send over to the device
 		log.Trace().Msgf("Ledger: rawCall: Writing data chunk to the Ledger: %s", hexutil.Bytes(chunk))
 
-		resp := bus.FetchWithHail("usb", "write", &bus.B_UsbWrite{
+		resp := bus.Fetch("usb", "write", &bus.B_UsbWrite{
 			USB_ID: usb_id,
 			Data:   chunk,
-		}, hail, hail_delay+5) // Add 5s to complete the write
+		})
 
 		if resp.Error != nil {
 			log.Error().Err(resp.Error).Msg("Ledger: rawCall: Error writing to device")
@@ -106,21 +106,12 @@ func rawCall(usb_id string, apdu *APDU, data []byte, hail *bus.B_Hail, hail_dela
 	}
 	// Stream the reply back from the wallet in 64 byte chunks
 	var reply []byte
-	first_read := true
 	for {
 		// Read the next chunk from the Ledger wallet
 
-		var resp *bus.Message
-		if first_read && hail != nil {
-			resp = bus.FetchWithHail("usb", "read", &bus.B_UsbRead{
-				USB_ID: usb_id,
-			}, hail, hail_delay)
-			first_read = false
-		} else {
-			resp = bus.Fetch("usb", "read", &bus.B_UsbRead{
-				USB_ID: usb_id,
-			})
-		}
+		var resp = bus.Fetch("usb", "read", &bus.B_UsbRead{
+			USB_ID: usb_id,
+		})
 
 		if resp.Error != nil {
 			log.Error().Err(resp.Error).Msg("Ledger: rawCall: Error reading from device")

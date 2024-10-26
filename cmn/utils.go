@@ -629,3 +629,35 @@ func Uint256FromHex(hex string) *big.Int {
 	i, _ := new(big.Int).SetString(strings.TrimPrefix(hex, "0x"), 16)
 	return i
 }
+
+func FormatFloatWithCommas(num float64) string {
+	intPart := int64(num)
+	decimalPart := num - float64(intPart)
+
+	// Format integer part with commas
+	intStr := fmt.Sprintf("%d", intPart)
+	n := len(intStr)
+	if n > 3 {
+		var b strings.Builder
+		mod := n % 3
+		if mod != 0 {
+			b.WriteString(intStr[:mod])
+			b.WriteString(",")
+		}
+		for i := mod; i < n; i += 3 {
+			b.WriteString(intStr[i : i+3])
+			if i+3 < n {
+				b.WriteString(",")
+			}
+		}
+		intStr = b.String()
+	}
+
+	// Format decimal part (if needed)
+	if decimalPart != 0 {
+		decimalStr := fmt.Sprintf("%.2f", decimalPart)[1:]
+		return intStr + decimalStr
+	}
+
+	return intStr
+}

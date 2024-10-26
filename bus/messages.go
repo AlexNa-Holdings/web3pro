@@ -349,18 +349,21 @@ type B_LP_V3_GetPositionStatus struct { // get-position-status
 }
 
 type B_LP_V3_GetPositionStatus_Response struct { // get-position-status_response
-	Owner        common.Address
-	ChainId      int
-	Token0       common.Address
-	Token1       common.Address
-	Provider     common.Address
-	On           bool
-	Liquidity0   *big.Int
-	Liquidity1   *big.Int
-	Gain0        *big.Int
-	Gain1        *big.Int
-	Dollars      float64
-	ProviderName string
-	FeeProtocol0 float32 // percentage
-	FeeProtocol1 float32 // percentage
+	Owner             common.Address
+	ChainId           int
+	Token0            common.Address
+	Token1            common.Address
+	Provider          common.Address
+	On                bool
+	Liquidity0        *big.Int
+	Liquidity1        *big.Int
+	Liquidity0Dollars float64
+	Liquidity1Dollars float64
+	Gain0             *big.Int
+	Gain1             *big.Int
+	Gain0Dollars      float64
+	Gain1Dollars      float64
+	ProviderName      string
+	FeeProtocol0      float32 // percentage
+	FeeProtocol1      float32 // percentage
 }

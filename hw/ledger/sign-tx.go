@@ -6,6 +6,7 @@ import (
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
+	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/ava-labs/coreth/accounts"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
@@ -51,7 +52,17 @@ func signTx(msg *bus.Message) (*types.Transaction, error) {
 	}
 	payload = append(payload, unsignedTxBytes...)
 
-	reply, err := call(ledger.USB_ID, &SIGN_TX_APDU, payload, generalHail, 5)
+	save_mode := ledger.Pane.Mode
+	save_template := ledger.Pane.GetTemplate()
+	defer func() {
+		ledger.Pane.SetTemplate(save_template)
+		ledger.Pane.SetMode(save_mode)
+	}()
+
+	ledger.Pane.SetTemplate("<w><c>\n<blink>" + gocui.ICON_ALERT + "</blink>Please sign the transaction on your device\n")
+	ledger.Pane.SetMode("template")
+
+	reply, err := call(ledger.USB_ID, &SIGN_TX_APDU, payload)
 	if err != nil {
 		log.Error().Err(err).Msgf("SignTx: Error signing transaction: %s", ledger.USB_ID)
 		return nil, err
