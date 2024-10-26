@@ -3,7 +3,9 @@ package trezor
 import (
 	"errors"
 	"fmt"
+	"strings"
 
+	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/ui"
@@ -15,10 +17,15 @@ var TP_Id int
 type TrezorPane struct {
 	ui.PaneDescriptor
 	*Trezor
-	Template string
 	On       bool
 	Id       int
 	ViewName string
+	Mode     string
+	Pin      string
+	Pass     string
+
+	pin_request  *bus.Message
+	pass_request *bus.Message
 }
 
 var Status TrezorPane = TrezorPane{
@@ -41,7 +48,50 @@ func NewTrezorPane(t *Trezor) *TrezorPane {
 		On:       true,
 	}
 
+	go p.loop()
+
 	return p
+}
+
+func (p *TrezorPane) loop() {
+
+	ch := bus.Subscribe(p.ViewName, "timer")
+	for msg := range ch {
+		if msg.RespondTo != 0 {
+			continue // ignore responses
+		}
+		switch msg.Type {
+		case "close":
+			return
+		case "get_pin":
+			if p.pin_request != nil {
+				p.pin_request.Respond("", errors.New("canceled"))
+			}
+
+			p.pin_request = msg
+			p.Pin = ""
+			p.setMode("pin")
+		case "get_pass":
+			if p.pass_request != nil {
+				p.pass_request.Respond("", errors.New("canceled"))
+			}
+			p.pass_request = msg
+			p.Pass = ""
+			p.setMode("pass")
+		case "done": //timer
+			id := msg.Data.(int)
+			if p.pin_request != nil && p.pin_request.TimerID == id {
+				p.pin_request.Respond("", errors.New("timeout"))
+				p.pin_request = nil
+				p.setMode("")
+			}
+			if p.pass_request != nil && p.pass_request.TimerID == id {
+				p.pass_request.Respond("", errors.New("timeout"))
+				p.pass_request = nil
+				p.setMode("")
+			}
+		}
+	}
 }
 
 func (p *TrezorPane) GetDesc() *ui.PaneDescriptor {
@@ -57,7 +107,7 @@ func (p *TrezorPane) SetOn(on bool) {
 }
 
 func (p *TrezorPane) EstimateLines(w int) int {
-	return gocui.EstimateTemplateLines(p.Template, w)
+	return gocui.EstimateTemplateLines(p.GetTemplate(), w)
 }
 
 func (p *TrezorPane) SetView(x0, y0, x1, y1 int, overlap byte) {
@@ -74,33 +124,160 @@ func (p *TrezorPane) SetView(x0, y0, x1, y1 int, overlap byte) {
 		v.Autoscroll = false
 		v.ScrollBar = true
 		v.OnResize = func(v *gocui.View) {
-			v.RenderTemplate(p.Template)
+			v.RenderTemplate(p.GetTemplate())
 			v.ScrollTop()
 		}
-		// v.OnOverHotspot = ProcessOnOverHotspot
-		// v.OnClickHotspot = ProcessOnClickHotspot
+		v.OnOverHotspot = cmn.StandardOnOverHotspot
+		v.OnClickHotspot = func(v *gocui.View, hs *gocui.Hotspot) {
+			if hs != nil {
+				param := cmn.Split3(hs.Value)
+
+				switch param[0] {
+				case "skip_password_on":
+					p.Trezor.setSkipPassword(false)
+					p.rebuidTemplate()
+					return
+				case "skip_password_off":
+					p.Trezor.setSkipPassword(true)
+					p.rebuidTemplate()
+					return
+				case "button":
+					switch param[1] {
+					case "back":
+						if len(p.Pin) > 0 {
+							p.Pin = p.Pin[:len(p.Pin)-1]
+							v.GetHotspotById("pin").SetText(strings.Repeat("*", len(p.Pin)) + "______________")
+						}
+					case "1", "2", "3", "4", "5", "6", "7", "8", "9":
+						p.Pin += param[1]
+						v.GetHotspotById("pin").SetText(strings.Repeat("*", len(p.Pin)) + "______________")
+					case "OK":
+						if p.pin_request != nil {
+							p.pin_request.Respond(p.Pin, nil)
+							p.pin_request = nil
+							p.setMode("")
+						}
+					case "Cancel":
+						if p.pin_request != nil {
+							p.pin_request.Respond("", errors.New("canceled"))
+							p.pin_request = nil
+							p.setMode("")
+						}
+					case "standard":
+						if p.pass_request != nil {
+							p.pass_request.Respond("", nil)
+							p.pass_request = nil
+							p.setMode("")
+						}
+					case "hidden":
+						if p.pass_request != nil {
+							res := bus.Fetch("timer", "pause", p.pass_request.TimerID)
+							if res.Error != nil {
+								log.Error().Err(res.Error).Msg("Error pausing timer")
+								p.pass_request.Respond("", res.Error)
+								p.pass_request = nil
+								p.setMode("")
+								return
+							}
+							v.GetGui().ShowPopup(&gocui.Popup{
+								Title: "Enter Trezor Password",
+								Template: `<c><w>
+Password: <input id:password size:16 masked:true>
+
+<button text:OK> <button text:Cancel>`,
+								OnClickHotspot: func(v *gocui.View, hs *gocui.Hotspot) {
+									if hs != nil {
+										switch hs.Value {
+										case "button OK":
+											p.Pass = v.GetInput("password")
+											v.GetGui().HidePopup()
+											p.pass_request.Respond(p.Pass, nil)
+											p.pass_request = nil
+											p.setMode("")
+										case "button Cancel":
+											v.GetGui().HidePopup()
+											p.pass_request.Respond("", errors.New("canceled"))
+											p.pass_request = nil
+											p.setMode("")
+										}
+									}
+								},
+								OnClose: func(v *gocui.View) {
+									bus.Fetch("timer", "resume", p.pass_request.TimerID)
+								},
+							})
+						}
+					}
+				}
+			}
+			cmn.StandardOnClickHotspot(v, hs)
+		}
+
 		p.rebuidTemplate()
 	}
 }
 
-func (p *TrezorPane) rebuidTemplate() {
-	temp := "<w>"
+func (p *TrezorPane) setMode(mode string) {
+	p.Mode = mode
 
-	if p.Trezor != nil {
-		temp += fmt.Sprintf("Firmware: %d.%d\n", *p.Trezor.MajorVersion, *p.Trezor.MinorVersion)
-
-		temp += fmt.Sprintf("      SN: %s\n",
-			cmn.TagLink(*p.Trezor.DeviceId, "copy serial number", "copy "+*p.Trezor.DeviceId))
-
-		temp += "Features: "
-
-		if p.Trezor.PassphraseAlwaysOnDevice != nil && *p.Trezor.PassphraseAlwaysOnDevice {
-			temp += cmn.TagLink(gocui.ICON_CHECK, "Passphrase support", "command ???")
-		} else {
-			temp += cmn.TagLink(gocui.ICON_UNCHECK, "Passphrase support", "command ???")
-		}
-		temp += " Password support\n"
+	if mode != "" {
+		p.View.EmFgColor = ui.Gui.ActionBgColor
+	} else {
+		p.View.EmFgColor = ui.Gui.HelpFgColor
 	}
 
-	p.Template = temp
+	p.rebuidTemplate()
+}
+
+func (p *TrezorPane) rebuidTemplate() {
+	temp := ""
+	switch p.Mode {
+	case "pin":
+		temp += "<c>Enter PIN\n"
+		temp += "<l id:pin text:'____________'> <button text:'\U000f006e ' id:back>\n\n"
+
+		ids := []int{7, 8, 9, 4, 5, 6, 1, 2, 3}
+
+		for i := 0; i < 9; i++ {
+			temp += fmt.Sprintf("<button color:g.HelpFgColor bgcolor:g.HelpBgColor text:' - ' id:%d> ", ids[i])
+			if (i+1)%3 == 0 {
+				temp += "\n\n"
+			}
+		}
+		temp += "<button text:OK> <button text:Cancel>"
+	case "pass":
+		temp += `<c><w>
+<button text:Standard color:g.HelpFgColor bgcolor:g.HelpBgColor id:standard> <button text:Hidden color:g.HelpFgColor bgcolor:g.HelpBgColor id:hidden> 
+
+<button text:Cancel>`
+	default:
+		if p.Trezor != nil {
+			temp += fmt.Sprintf("Firmware: %d.%d.%d\n",
+				*p.Trezor.MajorVersion,
+				*p.Trezor.MinorVersion,
+				*p.Trezor.PatchVersion)
+
+			temp += fmt.Sprintf("      SN: %s\n",
+				cmn.TagLink(*p.Trezor.DeviceId, "copy "+*p.Trezor.DeviceId, "Copy SN"))
+
+			if cmn.CurrentWallet != nil {
+				temp += "Features: "
+				if !p.Trezor.isSkipPassword() {
+					temp += cmn.TagLink(gocui.ICON_CHECK, "skip_password_off", "Set passphrase off")
+				} else {
+					temp += cmn.TagLink(gocui.ICON_UNCHECK, "skip_password_on", "Set passphrase on")
+				}
+				temp += " Use Passphrase"
+			}
+		}
+	}
+
+	p.SetTemplate(temp)
+
+	ui.Gui.Update(func(g *gocui.Gui) error {
+		if p.View != nil {
+			p.View.RenderTemplate(p.GetTemplate())
+		}
+		return nil
+	})
 }

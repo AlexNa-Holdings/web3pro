@@ -28,7 +28,7 @@ Usage:
 
 func Ws_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 	options := []ui.ACOption{}
-	p := cmn.Split(input)
+	p := cmn.Split3(input)
 	command, subcommand, _ := p[0], p[1], p[2]
 
 	if !cmn.IsInArray(websocket_subcommands, subcommand) {
@@ -49,7 +49,7 @@ func Ws_Process(c *Command, input string) {
 		return
 	}
 
-	p := cmn.Split(input)
+	p := cmn.Split3(input)
 	_, subcommand := p[0], p[1]
 
 	switch subcommand {

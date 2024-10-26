@@ -589,6 +589,22 @@ func openFromFile(file string, pass string) (*Wallet, error) {
 		w.Blockchains = []*Blockchain{}
 	}
 
+	if w.LP_V3_Providers == nil {
+		w.LP_V3_Providers = []*LP_V3{}
+	}
+
+	if w.LP_V3_Positions == nil {
+		w.LP_V3_Positions = []*LP_V3_Position{}
+	}
+
+	if w.ParamInt == nil {
+		w.ParamInt = make(map[string]int)
+	}
+
+	if w.ParamStr == nil {
+		w.ParamStr = make(map[string]string)
+	}
+
 	return w, nil
 }
 
@@ -948,4 +964,20 @@ func (w *Wallet) RemoveLP_V3Position(addr common.Address, chainId int, provider 
 		}
 	}
 	return errors.New("position not found")
+}
+
+func (w *Wallet) SetParamInt(name string, val int) error {
+	w.writeMutex.Lock()
+	defer w.writeMutex.Unlock()
+
+	w.ParamInt[name] = val
+	return w._locked_Save()
+}
+
+func (w *Wallet) SetParamStr(name string, val string) error {
+	w.writeMutex.Lock()
+	defer w.writeMutex.Unlock()
+
+	w.ParamStr[name] = val
+	return w._locked_Save()
 }

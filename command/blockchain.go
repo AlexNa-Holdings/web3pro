@@ -35,7 +35,7 @@ Commands:
 
 func Blockchain_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 	options := []ui.ACOption{}
-	p := cmn.Split(input)
+	p := cmn.Split3(input)
 	command, subcommand, param := p[0], p[1], p[2]
 
 	if !cmn.IsInArray(blockchain_subcommands, subcommand) {
@@ -90,7 +90,7 @@ func Blockchain_Process(c *Command, input string) {
 	w := cmn.CurrentWallet
 
 	//parse command subcommand parameters
-	t := cmn.Split(input)
+	t := cmn.Split3(input)
 	subcommand, b_name := t[1], t[2]
 
 	switch subcommand {

@@ -6,8 +6,6 @@ import (
 	"strings"
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
-	"github.com/AlexNa-Holdings/web3pro/cmn"
-	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/hw/trezor/trezorproto"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/protobuf/proto"
@@ -25,16 +23,23 @@ func (d *Trezor) Call(m *bus.Message, req proto.Message, result proto.Message) e
 		case trezorproto.MessageType_MessageType_PinMatrixRequest:
 			{
 				log.Trace().Msg("*** Enter PIN ...")
-				pin, err := d.RequsetPin(m)
-				if err != nil {
-					log.Error().Msgf("Call: Error getting pin: %s", err)
+				pr := m.Fetch(d.Pane.ViewName, "get_pin", nil)
+				if pr.Error != nil {
+					log.Error().Err(pr.Error).Msg("Error fetching pin")
 					d.RawCall(m, &trezorproto.Cancel{})
-					return err
+					return pr.Error
 				}
 
-				pinStr := string(pin)
+				pinStr := string(d.Pane.Pin)
+
+				if len(pinStr) < 1 {
+					log.Error().Msgf("Call: Invalid PIN provided")
+					d.RawCall(m, &trezorproto.Cancel{})
+					return errors.New("trezor: Invalid PIN provided")
+				}
+
 				for _, ch := range pinStr {
-					if !strings.ContainsRune("123456789", ch) || len(pin) < 1 {
+					if !strings.ContainsRune("123456789", ch) {
 						log.Error().Msgf("Call: Invalid PIN provided")
 						d.RawCall(m, &trezorproto.Cancel{})
 						return errors.New("trezor: Invalid PIN provided")
@@ -55,13 +60,18 @@ func (d *Trezor) Call(m *bus.Message, req proto.Message, result proto.Message) e
 			}
 		case trezorproto.MessageType_MessageType_PassphraseRequest:
 			{
-				log.Trace().Msg("Enter Pass	phrase")
-				pass, err := d.RequsetPassword(m)
-				if err != nil {
-					d.RawCall(m, &trezorproto.Cancel{})
-					return err
+				passStr := ""
+				if !d.isSkipPassword() {
+
+					pr := m.Fetch(d.Pane.ViewName, "get_pass", nil)
+					if pr.Error != nil {
+						log.Error().Err(pr.Error).Msg("Error fetching pass")
+						d.RawCall(m, &trezorproto.Cancel{})
+						return pr.Error
+					}
+
+					passStr = d.Pane.Pass
 				}
-				passStr := string(pass)
 				// send it
 				kind, reply, err = d.RawCall(m, &trezorproto.PassphraseAck{Passphrase: &passStr})
 				if err != nil {
@@ -104,120 +114,4 @@ func (d *Trezor) Call(m *bus.Message, req proto.Message, result proto.Message) e
 			}
 		}
 	}
-}
-
-func (d *Trezor) RequsetPin(m *bus.Message) (string, error) {
-	template := "<c><w>\n<l id:pin text:'____________'> <button text:'\U000f006e ' id:back>\n\n"
-
-	ids := []int{7, 8, 9, 4, 5, 6, 1, 2, 3}
-
-	for i := 0; i < 9; i++ {
-		template += fmt.Sprintf("<button color:g.HelpFgColor bgcolor:g.HelpBgColor text:' - ' id:%d> ", ids[i])
-		if (i+1)%3 == 0 {
-			template += "\n\n"
-		}
-	}
-	template += "<button text:OK> <button text:Cancel>"
-	pin := ""
-
-	m.Fetch("ui", "hail", &bus.B_Hail{
-		Title:     "Enter Trezor PIN",
-		Priorized: true,
-		Template:  template,
-		OnClickHotspot: func(m *bus.Message, v *gocui.View, hs *gocui.Hotspot) {
-			if hs != nil {
-				s := cmn.Split(hs.Value)
-				command, value := s[0], s[1]
-
-				switch command {
-				case "button":
-					switch value {
-					case "back":
-						if len(pin) > 0 {
-							pin = pin[:len(pin)-1]
-							v.GetHotspotById("pin").SetText(strings.Repeat("*", len(pin)) + "______________")
-						}
-					case "1", "2", "3", "4", "5", "6", "7", "8", "9":
-						pin += value
-						v.GetHotspotById("pin").SetText(strings.Repeat("*", len(pin)) + "______________")
-					}
-				}
-			}
-		},
-	})
-
-	log.Debug().Msgf("PIN: %s", pin)
-
-	if pin == "" {
-		return "", errors.New("pin request canceled")
-	}
-
-	return pin, nil
-
-}
-
-func (d *Trezor) RequsetPassword(m *bus.Message) (string, error) {
-	password := ""
-	canceled := false
-
-	m.Fetch("ui", "hail", &bus.B_Hail{
-		Title:     "Select Wallet Type",
-		Priorized: true,
-		Template: `<c><w>
-<button text:Standard color:g.HelpFgColor bgcolor:g.HelpBgColor id:standard> <button text:Hidden color:g.HelpFgColor bgcolor:g.HelpBgColor id:hidden> 
-
-<button text:Cancel>`,
-
-		OnClickHotspot: func(m *bus.Message, v *gocui.View, hs *gocui.Hotspot) {
-			if hs != nil {
-				s := cmn.Split(hs.Value)
-				command, value := s[0], s[1]
-
-				switch command {
-				case "button":
-					switch value {
-					case "standard":
-						bus.Send("ui", "remove-hail", m)
-					case "hidden":
-						res := bus.Fetch("timer", "pause", m.TimerID)
-						if res.Error != nil {
-							log.Error().Err(res.Error).Msg("Error pausing timer")
-							return
-						}
-						v.GetGui().ShowPopup(&gocui.Popup{
-							Title: "Enter Trezor Password",
-							Template: `<c><w>
-Password: <input id:password size:16 masked:true>
-
-<button text:OK> <button text:Cancel>`,
-							OnClickHotspot: func(v *gocui.View, hs *gocui.Hotspot) {
-								if hs != nil {
-									switch hs.Value {
-									case "button OK":
-										password = v.GetInput("password")
-										v.GetGui().HidePopup()
-										bus.Send("ui", "remove-hail", m)
-									case "button Cancel":
-										v.GetGui().HidePopup()
-									}
-								}
-							},
-							OnClose: func(v *gocui.View) {
-								bus.Fetch("timer", "resume", m.TimerID)
-							},
-						})
-					}
-				}
-			}
-		},
-		OnCancel: func(*bus.Message) {
-			canceled = true
-		},
-	})
-
-	if canceled {
-		return "", errors.New("password request canceled")
-	}
-
-	return password, nil
 }

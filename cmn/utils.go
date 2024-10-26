@@ -27,9 +27,9 @@ func Contains(s string, subststr string) bool {
 	)
 }
 
-// Split splits the input string into a slice of strings. Guarantees that the
+// Split3 splits the input string into a slice of strings. Guarantees that the
 // result has at least 3 elements.
-func Split(input string) []string {
+func Split3(input string) []string {
 	return SplitN(input, 3)
 }
 

@@ -30,6 +30,10 @@ type Wallet struct {
 	CurrentAddress common.Address `json:"current_address"`
 	CurrentOrigin  string         `json:"current_origin"`
 
+	// Auxilary params
+	ParamInt map[string]int    `json:"param_int"`
+	ParamStr map[string]string `json:"param_str"`
+
 	SoundOn bool   `json:"sound_on"`
 	Sound   string `json:"sound"`
 

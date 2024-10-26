@@ -34,7 +34,7 @@ COMMANDS:
 
 func Theme_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 	options := []ui.ACOption{}
-	p := cmn.Split(input)
+	p := cmn.Split3(input)
 	command, subcommand, param := p[0], p[1], p[2]
 
 	if !cmn.IsInArray(theme_subcommands, subcommand) {

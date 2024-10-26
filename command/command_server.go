@@ -77,7 +77,7 @@ func Init() {
 
 func AutoComplete(input string) (string, *[]ui.ACOption, string) {
 	options := []ui.ACOption{}
-	p := cmn.Split(input)
+	p := cmn.Split3(input)
 	command, _, _ := p[0], p[1], p[2]
 
 	if command == "" {

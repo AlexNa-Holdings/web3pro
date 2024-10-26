@@ -26,7 +26,7 @@ var trezors_mutex = &sync.Mutex{}
 const TRZ = "trezor"
 
 func Loop() {
-	ch := bus.Subscribe("signer", "usb")
+	ch := bus.Subscribe("signer", "usb", "wallet")
 	for msg := range ch {
 		if msg.RespondTo != 0 {
 			continue // ignore responses
@@ -48,6 +48,13 @@ func process(msg *bus.Message) {
 				disconnected(m)
 			} else {
 				log.Error().Msg("Loop: Invalid usb disconnected data")
+			}
+		}
+	case "wallet":
+		switch msg.Type {
+		case "open":
+			for _, t := range trezors {
+				t.Pane.rebuidTemplate()
 			}
 		}
 	case "signer":
@@ -238,4 +245,34 @@ Please connect your Trezor device:
 	})
 
 	return t
+}
+
+func (t *Trezor) isSkipPassword() bool {
+
+	w := cmn.CurrentWallet
+	if w == nil {
+		log.Error().Msg("UsePassword: No wallet")
+		return false
+	}
+
+	on, ok := w.ParamInt["trezor/"+t.Features.GetDeviceId()+"/skip_password"]
+	if !ok {
+		return false
+	}
+
+	return on == 1
+}
+
+func (t *Trezor) setSkipPassword(on bool) {
+	w := cmn.CurrentWallet
+	if w == nil {
+		log.Error().Msg("UsePassword: No wallet")
+		return
+	}
+
+	if on {
+		w.ParamInt["trezor/"+t.Features.GetDeviceId()+"/skip_password"] = 1
+	} else {
+		delete(w.ParamInt, "trezor/"+t.Features.GetDeviceId()+"/skip_password")
+	}
 }
