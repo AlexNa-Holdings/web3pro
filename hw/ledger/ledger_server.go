@@ -200,6 +200,7 @@ func connected(m *bus.B_UsbConnected) {
 	add(t)
 
 	t.Pane = NewLedgerPane(t)
+	t.Product = m.Product
 	ui.TopLeftFlow.AddPane(t.Pane)
 
 	n, err := getName(m.USB_ID)
@@ -209,7 +210,6 @@ func connected(m *bus.B_UsbConnected) {
 	}
 
 	t.Name = n
-	t.Product = m.Product
 	t.Pane.rebuidTemplate()
 
 	bus.Send("signer", "connected", &bus.B_SignerConnected{Type: LDG, Name: t.Name})

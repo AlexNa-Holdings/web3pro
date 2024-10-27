@@ -62,8 +62,7 @@ func send(msg *bus.Message) error {
 	msg.Fetch("ui", "hail", &bus.B_Hail{
 		Title:    "Send Tokens",
 		Template: template,
-		OnOk: func(m *bus.Message) bool {
-			bus.Send("ui", "remove-hail", m) // close first
+		OnOk: func(m *bus.Message, v *gocui.View) bool {
 			if t.Native {
 				err := Transfer(msg, b, s, from, to, amount)
 				if err != nil {
@@ -79,6 +78,7 @@ func send(msg *bus.Message) error {
 					return false
 				}
 			}
+			bus.Send("ui", "remove-hail", m) // close first
 			return false
 		},
 		OnOverHotspot: func(m *bus.Message, v *gocui.View, hs *gocui.Hotspot) {

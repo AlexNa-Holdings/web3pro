@@ -108,7 +108,7 @@ func (p *HailPaneType) SetView(x0, y0, x1, y1 int, overlap byte) {
 					log.Trace().Msgf("HailPane: button Ok")
 					close := true
 					if active_hail.OnOk != nil {
-						close = active_hail.OnOk(ActiveRequest)
+						close = active_hail.OnOk(ActiveRequest, v)
 					}
 					if close {
 						remove(ActiveRequest)

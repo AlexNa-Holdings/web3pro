@@ -183,7 +183,7 @@ func (t *TerminalPane) layoutAutocomplete(title string, options *[]ACOption, hig
 	input := t.Input.Buffer()
 	ix0, _, ix1, _ := t.Input.Dimensions()
 	io0, _ := t.Input.Origin()
-	_, sy0, sx1, sy1 := t.Screen.Dimensions()
+	_ /*sy0*/, _, sx1, sy1 := t.Screen.Dimensions()
 
 	frame_width := max(longest_option+2, len(title)+16) // make the title visible
 
@@ -196,8 +196,11 @@ func (t *TerminalPane) layoutAutocomplete(title string, options *[]ACOption, hig
 	}
 
 	frame_height := len(*options) + 2
-	if frame_height > sy1-sy0 {
-		frame_height = sy1 - sy0
+	// if frame_height > sy1-sy0 {
+	// 	frame_height = sy1 - sy0
+	// }
+	if frame_height > sy1 {
+		frame_height = sy1
 	}
 
 	if t.AutoComplete, err = Gui.SetView("terminal.autocomplete", x, sy1-frame_height, x+frame_width, sy1-1, 0); err != nil {

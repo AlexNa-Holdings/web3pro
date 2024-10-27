@@ -145,7 +145,7 @@ func (p *LedgerPane) rebuidTemplate() {
 			if p.Name != "" {
 				temp += fmt.Sprintf("<w><b>Product:<b> %s", p.Ledger.Product)
 			} else {
-				temp += "<button id:get_name text:'Request Devive Name'>"
+				temp += "<c>\n<button id:get_name text:'Request Devive Name'>\n"
 			}
 		}
 	}

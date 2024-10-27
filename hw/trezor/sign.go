@@ -6,6 +6,7 @@ import (
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
+	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/hw/trezor/trezorproto"
 	"github.com/ava-labs/coreth/accounts"
 	"github.com/rs/zerolog/log"
@@ -37,11 +38,15 @@ func sign(msg *bus.Message) (string, error) {
 
 	response := new(trezorproto.EthereumMessageSignature)
 
-	text_hail := bus.Send("ui", "hail", &bus.B_Hail{
-		Title:    "Sign Message",
-		Template: "<c><w>Please review tand sign it with your Trezor device.",
-	})
-	defer bus.Send("ui", "remove-hail", text_hail)
+	save_mode := t.Pane.Mode
+	save_template := t.Pane.GetTemplate()
+	defer func() {
+		t.Pane.SetTemplate(save_template)
+		t.Pane.SetMode(save_mode)
+	}()
+
+	t.Pane.SetTemplate("<w><c>\n<blink>" + gocui.ICON_ALERT + "</blink>Please review tand sign it with your Trezor device\n")
+	t.Pane.SetMode("template")
 
 	if err := t.Call(msg, request, response); err != nil {
 		log.Error().Err(err).Msgf("Sign: Error signing typed data(1): %s", m.Path)

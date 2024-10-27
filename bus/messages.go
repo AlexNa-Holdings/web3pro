@@ -40,7 +40,7 @@ type B_Hail struct { // hail
 	OnOpen         func(*Message, *gocui.Gui, *gocui.View)
 	OnClose        func(*Message)
 	OnCancel       func(*Message)
-	OnOk           func(*Message) bool // return true to close hail
+	OnOk           func(*Message, *gocui.View) bool // return true to close hail
 	OnSuspend      func(*Message)
 	OnResume       func(*Message)
 	OnTick         func(*Message, int)

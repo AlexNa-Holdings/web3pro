@@ -42,7 +42,7 @@ func sendTx(msg *bus.Message) (string, error) {
 		return "", fmt.Errorf("address from not found: %v", req.From)
 	}
 
-	template, err := BuildHailToSendTxTemplate(b, from, req.To, req.Amount, req.Data, nil)
+	template, err := BuildHailToSendTxTemplate(b, from, req.To, req.Amount, req.Data, nil, false)
 	if err != nil {
 		log.Error().Err(err).Msg("Error building send-tx hail template")
 		bus.Send("ui", "notify-error", fmt.Sprintf("Error: %v", err))
@@ -59,11 +59,60 @@ func sendTx(msg *bus.Message) (string, error) {
 	}
 
 	confirmed := false
+	err = nil
+	hash := ""
 
 	msg.Fetch("ui", "hail", &bus.B_Hail{
 		Title:    "Send Tx",
 		Template: template,
-		OnOk: func(m *bus.Message) bool {
+		OnOk: func(m *bus.Message, v *gocui.View) bool {
+
+			template, err := BuildHailToSendTxTemplate(b, from, req.To, req.Amount, req.Data, nil, true)
+			if err != nil {
+				bus.Send("ui", "notify-error", fmt.Sprintf("Error: %v", err))
+				return true
+			}
+
+			v.GetGui().UpdateAsync(func(*gocui.Gui) error {
+				v.RenderTemplate(template)
+				return nil
+			})
+
+			signer := w.GetSigner(from.Signer)
+			if signer == nil {
+				err = fmt.Errorf("signer not found: %v", from.Signer)
+				return true
+			}
+
+			sign_res := msg.Fetch("signer", "sign-tx", &bus.B_SignerSignTx{
+				Type:      signer.Type,
+				Name:      signer.Name,
+				MasterKey: signer.MasterKey,
+				Chain:     b.Name,
+				Tx:        tx,
+				From:      from.Address,
+				Path:      from.Path,
+			})
+
+			if sign_res.Error != nil {
+				err = fmt.Errorf("error signing transaction: %v", sign_res.Error)
+				return true
+			}
+
+			signedTx, ok := sign_res.Data.(*types.Transaction)
+			if !ok {
+				log.Error().Msgf("sendTx: Cannot convert to transaction. Data:(%v)", sign_res.Data)
+				err = errors.New("cannot convert to transaction")
+				return true
+			}
+
+			hash, err = SendSignedTx(signedTx)
+			if err != nil {
+				log.Error().Err(err).Msg("sendTx: Cannot send tx")
+				bus.Send("ui", "notify-error", fmt.Sprintf("Error: %v", err))
+				return true
+			}
+
 			confirmed = true
 			return true
 		},
@@ -77,7 +126,7 @@ func sendTx(msg *bus.Message) (string, error) {
 				case "button edit_gas_price":
 					go editFee(m, v, tx, nt, func(newGasPrice *big.Int) {
 						tx.GasPrice().Set(newGasPrice)
-						template, err := BuildHailToSendTxTemplate(b, from, req.To, req.Amount, req.Data, newGasPrice)
+						template, err := BuildHailToSendTxTemplate(b, from, req.To, req.Amount, req.Data, newGasPrice, false)
 						if err != nil {
 							log.Error().Err(err).Msg("Error building hail template")
 							bus.Send("ui", "notify-error", fmt.Sprintf("Error: %v", err))
@@ -95,7 +144,7 @@ func sendTx(msg *bus.Message) (string, error) {
 					})
 				case "button edit_contract":
 					go editContract(m, v, req.To, func() {
-						template, err := BuildHailToSendTxTemplate(b, from, req.To, req.Amount, req.Data, nil)
+						template, err := BuildHailToSendTxTemplate(b, from, req.To, req.Amount, req.Data, nil, false)
 						if err != nil {
 							log.Error().Err(err).Msg("Error building hail template")
 							bus.Send("ui", "notify-error", fmt.Sprintf("Error: %v", err))
@@ -143,7 +192,7 @@ func sendTx(msg *bus.Message) (string, error) {
 				}
 
 				if rebuild {
-					template, err := BuildHailToSendTxTemplate(b, from, req.To, req.Amount, req.Data, nil)
+					template, err := BuildHailToSendTxTemplate(b, from, req.To, req.Amount, req.Data, nil, false)
 					if err != nil {
 						log.Error().Err(err).Msg("Error building hail template")
 						bus.Send("ui", "notify-error", fmt.Sprintf("Error: %v", err))
@@ -165,39 +214,6 @@ func sendTx(msg *bus.Message) (string, error) {
 	if !confirmed {
 		return "", fmt.Errorf("rejected by user")
 	}
-
-	signer := w.GetSigner(from.Signer)
-	if signer == nil {
-		return "", fmt.Errorf("signer not found: %v", from.Signer)
-	}
-
-	sign_res := msg.Fetch("signer", "sign-tx", &bus.B_SignerSignTx{
-		Type:      signer.Type,
-		Name:      signer.Name,
-		MasterKey: signer.MasterKey,
-		Chain:     b.Name,
-		Tx:        tx,
-		From:      from.Address,
-		Path:      from.Path,
-	})
-
-	if sign_res.Error != nil {
-		return "", fmt.Errorf("error signing transaction: %v", sign_res.Error)
-	}
-
-	signedTx, ok := sign_res.Data.(*types.Transaction)
-	if !ok {
-		log.Error().Msgf("sendTx: Cannot convert to transaction. Data:(%v)", sign_res.Data)
-		return "", errors.New("cannot convert to transaction")
-	}
-
-	hash, err := SendSignedTx(signedTx)
-	if err != nil {
-		log.Error().Err(err).Msg("sendTx: Cannot send tx")
-		bus.Send("ui", "notify-error", fmt.Sprintf("Error: %v", err))
-		return "", err
-	}
-
 	bus.Send("ui", "notify", "Transaction sent: "+hash)
 
 	return hash, nil
@@ -281,7 +297,7 @@ func BuildTx(b *cmn.Blockchain, s *cmn.Signer, from *cmn.Address, to common.Addr
 }
 
 func BuildHailToSendTxTemplate(b *cmn.Blockchain, from *cmn.Address, to common.Address,
-	amount *big.Int, data []byte, suggested_gas_price *big.Int) (string, error) {
+	amount *big.Int, data []byte, suggested_gas_price *big.Int, confirmed bool) (string, error) {
 	if cmn.CurrentWallet == nil {
 		return "", errors.New("no wallet")
 	}
@@ -381,6 +397,12 @@ func BuildHailToSendTxTemplate(b *cmn.Blockchain, from *cmn.Address, to common.A
 
 	call_details := buildCallDetails(w, tx, to)
 
+	bottom := `<button text:Send id:ok bgcolor:g.HelpBgColor color:g.HelpFgColor tip:"send tokens">  ` +
+		`<button text:Reject id:cancel bgcolor:g.ErrorFgColor tip:"reject transaction">`
+	if confirmed {
+		bottom = `<c><blink>Waiting to be signed</blink></c>`
+	}
+
 	return `  Blockchain: ` + b.Name + `
         From: ` + cmn.TagAddressShortLink(from.Address) + " " + from.Name + `
       Amount: ` + nt.Value2Str(amount) + " " + nt.Symbol + `
@@ -397,9 +419,7 @@ func BuildHailToSendTxTemplate(b *cmn.Blockchain, from *cmn.Address, to common.A
    Total Fee: ` + cmn.TagValueSymbolLink(total_gas, nt) + `
 Total Fee($): ` + total_fee_s + `
 <c>
-` +
-		`<button text:Send id:ok bgcolor:g.HelpBgColor color:g.HelpFgColor tip:"send tokens">  ` +
-		`<button text:Reject id:cancel bgcolor:g.ErrorFgColor tip:"reject transaction">`, nil
+` + bottom, nil
 }
 
 func editContract(m *bus.Message, v *gocui.View, address common.Address, on_close func()) {

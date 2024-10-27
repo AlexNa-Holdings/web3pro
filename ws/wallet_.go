@@ -8,6 +8,7 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/eth"
+	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog/log"
 )
@@ -92,7 +93,7 @@ to :
 <u><b>` + schain + `</b></u>
 
 <button text:Ok> <button text:Cancel>`,
-		OnOk: func(m *bus.Message) bool {
+		OnOk: func(m *bus.Message, v *gocui.View) bool {
 			o.ChainId = int(chainID)
 			err := w.Save()
 			if err != nil {
@@ -164,7 +165,7 @@ Do you want to add the token:
 to your wallet?
 
 <button text:Ok> <button text:Cancel>`,
-			OnOk: func(m *bus.Message) bool {
+			OnOk: func(m *bus.Message, v *gocui.View) bool {
 
 				a_symbol, a_name, a_decimals, err := eth.GetERC20TokenInfo(b, common.HexToAddress(address))
 				if err != nil {

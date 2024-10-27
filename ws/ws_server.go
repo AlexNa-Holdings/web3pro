@@ -309,7 +309,7 @@ version: ` + version + `
 <button text:Ok> <button text:Cancel>
 
 <button text:'Block for session' id:block>`,
-		OnOk: func(m *bus.Message) bool {
+		OnOk: func(m *bus.Message, v *gocui.View) bool {
 			allowed = true
 			return true
 		},
@@ -450,7 +450,7 @@ Allow to connect to this web application:
 and use the current chain & address?
 
 <button text:Ok> <button text:Cancel>`,
-			OnOk: func(m *bus.Message) bool {
+			OnOk: func(m *bus.Message, v *gocui.View) bool {
 
 				chain_id := 1
 				b := w.GetBlockchainByName(w.CurrentChain)

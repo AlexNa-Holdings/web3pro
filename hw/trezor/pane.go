@@ -70,25 +70,25 @@ func (p *TrezorPane) loop() {
 
 			p.pin_request = msg
 			p.Pin = ""
-			p.setMode("pin")
+			p.SetMode("pin")
 		case "get_pass":
 			if p.pass_request != nil {
 				p.pass_request.Respond("", errors.New("canceled"))
 			}
 			p.pass_request = msg
 			p.Pass = ""
-			p.setMode("pass")
+			p.SetMode("pass")
 		case "done": //timer
 			id := msg.Data.(int)
 			if p.pin_request != nil && p.pin_request.TimerID == id {
 				p.pin_request.Respond("", errors.New("timeout"))
 				p.pin_request = nil
-				p.setMode("")
+				p.SetMode("")
 			}
 			if p.pass_request != nil && p.pass_request.TimerID == id {
 				p.pass_request.Respond("", errors.New("timeout"))
 				p.pass_request = nil
-				p.setMode("")
+				p.SetMode("")
 			}
 		}
 	}
@@ -155,19 +155,19 @@ func (p *TrezorPane) SetView(x0, y0, x1, y1 int, overlap byte) {
 						if p.pin_request != nil {
 							p.pin_request.Respond(p.Pin, nil)
 							p.pin_request = nil
-							p.setMode("")
+							p.SetMode("")
 						}
 					case "Cancel":
 						if p.pin_request != nil {
 							p.pin_request.Respond("", errors.New("canceled"))
 							p.pin_request = nil
-							p.setMode("")
+							p.SetMode("")
 						}
 					case "standard":
 						if p.pass_request != nil {
 							p.pass_request.Respond("", nil)
 							p.pass_request = nil
-							p.setMode("")
+							p.SetMode("")
 						}
 					case "hidden":
 						if p.pass_request != nil {
@@ -176,7 +176,7 @@ func (p *TrezorPane) SetView(x0, y0, x1, y1 int, overlap byte) {
 								log.Error().Err(res.Error).Msg("Error pausing timer")
 								p.pass_request.Respond("", res.Error)
 								p.pass_request = nil
-								p.setMode("")
+								p.SetMode("")
 								return
 							}
 							v.GetGui().ShowPopup(&gocui.Popup{
@@ -193,12 +193,12 @@ Password: <input id:password size:16 masked:true>
 											v.GetGui().HidePopup()
 											p.pass_request.Respond(p.Pass, nil)
 											p.pass_request = nil
-											p.setMode("")
+											p.SetMode("")
 										case "button Cancel":
 											v.GetGui().HidePopup()
 											p.pass_request.Respond("", errors.New("canceled"))
 											p.pass_request = nil
-											p.setMode("")
+											p.SetMode("")
 										}
 									}
 								},
@@ -217,7 +217,7 @@ Password: <input id:password size:16 masked:true>
 	}
 }
 
-func (p *TrezorPane) setMode(mode string) {
+func (p *TrezorPane) SetMode(mode string) {
 	p.Mode = mode
 
 	if mode != "" {
@@ -250,6 +250,8 @@ func (p *TrezorPane) rebuidTemplate() {
 <button text:Standard color:g.HelpFgColor bgcolor:g.HelpBgColor id:standard> <button text:Hidden color:g.HelpFgColor bgcolor:g.HelpBgColor id:hidden> 
 
 <button text:Cancel>`
+	case "template":
+		temp = p.GetTemplate()
 	default:
 		if p.Trezor != nil {
 			temp += fmt.Sprintf("<b>      SN:</b> %s\n",

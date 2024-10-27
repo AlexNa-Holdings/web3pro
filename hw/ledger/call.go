@@ -33,7 +33,7 @@ func call(usb_id string, apdu *APDU, data []byte) ([]byte, error) {
 			ledger.Pane.SetTemplate("<w><c>\n<blink>" + gocui.ICON_ALERT + "</blink>Please unlock your Ledger device\n")
 			ledger.Pane.SetMode("template")
 
-			tl_data, err := bus.TimerLoop(60*5, 3, func() (any, error, bool) {
+			tl_data, err := bus.TimerLoop(60*2, 3, func() (any, error, bool) {
 				r, err = rawCall(usb_id, apdu, data)
 				if err == nil || !strings.Contains(err.Error(), "LOCKED_DEVICE") {
 					return data, nil, true
@@ -61,7 +61,7 @@ func call(usb_id string, apdu *APDU, data []byte) ([]byte, error) {
 			ledger.Pane.SetTemplate("<w><c>\n<blink>" + gocui.ICON_ALERT + "</blink>Please open Ethereum app on the device\n")
 			ledger.Pane.SetMode("template")
 
-			tl_data, err := bus.TimerLoop(60*5, 3, func() (any, error, bool) {
+			tl_data, err := bus.TimerLoop(60*2, 3, func() (any, error, bool) {
 				r, err = rawCall(usb_id, apdu, data)
 				if err == nil || !strings.Contains(err.Error(), "WRONG APP") {
 					return data, nil, true

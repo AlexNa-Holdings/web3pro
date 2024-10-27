@@ -34,7 +34,7 @@ func signTypedDataV4(msg *bus.Message) (string, error) {
 	msg.Fetch("ui", "hail", &bus.B_Hail{
 		Title:    "Sign Typed Data",
 		Template: cmn.ConfirmEIP712Template(req.TypedData),
-		OnOk: func(m *bus.Message) bool {
+		OnOk: func(m *bus.Message, v *gocui.View) bool {
 			OK = true
 			return true
 		},

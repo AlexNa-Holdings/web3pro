@@ -52,95 +52,110 @@ func App_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 	w := cmn.CurrentWallet
 
 	options := []ui.ACOption{}
-
 	p := cmn.SplitN(input, 4)
 	command, subcommand, origin, addr := p[0], p[1], p[2], p[3]
 
-	if !cmn.IsInArray(app_subcommands, subcommand) {
-		for _, sc := range app_subcommands {
-			if input == "" || strings.Contains(sc, subcommand) {
-				options = append(options, ui.ACOption{Name: sc, Result: command + " " + sc + " "})
-			}
-		}
-		return "action", &options, subcommand
+	last_param := len(p) - 1
+	for last_param > 0 && p[last_param] == "" {
+		last_param--
 	}
 
-	if subcommand == "chain" {
-		o := w.GetOrigin(origin)
-		if o != nil {
-			for _, b := range w.Blockchains {
-				if strings.Contains(b.Name, addr) {
+	if strings.HasSuffix(input, " ") {
+		last_param++
+	}
+
+	switch last_param {
+	case 0, 1:
+
+		if !cmn.IsInArray(app_subcommands, subcommand) {
+			for _, sc := range app_subcommands {
+				if input == "" || strings.Contains(sc, subcommand) {
+					options = append(options, ui.ACOption{Name: sc, Result: command + " " + sc + " "})
+				}
+			}
+			return "action", &options, subcommand
+		}
+
+	case 2:
+		if subcommand == "remove" || subcommand == "list" || subcommand == "add_addr" ||
+			subcommand == "remove_addr" || subcommand == "promote_addr" ||
+			subcommand == "chain" || subcommand == "set" {
+
+			sort.Slice(w.Origins, func(i, j int) bool {
+				return w.Origins[i].ShortName() < w.Origins[j].ShortName()
+			})
+
+			for _, o := range w.Origins {
+				if cmn.Contains(o.URL, origin) {
 					options = append(options, ui.ACOption{
-						Name:   b.Name,
-						Result: "app chain '" + origin + "' '" + b.Name + "'"})
+						Name:   fmt.Sprintf("%-12s %s", o.ShortName(), o.URL),
+						Result: command + " " + subcommand + " '" + o.URL + "' "})
 				}
 			}
-			return "chain", &options, addr
+			return "application", &options, origin
 		}
-	}
 
-	if subcommand == "add_addr" {
-		o := w.GetOrigin(origin)
-		if o != nil {
-			for _, a := range w.Addresses {
-				if o.IsAllowed(a.Address) {
-					continue
+	case 3:
+		if subcommand == "chain" {
+			o := w.GetOrigin(origin)
+			if o != nil {
+				for _, b := range w.Blockchains {
+					if strings.Contains(b.Name, addr) {
+						options = append(options, ui.ACOption{
+							Name:   b.Name,
+							Result: "app chain '" + origin + "' '" + b.Name + "' "})
+					}
 				}
-
-				if !cmn.Contains(a.Address.String()+a.Name, addr) {
-					continue
-				}
-
-				options = append(options, ui.ACOption{
-					Name:   cmn.ShortAddress(a.Address) + " " + a.Name,
-					Result: "app add_addr '" + origin + "' '" + a.Address.String() + "'"})
-			}
-			return "address", &options, addr
-		}
-	}
-
-	if subcommand == "remove_addr" || subcommand == "promote_addr" {
-		o := w.GetOrigin(origin)
-		if o != nil {
-			for i, na := range o.Addresses {
-
-				if i == 0 && subcommand == "promote_addr" {
-					continue
-				}
-
-				a := w.GetAddress(na.Hex())
-				if a == nil {
-					continue
-				}
-
-				if !cmn.Contains(a.Address.String()+a.Name, addr) {
-					continue
-				}
-
-				options = append(options, ui.ACOption{
-					Name:   cmn.ShortAddress(a.Address) + " " + a.Name,
-					Result: "app " + subcommand + " '" + origin + "' '" + a.Name + "'"})
-			}
-			return "address", &options, addr
-		}
-	}
-
-	if subcommand == "remove" || subcommand == "list" || subcommand == "add_addr" ||
-		subcommand == "remove_addr" || subcommand == "promote_addr" ||
-		subcommand == "chain" || subcommand == "set" {
-
-		sort.Slice(w.Origins, func(i, j int) bool {
-			return w.Origins[i].ShortName() < w.Origins[j].ShortName()
-		})
-
-		for _, o := range w.Origins {
-			if cmn.Contains(o.URL, origin) {
-				options = append(options, ui.ACOption{
-					Name:   fmt.Sprintf("%-12s %s", o.ShortName(), o.URL),
-					Result: command + " " + subcommand + " '" + o.URL + "'"})
+				return "chain", &options, addr
 			}
 		}
-		return "application", &options, origin
+
+		if subcommand == "add_addr" {
+			o := w.GetOrigin(origin)
+			if o != nil {
+				for _, a := range w.Addresses {
+					if o.IsAllowed(a.Address) {
+						continue
+					}
+
+					if !cmn.Contains(a.Address.String()+a.Name, addr) {
+						continue
+					}
+
+					options = append(options, ui.ACOption{
+						Name:   cmn.ShortAddress(a.Address) + " " + a.Name,
+						Result: "app add_addr '" + origin + "' '" + a.Address.String() + "'"})
+				}
+				return "address", &options, addr
+			}
+		}
+
+		if subcommand == "remove_addr" || subcommand == "promote_addr" {
+			o := w.GetOrigin(origin)
+			if o != nil {
+				for i, na := range o.Addresses {
+
+					if i == 0 && subcommand == "promote_addr" {
+						continue
+					}
+
+					a := w.GetAddress(na.Hex())
+					if a == nil {
+						continue
+					}
+
+					if !cmn.Contains(a.Address.String()+a.Name, addr) {
+						continue
+					}
+
+					options = append(options, ui.ACOption{
+						Name:   cmn.ShortAddress(a.Address) + " " + a.Name,
+						Result: "app " + subcommand + " '" + origin + "' '" + a.Name + "'"})
+				}
+				return "address", &options, addr
+			}
+		}
+
 	}
 
 	return "", &options, ""
