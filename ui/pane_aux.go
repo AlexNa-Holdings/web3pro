@@ -71,6 +71,13 @@ func (p *AuxPane) SetView(x0, y0, x1, y1 int, overlap byte) {
 			v.RenderTemplate(p.GetTemplate())
 			v.ScrollTop()
 		}
+
+		v.SubTitleFgColor = Theme.HelpFgColor
+		v.SubTitleBgColor = Theme.HelpBgColor
+		v.FrameColor = Gui.ActionBgColor
+		v.TitleColor = Gui.ActionFgColor
+		v.EmFgColor = Gui.ActionBgColor
+
 		v.OnOverHotspot = cmn.StandardOnOverHotspot
 		v.OnClickHotspot = func(v *gocui.View, hs *gocui.Hotspot) {
 			if hs != nil {

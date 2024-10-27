@@ -340,9 +340,16 @@ func timer_reset(id int) {
 	t.lapsed = 0
 	t.HardLimit -= l
 	if t.Limit > t.HardLimit {
-		t.lapsed = t.HardLimit
+		t.Limit = t.HardLimit
 	}
 	t.starTime = time.Now()
+
+	// reset the timer
+	if nextCheckTimer != nil {
+		nextCheckTimer.Reset(0)
+	} else {
+		nextCheckTimer = time.NewTimer(0)
+	}
 }
 
 func TimerLoop(seconds int, every int, cancel_timer int, f func() (any, error, bool)) (any, error) {

@@ -298,10 +298,9 @@ func web3Handler(w http.ResponseWriter, r *http.Request) {
 
 	browser, version := getBrowser(ua)
 
-	bus.Fetch("ui", "hail", &bus.B_Hail{
+	bus.FetchEx("ui", "hail", &bus.B_Hail{
 		Title: "Allow Browser Connection",
-		Template: `<c><w>
-Allow connection from browser?
+		Template: `<c><w><blink>Allow</blink> connection from browser?
 
 ` + browser + `
 version: ` + version + `
@@ -319,7 +318,8 @@ version: ` + version + `
 				blockedUA[ua] = true
 				bus.Send("ui", "remove-hail", m)
 			}
-		}})
+		}},
+		0, 1*time.Minute, 1*time.Minute, nil, 0)
 	if !allowed {
 		http.Error(w, "Connection not allowed", http.StatusForbidden)
 		return

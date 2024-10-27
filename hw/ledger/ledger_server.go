@@ -303,9 +303,8 @@ func provide_device(sn string) *Ledger {
 		copies += "</b></u>"
 	}
 
-	pane := ui.NewAuxPane("HW Ledger", "<w><c>Please <blink>connect</blink> your Ledger device:\n <u><b>"+
-		name+`</b></u>`+copies+`
-<button text:Cancel>`)
+	pane := ui.NewAuxPane("HW Ledger", "<w><c>Please <blink>connect</blink> your Ledger device:\n\n <u><b>"+
+		name+"</b></u>"+copies+"\n\n<button text:Cancel>")
 	ui.TopLeftFlow.AddPane(pane)
 
 	defer func() {

@@ -227,9 +227,8 @@ func provide_device(sn string) *Trezor {
 		copies += "</b></u>"
 	}
 
-	pane := ui.NewAuxPane("HW Trezor", "<w><c>Please <blink>connect</blink> your Trezor device:\n <u><b>"+
-		name+`</b></u>`+copies+`
-<button text:Cancel>`)
+	pane := ui.NewAuxPane("HW Trezor", "<w><c>Please <blink>connect</blink> your Trezor device:\n\n <u><b>"+
+		name+"</b></u>"+copies+"\n\n<button text:Cancel>")
 	ui.TopLeftFlow.AddPane(pane)
 
 	defer func() {
