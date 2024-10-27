@@ -23,13 +23,6 @@ type LedgerPane struct {
 	Template string
 }
 
-var Status LedgerPane = LedgerPane{
-	PaneDescriptor: ui.PaneDescriptor{
-		MinWidth:  45,
-		MinHeight: 1,
-	},
-}
-
 func NewLedgerPane(t *Ledger) *LedgerPane {
 	TP_Id++
 	p := &LedgerPane{

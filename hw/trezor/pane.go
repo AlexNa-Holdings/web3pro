@@ -28,13 +28,6 @@ type TrezorPane struct {
 	pass_request *bus.Message
 }
 
-var Status TrezorPane = TrezorPane{
-	PaneDescriptor: ui.PaneDescriptor{
-		MinWidth:  45,
-		MinHeight: 1,
-	},
-}
-
 func NewTrezorPane(t *Trezor) *TrezorPane {
 	TP_Id++
 	p := &TrezorPane{
@@ -265,9 +258,9 @@ func (p *TrezorPane) rebuidTemplate() {
 			if cmn.CurrentWallet != nil {
 				temp += "<b>Features:</b> "
 				if !p.Trezor.isSkipPassword() {
-					temp += cmn.TagLink(gocui.ICON_CHECK, "skip_password_off", "Set passphrase off")
+					temp += cmn.TagLink(cmn.ICON_CHECK, "skip_password_off", "Set passphrase off")
 				} else {
-					temp += cmn.TagLink(gocui.ICON_UNCHECK, "skip_password_on", "Set passphrase on")
+					temp += cmn.TagLink(cmn.ICON_UNCHECK, "skip_password_on", "Set passphrase on")
 				}
 				temp += "Use Passphrase"
 			}

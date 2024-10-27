@@ -176,7 +176,7 @@ func FmtFloat64DN(num float64) string {
 
 func ShortAddress(a common.Address) string {
 	s := a.String()
-	return s[:6] + gocui.ICON_3DOTS + s[len(s)-4:]
+	return s[:6] + ICON_3DOTS + s[len(s)-4:]
 }
 
 func (t *Token) Value2Str(value *big.Int) string {
@@ -266,7 +266,7 @@ func AddAddressLink(v *gocui.View, a common.Address) {
 
 func AddAddressShortLink(v *gocui.View, a common.Address) {
 	s := a.String()
-	v.AddLink(s[:6]+gocui.ICON_3DOTS+s[len(s)-4:], "copy "+a.String(), a.String(), "")
+	v.AddLink(s[:6]+ICON_3DOTS+s[len(s)-4:], "copy "+a.String(), a.String(), "")
 }
 
 func TagLink(text, action, tip string) string {
@@ -277,7 +277,7 @@ func TagAddressShortLink(a common.Address) string {
 	s := a.String()
 
 	return fmt.Sprintf("<l text:'%s%s%s' action:'copy %s' tip:'%s'>",
-		s[:6], gocui.ICON_3DOTS, s[len(s)-4:], a.String(), a.String())
+		s[:6], ICON_3DOTS, s[len(s)-4:], a.String(), a.String())
 }
 
 func AddDollarValueLink(v *gocui.View, val *big.Int, t *Token) {
@@ -467,7 +467,7 @@ type SignedDataInfo struct {
 	Address    *Address
 }
 
-func ConfirmEIP712Template(data apitypes.TypedData) string {
+func ConfirmEIP712Template(data apitypes.TypedData, confirmed bool) string {
 	var sb strings.Builder
 	var info SignedDataInfo
 	titleCaser := cases.Title(language.English)
@@ -516,8 +516,13 @@ func ConfirmEIP712Template(data apitypes.TypedData) string {
 		sb.WriteString(fmt.Sprintf("<b>%s: </b>%s\n", titleCaser.String(field.Name), formattedValue))
 	}
 
-	sb.WriteString(`
+	if confirmed {
+		sb.WriteString(`<c><blink>Waiting to be signed</blink>
+<button text:Reject id:cancel bgcolor:g.ErrorFgColor tip:"reject transaction">`)
+	} else {
+		sb.WriteString(`
 <c><button text:"Sign" id:ok> <button id:cancel text:"Reject">`)
+	}
 
 	return sb.String()
 }

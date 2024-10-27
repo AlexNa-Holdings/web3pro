@@ -6,7 +6,6 @@ import (
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
-	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/ui"
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -144,8 +143,8 @@ func Address_Process(c *Command, input string) {
 		for _, a := range w.Addresses {
 			cmn.AddAddressShortLink(ui.Terminal.Screen, a.Address)
 			ui.Printf(" ")
-			ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command address edit '"+a.Name+"'", "Edit address", "")
-			ui.Terminal.Screen.AddLink(gocui.ICON_DELETE, "command address remove '"+a.Name+"'", "Remove address", "")
+			ui.Terminal.Screen.AddLink(cmn.ICON_EDIT, "command address edit '"+a.Name+"'", "Edit address", "")
+			ui.Terminal.Screen.AddLink(cmn.ICON_DELETE, "command address remove '"+a.Name+"'", "Remove address", "")
 			ui.Printf(" %-14s (%s) \n", a.Name, a.Signer)
 		}
 

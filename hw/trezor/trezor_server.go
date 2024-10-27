@@ -227,21 +227,27 @@ func provide_device(sn string) *Trezor {
 		copies += "</b></u>"
 	}
 
-	bus.Fetch("ui", "hail", &bus.B_Hail{
-		Title:     "Connect Trezor",
-		Priorized: true,
-		Template: `<c><w>
-Please connect your Trezor device:
+	pane := ui.NewAuxPane("HW Trezor", "<w><c>Please <blink>connect</blink> your Trezor device:\n <u><b>"+
+		name+`</b></u>`+copies+`
+<button text:Cancel>`)
+	ui.TopLeftFlow.AddPane(pane)
 
-<u><b>` + name + `</b></u>` + copies + `
+	defer func() {
+		ui.TopLeftFlow.RemovePane(pane)
+	}()
 
-<button text:Cancel>`,
-		OnTick: func(m *bus.Message, tick int) {
-			t = find_by_name(s_list)
-			if t != nil {
-				bus.Send("ui", "remove-hail", m)
-			}
-		},
+	bus.TimerLoop(60, 3, 0, func() (any, error, bool) {
+
+		if !pane.On {
+			return nil, fmt.Errorf("Canceled"), true
+		}
+
+		t = find_by_name(s_list)
+		if t != nil {
+			ui.TopLeftFlow.RemovePane(pane)
+			return nil, nil, true
+		}
+		return nil, nil, false
 	})
 
 	return t

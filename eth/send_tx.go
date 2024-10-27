@@ -66,8 +66,14 @@ func sendTx(msg *bus.Message) (string, error) {
 		Title:    "Send Tx",
 		Template: template,
 		OnOk: func(m *bus.Message, v *gocui.View) bool {
+			hail, ok := m.Data.(*bus.B_Hail)
+			if !ok {
+				log.Error().Msg("sendTx: hail data not found")
+				err = errors.New("hail data not found")
+				return true
+			}
 
-			template, err := BuildHailToSendTxTemplate(b, from, req.To, req.Amount, req.Data, nil, true)
+			hail.Template, err = BuildHailToSendTxTemplate(b, from, req.To, req.Amount, req.Data, nil, true)
 			if err != nil {
 				bus.Send("ui", "notify-error", fmt.Sprintf("Error: %v", err))
 				return true
@@ -212,7 +218,7 @@ func sendTx(msg *bus.Message) (string, error) {
 	})
 
 	if !confirmed {
-		return "", fmt.Errorf("rejected by user")
+		return "", err
 	}
 	bus.Send("ui", "notify", "Transaction sent: "+hash)
 
@@ -377,30 +383,31 @@ func BuildHailToSendTxTemplate(b *cmn.Blockchain, from *cmn.Address, to common.A
 		color_tag_end = "</color>"
 	}
 
-	toolbar := `<l text:'` + gocui.ICON_EDIT + `' action:'button edit_contract' tip:"Edit Contract">`
-	toolbar += `<l text:'` + gocui.ICON_DOWNLOAD + `' action:'button download_contract' tip:"Download Contract Code">`
+	toolbar := `<l text:'` + cmn.ICON_EDIT + `' action:'button edit_contract' tip:"Edit Contract">`
+	toolbar += `<l text:'` + cmn.ICON_DOWNLOAD + `' action:'button download_contract' tip:"Download Contract Code">`
 
 	if cmn.IsContractDownloaded(to) {
 		action := "system \"" + cmn.Config.Editor + "\" \"" + cmn.DataFolder + "/contracts/" + to.String() + "\""
-		toolbar += `<l text:'` + gocui.ICON_VSC + `' action:'` + action + `' tip:"Open Contract Code">`
+		toolbar += `<l text:'` + cmn.ICON_VSC + `' action:'` + action + `' tip:"Open Contract Code">`
 	}
 
 	if w.IsContractTrusted(to) {
-		toolbar += `<l text:'` + gocui.ICON_NO_ENTRY + `' action:'button untrust' tip:"Mark as not trusted">`
+		toolbar += `<l text:'` + cmn.ICON_NO_ENTRY + `' action:'button untrust' tip:"Mark as not trusted">`
 	} else {
-		toolbar += `<l text:'` + gocui.ICON_TRUST + `' action:'button trust' tip:"Mark as trusted">`
+		toolbar += `<l text:'` + cmn.ICON_TRUST + `' action:'button trust' tip:"Mark as trusted">`
 	}
 
 	burl, _ := strings.CutSuffix(b.ExplorerUrl, "/")
 
-	toolbar += `<l text:'` + gocui.ICON_LINK + `' action:'open ` + burl + "/address/" + to.String() + `' tip:"Open in Explorer">`
+	toolbar += `<l text:'` + cmn.ICON_LINK + `' action:'open ` + burl + "/address/" + to.String() + `' tip:"Open in Explorer">`
 
 	call_details := buildCallDetails(w, tx, to)
 
 	bottom := `<button text:Send id:ok bgcolor:g.HelpBgColor color:g.HelpFgColor tip:"send tokens">  ` +
 		`<button text:Reject id:cancel bgcolor:g.ErrorFgColor tip:"reject transaction">`
 	if confirmed {
-		bottom = `<c><blink>Waiting to be signed</blink></c>`
+		bottom = `<c><blink>Waiting to be signed</blink>
+<button text:Reject id:cancel bgcolor:g.ErrorFgColor tip:"reject transaction">`
 	}
 
 	return `  Blockchain: ` + b.Name + `
@@ -415,7 +422,7 @@ func BuildHailToSendTxTemplate(b *cmn.Blockchain, from *cmn.Address, to common.A
 <line text:Fee> 
    Gas Limit: ` + cmn.TagUint64Link(tx.Gas()) + ` 
    Gas Price: ` + cmn.TagValueSymbolLink(gas_price, nt) + " " +
-		` <l text:` + gocui.ICON_EDIT + ` action:'button edit_gas_price' tip:"Edit Fee">` + gp_change + `
+		` <l text:` + cmn.ICON_EDIT + ` action:'button edit_gas_price' tip:"Edit Fee">` + gp_change + `
    Total Fee: ` + cmn.TagValueSymbolLink(total_gas, nt) + `
 Total Fee($): ` + total_fee_s + `
 <c>
@@ -522,7 +529,7 @@ func functionDetails(parsedABI abi.ABI, function abi.Method, data []byte) string
       Method: `
 
 	r += fmt.Sprintf("<l text:'%v' tip:'Copy function name' action:'copy %v'>", function.Name, function.Name) + `
-  Parameters: ` + cmn.TagLink(gocui.ICON_COPY, "copy "+hexutil.Encode(data[4:]), "Copy data") + ` 
+  Parameters: ` + cmn.TagLink(cmn.ICON_COPY, "copy "+hexutil.Encode(data[4:]), "Copy data") + ` 
 `
 	// Decode the parameters of the function
 	args := data[4:] // The rest of the data contains the function parameters

@@ -1,11 +1,13 @@
 package eth
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
+	"github.com/rs/zerolog/log"
 )
 
 func signTypedDataV4(msg *bus.Message) (string, error) {
@@ -30,11 +32,46 @@ func signTypedDataV4(msg *bus.Message) (string, error) {
 	}
 
 	OK := false
+	var sign string
+	var err error
 
 	msg.Fetch("ui", "hail", &bus.B_Hail{
 		Title:    "Sign Typed Data",
-		Template: cmn.ConfirmEIP712Template(req.TypedData),
+		Template: cmn.ConfirmEIP712Template(req.TypedData, false),
 		OnOk: func(m *bus.Message, v *gocui.View) bool {
+
+			hail, ok := m.Data.(*bus.B_Hail)
+			if !ok {
+				log.Error().Msg("sendTx: hail data not found")
+				err = errors.New("hail data not found")
+				return true
+			}
+
+			hail.Template = cmn.ConfirmEIP712Template(req.TypedData, true)
+
+			v.GetGui().UpdateAsync(func(*gocui.Gui) error {
+				hail, ok := m.Data.(*bus.B_Hail)
+				if ok {
+					v.RenderTemplate(hail.Template)
+				}
+				return nil
+			})
+
+			res := msg.Fetch("signer", "sign-typed-data-v4", &bus.B_SignerSignTypedData_v4{
+				Type:      signer.Type,
+				Name:      signer.Name,
+				MasterKey: signer.MasterKey,
+				Address:   a.Address,
+				Path:      a.Path,
+				TypedData: req.TypedData,
+			})
+			if res.Error != nil {
+				err = res.Error
+				return true
+			}
+
+			sign = res.Data.(string)
+			err = nil
 			OK = true
 			return true
 		},
@@ -46,22 +83,14 @@ func signTypedDataV4(msg *bus.Message) (string, error) {
 		},
 	})
 
+	if err != nil {
+		return "", fmt.Errorf("error signing typed data: %v", err)
+	}
+
 	if !OK {
-		return "", fmt.Errorf("cancelled")
+		return "", fmt.Errorf("signing cancelled")
 	}
 
-	res := msg.Fetch("signer", "sign-typed-data-v4", &bus.B_SignerSignTypedData_v4{
-		Type:      signer.Type,
-		Name:      signer.Name,
-		MasterKey: signer.MasterKey,
-		Address:   a.Address,
-		Path:      a.Path,
-		TypedData: req.TypedData,
-	})
-	if res.Error != nil {
-		return "", fmt.Errorf("error signing typed data: %v", res.Error)
-	}
-
-	return res.Data.(string), nil
+	return sign, nil
 
 }

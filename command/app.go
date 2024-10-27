@@ -7,7 +7,6 @@ import (
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
-	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/ui"
 )
 
@@ -191,7 +190,7 @@ func App_Process(c *Command, input string) {
 				continue
 			}
 
-			ui.Terminal.Screen.AddLink(gocui.ICON_DELETE,
+			ui.Terminal.Screen.AddLink(cmn.ICON_DELETE,
 				"command app remove '"+o.URL+"'",
 				"Remove access for the web application", "")
 
@@ -214,14 +213,14 @@ func App_Process(c *Command, input string) {
 
 			// 	cmn.AddAddressShortLink(ui.Terminal.Screen, a.Address)
 			// 	ui.Printf(" ")
-			// 	ui.Terminal.Screen.AddLink(gocui.ICON_DELETE,
+			// 	ui.Terminal.Screen.AddLink(cmn.ICON_DELETE,
 			// 		"command app remove_addr '"+o.URL+"' '"+a.Name+"'",
 			// 		"Remove access for the address", "")
 
 			// 	if i == 0 {
 			// 		ui.Printf("  ")
 			// 	} else {
-			// 		ui.Terminal.Screen.AddLink(gocui.ICON_PROMOTE,
+			// 		ui.Terminal.Screen.AddLink(cmn.ICON_PROMOTE,
 			// 			"command app promote_addr '"+o.URL+"' '"+a.Name+"'",
 			// 			"Promote the address", "")
 			// 	}

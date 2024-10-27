@@ -6,7 +6,6 @@ import (
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
-	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/hw/trezor/trezorproto"
 	"github.com/ava-labs/coreth/accounts"
 	"github.com/rs/zerolog/log"
@@ -45,7 +44,7 @@ func sign(msg *bus.Message) (string, error) {
 		t.Pane.SetMode(save_mode)
 	}()
 
-	t.Pane.SetTemplate("<w><c>\n<blink>" + gocui.ICON_ALERT + "</blink>Please review tand sign it with your Trezor device\n")
+	t.Pane.SetTemplate("<w><c>\n<blink>" + cmn.ICON_ALERT + "</blink>Please review tand sign it with your Trezor device\n")
 	t.Pane.SetMode("template")
 
 	if err := t.Call(msg, request, response); err != nil {

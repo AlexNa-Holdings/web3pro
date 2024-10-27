@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
-	"github.com/AlexNa-Holdings/web3pro/gocui"
+	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/ava-labs/coreth/accounts"
 	"github.com/rs/zerolog/log"
 )
@@ -45,7 +45,7 @@ func sign(msg *bus.Message) (string, error) {
 		ledger.Pane.SetMode(save_mode)
 	}()
 
-	ledger.Pane.SetTemplate("<w><c>\n<blink>" + gocui.ICON_ALERT + "</blink>Please sign the message on your device\n")
+	ledger.Pane.SetTemplate("<w><c>\n<blink>" + cmn.ICON_ALERT + "</blink>Please sign the message on your device\n")
 	ledger.Pane.SetMode("template")
 
 	reply, err := call(ledger.USB_ID, &SIGN_MSG_PERSONAL_APDU, payload)

@@ -9,7 +9,6 @@ import (
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
-	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/ui"
 	"github.com/rs/zerolog/log"
 )
@@ -304,21 +303,27 @@ func provide_device(sn string) *Ledger {
 		copies += "</b></u>"
 	}
 
-	bus.Fetch("ui", "hail", &bus.B_Hail{
-		Title:     "Connect Ledger",
-		Priorized: true,
-		Template: `<c><w>
-Please connect your Ledger device:
+	pane := ui.NewAuxPane("HW Ledger", "<w><c>Please <blink>connect</blink> your Ledger device:\n <u><b>"+
+		name+`</b></u>`+copies+`
+<button text:Cancel>`)
+	ui.TopLeftFlow.AddPane(pane)
 
-<u><b>` + name + `</b></u>` + copies + `
+	defer func() {
+		ui.TopLeftFlow.RemovePane(pane)
+	}()
 
-<button text:Cancel>`,
-		OnTick: func(m *bus.Message, tick int) {
-			t = find_by_name(s_list)
-			if t != nil {
-				bus.Send("ui", "remove-hail", m)
-			}
-		},
+	bus.TimerLoop(60, 3, 0, func() (any, error, bool) {
+
+		if !pane.On {
+			return nil, fmt.Errorf("Canceled"), true
+		}
+
+		t = find_by_name(s_list)
+		if t != nil {
+			ui.TopLeftFlow.RemovePane(pane)
+			return nil, nil, true
+		}
+		return nil, nil, false
 	})
 
 	return t
@@ -356,7 +361,7 @@ func provide_eth_app(usb_id string, needed_app string) error {
 			ledger.Pane.SetMode(save_mode)
 		}()
 
-		ledger.Pane.SetTemplate("<w><c>\n<blink>" + gocui.ICON_ALERT + "</blink> Please alllow the Ethereum app on your Ledger device\n")
+		ledger.Pane.SetTemplate("<w><c>\n<blink>" + cmn.ICON_ALERT + "</blink> Please alllow the Ethereum app on your Ledger device\n")
 		ledger.Pane.SetMode("template")
 
 		if needed_app == "BOLOS" {

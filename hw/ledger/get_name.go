@@ -1,7 +1,7 @@
 package ledger
 
 import (
-	"github.com/AlexNa-Holdings/web3pro/gocui"
+	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/rs/zerolog/log"
 )
 
@@ -19,7 +19,7 @@ func getName(usb_id string) (string, error) {
 		ledger.Pane.SetMode(save_mode)
 	}()
 
-	ledger.Pane.SetTemplate("<w><c>\n<blink>" + gocui.ICON_ALERT + "</blink>Please unlock your Ledger device and allow to read its name\n")
+	ledger.Pane.SetTemplate("<w><c>\n<blink>" + cmn.ICON_ALERT + "</blink>Please unlock your Ledger device and allow to read its name\n")
 	ledger.Pane.SetMode("template")
 
 	err := provide_eth_app(usb_id, "BOLOS")

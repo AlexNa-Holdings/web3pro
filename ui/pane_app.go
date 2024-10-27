@@ -142,17 +142,17 @@ func (p *AppPane) rebuidTemplate() string {
 
 		if i == 0 {
 			temp += cmn.TagAddressShortLink(na)
-			temp += " " + cmn.TagLink(gocui.ICON_DELETE,
+			temp += " " + cmn.TagLink(cmn.ICON_DELETE,
 				"command app remove_addr '"+o.URL+"' '"+na.String()+"'",
 				"Remove access for the address")
 			temp += "  " + name
 			temp += "\n"
 		} else {
 			temp += "       " + cmn.TagAddressShortLink(na)
-			temp += " " + cmn.TagLink(gocui.ICON_DELETE,
+			temp += " " + cmn.TagLink(cmn.ICON_DELETE,
 				"command app remove_addr '"+o.URL+"' '"+na.String()+"'",
 				"Remove access for the address")
-			temp += cmn.TagLink(gocui.ICON_PROMOTE,
+			temp += cmn.TagLink(cmn.ICON_PROMOTE,
 				"command app promote_addr '"+o.URL+"' '"+na.String()+"'",
 				"Promote address")
 			temp += name
@@ -160,7 +160,7 @@ func (p *AppPane) rebuidTemplate() string {
 		}
 	}
 
-	temp += "       " + cmn.TagLink(gocui.ICON_ADD,
+	temp += "       " + cmn.TagLink(cmn.ICON_ADD,
 		"start_command app add_addr '"+o.URL+"' ",
 		"Add address")
 

@@ -5,11 +5,11 @@ import (
 	"strings"
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
-	"github.com/AlexNa-Holdings/web3pro/gocui"
+	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/rs/zerolog/log"
 )
 
-var generalTemplate = "<c><w>\n<blink>" + gocui.ICON_ALERT + "</blink>Please make sure your Ledger device is connected and unlocked\n"
+var generalTemplate = "<c><w>\n<blink>" + cmn.ICON_ALERT + "</blink>Please make sure your Ledger device is connected and unlocked\n"
 
 func call(usb_id string, apdu *APDU, data []byte) ([]byte, error) {
 	var err error
@@ -30,10 +30,10 @@ func call(usb_id string, apdu *APDU, data []byte) ([]byte, error) {
 			save_mode := ledger.Pane.Mode
 			save_template := ledger.Pane.GetTemplate()
 
-			ledger.Pane.SetTemplate("<w><c>\n<blink>" + gocui.ICON_ALERT + "</blink>Please unlock your Ledger device\n")
+			ledger.Pane.SetTemplate("<w><c>\n<blink>" + cmn.ICON_ALERT + "</blink>Please unlock your Ledger device\n")
 			ledger.Pane.SetMode("template")
 
-			tl_data, err := bus.TimerLoop(60*2, 3, func() (any, error, bool) {
+			tl_data, err := bus.TimerLoop(60*2, 3, 0, func() (any, error, bool) {
 				r, err = rawCall(usb_id, apdu, data)
 				if err == nil || !strings.Contains(err.Error(), "LOCKED_DEVICE") {
 					return data, nil, true
@@ -58,10 +58,10 @@ func call(usb_id string, apdu *APDU, data []byte) ([]byte, error) {
 			save_mode := ledger.Pane.Mode
 			save_template := ledger.Pane.GetTemplate()
 
-			ledger.Pane.SetTemplate("<w><c>\n<blink>" + gocui.ICON_ALERT + "</blink>Please open Ethereum app on the device\n")
+			ledger.Pane.SetTemplate("<w><c>\n<blink>" + cmn.ICON_ALERT + "</blink>Please open Ethereum app on the device\n")
 			ledger.Pane.SetMode("template")
 
-			tl_data, err := bus.TimerLoop(60*2, 3, func() (any, error, bool) {
+			tl_data, err := bus.TimerLoop(60*2, 3, 0, func() (any, error, bool) {
 				r, err = rawCall(usb_id, apdu, data)
 				if err == nil || !strings.Contains(err.Error(), "WRONG APP") {
 					return data, nil, true

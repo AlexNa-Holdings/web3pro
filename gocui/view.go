@@ -26,27 +26,7 @@ const (
 	RIGHT  = 8 // view is overlapping at right edge
 )
 
-const (
-	ICON_DELETE   = "\U0000f057 " //"\uf00d"
-	ICON_EDIT     = "\uf044 "
-	ICON_COPY     = "\uf0c5 "
-	ICON_DROPLIST = "\ueb6e "
-	ICON_PROMOTE  = "\ued65 "
-	ICON_ADD      = "\ueadc "
-	ICON_3DOTS    = "\U000f01d8"
-	ICON_BACK     = "\U000f006e "
-	ICON_SEND     = "\U000f048a "
-	ICON_LINK     = "\uf08e "
-	ICON_FEED     = "\uf09e "
-	ICON_DOWNLOAD = "\ueac2 "
-	ICON_VSC      = "\U000f0a1e "
-	ICON_TRUST    = "\uebc1 "
-	ICON_NO_ENTRY = "\uf4f4 "
-	ICON_LIGHT    = "\U000f06e8 "
-	ICON_CHECK    = "\U000f0134 "
-	ICON_UNCHECK  = "\U000f0130 "
-	ICON_ALERT    = "\U000f0028 "
-)
+const ICON_DROPLIST = "\ueb6e "
 
 const REGEX_TAGS = `<(/?\w+)((?:\s+\w+(?::(?:[^>\s]+|"[^"]*"|'[^']*'))?\s*)*)>`
 const REGEX_SINGLE_TAG = `(/?\w+)(?::(".*?"|'.*?'|[^>\s]+))`

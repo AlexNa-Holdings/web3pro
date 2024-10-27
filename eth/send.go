@@ -40,7 +40,7 @@ func send(msg *bus.Message) error {
 		return fmt.Errorf("address from not found: %v", req.From)
 	}
 
-	template, err := BuildHailToSendTemplate(b, t, from, req.To, req.Amount, nil)
+	template, err := BuildHailToSendTemplate(b, t, from, req.To, req.Amount, nil, false)
 	if err != nil {
 		log.Error().Err(err).Msg("Error building hail template")
 		bus.Send("ui", "notify-error", fmt.Sprintf("Error: %v", err))
@@ -63,6 +63,28 @@ func send(msg *bus.Message) error {
 		Title:    "Send Tokens",
 		Template: template,
 		OnOk: func(m *bus.Message, v *gocui.View) bool {
+			hail, ok := m.Data.(*bus.B_Hail)
+			if !ok {
+				log.Error().Msg("sendTx: hail data not found")
+				err = errors.New("hail data not found")
+				return true
+			}
+
+			hail.Template, err = BuildHailToSendTemplate(b, t, from, to, amount, nil, false)
+			if err != nil {
+				log.Error().Err(err).Msg("Error building hail template")
+				bus.Send("ui", "notify-error", fmt.Sprintf("Error: %v", err))
+				return false
+			}
+
+			v.GetGui().UpdateAsync(func(*gocui.Gui) error {
+				hail, ok := m.Data.(*bus.B_Hail)
+				if ok {
+					v.RenderTemplate(hail.Template)
+				}
+				return nil
+			})
+
 			if t.Native {
 				err := Transfer(msg, b, s, from, to, amount)
 				if err != nil {
@@ -89,7 +111,7 @@ func send(msg *bus.Message) error {
 				switch hs.Value {
 				case "button edit_gas_price":
 					go editFee(m, v, tx, nt, func(newGasPrice *big.Int) {
-						template, err := BuildHailToSendTemplate(b, t, from, to, amount, newGasPrice)
+						template, err := BuildHailToSendTemplate(b, t, from, to, amount, newGasPrice, false)
 						if err != nil {
 							log.Error().Err(err).Msg("Error building hail template")
 							bus.Send("ui", "notify-error", fmt.Sprintf("Error: %v", err))
@@ -221,7 +243,7 @@ Gas price: <input id:gas_price size:14 value:"` + cmn.FmtAmount(market, 18, fals
 }
 
 func BuildHailToSendTemplate(b *cmn.Blockchain, t *cmn.Token,
-	from *cmn.Address, to common.Address, amount *big.Int, suggested_gas_price *big.Int) (string, error) {
+	from *cmn.Address, to common.Address, amount *big.Int, suggested_gas_price *big.Int, confirmed bool) (string, error) {
 	if cmn.CurrentWallet == nil {
 		return "", errors.New("no wallet")
 	}
@@ -302,6 +324,13 @@ func BuildHailToSendTemplate(b *cmn.Blockchain, t *cmn.Token,
 		total_fee_s = cmn.TagShortDollarLink(total_fee_dollars)
 	}
 
+	bottom := `<button text:Send id:ok bgcolor:g.HelpBgColor color:g.HelpFgColor tip:"send tokens">  ` +
+		`<button text:Reject id:cancel bgcolor:g.ErrorFgColor tip:"reject transaction">`
+	if confirmed {
+		bottom = `<c><blink>Waiting to be signed</blink>
+<button text:Reject id:cancel bgcolor:g.ErrorFgColor tip:"reject transaction">`
+	}
+
 	return `  Blockchain: ` + b.Name + `
        Token: ` + t.Symbol + tc + `
         From: ` + cmn.TagAddressShortLink(from.Address) + " " + from.Name + `
@@ -312,11 +341,9 @@ func BuildHailToSendTemplate(b *cmn.Blockchain, t *cmn.Token,
 <line text:Fee> 
    Gas Limit: ` + cmn.TagUint64Link(tx.Gas()) + ` 
    Gas Price: ` + cmn.TagValueSymbolLink(gas_price, nt) + " " +
-		` <l text:` + gocui.ICON_EDIT + ` action:'button edit_gas_price' tip:"Edit Fee">` + gp_change + `
+		` <l text:` + cmn.ICON_EDIT + ` action:'button edit_gas_price' tip:"Edit Fee">` + gp_change + `
    Total Fee: ` + cmn.TagValueSymbolLink(total_gas, nt) + `
 Total Fee($): ` + total_fee_s + `
 <c>
-` +
-		`<button text:Send id:ok bgcolor:g.HelpBgColor color:g.HelpFgColor tip:"send tokens">  ` +
-		`<button text:Reject id:cancel bgcolor:g.ErrorFgColor tip:"reject transaction">`, nil
+` + bottom, nil
 }

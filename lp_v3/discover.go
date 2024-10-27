@@ -6,7 +6,6 @@ import (
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
-	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/ui"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog/log"
@@ -136,7 +135,7 @@ func discover(msg *bus.Message) error {
 					ui.Printf("    ")
 					cmn.AddAddressShortLink(ui.Terminal.Screen, pos.Token0)
 					ui.Printf(" ")
-					ui.Terminal.Screen.AddLink(gocui.ICON_ADD, "command token add "+b.Name+" "+pos.Token0.String(), "Add token", "")
+					ui.Terminal.Screen.AddLink(cmn.ICON_ADD, "command token add "+b.Name+" "+pos.Token0.String(), "Add token", "")
 				}
 
 				ui.Printf(" / ")
@@ -147,7 +146,7 @@ func discover(msg *bus.Message) error {
 				} else {
 					cmn.AddAddressShortLink(ui.Terminal.Screen, pos.Token1)
 					ui.Printf(" ")
-					ui.Terminal.Screen.AddLink(gocui.ICON_ADD, "command token add "+b.Name+" "+pos.Token1.String(), "Add token", "")
+					ui.Terminal.Screen.AddLink(cmn.ICON_ADD, "command token add "+b.Name+" "+pos.Token1.String(), "Add token", "")
 				}
 
 				ui.Printf(" Fee: %.2f%%\n", float64(pos.Fee.Uint64())/10000.)

@@ -282,17 +282,17 @@ func Token_Process(c *Command, input string) {
 				ui.Printf("       ")
 			}
 
-			ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command token edit "+strconv.Itoa(t.ChainId)+" "+t.Address.String()+" ", "Edit token", "")
+			ui.Terminal.Screen.AddLink(cmn.ICON_EDIT, "command token edit "+strconv.Itoa(t.ChainId)+" "+t.Address.String()+" ", "Edit token", "")
 
 			if !t.Native {
-				ui.Terminal.Screen.AddLink(gocui.ICON_LINK, "open "+b.ExplorerLink(t.Address), b.ExplorerLink(t.Address), "")
-				ui.Terminal.Screen.AddLink(gocui.ICON_DELETE, "command token remove "+strconv.Itoa(t.ChainId)+" '"+t.Address.String()+"'", "Remove token", "")
+				ui.Terminal.Screen.AddLink(cmn.ICON_LINK, "open "+b.ExplorerLink(t.Address), b.ExplorerLink(t.Address), "")
+				ui.Terminal.Screen.AddLink(cmn.ICON_DELETE, "command token remove "+strconv.Itoa(t.ChainId)+" '"+t.Address.String()+"'", "Remove token", "")
 			} else {
 				ui.Printf("    ")
 			}
 
 			if t.PriceFeeder == "" || t.PriceFeedParam == "" {
-				ui.Terminal.Screen.AddLink(gocui.ICON_FEED, "command p discover '"+b.Name+"' '"+t.Address.String()+"'", "Discover price", "")
+				ui.Terminal.Screen.AddLink(cmn.ICON_FEED, "command p discover '"+b.Name+"' '"+t.Address.String()+"'", "Discover price", "")
 			} else {
 				ui.Printf("  ")
 			}
@@ -399,7 +399,7 @@ func Token_Process(c *Command, input string) {
 			}
 			ui.Printf(" %s ", b.Address.Name)
 			ui.Terminal.Screen.AddLink(
-				gocui.ICON_SEND,
+				cmn.ICON_SEND,
 				"command send '"+chain+"' '"+tid+"' "+string(b.Address.Address.String()),
 				"Send tokens",
 				"")

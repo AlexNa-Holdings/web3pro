@@ -6,7 +6,6 @@ import (
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
-	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/ui"
 )
 
@@ -124,7 +123,7 @@ func Blockchain_Process(c *Command, input string) {
 					ui.Printf(" Chain ID: %d\n", b.ChainId)
 					ui.Printf(" Symbol: %s\n", b.Currency)
 					ui.Printf(" Explorer: %s\n", b.ExplorerUrl)
-					ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command b edit '"+b.Name+"'", "Edit blockchain '"+b.Name+"'", "")
+					ui.Terminal.Screen.AddLink(cmn.ICON_EDIT, "command b edit '"+b.Name+"'", "Edit blockchain '"+b.Name+"'", "")
 
 					ui.Printf("\n")
 					return
@@ -175,8 +174,8 @@ func Blockchain_Process(c *Command, input string) {
 			ui.Printf("%4d ", b.ChainId)
 			ui.Terminal.Screen.AddLink(b.Name, "command b use '"+b.Name+"'", "Use blockchain '"+b.Name+"'", "")
 			ui.Printf(" ")
-			ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command b edit '"+b.Name+"'", "Edit blockchain '"+b.Name+"'", "")
-			ui.Terminal.Screen.AddLink(gocui.ICON_DELETE, "command b remove '"+b.Name+"'", "Remove blockchain '"+b.Name+"'", "")
+			ui.Terminal.Screen.AddLink(cmn.ICON_EDIT, "command b edit '"+b.Name+"'", "Edit blockchain '"+b.Name+"'", "")
+			ui.Terminal.Screen.AddLink(cmn.ICON_DELETE, "command b remove '"+b.Name+"'", "Remove blockchain '"+b.Name+"'", "")
 			ui.Printf("\n")
 		}
 

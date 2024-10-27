@@ -177,8 +177,8 @@ func LP_V3_Process(c *Command, input string) {
 			}
 
 			ui.Printf("%d %-12s %-12s ", i+1, b.Name, lp.Name)
-			ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command lp_v3 edit "+strconv.Itoa(lp.ChainId)+" '"+lp.Provider.Hex()+"' '"+lp.Name+"'", "Edit provider", "")
-			ui.Terminal.Screen.AddLink(gocui.ICON_DELETE, "command lp_v3 remove "+strconv.Itoa(lp.ChainId)+" '"+lp.Provider.Hex()+"'", "Remove provider", "")
+			ui.Terminal.Screen.AddLink(cmn.ICON_EDIT, "command lp_v3 edit "+strconv.Itoa(lp.ChainId)+" '"+lp.Provider.Hex()+"' '"+lp.Name+"'", "Edit provider", "")
+			ui.Terminal.Screen.AddLink(cmn.ICON_DELETE, "command lp_v3 remove "+strconv.Itoa(lp.ChainId)+" '"+lp.Provider.Hex()+"'", "Remove provider", "")
 			cmn.AddAddressShortLink(ui.Terminal.Screen, lp.Provider)
 			ui.Printf("\n")
 		}
@@ -374,9 +374,9 @@ func list(w *cmn.Wallet) {
 		}
 
 		if p.On {
-			ui.Printf(ui.F(gocui.ColorGreen) + gocui.ICON_LIGHT + ui.F(ui.Terminal.Screen.FgColor))
+			ui.Printf(ui.F(gocui.ColorGreen) + cmn.ICON_LIGHT + ui.F(ui.Terminal.Screen.FgColor))
 		} else {
-			ui.Printf(ui.F(gocui.ColorRed) + gocui.ICON_LIGHT + ui.F(ui.Terminal.Screen.FgColor))
+			ui.Printf(ui.F(gocui.ColorRed) + cmn.ICON_LIGHT + ui.F(ui.Terminal.Screen.FgColor))
 		}
 
 		if t0 != nil {

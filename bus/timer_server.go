@@ -345,7 +345,7 @@ func timer_reset(id int) {
 	t.starTime = time.Now()
 }
 
-func TimerLoop(seconds int, every int, f func() (any, error, bool)) (any, error) {
+func TimerLoop(seconds int, every int, cancel_timer int, f func() (any, error, bool)) (any, error) {
 
 	start := time.Now()
 	duration := 60 * time.Second
@@ -358,8 +358,8 @@ func TimerLoop(seconds int, every int, f func() (any, error, bool)) (any, error)
 			continue // ignore responses
 		}
 
-		if msg.Type == "tick" {
-
+		switch msg.Type {
+		case "tick":
 			if time.Now().After(start.Add(duration)) {
 				break
 			}
@@ -369,6 +369,11 @@ func TimerLoop(seconds int, every int, f func() (any, error, bool)) (any, error)
 				if done {
 					return data, err
 				}
+			}
+		case "done":
+			timer_id, ok := msg.Data.(int)
+			if ok && timer_id == cancel_timer {
+				return nil, errors.New("timeout")
 			}
 		}
 

@@ -241,9 +241,9 @@ func (p *LP_V3Pane) rebuidTemplate() string {
 		}
 
 		if p.On {
-			temp += "<color fg:green>" + gocui.ICON_LIGHT + "</color>"
+			temp += "<color fg:green>" + cmn.ICON_LIGHT + "</color>"
 		} else {
-			temp += "<color fg:red>" + gocui.ICON_LIGHT + "</color>"
+			temp += "<color fg:red>" + cmn.ICON_LIGHT + "</color>"
 		}
 
 		if t0 != nil {

@@ -8,7 +8,6 @@ import (
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
-	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/price"
 	"github.com/AlexNa-Holdings/web3pro/ui"
 	"github.com/rs/zerolog/log"
@@ -191,10 +190,10 @@ func Price_Process(c *Command, input string) {
 				tn = t.Symbol
 			}
 
-			ui.Terminal.Screen.AddLink(gocui.ICON_FEED, "command price set_feeder '"+bchain+"' "+
+			ui.Terminal.Screen.AddLink(cmn.ICON_FEED, "command price set_feeder '"+bchain+"' "+
 				tn+" "+p.PriceFeeder+" '"+p.PairID+"'",
 				"Connect price feeder to trading pair", "")
-			ui.Terminal.Screen.AddLink(gocui.ICON_LINK, "open "+p.URL, p.URL, "")
+			ui.Terminal.Screen.AddLink(cmn.ICON_LINK, "open "+p.URL, p.URL, "")
 
 			ui.Printf(" %s ", p.PairID)
 
@@ -309,10 +308,10 @@ func list_price_feeders(w *cmn.Wallet) {
 			ui.Printf("          ")
 		}
 
-		ui.Terminal.Screen.AddLink(gocui.ICON_EDIT, "command token edit "+strconv.Itoa(t.ChainId)+" "+t.Address.String()+" ", "Edit token", "")
+		ui.Terminal.Screen.AddLink(cmn.ICON_EDIT, "command token edit "+strconv.Itoa(t.ChainId)+" "+t.Address.String()+" ", "Edit token", "")
 
 		if t.PriceFeeder == "" {
-			ui.Terminal.Screen.AddLink(gocui.ICON_FEED, "command p discover '"+b.Name+"' '"+t.Address.String()+"'", "Discover price", "")
+			ui.Terminal.Screen.AddLink(cmn.ICON_FEED, "command p discover '"+b.Name+"' '"+t.Address.String()+"'", "Discover price", "")
 		} else {
 			ui.Printf("  ")
 		}

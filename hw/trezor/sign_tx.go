@@ -7,7 +7,6 @@ import (
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
-	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/hw/trezor/trezorproto"
 	"github.com/ava-labs/coreth/accounts"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -79,7 +78,7 @@ func signTx(msg *bus.Message) (*types.Transaction, error) {
 		t.Pane.SetMode(save_mode)
 	}()
 
-	t.Pane.SetTemplate("<w><c>\n<blink>" + gocui.ICON_ALERT + "</blink>Please unlock your Trezor device and allow to sign the transaction\n")
+	t.Pane.SetTemplate("<w><c>\n<blink>" + cmn.ICON_ALERT + "</blink>Please unlock your Trezor device and allow to sign the transaction\n")
 	t.Pane.SetMode("template")
 
 	if err := t.Call(msg, request, response); err != nil {

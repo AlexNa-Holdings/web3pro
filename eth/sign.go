@@ -1,11 +1,13 @@
 package eth
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
+	"github.com/rs/zerolog/log"
 )
 
 func sign(msg *bus.Message) (string, error) {
@@ -30,6 +32,8 @@ func sign(msg *bus.Message) (string, error) {
 	}
 
 	OK := false
+	var err error
+	var sign string
 
 	msg.Fetch("ui", "hail", &bus.B_Hail{
 		Title: "Sign Message",
@@ -39,6 +43,44 @@ func sign(msg *bus.Message) (string, error) {
 <c> <button text:"OK" id:"ok"> <button text:"Cancel" id:"cancel">
 `,
 		OnOk: func(m *bus.Message, v *gocui.View) bool {
+
+			hail, ok := m.Data.(*bus.B_Hail)
+			if !ok {
+				log.Error().Msg("sendTx: hail data not found")
+				err = errors.New("hail data not found")
+				return true
+			}
+
+			hail.Template = `<w>
+ Message: ` + string(req.Data) + `
+ 
+<c><blink>Waiting to be signed</blink>
+<button text:Reject id:cancel bgcolor:g.ErrorFgColor tip:"reject transaction">
+`
+
+			v.GetGui().UpdateAsync(func(*gocui.Gui) error {
+				hail, ok := m.Data.(*bus.B_Hail)
+				if ok {
+					v.RenderTemplate(hail.Template)
+				}
+				return nil
+			})
+
+			res := msg.Fetch("signer", "sign", &bus.B_SignerSign{
+				Type:      signer.Type,
+				Name:      signer.Name,
+				MasterKey: signer.MasterKey,
+				Address:   a.Address,
+				Path:      a.Path,
+				Data:      req.Data,
+			})
+			if res.Error != nil {
+				err = res.Error
+				return true
+			}
+
+			sign = res.Data.(string)
+			err = nil
 			OK = true
 			return true
 		},
@@ -50,22 +92,14 @@ func sign(msg *bus.Message) (string, error) {
 		},
 	})
 
+	if err != nil {
+		return "", err
+	}
+
 	if !OK {
 		return "", fmt.Errorf("cancelled")
 	}
 
-	res := msg.Fetch("signer", "sign", &bus.B_SignerSign{
-		Type:      signer.Type,
-		Name:      signer.Name,
-		MasterKey: signer.MasterKey,
-		Address:   a.Address,
-		Path:      a.Path,
-		Data:      req.Data,
-	})
-	if res.Error != nil {
-		return "", fmt.Errorf("error signing typed data: %v", res.Error)
-	}
-
-	return res.Data.(string), nil
+	return sign, nil
 
 }
