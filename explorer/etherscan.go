@@ -19,24 +19,24 @@ import (
 type EtherScanAPI struct {
 }
 
-func (e *EtherScanAPI) DownloadContract(w *cmn.Wallet, b *cmn.Blockchain, a common.Address) error {
+func (e *EtherScanAPI) DownloadContract(w *cmn.Wallet, b *cmn.Blockchain, a common.Address) (string, error) {
 	if b.ExplorerAPIUrl == "" {
-		return errors.New("blockchain has no explorer API")
+		return "", errors.New("blockchain has no explorer API")
 	}
 
 	err := DownloadContractABI(b, a)
 	if err != nil {
 		log.Error().Err(err).Msg("Error downloading contract ABI")
-		return err
+		return "", err
 	}
 
-	err = DownloadContractCode(b, a)
+	name, err := DownloadContractCode(b, a)
 	if err != nil {
 		log.Error().Err(err).Msg("Error downloading contract code")
-		return err
+		return "", err
 	}
 
-	return nil
+	return name, nil
 }
 
 func DownloadContractABI(b *cmn.Blockchain, a common.Address) error {
@@ -94,7 +94,7 @@ func DownloadContractABI(b *cmn.Blockchain, a common.Address) error {
 	return nil
 }
 
-func DownloadContractCode(b *cmn.Blockchain, a common.Address) error {
+func DownloadContractCode(b *cmn.Blockchain, a common.Address) (string, error) {
 
 	exu, _ := strings.CutSuffix(b.ExplorerAPIUrl, "/")
 	URL := fmt.Sprintf("%s?module=contract&action=getsourcecode&address=%s&apikey=%s", exu, a.Hex(), b.ExplorerAPIToken)
@@ -104,45 +104,51 @@ func DownloadContractCode(b *cmn.Blockchain, a common.Address) error {
 	resp, err := http.Get(URL)
 	if err != nil {
 		log.Error().Err(err).Msgf("Error getting contract code from %s", b.ExplorerAPIUrl)
-		return err
+		return "", err
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Error().Err(err).Msgf("Error reading response from %s", b.ExplorerAPIUrl)
-		return err
+		return "", err
 	}
 
 	// Parse the JSON response
 	var result map[string]interface{}
 	if err := json.Unmarshal(body, &result); err != nil {
 		log.Error().Err(err).Msg("Error parsing JSON response")
-		return err
+		return "", err
 	}
 
 	if result["status"] != "1" {
 		log.Error().Msgf("API error: %s", result["message"])
-		return fmt.Errorf("API error: %s", result["message"])
+		return "", fmt.Errorf("API error: %s", result["message"])
 	}
 
 	// The result is a slice with one element
 	resultArray, ok := result["result"].([]interface{})
 	if !ok || len(resultArray) == 0 {
 		log.Error().Msg("Unexpected result format")
-		return fmt.Errorf("unexpected result format")
+		return "", fmt.Errorf("unexpected result format")
 	}
 
 	contractInfo, ok := resultArray[0].(map[string]interface{})
 	if !ok {
 		log.Error().Msg("Unexpected contract info format")
-		return fmt.Errorf("unexpected contract info format")
+		return "", fmt.Errorf("unexpected contract info format")
+	}
+
+	name, ok := contractInfo["ContractName"].(string)
+	if !ok {
+		log.Error().Msg("ContractName not found in response")
+		return "", fmt.Errorf("contract name not found in response")
 	}
 
 	sourceCode, ok := contractInfo["SourceCode"].(string)
 	if !ok {
 		log.Error().Msg("SourceCode not found in response")
-		return fmt.Errorf("source code not found in response")
+		return "", fmt.Errorf("source code not found in response")
 	}
 
 	// Create directories
@@ -150,7 +156,7 @@ func DownloadContractCode(b *cmn.Blockchain, a common.Address) error {
 	err = os.MkdirAll(dir, 0755)
 	if err != nil {
 		log.Error().Err(err).Msgf("Error creating directories : %s", dir)
-		return err
+		return "", err
 	}
 
 	// Handle multi-file contracts (SourceCode is a JSON string)
@@ -165,13 +171,13 @@ func DownloadContractCode(b *cmn.Blockchain, a common.Address) error {
 
 		if err := json.Unmarshal([]byte(sourceCode), &sourceCodeJSON); err != nil {
 			log.Error().Err(err).Msg("Error parsing SourceCode JSON")
-			return err
+			return "", err
 		}
 
 		sources, ok := sourceCodeJSON["sources"].(map[string]interface{})
 		if !ok {
 			log.Error().Msg("Sources not found in SourceCode JSON")
-			return fmt.Errorf("sources not found in SourceCode JSON")
+			return "", fmt.Errorf("sources not found in SourceCode JSON")
 		}
 
 		for fileName, fileInfo := range sources {
@@ -192,13 +198,13 @@ func DownloadContractCode(b *cmn.Blockchain, a common.Address) error {
 			err = os.MkdirAll(fdir, 0755)
 			if err != nil {
 				log.Error().Err(err).Msgf("Error creating directories : %s", fdir)
-				return err
+				return "", err
 			}
 
 			err = os.WriteFile(filePath, []byte(content), 0644)
 			if err != nil {
 				log.Error().Err(err).Msgf("Error saving source code to %s", filePath)
-				return err
+				return "", err
 			}
 		}
 	} else {
@@ -208,18 +214,18 @@ func DownloadContractCode(b *cmn.Blockchain, a common.Address) error {
 		err = os.MkdirAll(dir, 0755)
 		if err != nil {
 			log.Error().Err(err).Msgf("Error creating directories : %s", dir)
-			return err
+			return "", err
 		}
 
 		err = os.WriteFile(filePath, []byte(sourceCode), 0644)
 		if err != nil {
 			log.Error().Err(err).Msgf("Error saving contract code to %s", filePath)
-			return err
+			return "", err
 		}
 
 	}
 
 	bus.Send("ui", "notify", "Contract code saved")
 
-	return nil
+	return name, nil
 }

@@ -52,26 +52,35 @@ func Init() {
 	go Loop()
 }
 
-func addCancel(id int, cancel context.CancelFunc) {
-	rw_cancels_mutex.Lock()
-	defer rw_cancels_mutex.Unlock()
-	rw_cancels[id] = cancel
-}
-
 func setRate(rate time.Duration) {
 	if rate != enum_ticker_rate {
 		enum_ticker.Reset(rate)
 	}
 }
 
-func doCancel(id int) {
+func cancelOperation(id int) {
+	log.Debug().Msgf("doCanceltimer %d", id)
+
 	rw_cancels_mutex.Lock()
 	defer rw_cancels_mutex.Unlock()
 
 	c, ok := rw_cancels[id]
 	if ok {
+		log.Debug().Msgf("###### USB UOPERATION CANCELLED %d", id)
 		c()
 	}
+	delete(rw_cancels, id)
+}
+
+func addCancelHandler(id int, cancel context.CancelFunc) {
+	rw_cancels_mutex.Lock()
+	defer rw_cancels_mutex.Unlock()
+	rw_cancels[id] = cancel
+}
+
+func removeCancelHandler(id int) {
+	rw_cancels_mutex.Lock()
+	defer rw_cancels_mutex.Unlock()
 	delete(rw_cancels, id)
 }
 
@@ -103,7 +112,7 @@ func list() bus.B_UsbList_Response {
 
 	ctx.OpenDevices(func(desc *gousb.DeviceDesc) bool {
 
-		if desc.Path == nil || len(desc.Path) == 0 {
+		if len(desc.Path) == 0 {
 			return false // skip
 		}
 
@@ -145,19 +154,28 @@ func write(msg *bus.Message) error {
 		log.Error().Msg("usb.write: TimerID is required for USD writing")
 		return fmt.Errorf("usb.write: TimerID is required")
 	}
-	cancel_ctx, cancel := context.WithCancel(context.Background())
-	addCancel(msg.TimerID, cancel)
+	cancel_ctx, cancel_func := context.WithCancel(context.Background())
+	addCancelHandler(msg.TimerID, cancel_func)
 
 	operation_mutex.Lock()
+	log.Debug().Msg("Before write")
 	_, err = conn.EndpointOut.WriteContext(cancel_ctx, req.Data)
+	log.Debug().Msg("After write")
 	operation_mutex.Unlock()
 
 	if err != nil {
 		log.Error().Err(err).Msg("usb.write: Error writing to device")
+
+		if strings.Contains(err.Error(), "no device") {
+			log.Error().Msg("usb.write: Device not found")
+			removeUSBDevice(req.USB_ID)
+		}
+
 		return err
 	}
 
-	doCancel(msg.TimerID)
+	removeCancelHandler(msg.TimerID)
+
 	return nil
 }
 
@@ -178,19 +196,29 @@ func read(msg *bus.Message) (*bus.B_UsbRead_Response, error) {
 		return nil, errors.New("TimerID is required")
 	}
 
-	cancel_ctx, cancel := context.WithCancel(context.Background())
-	addCancel(msg.TimerID, cancel)
+	cancel_ctx, cancel_func := context.WithCancel(context.Background())
+	addCancelHandler(msg.TimerID, cancel_func)
 	data := make([]byte, conn.EndpointIn.Desc.MaxPacketSize)
 
+	log.Debug().Msgf("Reading from device Timer: %d", msg.TimerID)
 	operation_mutex.Lock()
+	log.Debug().Msg("Before read")
 	n, err := conn.EndpointIn.ReadContext(cancel_ctx, data)
+	log.Debug().Msg("After read")
 	operation_mutex.Unlock()
+	log.Debug().Msg("After read unlock")
 
 	if err != nil {
 		log.Error().Err(err).Msg("Error reading from device")
+
+		if strings.Contains(err.Error(), "no device") {
+			log.Error().Msg("usb.write: Device not found")
+			removeUSBDevice(req.USB_ID)
+		}
+
 		return nil, err
 	}
-	doCancel(msg.TimerID)
+	removeCancelHandler(msg.TimerID)
 
 	return &bus.B_UsbRead_Response{Data: data[:n]}, nil
 }
@@ -225,7 +253,9 @@ func process(msg *bus.Message) {
 		switch msg.Type {
 		case "done":
 			if id, ok := msg.Data.(int); ok {
-				doCancel(id)
+				if len(rw_cancels) > 0 {
+					cancelOperation(id)
+				}
 			} else {
 				log.Error().Msg("Invalid message data. Expected B_TimerDone")
 			}

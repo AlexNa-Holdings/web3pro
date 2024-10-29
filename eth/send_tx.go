@@ -70,13 +70,13 @@ func sendTx(msg *bus.Message) (string, error) {
 			if !ok {
 				log.Error().Msg("sendTx: hail data not found")
 				err = errors.New("hail data not found")
-				return true
+				return false
 			}
 
 			hail.Template, err = BuildHailToSendTxTemplate(b, from, req.To, req.Amount, req.Data, nil, true)
 			if err != nil {
 				bus.Send("ui", "notify-error", fmt.Sprintf("Error: %v", err))
-				return true
+				return false
 			}
 
 			v.GetGui().UpdateAsync(func(*gocui.Gui) error {
@@ -87,7 +87,7 @@ func sendTx(msg *bus.Message) (string, error) {
 			signer := w.GetSigner(from.Signer)
 			if signer == nil {
 				err = fmt.Errorf("signer not found: %v", from.Signer)
-				return true
+				return false
 			}
 
 			sign_res := msg.Fetch("signer", "sign-tx", &bus.B_SignerSignTx{
@@ -102,25 +102,28 @@ func sendTx(msg *bus.Message) (string, error) {
 
 			if sign_res.Error != nil {
 				err = fmt.Errorf("error signing transaction: %v", sign_res.Error)
-				return true
+				return false
 			}
 
 			signedTx, ok := sign_res.Data.(*types.Transaction)
 			if !ok {
 				log.Error().Msgf("sendTx: Cannot convert to transaction. Data:(%v)", sign_res.Data)
 				err = errors.New("cannot convert to transaction")
-				return true
+				return false
 			}
 
 			hash, err = SendSignedTx(signedTx)
 			if err != nil {
 				log.Error().Err(err).Msg("sendTx: Cannot send tx")
 				bus.Send("ui", "notify-error", fmt.Sprintf("Error: %v", err))
-				return true
+				return false
 			}
 
 			confirmed = true
 			return true
+		},
+		OnCancel: func(m *bus.Message) {
+			bus.Send("timer", "trigger", m.TimerID) // to cancel all nested operations
 		},
 		OnOverHotspot: func(m *bus.Message, v *gocui.View, hs *gocui.Hotspot) {
 			cmn.StandardOnOverHotspot(v, hs)
@@ -406,7 +409,8 @@ func BuildHailToSendTxTemplate(b *cmn.Blockchain, from *cmn.Address, to common.A
 	bottom := `<button text:Send id:ok bgcolor:g.HelpBgColor color:g.HelpFgColor tip:"send tokens">  ` +
 		`<button text:Reject id:cancel bgcolor:g.ErrorFgColor tip:"reject transaction">`
 	if confirmed {
-		bottom = `<c><blink>Waiting to be signed</blink>
+		bottom = `<c><blink>Waiting</blink> to be signed
+
 <button text:Reject id:cancel bgcolor:g.ErrorFgColor tip:"reject transaction">`
 	}
 

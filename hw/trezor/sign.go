@@ -44,7 +44,7 @@ func sign(msg *bus.Message) (string, error) {
 		t.Pane.SetMode(save_mode)
 	}()
 
-	t.Pane.SetTemplate("<w><c>\n<blink>" + cmn.ICON_ALERT + "</blink>Please review tand sign it with your Trezor device\n")
+	t.Pane.SetTemplate("<w><c>\nPlease <blink>review and sign</blink> it with your Trezor device\n")
 	t.Pane.SetMode("template")
 
 	if err := t.Call(msg, request, response); err != nil {

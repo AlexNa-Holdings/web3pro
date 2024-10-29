@@ -77,9 +77,9 @@ type ExternalLibrary struct {
 type BlockscoutAPI struct {
 }
 
-func (e *BlockscoutAPI) DownloadContract(w *cmn.Wallet, b *cmn.Blockchain, a common.Address) error {
+func (e *BlockscoutAPI) DownloadContract(w *cmn.Wallet, b *cmn.Blockchain, a common.Address) (string, error) {
 	if b.ExplorerUrl == "" {
-		return errors.New("blockchain has no explorer")
+		return "", errors.New("blockchain has no explorer")
 	}
 
 	exu, _ := strings.CutSuffix(b.ExplorerAPIUrl, "/")
@@ -90,14 +90,14 @@ func (e *BlockscoutAPI) DownloadContract(w *cmn.Wallet, b *cmn.Blockchain, a com
 
 	resp, err := http.Get(URL)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	// log.Debug().Msgf("Downloaded contract: %s", string(body))
@@ -105,7 +105,7 @@ func (e *BlockscoutAPI) DownloadContract(w *cmn.Wallet, b *cmn.Blockchain, a com
 	var sc SmartContract
 	err = json.Unmarshal(body, &sc)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	os.MkdirAll(cmn.DataFolder+"/abi", 0755)
@@ -114,30 +114,30 @@ func (e *BlockscoutAPI) DownloadContract(w *cmn.Wallet, b *cmn.Blockchain, a com
 	// Marshal the ABI slice to JSON
 	abiData, err := json.MarshalIndent(sc.Abi, "", "  ")
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	err = os.WriteFile(path, abiData, 0644) // Save the ABI
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	contractDir := cmn.DataFolder + "/contracts/" + a.Hex()
 	err = os.MkdirAll(contractDir, 0755) // Create the /contract/address directory if it doesn't exist
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	for _, source := range sc.AdditionalSources {
 		sourcePath := filepath.Join(contractDir, source.FilePath)
 		err = os.MkdirAll(filepath.Dir(sourcePath), 0755) // Ensure directories exist
 		if err != nil {
-			return err
+			return "", err
 		}
 
 		err = os.WriteFile(sourcePath, []byte(source.SourceCode), 0644) // Save the source code
 		if err != nil {
-			return err
+			return "", err
 		}
 	}
 
@@ -146,13 +146,13 @@ func (e *BlockscoutAPI) DownloadContract(w *cmn.Wallet, b *cmn.Blockchain, a com
 
 	err = os.MkdirAll(filepath.Dir(mainSourcePath), 0755)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	err = os.WriteFile(mainSourcePath, []byte(sc.SourceCode), 0644)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	return nil
+	return sc.Name, nil
 }

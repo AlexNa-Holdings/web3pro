@@ -30,7 +30,7 @@ func signTx(msg *bus.Message) (*types.Transaction, error) {
 		return nil, fmt.Errorf("SignTx: no device found with name %s", m.Name)
 	}
 
-	err := provide_eth_app(ledger.USB_ID, "Ethereum")
+	err := provide_eth_app(msg, ledger.USB_ID, "Ethereum")
 	if err != nil {
 		return nil, err
 	}
@@ -58,10 +58,10 @@ func signTx(msg *bus.Message) (*types.Transaction, error) {
 		ledger.Pane.SetMode(save_mode)
 	}()
 
-	ledger.Pane.SetTemplate("<w><c>\n<blink>" + cmn.ICON_ALERT + "</blink>Please sign the transaction on your device\n")
+	ledger.Pane.SetTemplate("<w><c>\nPlease <blink>sign</blink> the transaction on your device\n")
 	ledger.Pane.SetMode("template")
 
-	reply, err := call(ledger.USB_ID, &SIGN_TX_APDU, payload)
+	reply, err := call(msg, ledger.USB_ID, &SIGN_TX_APDU, payload)
 	if err != nil {
 		log.Error().Err(err).Msgf("SignTx: Error signing transaction: %s", ledger.USB_ID)
 		return nil, err

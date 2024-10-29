@@ -517,7 +517,8 @@ func ConfirmEIP712Template(data apitypes.TypedData, confirmed bool) string {
 	}
 
 	if confirmed {
-		sb.WriteString(`<c><blink>Waiting to be signed</blink>
+		sb.WriteString(`<c><blink>Waiting</blink> to be signed
+		
 <button text:Reject id:cancel bgcolor:g.ErrorFgColor tip:"reject transaction">`)
 	} else {
 		sb.WriteString(`

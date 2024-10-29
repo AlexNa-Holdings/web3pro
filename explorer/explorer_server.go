@@ -14,7 +14,7 @@ func Init() {
 }
 
 type Explorer interface {
-	DownloadContract(w *cmn.Wallet, b *cmn.Blockchain, contract common.Address) error
+	DownloadContract(w *cmn.Wallet, b *cmn.Blockchain, contract common.Address) (string, error)
 }
 
 func Loop() {
@@ -71,7 +71,7 @@ func download(m *bus.B_ExplorerDownloadContract) error {
 		return errors.New("no explorer")
 	}
 
-	err := ex.DownloadContract(w, b, m.Address)
+	name, err := ex.DownloadContract(w, b, m.Address)
 	if err != nil {
 		log.Error().Err(err).Msg("Error downloading contract")
 		return err
@@ -81,6 +81,16 @@ func download(m *bus.B_ExplorerDownloadContract) error {
 	if err != nil {
 		log.Error().Err(err).Msg("Error saving wallet")
 		return err
+	}
+
+	// update contract name in the wallet
+	if c := w.GetContract(m.Address); c != nil {
+		c.Name = name
+		w.SetContract(m.Address, c)
+	} else {
+		w.SetContract(m.Address, &cmn.Contract{
+			Name: name,
+		})
 	}
 
 	return nil

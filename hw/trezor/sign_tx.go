@@ -78,7 +78,7 @@ func signTx(msg *bus.Message) (*types.Transaction, error) {
 		t.Pane.SetMode(save_mode)
 	}()
 
-	t.Pane.SetTemplate("<w><c>\n<blink>" + cmn.ICON_ALERT + "</blink>Please unlock your Trezor device and allow to sign the transaction\n")
+	t.Pane.SetTemplate("<w><c>\nPlease <blink>sign</blink> transaction on your Trezor device\n")
 	t.Pane.SetMode("template")
 
 	if err := t.Call(msg, request, response); err != nil {

@@ -67,7 +67,7 @@ func send(msg *bus.Message) error {
 			if !ok {
 				log.Error().Msg("sendTx: hail data not found")
 				err = errors.New("hail data not found")
-				return true
+				return false
 			}
 
 			hail.Template, err = BuildHailToSendTemplate(b, t, from, to, amount, nil, false)
@@ -100,8 +100,10 @@ func send(msg *bus.Message) error {
 					return false
 				}
 			}
-			bus.Send("ui", "remove-hail", m) // close first
-			return false
+			return true
+		},
+		OnCancel: func(m *bus.Message) {
+			bus.Send("timer", "trigger", m.TimerID) // to cancel all nested operations
 		},
 		OnOverHotspot: func(m *bus.Message, v *gocui.View, hs *gocui.Hotspot) {
 			cmn.StandardOnOverHotspot(v, hs)
@@ -327,7 +329,8 @@ func BuildHailToSendTemplate(b *cmn.Blockchain, t *cmn.Token,
 	bottom := `<button text:Send id:ok bgcolor:g.HelpBgColor color:g.HelpFgColor tip:"send tokens">  ` +
 		`<button text:Reject id:cancel bgcolor:g.ErrorFgColor tip:"reject transaction">`
 	if confirmed {
-		bottom = `<c><blink>Waiting to be signed</blink>
+		bottom = `<c><blink>Waiting</blink> to be signed
+
 <button text:Reject id:cancel bgcolor:g.ErrorFgColor tip:"reject transaction">`
 	}
 

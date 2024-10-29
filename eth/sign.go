@@ -48,13 +48,14 @@ func sign(msg *bus.Message) (string, error) {
 			if !ok {
 				log.Error().Msg("sendTx: hail data not found")
 				err = errors.New("hail data not found")
-				return true
+				return false
 			}
 
 			hail.Template = `<w>
  Message: ` + string(req.Data) + `
  
-<c><blink>Waiting to be signed</blink>
+<c><blink>Waiting</blink> to be signed
+
 <button text:Reject id:cancel bgcolor:g.ErrorFgColor tip:"reject transaction">
 `
 
@@ -76,13 +77,16 @@ func sign(msg *bus.Message) (string, error) {
 			})
 			if res.Error != nil {
 				err = res.Error
-				return true
+				return false
 			}
 
 			sign = res.Data.(string)
 			err = nil
 			OK = true
 			return true
+		},
+		OnCancel: func(m *bus.Message) {
+			bus.Send("timer", "trigger", m.TimerID) // to cancel all nested operations
 		},
 		OnOverHotspot: func(m *bus.Message, v *gocui.View, hs *gocui.Hotspot) {
 			cmn.StandardOnOverHotspot(v, hs)

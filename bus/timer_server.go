@@ -124,7 +124,7 @@ func ProcessTimers() {
 					mu.Lock()
 					t, ok := timers[id]
 					if !ok {
-						log.Error().Msgf("Timer %d does not exist", id)
+						log.Error().Msgf("Timer:trigger %d does not exist", id)
 						msg.Respond("ERROR", errors.New("timer does not exist"))
 					} else {
 						t.lapsed = t.Limit

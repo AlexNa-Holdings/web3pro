@@ -683,6 +683,15 @@ func (w *Wallet) GetContract(a common.Address) *Contract {
 	return c
 }
 
+func (w *Wallet) SetContract(a common.Address, c *Contract) error {
+	w.writeMutex.Lock()
+	defer w.writeMutex.Unlock()
+
+	w.Contracts[a] = c
+
+	return w._locked_Save()
+}
+
 func (w *Wallet) GetAddressByName(n string) *Address {
 	for _, s := range w.Addresses {
 		if s.Name == n {

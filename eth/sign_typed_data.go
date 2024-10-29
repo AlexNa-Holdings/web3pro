@@ -44,7 +44,7 @@ func signTypedDataV4(msg *bus.Message) (string, error) {
 			if !ok {
 				log.Error().Msg("sendTx: hail data not found")
 				err = errors.New("hail data not found")
-				return true
+				return false
 			}
 
 			hail.Template = cmn.ConfirmEIP712Template(req.TypedData, true)
@@ -67,13 +67,16 @@ func signTypedDataV4(msg *bus.Message) (string, error) {
 			})
 			if res.Error != nil {
 				err = res.Error
-				return true
+				return false
 			}
 
 			sign = res.Data.(string)
 			err = nil
 			OK = true
 			return true
+		},
+		OnCancel: func(m *bus.Message) {
+			bus.Send("timer", "trigger", m.TimerID) // to cancel all nested operations
 		},
 		OnOverHotspot: func(m *bus.Message, v *gocui.View, hs *gocui.Hotspot) {
 			cmn.StandardOnOverHotspot(v, hs)

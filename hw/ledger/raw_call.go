@@ -66,7 +66,7 @@ var StatusCodes = map[int]string{
 	0x9850: "MAX_VALUE_REACHED",
 }
 
-func rawCall(usb_id string, apdu *APDU, data []byte) ([]byte, error) {
+func rawCall(msg *bus.Message, usb_id string, apdu *APDU, data []byte) ([]byte, error) {
 	// Construct the message payload, possibly split into multiple chunks
 	buf := make([]byte, 2, 7+len(data))
 
@@ -94,10 +94,18 @@ func rawCall(usb_id string, apdu *APDU, data []byte) ([]byte, error) {
 		// Send over to the device
 		log.Trace().Msgf("Ledger: rawCall: Writing data chunk to the Ledger: %s", hexutil.Bytes(chunk))
 
-		resp := bus.Fetch("usb", "write", &bus.B_UsbWrite{
-			USB_ID: usb_id,
-			Data:   chunk,
-		})
+		var resp *bus.Message
+		if msg == nil {
+			resp = bus.Fetch("usb", "write", &bus.B_UsbWrite{
+				USB_ID: usb_id,
+				Data:   chunk,
+			})
+		} else {
+			resp = msg.Fetch("usb", "write", &bus.B_UsbWrite{
+				USB_ID: usb_id,
+				Data:   chunk,
+			})
+		}
 
 		if resp.Error != nil {
 			log.Error().Err(resp.Error).Msg("Ledger: rawCall: Error writing to device")
@@ -109,9 +117,16 @@ func rawCall(usb_id string, apdu *APDU, data []byte) ([]byte, error) {
 	for {
 		// Read the next chunk from the Ledger wallet
 
-		var resp = bus.Fetch("usb", "read", &bus.B_UsbRead{
-			USB_ID: usb_id,
-		})
+		var resp *bus.Message
+		if msg == nil {
+			resp = bus.Fetch("usb", "read", &bus.B_UsbRead{
+				USB_ID: usb_id,
+			})
+		} else {
+			resp = msg.Fetch("usb", "read", &bus.B_UsbRead{
+				USB_ID: usb_id,
+			})
+		}
 
 		if resp.Error != nil {
 			log.Error().Err(resp.Error).Msg("Ledger: rawCall: Error reading from device")

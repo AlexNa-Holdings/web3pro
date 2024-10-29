@@ -12,14 +12,20 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func get_addresses(m *bus.B_SignerGetAddresses) (*bus.B_SignerGetAddresses_Response, error) {
+func get_addresses(msg *bus.Message) (*bus.B_SignerGetAddresses_Response, error) {
+
+	m, ok := msg.Data.(*bus.B_SignerGetAddresses)
+	if !ok {
+		return nil, fmt.Errorf("invalid message data")
+	}
+
 	rd := &bus.B_SignerGetAddresses_Response{}
 	ledger := provide_device(m.Name)
 	if ledger == nil {
 		return rd, fmt.Errorf("no device found with name %s", m.Name)
 	}
 
-	err := provide_eth_app(ledger.USB_ID, "Ethereum")
+	err := provide_eth_app(msg, ledger.USB_ID, "Ethereum")
 	if err != nil {
 		return rd, err
 	}
@@ -47,7 +53,7 @@ func get_addresses(m *bus.B_SignerGetAddresses) (*bus.B_SignerGetAddresses_Respo
 
 		data := serializePath(bipPath)
 
-		r, err := call(ledger.USB_ID, &GET_ADDRESS_APDU, data)
+		r, err := call(msg, ledger.USB_ID, &GET_ADDRESS_APDU, data)
 		if err != nil {
 			log.Error().Err(err).Msgf("Init: Error getting device name: %s", ledger.USB_ID)
 			return rd, err

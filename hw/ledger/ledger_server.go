@@ -69,7 +69,7 @@ func process(msg *bus.Message) {
 		case "connected":
 			if m, ok := msg.Data.(*bus.B_UsbConnected); ok && m.Vendor == "Ledger" {
 				log.Debug().Msg("Ledger usb connected")
-				connected(m)
+				connected(msg)
 			}
 		case "disconnected":
 			if m, ok := msg.Data.(*bus.B_UsbDisconnected); ok {
@@ -100,7 +100,7 @@ func process(msg *bus.Message) {
 		case "get-addresses":
 			if m, ok := msg.Data.(*bus.B_SignerGetAddresses); ok {
 				if m.Type == LDG {
-					msg.Respond(get_addresses(m))
+					msg.Respond(get_addresses(msg))
 				}
 			} else {
 				log.Error().Msg("Loop: Invalid hw get-addresses data")
@@ -189,7 +189,13 @@ func add(t *Ledger) {
 	ledgers = append(ledgers, t)
 }
 
-func connected(m *bus.B_UsbConnected) {
+func connected(msg *bus.Message) {
+	m, ok := msg.Data.(*bus.B_UsbConnected)
+	if !ok {
+		log.Error().Msg("Loop: Invalid usb connected data")
+		return
+	}
+
 	log.Debug().Msgf("Ledger Connected: %s %s", m.Vendor, m.Product)
 
 	t := &Ledger{
@@ -202,7 +208,7 @@ func connected(m *bus.B_UsbConnected) {
 	t.Product = m.Product
 	ui.TopLeftFlow.AddPane(t.Pane)
 
-	n, err := getName(m.USB_ID)
+	n, err := getName(msg, m.USB_ID)
 	if err != nil {
 		log.Error().Err(err).Msg("Error initializing ledger")
 		return
@@ -220,8 +226,6 @@ func disconnected(m *bus.B_UsbDisconnected) {
 }
 
 func find_by_name(name []*cmn.Signer) *Ledger {
-	log.Debug().Msgf("find_by_name: %v", name)
-
 	ledgers_mutex.Lock()
 	defer ledgers_mutex.Unlock()
 
@@ -233,8 +237,6 @@ func find_by_name(name []*cmn.Signer) *Ledger {
 		}
 	}
 
-	log.Debug().Msg("find_by_name: not found")
-
 	// if not found let's try to initialize those without a name
 	//check if there are not initialized ledgers
 	for _, t := range ledgers {
@@ -242,7 +244,7 @@ func find_by_name(name []*cmn.Signer) *Ledger {
 
 			log.Debug().Msgf("find_by_name: initializing %s", t.USB_ID)
 
-			n, err := getName(t.USB_ID)
+			n, err := getName(nil, t.USB_ID)
 			if err != nil {
 				log.Error().Err(err).Msg("Error initializing ledger")
 			}
@@ -312,14 +314,12 @@ func provide_device(sn string) *Ledger {
 	}()
 
 	bus.TimerLoop(60, 3, 0, func() (any, error, bool) {
-
 		if !pane.On {
 			return nil, fmt.Errorf("Canceled"), true
 		}
 
 		t = find_by_name(s_list)
 		if t != nil {
-			ui.TopLeftFlow.RemovePane(pane)
 			return nil, nil, true
 		}
 		return nil, nil, false
@@ -328,11 +328,11 @@ func provide_device(sn string) *Ledger {
 	return t
 }
 
-func provide_eth_app(usb_id string, needed_app string) error {
+func provide_eth_app(msg *bus.Message, usb_id string, needed_app string) error {
 
 	log.Debug().Msgf("provide_eth_app: %s %s", usb_id, needed_app)
 
-	r, err := call(usb_id, &GET_INFO_APDU, nil)
+	r, err := call(msg, usb_id, &GET_INFO_APDU, nil)
 	if err != nil {
 		log.Error().Err(err).Msgf("provide_eth_app: Error getting device name: %s", usb_id)
 		return err
@@ -360,17 +360,17 @@ func provide_eth_app(usb_id string, needed_app string) error {
 			ledger.Pane.SetMode(save_mode)
 		}()
 
-		ledger.Pane.SetTemplate("<w><c>\n<blink>" + cmn.ICON_ALERT + "</blink> Please alllow the Ethereum app on your Ledger device\n")
+		ledger.Pane.SetTemplate("<w><c>\nPlease <blink>alllow</blink> the Ethereum app on your Ledger device\n")
 		ledger.Pane.SetMode("template")
 
 		if needed_app == "BOLOS" {
-			_, err := call(usb_id, &QUIT_APP_APDU, nil)
+			_, err := call(msg, usb_id, &QUIT_APP_APDU, nil)
 			if err != nil {
 				log.Error().Err(err).Msgf("provide_eth_app: Error quitting app: %s", usb_id)
 				return err
 			}
 		} else {
-			_, err := call(usb_id, &LAUNCH_APP_APDU, []byte(needed_app))
+			_, err := call(msg, usb_id, &LAUNCH_APP_APDU, []byte(needed_app))
 			if err != nil {
 				log.Error().Err(err).Msgf("provide_eth_app: Error quitting app: %s", usb_id)
 				return err

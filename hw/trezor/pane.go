@@ -223,9 +223,14 @@ func (p *TrezorPane) SetMode(mode string) {
 }
 
 func (p *TrezorPane) rebuidTemplate() {
+	if p.View == nil {
+		return
+	}
+
 	temp := ""
 	switch p.Mode {
 	case "pin":
+		p.View.TitleColor = ui.Gui.ActionFgColor
 		temp += "<c>\n"
 		temp += "<b>Enter PIN: </b><l id:pin text:'____________'> <button text:'\U000f006e ' id:back>\n\n"
 
@@ -239,13 +244,16 @@ func (p *TrezorPane) rebuidTemplate() {
 		}
 		temp += "<button text:OK> <button text:Cancel>\n"
 	case "pass":
+		p.View.TitleColor = ui.Gui.ActionFgColor
 		temp += `<c><w>
 <button text:Standard color:g.HelpFgColor bgcolor:g.HelpBgColor id:standard> <button text:Hidden color:g.HelpFgColor bgcolor:g.HelpBgColor id:hidden> 
 
 <button text:Cancel>`
 	case "template":
+		p.View.TitleColor = ui.Gui.ActionFgColor
 		temp = p.GetTemplate()
 	default:
+		p.View.TitleColor = ui.Gui.BgColor
 		if p.Trezor != nil {
 			temp += fmt.Sprintf("<b>      SN:</b> %s\n",
 				cmn.TagLink(*p.Trezor.DeviceId, "copy "+*p.Trezor.DeviceId, "Copy SN"))

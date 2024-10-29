@@ -96,7 +96,7 @@ func (p *LedgerPane) SetView(x0, y0, x1, y1 int, overlap byte) {
 					switch param[1] {
 					case "get_name":
 						if p.Ledger != nil {
-							n, err := getName(p.USB_ID)
+							n, err := getName(nil, p.USB_ID)
 							if err != nil {
 								log.Error().Err(err).Msg("Error initializing ledger")
 								return
@@ -129,11 +129,18 @@ func (p *LedgerPane) SetMode(mode string) {
 }
 
 func (p *LedgerPane) rebuidTemplate() {
+	if p.View == nil {
+		return
+	}
+
 	temp := ""
+
 	switch p.Mode {
 	case "template":
+		p.View.TitleColor = ui.Gui.ActionFgColor
 		temp = p.GetTemplate()
 	default:
+		p.View.TitleColor = ui.Gui.FrameColor
 		if p.Ledger != nil {
 			if p.Name != "" {
 				temp += fmt.Sprintf("<w><b>Product:<b> %s", p.Ledger.Product)

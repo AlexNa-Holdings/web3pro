@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
-	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/ava-labs/coreth/accounts"
 	"github.com/rs/zerolog/log"
 )
@@ -18,7 +17,7 @@ func sign(msg *bus.Message) (string, error) {
 		return "", fmt.Errorf("no device found with name %s", m.Name)
 	}
 
-	err := provide_eth_app(ledger.USB_ID, "Ethereum")
+	err := provide_eth_app(msg, ledger.USB_ID, "Ethereum")
 	if err != nil {
 		return "", err
 	}
@@ -45,10 +44,10 @@ func sign(msg *bus.Message) (string, error) {
 		ledger.Pane.SetMode(save_mode)
 	}()
 
-	ledger.Pane.SetTemplate("<w><c>\n<blink>" + cmn.ICON_ALERT + "</blink>Please sign the message on your device\n")
+	ledger.Pane.SetTemplate("<w><c>\nPlease <blink>sign</blink> the message on your device\n")
 	ledger.Pane.SetMode("template")
 
-	reply, err := call(ledger.USB_ID, &SIGN_MSG_PERSONAL_APDU, payload)
+	reply, err := call(msg, ledger.USB_ID, &SIGN_MSG_PERSONAL_APDU, payload)
 	if err != nil {
 		log.Error().Err(err).Msgf("SignTypedData: Error signing typed data: %s", m.Path)
 		return "", err

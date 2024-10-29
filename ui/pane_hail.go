@@ -111,14 +111,13 @@ func (p *HailPaneType) SetView(x0, y0, x1, y1 int, overlap byte) {
 						close = active_hail.OnOk(ActiveRequest, v)
 					}
 					if close {
+						log.Debug().Msg("HailPane: button Ok: closing")
 						remove(ActiveRequest)
 					}
 				case "button cancel":
 					log.Trace().Msgf("HailPane: button Cancel")
-					if active_hail.OnCancel != nil {
-						active_hail.OnCancel(ActiveRequest)
-					}
-					remove(ActiveRequest)
+					bus.Send("timer", "trigger", ActiveRequest.TimerID) // to cancel all including nested messages
+
 				default:
 					if active_hail.OnClickHotspot != nil {
 						go active_hail.OnClickHotspot(ActiveRequest, v, hs)
@@ -201,15 +200,15 @@ func remove(m *bus.Message) {
 		return
 	}
 
+	log.Debug().Msgf("???????  HailPane: remove: %d", m.ID)
+
 	if m.Data == nil {
 		log.Error().Msg("HailPane: remove: nil data")
 		return
 	}
 
-	log.Debug().Msgf("HailPane: remove: %s", m.Data.(*bus.B_Hail).Title)
-
 	hail := m.Data.(*bus.B_Hail)
-	log.Trace().Msgf("Removing hail %s", hail.Title)
+	log.Trace().Msgf("Removing hail id:%d %s", m.ID, hail.Title)
 
 	hqRemove(m)
 
@@ -240,6 +239,7 @@ func cancel(m *bus.Message) {
 		hail.OnCancel(m)
 	}
 
+	log.Debug().Msgf("HailPane: cancel: %s", hail.Title)
 	remove(m)
 }
 
