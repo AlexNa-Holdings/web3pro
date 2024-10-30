@@ -196,7 +196,7 @@ func find_by_name(name []*cmn.Signer) *Trezor {
 	return nil
 }
 
-func provide_device(sn string) *Trezor {
+func provide_device(msg *bus.Message, sn string) *Trezor {
 	w := cmn.CurrentWallet
 	if w == nil {
 		return nil
@@ -235,7 +235,7 @@ func provide_device(sn string) *Trezor {
 		ui.TopLeftFlow.RemovePane(pane)
 	}()
 
-	bus.TimerLoop(60, 3, 0, func() (any, error, bool) {
+	bus.TimerLoop(60, 3, msg.TimerID, func() (any, error, bool) {
 
 		if !pane.On {
 			return nil, fmt.Errorf("Canceled"), true

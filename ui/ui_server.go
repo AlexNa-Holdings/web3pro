@@ -73,13 +73,7 @@ func process(msg *bus.Message) {
 	switch msg.Type {
 	case "hail":
 		log.Trace().Msg("ProcessHails: Hail received")
-		if hail, ok := msg.Data.(*bus.B_Hail); ok {
-			log.Trace().Msgf("Hail received: %s", hail.Title)
-
-			if on_top := add(msg); on_top {
-				HailPane.open(msg)
-			}
-		}
+		add(msg)
 	case "remove-hail":
 		if m, ok := msg.Data.(*bus.Message); ok {
 			if m != nil {
@@ -115,14 +109,6 @@ func process(msg *bus.Message) {
 
 				if hail.OnTick != nil {
 					hail.OnTick(ActiveRequest, msg.Tick)
-				}
-			}
-		}
-	case "done":
-		if id, ok := msg.Data.(int); ok {
-			if ActiveRequest != nil {
-				if ActiveRequest.TimerID == id {
-					cancel(ActiveRequest)
 				}
 			}
 		}

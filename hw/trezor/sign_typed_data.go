@@ -14,7 +14,7 @@ import (
 func signTypedData_v4(msg *bus.Message) (string, error) {
 	m, _ := msg.Data.(*bus.B_SignerSignTypedData_v4)
 
-	t := provide_device(m.Name)
+	t := provide_device(msg, m.Name)
 	if t == nil {
 		return "", fmt.Errorf("Trezor not found: %s", m.Name)
 	}

@@ -12,7 +12,7 @@ import (
 func sign(msg *bus.Message) (string, error) {
 	m, _ := msg.Data.(*bus.B_SignerSign)
 
-	ledger := provide_device(m.Name)
+	ledger := provide_device(msg, m.Name)
 	if ledger == nil {
 		return "", fmt.Errorf("no device found with name %s", m.Name)
 	}

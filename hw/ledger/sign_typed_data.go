@@ -18,7 +18,7 @@ import (
 func signTypedData_v4(msg *bus.Message) (string, error) {
 	m, _ := msg.Data.(*bus.B_SignerSignTypedData_v4)
 
-	ledger := provide_device(m.Name)
+	ledger := provide_device(msg, m.Name)
 	if ledger == nil {
 		return "", fmt.Errorf("no device found with name %s", m.Name)
 	}

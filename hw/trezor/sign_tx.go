@@ -21,7 +21,7 @@ func signTx(msg *bus.Message) (*types.Transaction, error) {
 
 	m, _ := msg.Data.(*bus.B_SignerSignTx)
 
-	t := provide_device(m.Name)
+	t := provide_device(msg, m.Name)
 	if t == nil {
 		return nil, fmt.Errorf("Trezor not found: %s", m.Name)
 	}

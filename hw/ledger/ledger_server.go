@@ -274,7 +274,7 @@ func find_by_usb_id(usb_id string) *Ledger {
 	return nil
 }
 
-func provide_device(sn string) *Ledger {
+func provide_device(msg *bus.Message, sn string) *Ledger {
 	w := cmn.CurrentWallet
 	if w == nil {
 		return nil
@@ -313,7 +313,7 @@ func provide_device(sn string) *Ledger {
 		ui.TopLeftFlow.RemovePane(pane)
 	}()
 
-	bus.TimerLoop(60, 3, 0, func() (any, error, bool) {
+	bus.TimerLoop(60, 3, msg.TimerID, func() (any, error, bool) {
 		if !pane.On {
 			return nil, fmt.Errorf("Canceled"), true
 		}

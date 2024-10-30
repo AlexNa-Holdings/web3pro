@@ -24,7 +24,7 @@ func get_addresses(msg *bus.Message) (*bus.B_SignerGetAddresses_Response, error)
 	}
 
 	rd := &bus.B_SignerGetAddresses_Response{}
-	t := provide_device(data.Name)
+	t := provide_device(msg, data.Name)
 	if t == nil {
 		return rd, fmt.Errorf("no device found with name %s", data.Name)
 	}

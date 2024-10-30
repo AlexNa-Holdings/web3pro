@@ -144,17 +144,28 @@ func (p *HailPaneType) SetView(x0, y0, x1, y1 int, overlap byte) {
 	}
 }
 
-func add(m *bus.Message) bool { // returns if on top
-
+func add(m *bus.Message) {
 	hail, ok := m.Data.(*bus.B_Hail)
 	if !ok {
 		log.Error().Msg("Hail data is not of type HailRequest")
-		return false
+		return
 	}
 
 	log.Trace().Msgf("Adding hail: %s", hail.Title)
 	hqAdd(m, hail.Priorized)
-	return m == HailQueue[0]
+
+	m.OnCancel = func(m *bus.Message) {
+		if hail.OnCancel != nil {
+			hail.OnCancel(m)
+		}
+
+		log.Debug().Msgf("HailPane: OnCancel: %s", hail.Title)
+		remove(m)
+	}
+
+	if m == HailQueue[0] { // if on top
+		HailPane.open(m)
+	}
 }
 
 func hqAdd(m *bus.Message, on_top bool) {
@@ -171,7 +182,7 @@ func hqAdd(m *bus.Message, on_top bool) {
 	}
 }
 
-func hqRemove(m *bus.Message) {
+func hqRemove(m *bus.Message) bool {
 	HQMutex.Lock()
 	defer HQMutex.Unlock()
 
@@ -179,8 +190,10 @@ func hqRemove(m *bus.Message) {
 		if HailQueue[i] == m {
 			HailQueue = append(HailQueue[:i], HailQueue[i+1:]...)
 			i -= 1
+			return true
 		}
 	}
+	return false
 }
 
 func hqGetTop() *bus.Message {
@@ -194,13 +207,10 @@ func hqGetTop() *bus.Message {
 }
 
 func remove(m *bus.Message) {
-
-	if m == nil {
-		log.Error().Msg("HailPane: remove: nil message")
-		return
+	removed := hqRemove(m)
+	if !removed {
+		return // already removed
 	}
-
-	log.Debug().Msgf("???????  HailPane: remove: %d", m.ID)
 
 	if m.Data == nil {
 		log.Error().Msg("HailPane: remove: nil data")
@@ -209,8 +219,6 @@ func remove(m *bus.Message) {
 
 	hail := m.Data.(*bus.B_Hail)
 	log.Trace().Msgf("Removing hail id:%d %s", m.ID, hail.Title)
-
-	hqRemove(m)
 
 	if hail.OnClose != nil {
 		hail.OnClose(m)
@@ -230,17 +238,6 @@ func remove(m *bus.Message) {
 			HidePane(&HailPane)
 		}
 	}
-}
-
-func cancel(m *bus.Message) {
-	hail := m.Data.(*bus.B_Hail)
-
-	if hail.OnCancel != nil {
-		hail.OnCancel(m)
-	}
-
-	log.Debug().Msgf("HailPane: cancel: %s", hail.Title)
-	remove(m)
 }
 
 func (p *HailPaneType) open(m *bus.Message) {

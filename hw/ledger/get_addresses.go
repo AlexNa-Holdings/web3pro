@@ -20,7 +20,7 @@ func get_addresses(msg *bus.Message) (*bus.B_SignerGetAddresses_Response, error)
 	}
 
 	rd := &bus.B_SignerGetAddresses_Response{}
-	ledger := provide_device(m.Name)
+	ledger := provide_device(msg, m.Name)
 	if ledger == nil {
 		return rd, fmt.Errorf("no device found with name %s", m.Name)
 	}

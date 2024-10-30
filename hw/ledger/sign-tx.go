@@ -25,7 +25,7 @@ func signTx(msg *bus.Message) (*types.Transaction, error) {
 		return nil, fmt.Errorf("SignTx: blockchain not found: %v", m.Chain)
 	}
 
-	ledger := provide_device(m.Name)
+	ledger := provide_device(msg, m.Name)
 	if ledger == nil {
 		return nil, fmt.Errorf("SignTx: no device found with name %s", m.Name)
 	}

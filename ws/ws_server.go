@@ -319,7 +319,7 @@ version: ` + version + `
 				bus.Send("ui", "remove-hail", m)
 			}
 		}},
-		0, 1*time.Minute, 1*time.Minute, nil, 0)
+		0, 1*time.Minute, 1*time.Minute)
 	if !allowed {
 		http.Error(w, "Connection not allowed", http.StatusForbidden)
 		return
@@ -357,7 +357,7 @@ version: ` + version + `
 			break
 		}
 
-		log.Debug().Msgf("ws-> %v", string(msg))
+		// log.Debug().Msgf("ws-> %v", string(msg))
 
 		if msgType != websocket.TextMessage {
 			log.Trace().Msgf("Received non-text message: %d", msgType)
@@ -409,7 +409,7 @@ func (con *ConContext) send(data any) {
 		return
 	}
 
-	log.Debug().Msgf("ws<- %v", string(respBytes))
+	// log.Debug().Msgf("ws<- %v", string(respBytes))
 
 	err = con.Connection.WriteMessage(websocket.TextMessage, respBytes)
 	if err != nil {
@@ -418,9 +418,6 @@ func (con *ConContext) send(data any) {
 }
 
 func getAllowedOrigin(u string) (*cmn.Origin, bool) {
-
-	log.Debug().Msgf("getAllowedOrigin: %s", u)
-
 	su, err := url.Parse(u)
 	if err != nil {
 		log.Error().Err(err).Msgf("Failed to parse URL: %s", u)

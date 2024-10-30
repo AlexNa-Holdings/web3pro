@@ -58,7 +58,7 @@ func handleEthMethod(req RPCRequest, ctx *ConContext, res *RPCResponse) {
 	}
 
 	if err != nil {
-		log.Error().Err(err).Msgf("Error handling method: %v", req)
+		log.Error().Err(err).Msgf("Error handling method: %s", req.Method)
 		res.Error = &RPCError{
 			Code:    4001,
 			Message: "Error handling method",
