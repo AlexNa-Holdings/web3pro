@@ -109,8 +109,13 @@ func (e *BlockscoutAPI) DownloadContract(w *cmn.Wallet, b *cmn.Blockchain, a com
 		return "", err
 	}
 
-	os.MkdirAll(cmn.DataFolder+"/abi", 0755)
-	path := cmn.DataFolder + "/abi/" + a.Hex() + ".json"
+	contractDir := cmn.DataFolder + "/contracts/" + a.Hex()
+	err = os.MkdirAll(contractDir, 0755) // Create the /contract/address directory if it doesn't exist
+	if err != nil {
+		return "", err
+	}
+
+	path := contractDir + "/abi.json"
 
 	// Marshal the ABI slice to JSON
 	abiData, err := json.MarshalIndent(sc.Abi, "", "  ")
@@ -123,14 +128,14 @@ func (e *BlockscoutAPI) DownloadContract(w *cmn.Wallet, b *cmn.Blockchain, a com
 		return "", err
 	}
 
-	contractDir := cmn.DataFolder + "/contracts/" + a.Hex()
-	err = os.MkdirAll(contractDir, 0755) // Create the /contract/address directory if it doesn't exist
+	contractSrcDir := contractDir + "/src"
+	err = os.MkdirAll(contractSrcDir, 0755) // Create the /contract/address directory if it doesn't exist
 	if err != nil {
 		return "", err
 	}
 
 	for _, source := range sc.AdditionalSources {
-		sourcePath := filepath.Join(contractDir, source.FilePath)
+		sourcePath := filepath.Join(contractSrcDir, source.FilePath)
 		err = os.MkdirAll(filepath.Dir(sourcePath), 0755) // Ensure directories exist
 		if err != nil {
 			return "", err
@@ -143,7 +148,7 @@ func (e *BlockscoutAPI) DownloadContract(w *cmn.Wallet, b *cmn.Blockchain, a com
 	}
 
 	// Save the main contract source code
-	mainSourcePath := filepath.Join(contractDir, sc.FilePath)
+	mainSourcePath := filepath.Join(contractSrcDir, sc.FilePath)
 
 	err = os.MkdirAll(filepath.Dir(mainSourcePath), 0755)
 	if err != nil {

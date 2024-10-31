@@ -280,6 +280,17 @@ func TagAddressShortLink(a common.Address) string {
 		s[:6], ICON_3DOTS, s[len(s)-4:], a.String(), a.String())
 }
 
+func TagBytesLink(b []byte) string {
+	s := "0x" + common.Bytes2Hex(b)
+
+	if len(s) <= 16 {
+		return fmt.Sprintf("<l text:'%s' action:'copy %s' tip:'%s'>", s, s, s)
+	} else {
+		return fmt.Sprintf("<l text:'%s%s%s' action:'copy %s' tip:'%s'>",
+			s[:8], ICON_3DOTS, s[len(s)-6:], s, s)
+	}
+}
+
 func AddDollarValueLink(v *gocui.View, val *big.Int, t *Token) {
 	if v == nil {
 		return
@@ -575,12 +586,14 @@ func formatFieldValue(info SignedDataInfo, fieldName, fieldType string, value in
 }
 
 func IsContractDownloaded(a common.Address) bool {
-	path := DataFolder + "/abi/" + a.String() + ".json"
+	ContractFolder := DataFolder + "/contracts/" + a.String()
+
+	path := ContractFolder + "/abi.json"
 	if _, err := os.Stat(path); err != nil {
 		return false
 	}
 
-	path = DataFolder + "/contracts/" + a.String()
+	path = ContractFolder + "/src"
 	if _, err := os.Stat(path); err != nil {
 		return false
 	}

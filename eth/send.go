@@ -162,9 +162,9 @@ Total($): <input id:gas_price_dollars size:14 value:"` +
 	m.Fetch("ui", "popup", &gocui.Popup{
 		Title: "Edit Gas Price",
 		Template: `<c><w>
-<button text:' Low  '    id:Low> ` + cmn.FmtAmount(low, 18, true) + p_low + `
-<button text:'Market' id:Market> ` + cmn.FmtAmount(market, 18, true) + p_market + `
-<button text:' High '   id:High> ` + cmn.FmtAmount(high, 18, true) + p_high + `
+ <button text:' Low  '    id:Low> ` + cmn.FmtAmount(low, 18, true) + p_low + ` 
+ <button text:'Market' id:Market> ` + cmn.FmtAmount(market, 18, true) + p_market + ` 
+ <button text:' High '   id:High> ` + cmn.FmtAmount(high, 18, true) + p_high + ` 
 
 <line text:Advanced></c>
 

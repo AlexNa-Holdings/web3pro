@@ -404,7 +404,7 @@ func BuildHailToSendTxTemplate(b *cmn.Blockchain, from *cmn.Address, to common.A
 
 	toolbar += `<l text:'` + cmn.ICON_LINK + `' action:'open ` + burl + "/address/" + to.String() + `' tip:"Open in Explorer">`
 
-	call_details := buildCallDetails(w, tx, to)
+	call_details := buildCallDetails(tx, to)
 
 	bottom := `<button text:Send id:ok bgcolor:g.HelpBgColor color:g.HelpFgColor tip:"send tokens">  ` +
 		`<button text:Reject id:cancel bgcolor:g.ErrorFgColor tip:"reject transaction">`
@@ -480,15 +480,17 @@ func editContract(m *bus.Message, v *gocui.View, address common.Address, on_clos
 	})
 }
 
-func buildCallDetails(w *cmn.Wallet, tx *types.Transaction, to common.Address) string {
+func buildCallDetails(tx *types.Transaction, to common.Address) string {
 	r := ""
 
 	if !cmn.IsContractDownloaded(to) {
 		return r + "(no ABI)"
 	}
 
+	ContractFolder := cmn.DataFolder + "/contracts/" + to.String()
+
 	// Load and parse ABI
-	path := cmn.DataFolder + "/abi/" + to.String() + ".json"
+	path := ContractFolder + "/abi.json"
 	abiJSON, err := os.ReadFile(path)
 	if err != nil {
 		return r + "(error reading ABI)"
@@ -544,29 +546,42 @@ func functionDetails(parsedABI abi.ABI, function abi.Method, data []byte) string
 
 	// Display the parameters
 	for i, param := range params {
-		r += fmt.Sprintf("%12s: ", function.Inputs[i].Name)
-		r += printValue(parsedABI, function, function.Inputs[i].Type, param)
+		r += printValue(function.Inputs[i].Name, parsedABI, function, function.Inputs[i].Type, param, 0)
 	}
 
 	return r
 }
 
-func printValue(parsedABI abi.ABI, function abi.Method, v abi.Type, param interface{}) string {
-	r := ""
+func printValue(name string, parsedABI abi.ABI, function abi.Method, v abi.Type, param interface{}, indent int) string {
+	r := fmt.Sprintf("%s%12s: ", strings.Repeat(" ", indent*2), name)
 
 	switch v.T {
 	case abi.IntTy, abi.UintTy:
-		r += fmt.Sprintf("%v\n", param)
+		s := fmt.Sprintf("%v", param)
+		r += cmn.TagLink(s, "copy "+s, "Copy value") + "\n"
 	case abi.BoolTy:
 		r += fmt.Sprintf("%t\n", param)
 	case abi.StringTy:
 		r += fmt.Sprintf("%q\n", param)
 	case abi.AddressTy:
+
+		name := ""
+		if cmn.CurrentWallet != nil {
+			a := cmn.CurrentWallet.GetAddress(param.(common.Address))
+			if a != nil {
+				name = a.Name
+			} else {
+				c := cmn.CurrentWallet.GetContract(param.(common.Address))
+				if c != nil {
+					name = c.Name
+				}
+			}
+		}
+
 		address := param.(common.Address)
-		r += cmn.TagAddressShortLink(address) + "\n"
+		r += cmn.TagAddressShortLink(address) + " " + name + "\n"
 	case abi.FixedBytesTy, abi.BytesTy:
-		bytesValue := param.([]byte)
-		r += fmt.Sprintf("0x%x\n", bytesValue)
+		r += cmn.TagBytesLink(param.([]byte)) + "\n"
 	case abi.SliceTy, abi.ArrayTy:
 		// Handling array/slice of values
 		v := reflect.ValueOf(param)
@@ -614,29 +629,23 @@ func printValue(parsedABI abi.ABI, function abi.Method, v abi.Type, param interf
 					r += fmt.Sprintf("%v", elem.Interface())
 				}
 			}
-			r += "]\n"
+			r += strings.Repeat(" ", 14+indent*2) + "]\n"
 		}
 	case abi.TupleTy:
 		// Handling tuples, including structs
-		r += "(\n "
+		r += v.TupleRawName + "{\n"
+
 		param_v := reflect.ValueOf(param)
 		for j := 0; j < param_v.NumField(); j++ {
-			if j > 0 {
-				r += ",\n "
-			}
 			field := param_v.Field(j)
-
-			// pt, ok := field.Interface().(abi.Type)
-			// if ok {
-			// 	r += printValue(parsedABI, function, pt, field.Interface())
-			// } else {
-			r += fmt.Sprintf("%v", field.Interface()) // TODO TUPLES
-			// }
+			r += printValue(
+				v.TupleRawNames[j],
+				parsedABI, function, *v.TupleElems[j], field.Interface(), indent+1)
 		}
-		r += ")\n"
+		r, _ = strings.CutSuffix(r, "\n")
+		r += " }\n"
 	case abi.HashTy:
-		hash := param.([32]byte)
-		r += fmt.Sprintf("0x%x\n", hash)
+		r += cmn.TagBytesLink(param.([]byte)) + "\n"
 	case abi.FixedPointTy:
 		r += fmt.Sprintf("%v (FixedPoint)\n", param)
 	case abi.FunctionTy:

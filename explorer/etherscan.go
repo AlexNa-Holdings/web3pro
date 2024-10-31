@@ -80,9 +80,14 @@ func DownloadContractABI(b *cmn.Blockchain, a common.Address) error {
 		return fmt.Errorf("ABI not found in response")
 	}
 
-	os.MkdirAll(cmn.DataFolder+"/abi", 0755)
+	contractDir := cmn.DataFolder + "/contracts/" + a.Hex()
+	err = os.MkdirAll(contractDir, 0755) // Create the /contract/address directory if it doesn't exist
+	if err != nil {
+		return err
+	}
 
-	path := cmn.DataFolder + "/abi/" + a.Hex() + ".json"
+	path := contractDir + "/abi.json"
+
 	err = os.WriteFile(path, []byte(abi), 0644)
 	if err != nil {
 		log.Error().Err(err).Msgf("Error saving ABI to %s", path)
@@ -152,10 +157,9 @@ func DownloadContractCode(b *cmn.Blockchain, a common.Address) (string, error) {
 	}
 
 	// Create directories
-	dir := cmn.DataFolder + "/contracts/" + a.Hex()
-	err = os.MkdirAll(dir, 0755)
+	contractSrcDir := cmn.DataFolder + "/contracts/" + a.Hex() + "/src"
+	err = os.MkdirAll(contractSrcDir, 0755) // Create the /contract/address directory if it doesn't exist
 	if err != nil {
-		log.Error().Err(err).Msgf("Error creating directories : %s", dir)
 		return "", err
 	}
 
@@ -192,7 +196,7 @@ func DownloadContractCode(b *cmn.Blockchain, a common.Address) (string, error) {
 				continue
 			}
 
-			filePath := fmt.Sprintf("%s/%s", dir, fileName)
+			filePath := fmt.Sprintf("%s/%s", contractSrcDir, fileName)
 
 			fdir := filepath.Dir(filePath)
 			err = os.MkdirAll(fdir, 0755)
@@ -208,14 +212,7 @@ func DownloadContractCode(b *cmn.Blockchain, a common.Address) (string, error) {
 			}
 		}
 	} else {
-		filePath := fmt.Sprintf("%s/contract.sol", dir)
-
-		//create all the directories
-		err = os.MkdirAll(dir, 0755)
-		if err != nil {
-			log.Error().Err(err).Msgf("Error creating directories : %s", dir)
-			return "", err
-		}
+		filePath := fmt.Sprintf("%s/contract.sol", contractSrcDir)
 
 		err = os.WriteFile(filePath, []byte(sourceCode), 0644)
 		if err != nil {
