@@ -92,7 +92,7 @@ func (p *StatusPane) rebuidTemplate() {
 
 	if cmn.CurrentWallet != nil {
 		w := cmn.CurrentWallet
-		b := w.GetBlockchainByName(w.CurrentChain)
+		b := w.GetBlockchain(w.CurrentChainId)
 		a := w.GetAddress(w.CurrentAddress.String())
 
 		if b != nil {

@@ -35,11 +35,11 @@ func Open(name string, pass string) error {
 
 	if err == nil {
 		w._locked_AuditNativeTokens()
-		if w.CurrentChain == "" || w.GetBlockchainByName(w.CurrentChain) == nil {
+		if w.CurrentChainId == 0 || w.GetBlockchain(w.CurrentChainId) == nil {
 			if len(w.Blockchains) > 0 {
-				w.CurrentChain = w.Blockchains[0].Name
+				w.CurrentChainId = w.Blockchains[0].ChainId
 			} else {
-				w.CurrentChain = ""
+				w.CurrentChainId = 0
 			}
 		}
 		if w.CurrentAddress == (common.Address{}) || w.GetAddress(w.CurrentAddress.String()) == nil {
@@ -239,8 +239,6 @@ func (w *Wallet) RemoveOrigin(url string) error {
 		w.CurrentOrigin = ""
 	}
 
-	w.writeMutex.Unlock()
-
 	if deleted {
 		bus.Send("wallet", "origin-changed", url)
 		return w._locked_Save()
@@ -278,18 +276,16 @@ func (w *Wallet) AddOrigin(o *Origin) error {
 		return err
 	}
 
-	w.writeMutex.Lock()
 	w.Origins = append(w.Origins, o)
 	if w.CurrentOrigin == "" {
 		w.CurrentOrigin = o.URL
 	}
-	w.writeMutex.Unlock()
 
 	bus.Send("wallet", "origin-changed", o.URL)
 	return w._locked_Save()
 }
 
-func (w *Wallet) RemoveOriginAddress(url string, a string) error {
+func (w *Wallet) RemoveOriginAddress(url string, a common.Address) error {
 	w.writeMutex.Lock()
 	defer w.writeMutex.Unlock()
 
@@ -298,19 +294,12 @@ func (w *Wallet) RemoveOriginAddress(url string, a string) error {
 		return errors.New("origin not found")
 	}
 
-	addr := w.GetAddressByName(a)
-	if addr == nil {
-		return errors.New("address not found")
-	}
-
-	w.writeMutex.Lock()
 	for i, na := range o.Addresses {
-		if na == addr.Address {
+		if na == a {
 			o.Addresses = append(o.Addresses[:i], o.Addresses[i+1:]...)
 			break
 		}
 	}
-	w.writeMutex.Unlock()
 
 	if len(o.Addresses) == 0 {
 		w.RemoveOrigin(url)

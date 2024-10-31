@@ -195,7 +195,7 @@ func (p *LP_V3Pane) rebuidTemplate() string {
 		return "loading..."
 	}
 
-	temp := "Xch@Chain     Pair   On Liq0     Liq1     Gain0    Gain1     Gain$    Fee%%   Address\n"
+	temp := "Xch@Chain      Pair   On Liq0     Liq1     Gain0    Gain1     Gain$    Fee%%   Address\n"
 
 	for i, p := range lp_info_list {
 

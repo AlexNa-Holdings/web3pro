@@ -532,7 +532,7 @@ func functionDetails(parsedABI abi.ABI, function abi.Method, data []byte) string
 	r := `
       Method: `
 
-	r += fmt.Sprintf("<l text:'%v' tip:'Copy function name' action:'copy %v'>", function.Name, function.Name) + `
+	r += fmt.Sprintf("<l text:'%v' tip:'Copy function name' action:'copy %v'>", function.RawName, function.RawName) + `
   Parameters: ` + cmn.TagLink(cmn.ICON_COPY, "copy "+hexutil.Encode(data[4:]), "Copy data") + ` 
 `
 	// Decode the parameters of the function
@@ -545,90 +545,108 @@ func functionDetails(parsedABI abi.ABI, function abi.Method, data []byte) string
 	// Display the parameters
 	for i, param := range params {
 		r += fmt.Sprintf("%12s: ", function.Inputs[i].Name)
-		switch function.Inputs[i].Type.T {
-		case abi.IntTy, abi.UintTy:
-			r += fmt.Sprintf("%v\n", param)
-		case abi.BoolTy:
-			r += fmt.Sprintf("%t\n", param)
-		case abi.StringTy:
-			r += fmt.Sprintf("%q\n", param)
-		case abi.AddressTy:
-			address := param.(common.Address)
-			r += cmn.TagAddressShortLink(address) + "\n"
-		case abi.FixedBytesTy, abi.BytesTy:
-			bytesValue := param.([]byte)
-			r += fmt.Sprintf("0x%x\n", bytesValue)
-		case abi.SliceTy, abi.ArrayTy:
-			// Handling array/slice of values
-			v := reflect.ValueOf(param)
-			if v.Len() > 0 &&
-				(v.Index(0).Kind() == reflect.Uint8 ||
-					v.Index(0).Kind() == reflect.Int8) {
-				// If it's a byte array, display as hex string
-				bytesValue := param.([]byte)
-				r += formatBytesAsHex(bytesValue)
-			} else {
-				r += "["
-				for j := 0; j < v.Len(); j++ {
-					if j > 0 {
-						r += ", "
-					}
-					elem := v.Index(j)
-					if elem.Kind() == reflect.Slice && elem.Type().Elem().Kind() == reflect.Uint8 {
-						var f abi.Method
-						found := false
-						if function.Name == "multicall" && len(elem.Interface().([]byte)) > 4 {
-							// Match the function selector to a function in the ABI
-							functionSelector := elem.Interface().([]byte)[:4]
-							for _, method := range parsedABI.Methods {
-								if bytes.Equal(functionSelector, method.ID) {
-									f = method
-									found = true
-									break
-								}
-							}
-						}
-
-						if found {
-							r += functionDetails(parsedABI, f, elem.Interface().([]byte))
-
-						} else {
-							r += formatBytesAsHex(elem.Interface().([]byte))
-						}
-					} else {
-						r += fmt.Sprintf("%v", elem.Interface())
-					}
-				}
-				r += "]\n"
-			}
-		case abi.TupleTy:
-			// Handling tuples, including structs
-			r += "(\n "
-			v := reflect.ValueOf(param)
-			for j := 0; j < v.NumField(); j++ {
-				if j > 0 {
-					r += ",\n "
-				}
-				field := v.Field(j)
-				r += fmt.Sprintf("%v", field.Interface())
-			}
-			r += ")\n"
-		case abi.HashTy:
-			hash := param.([32]byte)
-			r += fmt.Sprintf("0x%x\n", hash)
-		case abi.FixedPointTy:
-			r += fmt.Sprintf("%v (FixedPoint)\n", param)
-		case abi.FunctionTy:
-			functionData := param.([24]byte)
-			r += fmt.Sprintf("0x%x\n", functionData)
-		default:
-			r += "(unknown type)\n"
-		}
+		r += printValue(parsedABI, function, function.Inputs[i].Type, param)
 	}
 
 	return r
 }
 
+func printValue(parsedABI abi.ABI, function abi.Method, v abi.Type, param interface{}) string {
+	r := ""
+
+	switch v.T {
+	case abi.IntTy, abi.UintTy:
+		r += fmt.Sprintf("%v\n", param)
+	case abi.BoolTy:
+		r += fmt.Sprintf("%t\n", param)
+	case abi.StringTy:
+		r += fmt.Sprintf("%q\n", param)
+	case abi.AddressTy:
+		address := param.(common.Address)
+		r += cmn.TagAddressShortLink(address) + "\n"
+	case abi.FixedBytesTy, abi.BytesTy:
+		bytesValue := param.([]byte)
+		r += fmt.Sprintf("0x%x\n", bytesValue)
+	case abi.SliceTy, abi.ArrayTy:
+		// Handling array/slice of values
+		v := reflect.ValueOf(param)
+		if v.Len() > 0 &&
+			(v.Index(0).Kind() == reflect.Uint8 ||
+				v.Index(0).Kind() == reflect.Int8) {
+			// If it's a byte array, display as hex string
+			bytesValue := param.([]byte)
+			r += formatBytesAsHex(bytesValue)
+		} else {
+			r += "["
+			for j := 0; j < v.Len(); j++ {
+				if j > 0 {
+					r += ", "
+				}
+				elem := v.Index(j)
+				if elem.Kind() == reflect.Slice && elem.Type().Elem().Kind() == reflect.Uint8 {
+					var f abi.Method
+					found := false
+					if function.RawName == "multicall" && len(elem.Interface().([]byte)) > 4 {
+						// Match the function selector to a function in the ABI
+						functionSelector := elem.Interface().([]byte)[:4]
+
+						log.Debug().Msgf("functionSelector: %s", hexutil.Encode(functionSelector))
+
+						for _, method := range parsedABI.Methods {
+
+							log.Debug().Msgf("method.ID: %s name: %s", hexutil.Encode(method.ID), method.Name)
+
+							if bytes.Equal(functionSelector, method.ID) {
+								f = method
+								found = true
+								break
+							}
+						}
+					}
+
+					if found {
+						r += functionDetails(parsedABI, f, elem.Interface().([]byte))
+
+					} else {
+						r += formatBytesAsHex(elem.Interface().([]byte))
+					}
+				} else {
+					r += fmt.Sprintf("%v", elem.Interface())
+				}
+			}
+			r += "]\n"
+		}
+	case abi.TupleTy:
+		// Handling tuples, including structs
+		r += "(\n "
+		param_v := reflect.ValueOf(param)
+		for j := 0; j < param_v.NumField(); j++ {
+			if j > 0 {
+				r += ",\n "
+			}
+			field := param_v.Field(j)
+
+			// pt, ok := field.Interface().(abi.Type)
+			// if ok {
+			// 	r += printValue(parsedABI, function, pt, field.Interface())
+			// } else {
+			r += fmt.Sprintf("%v", field.Interface()) // TODO TUPLES
+			// }
+		}
+		r += ")\n"
+	case abi.HashTy:
+		hash := param.([32]byte)
+		r += fmt.Sprintf("0x%x\n", hash)
+	case abi.FixedPointTy:
+		r += fmt.Sprintf("%v (FixedPoint)\n", param)
+	case abi.FunctionTy:
+		functionData := param.([24]byte)
+		r += fmt.Sprintf("0x%x\n", functionData)
+	default:
+		r += "(unknown type)\n"
+	}
+	return r
+}
 func formatBytesAsHex(bytesValue []byte) string {
 	MAX_IN_LINE := 16
 

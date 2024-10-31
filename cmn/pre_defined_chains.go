@@ -5,7 +5,7 @@ import "github.com/ethereum/go-ethereum/common"
 var PredefinedBlockchains []Blockchain = []Blockchain{
 	{
 		Name:            "Ethereum",
-		Url:             "https://ethereum-rpc.publicnode.com",
+		Url:             "https://eth-protect.rpc.blxrbdn.com",
 		ChainId:         1,
 		ExplorerUrl:     "https://etherscan.io",
 		ExplorerAPIUrl:  "https://api.etherscan.io/api",

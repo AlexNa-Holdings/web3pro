@@ -55,9 +55,10 @@ type ABIElement struct {
 }
 
 type ABIInputElement struct {
-	Type         string `json:"type"`
-	Name         string `json:"name"`
-	InternalType string `json:"internalType,omitempty"`
+	Type         string            `json:"type"`
+	Name         string            `json:"name"`
+	InternalType string            `json:"internalType,omitempty"`
+	Components   []ABIInputElement `json:"components,omitempty"`
 }
 
 type ContractSource struct {

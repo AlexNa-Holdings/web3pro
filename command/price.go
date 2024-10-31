@@ -177,13 +177,13 @@ func Price_Process(c *Command, input string) {
 			return
 		}
 
-		ui.Printf("\n   Feeder            Pair    Liquidity    Price       ID\n")
+		ui.Printf("\n   Feeder          Pair    Liquidity    Price       ID\n")
 
 		for _, p := range pi_list {
 			ui.Printf("%-14s ", p.PriceFeeder)
 			ui.Printf(" %4s/%-5s ", p.BaseToken, p.QuoteToken)
-			ui.Printf(" %s", cmn.FmtFloat64D(p.Liquidity, true))
-			ui.Printf(" %s", cmn.FmtFloat64D(p.PriceUsd, true))
+			cmn.AddDollarLink(ui.Terminal.Screen, p.Liquidity)
+			cmn.AddDollarLink(ui.Terminal.Screen, p.PriceUsd)
 
 			tn := t.Address.String()
 			if t.Unique {

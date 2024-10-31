@@ -51,7 +51,6 @@ type Wallet struct {
 	AppsPaneOn      bool `json:"apps_pane_on"`
 	LP_V3PaneOn     bool `json:"lp_v3_pane_on"`
 
-	CurrentChain   string         `json:"current_chain"` // TODO delete
 	CurrentChainId int            `json:"current_chain_id"`
 	CurrentAddress common.Address `json:"current_address"`
 	CurrentOrigin  string         `json:"current_origin"`

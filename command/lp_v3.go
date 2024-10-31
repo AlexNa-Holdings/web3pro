@@ -273,6 +273,7 @@ func list(w *cmn.Wallet) {
 
 	if len(w.LP_V3_Positions) == 0 {
 		ui.Printf("(no positions)\n")
+		return
 	}
 
 	sort.Slice(w.LP_V3_Positions, func(i, j int) bool {
@@ -289,7 +290,7 @@ func list(w *cmn.Wallet) {
 		return w.LP_V3_Positions[i].ChainId < w.LP_V3_Positions[j].ChainId
 	})
 
-	ui.Printf("Xch@Chain     Pair    On Liq0     Liq1     Gain0    Gain1     Gain$    Fee%%    Address\n")
+	ui.Printf("Xch@Chain      Pair    On Liq0     Liq1     Gain0    Gain1     Gain$    Fee%%    Address\n")
 
 	to_delete := make([]*cmn.LP_V3_Position, 0)
 

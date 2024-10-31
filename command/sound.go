@@ -35,13 +35,47 @@ func Sound_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 	p := cmn.Split3(input)
 	command, subcommand, _ := p[0], p[1], p[2]
 
-	if !cmn.IsInArray(sound_subcommands, subcommand) {
-		for _, sc := range sound_subcommands {
-			if input == "" || strings.Contains(sc, subcommand) {
-				options = append(options, ui.ACOption{Name: sc, Result: command + " " + sc + " "})
+	last_param := len(p) - 1
+	for last_param > 0 && p[last_param] == "" {
+		last_param--
+	}
+
+	if strings.HasSuffix(input, " ") {
+		last_param++
+	}
+
+	switch last_param {
+	case 0, 1:
+
+		if !cmn.IsInArray(sound_subcommands, subcommand) {
+			for _, sc := range sound_subcommands {
+				if input == "" || strings.Contains(sc, subcommand) {
+					options = append(options, ui.ACOption{Name: sc, Result: command + " " + sc + " "})
+				}
 			}
+			return "action", &options, subcommand
 		}
-		return "action", &options, subcommand
+	case 2:
+		if subcommand == "set" || subcommand == "play" {
+			resp := bus.Fetch("sound", "list", nil)
+			if resp.Error != nil {
+				ui.PrintErrorf("Error listing sounds: %v", resp.Error)
+				return "", nil, ""
+			}
+
+			l, ok := resp.Data.([]string)
+			if !ok {
+				ui.PrintErrorf("Error listing sounds: %v", resp.Error)
+				return "", nil, ""
+			}
+
+			for _, s := range l {
+				if cmn.Contains(s, p[2]) {
+					options = append(options, ui.ACOption{Name: s, Result: command + " " + subcommand + " '" + s + "'"})
+				}
+			}
+			return "sound", &options, p[2]
+		}
 	}
 
 	return "", &options, ""

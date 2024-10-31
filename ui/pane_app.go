@@ -58,7 +58,8 @@ func (p *AppPane) SetView(x0, y0, x1, y1 int, overlap byte) {
 		}
 		v.OnOverHotspot = ProcessOnOverHotspot
 		v.OnClickHotspot = ProcessOnClickHotspot
-		p.rebuidTemplate()
+		p.SetTemplate(p.rebuidTemplate())
+		v.RenderTemplate(p.GetTemplate())
 	}
 }
 

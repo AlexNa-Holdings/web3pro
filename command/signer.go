@@ -225,8 +225,8 @@ func Signer_Process(c *Command, input string) {
 			cmn.AddAddressLink(ui.Terminal.Screen, a)
 			ui.Printf(" ")
 
-			if w.CurrentChain != "" {
-				b := w.GetBlockchainByName(w.CurrentChain)
+			if w.CurrentChainId != 0 {
+				b := w.GetBlockchain(w.CurrentChainId)
 				if b != nil {
 					t := w.GetTokenByAddress(w.CurrentChainId, common.Address{0})
 					if t != nil {

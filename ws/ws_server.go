@@ -300,7 +300,8 @@ func web3Handler(w http.ResponseWriter, r *http.Request) {
 
 	bus.FetchEx("ui", "hail", &bus.B_Hail{
 		Title: "Allow Browser Connection",
-		Template: `<c><w><blink>Allow</blink> connection from browser?
+		Template: `<c><w>
+<blink>Allow</blink> browser to connect?
 
 ` + browser + `
 version: ` + version + `
@@ -440,7 +441,7 @@ func getAllowedOrigin(u string) (*cmn.Origin, bool) {
 		bus.Fetch("ui", "hail", &bus.B_Hail{
 			Title: "Connect Web Application",
 			Template: `<c><w>
-Allow to connect to this web application:
+<blink>Allow</blink> web application to connect to Web3Pro?:
 
 <u><b>` + cmn.GetHostName(u) + `</b></u>
 
@@ -450,7 +451,7 @@ and use the current chain & address?
 			OnOk: func(m *bus.Message, v *gocui.View) bool {
 
 				chain_id := 1
-				b := w.GetBlockchainByName(w.CurrentChain)
+				b := w.GetBlockchain(w.CurrentChainId)
 				if b != nil {
 					chain_id = b.ChainId
 				}
@@ -463,6 +464,8 @@ and use the current chain & address?
 
 				w.AddOrigin(origin)
 				w.CurrentOrigin = u
+				w.AppsPaneOn = true
+
 				err := w.Save()
 				if err != nil {
 					log.Error().Err(err).Msg("Failed to save wallet")

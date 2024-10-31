@@ -200,12 +200,13 @@ func Blockchain_Process(c *Command, input string) {
 			return
 		}
 
-		if w.GetBlockchainByName(b_name) == nil {
+		b := w.GetBlockchainByName(b_name)
+		if b == nil {
 			ui.PrintErrorf("Blockchain %s not found", b_name)
 			return
 		}
 
-		w.CurrentChain = b_name
+		w.CurrentChainId = b.ChainId
 		err := w.Save()
 		if err != nil {
 			ui.PrintErrorf("Failed to save wallet: %s", err)

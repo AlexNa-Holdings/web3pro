@@ -263,7 +263,8 @@ from the web application
 `,
 
 			func() bool {
-				err := w.RemoveOriginAddress(origin, addr)
+				a := cmn.AddressFromAny(addr)
+				err := w.RemoveOriginAddress(origin, a)
 				if err != nil {
 					ui.PrintErrorf("Error saving wallet: %v", err)
 					return false
