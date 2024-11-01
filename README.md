@@ -1,5 +1,7 @@
 
-Web3Pro Cypto Wallet
+# Web3Pro Cypto Wallet
+
+This is a crypto wallet that I use for my personal use. It is a selfware project. It is not intended for mass consumption
 
 
 # SELFWARE
