@@ -1,7 +1,6 @@
 package command
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
@@ -69,11 +68,7 @@ func Wallet_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 
 func Wallet_Process(c *Command, input string) {
 	//parse command subcommand parameters
-	tokens := strings.Fields(input)
-	if len(tokens) < 2 {
-		fmt.Fprintln(ui.Terminal.Screen, c.Usage)
-		return
-	}
+	tokens := cmn.Split3(input)
 	//execute command
 	subcommand := tokens[1]
 
@@ -95,7 +90,7 @@ func Wallet_Process(c *Command, input string) {
 		} else {
 			ui.PrintErrorf("No wallet open")
 		}
-	case "list":
+	case "list", "":
 		files := cmn.WalletList()
 		if files == nil {
 			ui.PrintErrorf("Error reading directory")
