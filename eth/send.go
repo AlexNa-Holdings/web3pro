@@ -145,11 +145,12 @@ func editFee(m *bus.Message, v *gocui.View, tx *types.Transaction, nt *cmn.Token
 	market := tx.GasPrice()
 	high := new(big.Int).Div(new(big.Int).Mul(tx.GasPrice(), big.NewInt(11)), big.NewInt(10))
 
-	var p_low, p_market, p_high, cp string
+	var p_low, p_market, p_high float64
+	var cp string
 	if nt.Price > 0 {
-		p_low = cmn.FmtFloat64D(nt.Price*cmn.Float64(high, 18)*float64(tx.Gas()), true)
-		p_market = cmn.FmtFloat64D(nt.Price*cmn.Float64(market, 18)*float64(tx.Gas()), true)
-		p_high = cmn.FmtFloat64D(nt.Price*cmn.Float64(high, 18)*float64(tx.Gas()), true)
+		p_low = nt.Price * cmn.Float64(high, 18) * float64(tx.Gas())
+		p_market = nt.Price * cmn.Float64(market, 18) * float64(tx.Gas())
+		p_high = nt.Price * cmn.Float64(high, 18) * float64(tx.Gas())
 
 		cp = `
 Total($): <input id:gas_price_dollars size:14 value:"` +
@@ -162,13 +163,13 @@ Total($): <input id:gas_price_dollars size:14 value:"` +
 	m.Fetch("ui", "popup", &gocui.Popup{
 		Title: "Edit Gas Price",
 		Template: `<c><w>
- <button text:' Low  '    id:Low> ` + cmn.FmtAmount(low, 18, true) + p_low + ` 
- <button text:'Market' id:Market> ` + cmn.FmtAmount(market, 18, true) + p_market + ` 
- <button text:' High '   id:High> ` + cmn.FmtAmount(high, 18, true) + p_high + ` 
+ <button text:' Low  '    id:Low> ` + cmn.TagValueLink(low, nt) + cmn.TagDollarLink(p_low) + ` 
+ <button text:'Market' id:Market> ` + cmn.TagValueLink(market, nt) + cmn.TagDollarLink(p_market) + ` 
+ <button text:' High '   id:High> ` + cmn.TagValueLink(high, nt) + cmn.TagDollarLink(p_high) + ` 
 
 <line text:Advanced></c>
 
-Gas price: <input id:gas_price size:14 value:"` + cmn.FmtAmount(market, 18, false) + `"> ` + nt.Name + cp + ` 
+ Gas price: <input id:gas_price size:14 value:"` + cmn.FmtAmount(market, 18, false) + `"> ` + nt.Name + cp + ` 
 <c>
 <button text:'Use custom price' id:Custom>
 <line>
@@ -202,7 +203,9 @@ Gas price: <input id:gas_price size:14 value:"` + cmn.FmtAmount(market, 18, fals
 					v.GetGui().HidePopup()
 				}
 			}
+			cmn.StandardOnClickHotspot(v, hs)
 		},
+		OnOverHotspot: cmn.StandardOnOverHotspot,
 		OnChange: func(p *gocui.Popup, pc *gocui.PopoupControl) {
 			if nt.Price <= 0 {
 				return
