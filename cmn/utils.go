@@ -21,6 +21,9 @@ import (
 )
 
 func Contains(s string, subststr string) bool {
+
+	log.Debug().Msgf("s: %s, subststr: %s result: %t", s, subststr, strings.Contains(s, subststr))
+
 	return strings.Contains(
 		strings.ToLower(s),
 		strings.ToLower(subststr),

@@ -195,7 +195,7 @@ func (p *LP_V3Pane) rebuidTemplate() string {
 		return "loading..."
 	}
 
-	temp := "Xch@Chain      Pair   On Liq0     Liq1     Gain0    Gain1     Gain$    Fee%%   Address\n"
+	temp := "Xch@Chain      Pair    On Liq0     Liq1     Gain0    Gain1     Gain$    Fee%    Address\n"
 
 	for i, p := range lp_info_list {
 
@@ -223,20 +223,20 @@ func (p *LP_V3Pane) rebuidTemplate() string {
 		t1 := w.GetTokenByAddress(p.ChainId, p.Token1)
 
 		if t0 != nil && t1 != nil {
-			temp += fmt.Sprintf("%9s", t0.Symbol+"/"+t1.Symbol)
+			temp += fmt.Sprintf("%11s", t0.Symbol+"/"+t1.Symbol)
 		} else {
 			if t0 != nil {
-				temp += fmt.Sprintf("%-5s", t0.Symbol)
+				temp += fmt.Sprintf("%-6s", t0.Symbol)
 			} else {
-				temp += cmn.TagLink("???", "command token add "+b.Name+" "+p.Token0.String(), "Add token")
+				temp += cmn.TagLink("????", "command token add "+b.Name+" "+p.Token0.String(), "Add token")
 			}
 
 			temp += "/"
 
 			if t1 != nil {
-				temp += fmt.Sprintf("%-5s", t1.Symbol)
+				temp += fmt.Sprintf("%-6s", t1.Symbol)
 			} else {
-				temp += cmn.TagLink("???", "command token add "+b.Name+" "+p.Token1.String(), "Add token")
+				temp += cmn.TagLink("????", "command token add "+b.Name+" "+p.Token1.String(), "Add token")
 			}
 		}
 

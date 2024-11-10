@@ -132,7 +132,8 @@ func DS_GetPriceInfoList(chain_id int, tokenAddr string) ([]PriceInfo, error) {
 
 		chain, err := extractBlockchainFromURL(pair.URL)
 		if err != nil {
-			return nil, fmt.Errorf("failed to extract blockchain from URL: %w", err)
+			log.Error().Err(err).Msgf("failed to extract blockchain from URL: %v", err)
+			continue
 		}
 
 		if chain != chain_name {
@@ -142,6 +143,7 @@ func DS_GetPriceInfoList(chain_id int, tokenAddr string) ([]PriceInfo, error) {
 		price, err := strconv.ParseFloat(pair.PriceUsd, 64)
 		if err != nil {
 			log.Error().Err(err).Msgf("ParseFloat(%s) err: %v", pair.PriceUsd, err)
+			continue
 		}
 
 		pairs = append(pairs,

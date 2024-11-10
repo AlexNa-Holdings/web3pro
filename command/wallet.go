@@ -55,8 +55,8 @@ func Wallet_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 		files := cmn.WalletList()
 
 		for _, file := range files {
-			if param == "" || strings.Contains(file, param) {
-				options = append(options, ui.ACOption{Name: file, Result: command + " open " + file + " "})
+			if param == "" || strings.Contains(file.Name(), param) {
+				options = append(options, ui.ACOption{Name: file.Name(), Result: command + " open " + file.Name() + " "})
 			}
 		}
 
@@ -100,7 +100,7 @@ func Wallet_Process(c *Command, input string) {
 		ui.Printf("\nWallets:\n")
 
 		for _, file := range files {
-			ui.Terminal.Screen.AddLink(file, "command w open "+file, "Open wallet "+file, "")
+			ui.Terminal.Screen.AddLink(file.Name(), "command w open "+file.Name(), "Open wallet "+file.Name(), "")
 			ui.Printf("\n")
 		}
 

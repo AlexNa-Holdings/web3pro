@@ -9,9 +9,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"math/big"
 	"net/url"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -418,19 +420,21 @@ func (w *Wallet) PromoteOriginAddress(url string, a string) error {
 	return w._locked_Save()
 }
 
-func WalletList() []string {
+func WalletList() []fs.DirEntry {
 	files, err := os.ReadDir(DataFolder + "/wallets")
 	if err != nil {
 		log.Error().Msgf("Error reading directory: %v\n", err)
 		return nil
 	}
 
-	names := []string{}
-	for _, file := range files {
-		names = append(names, file.Name())
-	}
+	// sort by time
+	sort.Slice(files, func(i, j int) bool {
+		i0, _ := files[i].Info()
+		j0, _ := files[j].Info()
+		return i0.ModTime().Before(j0.ModTime())
+	})
 
-	return names
+	return files
 }
 
 func encrypt(data []byte, passphrase []byte) ([]byte, error) {

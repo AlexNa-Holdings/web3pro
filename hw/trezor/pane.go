@@ -202,11 +202,10 @@ Password: <input id:password size:16 masked:true>
 						}
 					}
 				}
+				cmn.StandardOnClickHotspot(v, hs)
 			}
-			cmn.StandardOnClickHotspot(v, hs)
+			p.rebuidTemplate()
 		}
-
-		p.rebuidTemplate()
 	}
 }
 

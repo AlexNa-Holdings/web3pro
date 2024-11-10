@@ -89,8 +89,7 @@ func Token_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 		b := w.GetBlockchainByName(param)
 		token := p[3]
 
-		if subcommand == "balance" && b != nil &&
-			(token == "" || (w.GetTokenByAddress(b.ChainId, common.HexToAddress(token)) == nil && w.GetTokenBySymbol(b.ChainId, token) == nil)) {
+		if subcommand == "balance" && b != nil {
 			for _, t := range w.Tokens {
 				if t.ChainId != b.ChainId {
 					continue
@@ -275,11 +274,11 @@ func Token_Process(c *Command, input string) {
 			}
 
 			if t.PriceChange24 > 0 {
-				ui.Printf(ui.F(gocui.ColorGreen)+"\uf0d8%2.2f%% "+ui.F(ui.Terminal.Screen.FgColor), t.PriceChange24)
+				ui.Printf(ui.F(gocui.ColorGreen)+"\uf0d8%5.2f%% "+ui.F(ui.Terminal.Screen.FgColor), t.PriceChange24)
 			} else if t.PriceChange24 < 0 {
-				ui.Printf(ui.F(gocui.ColorRed)+"\uf0d7%2.2f%% "+ui.F(ui.Terminal.Screen.FgColor), -t.PriceChange24)
+				ui.Printf(ui.F(gocui.ColorRed)+"\uf0d7%5.2f%% "+ui.F(ui.Terminal.Screen.FgColor), -t.PriceChange24)
 			} else {
-				ui.Printf("       ")
+				ui.Printf("        ")
 			}
 
 			ui.Terminal.Screen.AddLink(cmn.ICON_EDIT, "command token edit "+strconv.Itoa(t.ChainId)+" "+t.Address.String()+" ", "Edit token", "")
