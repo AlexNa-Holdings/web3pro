@@ -544,7 +544,7 @@ func getTransactionByHash(o *cmn.Origin, req RPCRequest, ctx *ConContext, res *R
 		return fmt.Errorf("blockchain not found")
 	}
 
-	send_res := bus.Fetch("eth", "tx-by-hash", &bus.B_EthTxByHash{
+	send_res := bus.Fetch("eth", "get-tx-by-hash", &bus.B_EthTxByHash{
 		Blockchain: b.Name,
 		Hash:       common.HexToHash(tx_hash),
 	})
