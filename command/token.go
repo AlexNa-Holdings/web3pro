@@ -358,7 +358,16 @@ func Token_Process(c *Command, input string) {
 		ui.Printf("\nToken: %s %s\n", t.Symbol, t.Name)
 
 		if t.Price > 0. {
-			ui.Printf("Price: %s\n", cmn.FmtFloat64D(t.Price, true))
+			ui.Printf("Price: ")
+			cmn.AddDollarLink(ui.Terminal.Screen, t.Price)
+			ui.Printf(" 24h: ")
+			if t.PriceChange24 > 0 {
+				ui.Printf(ui.F(gocui.ColorGreen)+"\uf0d8%5.2f%% "+ui.F(ui.Terminal.Screen.FgColor), t.PriceChange24)
+			}
+			if t.PriceChange24 < 0 {
+				ui.Printf(ui.F(gocui.ColorRed)+"\uf0d7%5.2f%% "+ui.F(ui.Terminal.Screen.FgColor), -t.PriceChange24)
+			}
+			ui.Printf("\n")
 		}
 
 		for _, a := range w.Addresses {
