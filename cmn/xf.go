@@ -55,6 +55,10 @@ func (n *XF) String() string {
 		return "NaN"
 	}
 
+	if n.Int.Cmp(big.NewInt(0)) == 0 {
+		return "0.00"
+	}
+
 	s := n.Int.String()
 	if len(s) <= n.decimals {
 		s = strings.Repeat("0", n.decimals-len(s)+1) + s

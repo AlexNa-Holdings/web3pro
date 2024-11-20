@@ -314,8 +314,12 @@ func AddDollarValueLink(v *gocui.View, val *big.Int, t *Token) {
 }
 
 func AddDollarLink(v *gocui.View, val float64) {
-	text := FmtFloat64D(val, true)
-	n := fmt.Sprintf("%.15f", val)
+	text := "0.00"
+	n := "0.00"
+	if val != 0.0 {
+		text = FmtFloat64D(val, true)
+		n = fmt.Sprintf("%.15f", val)
+	}
 
 	v.AddLink(text, "copy "+n, n, "")
 }
@@ -343,11 +347,19 @@ func TagShortDollarValueLink(val *big.Int, t *Token) string {
 }
 
 func TagShortDollarLink(val float64) string {
-	return fmt.Sprintf("<l text:'%s' action:'copy %.15f' tip:'%.15f'>", FmtFloat64D(val, false), val, val)
+	if val == 0.0 {
+		return "<l text:'0.00' action:'copy 0.00' tip:'0.00'>"
+	} else {
+		return fmt.Sprintf("<l text:'%s' action:'copy %.15f' tip:'%.15f'>", FmtFloat64D(val, false), val, val)
+	}
 }
 
 func TagDollarLink(val float64) string {
-	return fmt.Sprintf("<l text:'%s' action:'copy %.15f' tip:'%.15f'>", FmtFloat64D(val, true), val, val)
+	if val == 0.0 {
+		return "<l text:'   0.00   ' action:'copy 0.00' tip:'0.00'>"
+	} else {
+		return fmt.Sprintf("<l text:'%s' action:'copy %.15f' tip:'%.15f'>", FmtFloat64D(val, true), val, val)
+	}
 }
 
 func TagValueLink(val *big.Int, t *Token) string {
