@@ -586,6 +586,14 @@ func openFromFile(file string, pass string) (*Wallet, error) {
 		w.LP_V3_Positions = []*LP_V3_Position{}
 	}
 
+	if w.LP_V4_Providers == nil {
+		w.LP_V4_Providers = []*LP_V4{}
+	}
+
+	if w.LP_V4_Positions == nil {
+		w.LP_V4_Positions = []*LP_V4_Position{}
+	}
+
 	if w.ParamInt == nil {
 		w.ParamInt = make(map[string]int)
 	}
@@ -958,6 +966,106 @@ func (w *Wallet) RemoveLP_V3Position(addr common.Address, chainId int, provider 
 	for i, lp := range w.LP_V3_Positions {
 		if lp.Owner.Cmp(addr) == 0 && lp.ChainId == chainId && lp.Provider == provider && lp.NFT_Token.Cmp(nft) == 0 {
 			w.LP_V3_Positions = append(w.LP_V3_Positions[:i], w.LP_V3_Positions[i+1:]...)
+			return w._locked_Save()
+		}
+	}
+	return errors.New("position not found")
+}
+
+// LP V4 methods
+
+func (w *Wallet) AddLP_V4(lp *LP_V4) error {
+	if w.GetLP_V4(lp.ChainId, lp.Provider) != nil {
+		return errors.New("provider already exists")
+	}
+
+	if w.GetLP_V4_by_name(lp.ChainId, lp.Name) != nil {
+		return errors.New("provider with the same name already exists")
+	}
+
+	w.LP_V4_Providers = append(w.LP_V4_Providers, lp)
+	return w.Save()
+}
+
+func (w *Wallet) GetLP_V4(chainId int, addr common.Address) *LP_V4 {
+	for _, lp := range w.LP_V4_Providers {
+		if lp.ChainId == chainId && lp.Provider == addr {
+			return lp
+		}
+	}
+	return nil
+}
+
+func (w *Wallet) GetLP_V4_by_name(chainId int, name string) *LP_V4 {
+	for _, lp := range w.LP_V4_Providers {
+		if lp.ChainId == chainId && lp.Name == name {
+			return lp
+		}
+	}
+	return nil
+}
+
+func (w *Wallet) RemoveLP_V4(chainId int, provider common.Address) error {
+	w.writeMutex.Lock()
+	defer w.writeMutex.Unlock()
+
+	for i, lp := range w.LP_V4_Providers {
+		if lp.ChainId == chainId && lp.Provider == provider {
+			w.LP_V4_Providers = append(w.LP_V4_Providers[:i], w.LP_V4_Providers[i+1:]...)
+
+			// remove all positions
+			for j := len(w.LP_V4_Positions) - 1; j >= 0; j-- {
+				if w.LP_V4_Positions[j].ChainId == chainId && w.LP_V4_Positions[j].Provider == provider {
+					w.LP_V4_Positions = append(w.LP_V4_Positions[:j], w.LP_V4_Positions[j+1:]...)
+				}
+			}
+
+			return w._locked_Save()
+		}
+	}
+
+	return errors.New("provider not found")
+}
+
+func (w *Wallet) AddLP_V4Position(lp *LP_V4_Position) error {
+	w.writeMutex.Lock()
+	defer w.writeMutex.Unlock()
+
+	if pos := w.GetLP_V4Position(lp.ChainId, lp.Provider, lp.NFT_Token); pos != nil {
+		// update
+		pos.Owner = lp.Owner
+		pos.Currency0 = lp.Currency0
+		pos.Currency1 = lp.Currency1
+		pos.PoolId = lp.PoolId
+		pos.Fee = lp.Fee
+		pos.TickLower = lp.TickLower
+		pos.TickUpper = lp.TickUpper
+		pos.Liquidity = lp.Liquidity
+		pos.HookAddress = lp.HookAddress
+	} else {
+		w.LP_V4_Positions = append(w.LP_V4_Positions, lp)
+	}
+	return w._locked_Save()
+}
+
+func (w *Wallet) GetLP_V4Position(chainId int, provider common.Address, nft *big.Int) *LP_V4_Position {
+	for _, lp := range w.LP_V4_Positions {
+		if lp.ChainId == chainId &&
+			lp.Provider.Cmp(provider) == 0 &&
+			lp.NFT_Token.Cmp(nft) == 0 {
+			return lp
+		}
+	}
+	return nil
+}
+
+func (w *Wallet) RemoveLP_V4Position(addr common.Address, chainId int, provider common.Address, nft *big.Int) error {
+	w.writeMutex.Lock()
+	defer w.writeMutex.Unlock()
+
+	for i, lp := range w.LP_V4_Positions {
+		if lp.Owner.Cmp(addr) == 0 && lp.ChainId == chainId && lp.Provider == provider && lp.NFT_Token.Cmp(nft) == 0 {
+			w.LP_V4_Positions = append(w.LP_V4_Positions[:i], w.LP_V4_Positions[i+1:]...)
 			return w._locked_Save()
 		}
 	}

@@ -35,6 +35,7 @@ type SConfig struct {
 	PriceUpdatePeriod      string        `yaml:"price_update_period"`      // price update period
 	Editor                 string        `yaml:"editor"`                   // editor
 	CMC_API_KEY            string        `yaml:"cmc_api_key"`              // CoinMarketCap API key
+	TheGraphAPIKey         string        `yaml:"thegraph_api_key"`         // The Graph API key for subgraph queries
 }
 
 var Config *SConfig = &SConfig{ //Default config

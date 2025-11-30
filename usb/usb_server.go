@@ -121,6 +121,10 @@ func write(msg *bus.Message) error {
 		log.Error().Msg("usb.write: Device not found")
 		return fmt.Errorf("usb.write: device not found: %s", req.USB_ID)
 	}
+	if conn.EndpointOut == nil {
+		log.Error().Msg("usb.write: EndpointOut is nil")
+		return fmt.Errorf("usb.write: EndpointOut not initialized for device: %s", req.USB_ID)
+	}
 	if msg.TimerID == 0 {
 		log.Error().Msg("usb.write: TimerID is required for USD writing")
 		return fmt.Errorf("usb.write: TimerID is required")
@@ -162,6 +166,10 @@ func read(msg *bus.Message) (*bus.B_UsbRead_Response, error) {
 	if err != nil {
 		log.Error().Msg("Device not found")
 		return nil, fmt.Errorf("device not found: %s", req.USB_ID)
+	}
+	if conn.EndpointIn == nil {
+		log.Error().Msg("usb.read: EndpointIn is nil")
+		return nil, fmt.Errorf("usb.read: EndpointIn not initialized for device: %s", req.USB_ID)
 	}
 
 	if msg.TimerID == 0 {
@@ -300,8 +308,14 @@ func OpenDevice(id string) (*USB_DEV, error) {
 		return nil, errors.New("device not found")
 	}
 
-	if t.Device != nil {
+	// If device is already properly opened with endpoints, return it
+	if t.Device != nil && t.EndpointIn != nil && t.EndpointOut != nil {
 		return t, nil // already opened
+	}
+
+	// If device was partially opened (failed previously), close it first
+	if t.Device != nil {
+		t.Close()
 	}
 
 	d, err := ctx.OpenDevices(func(desc *gousb.DeviceDesc) bool {
@@ -324,24 +338,37 @@ func OpenDevice(id string) (*USB_DEV, error) {
 		return nil, errors.New("device not found")
 	}
 
-	t.Device = d[0]
+	device := d[0]
 
-	cfg, err := t.Device.Config(1)
+	// On macOS, SetAutoDetach can cause issues - skip it
+	// The HID driver detachment is handled differently on macOS
+	// if err := device.SetAutoDetach(true); err != nil {
+	// 	log.Error().Err(err).Msg("SetAutoDetach(true)")
+	// }
+
+	cfg, err := device.Config(1)
 	if err != nil {
-		log.Error().Msgf("%s.Config(1): %v", t.Device, err)
+		device.Close()
+		log.Error().Msgf("%s.Config(1): %v", device, err)
 		return nil, err
 	}
 
-	// Detach the kernel driver if necessary
-	if err := t.Device.SetAutoDetach(true); err != nil {
-		log.Error().Err(err).Msg("SetAutoDetach(true)")
+	// Try to claim interface - on macOS, may need to try different interfaces
+	var iface *gousb.Interface
+	var ifaceErr error
+	for ifaceNum := 0; ifaceNum < 3; ifaceNum++ {
+		iface, ifaceErr = cfg.Interface(ifaceNum, 0)
+		if ifaceErr == nil {
+			log.Trace().Msgf("Successfully claimed interface %d", ifaceNum)
+			break
+		}
+		log.Trace().Msgf("Failed to claim interface %d: %v", ifaceNum, ifaceErr)
 	}
-
-	iface, err := cfg.Interface(0, 0)
-	if err != nil {
+	if iface == nil {
 		cfg.Close()
-		log.Error().Err(err).Msgf("Interface(0, 0)")
-		return nil, err
+		device.Close()
+		log.Error().Err(ifaceErr).Msgf("Failed to claim any interface")
+		return nil, ifaceErr
 	}
 
 	var epIn *gousb.InEndpoint
@@ -356,11 +383,15 @@ func OpenDevice(id string) (*USB_DEV, error) {
 	}
 
 	if epIn == nil || epOut == nil {
+		iface.Close()
 		cfg.Close()
+		device.Close()
 		log.Error().Msg("No endpoints found")
 		return nil, errors.New("no endpoints found")
 	}
 
+	// Only set everything on success
+	t.Device = device
 	t.Config = cfg
 	t.Interface = iface
 	t.EndpointOut = epOut

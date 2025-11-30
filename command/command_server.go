@@ -41,6 +41,7 @@ func Init() {
 		NewSoundCommand(),
 		NewExplorerCommand(),
 		NewLP_V3Command(),
+		NewLP_V4Command(),
 	}
 
 	go func() {

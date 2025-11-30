@@ -25,6 +25,7 @@ var panes = []Pane{
 	&HailPane,
 	&App,
 	&LP_V3,
+	&LP_V4,
 	&Terminal,
 }
 

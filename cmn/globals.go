@@ -47,9 +47,12 @@ type Wallet struct {
 	Origins         []*Origin         `json:"origins"`
 	LP_V3_Providers []*LP_V3          `json:"lp_v3_providers"`
 	LP_V3_Positions []*LP_V3_Position `json:"lp_v3_positions"`
+	LP_V4_Providers []*LP_V4          `json:"lp_v4_providers"`
+	LP_V4_Positions []*LP_V4_Position `json:"lp_v4_positions"`
 	Contracts       map[common.Address]*Contract
 	AppsPaneOn      bool `json:"apps_pane_on"`
 	LP_V3PaneOn     bool `json:"lp_v3_pane_on"`
+	LP_V4PaneOn     bool `json:"lp_v4_pane_on"`
 
 	CurrentChainId int            `json:"current_chain_id"`
 	CurrentAddress common.Address `json:"current_address"`
@@ -138,4 +141,31 @@ type LP_V3_Position struct {
 	Pool      common.Address `json:"pool"`
 	TickLower int64          `json:"tick_lower"`
 	TickUpper int64          `json:"tick_upper"`
+}
+
+type LP_V4 struct { // LP v4 Position Manager
+	Name        string         `json:"name"`
+	Provider    common.Address `json:"provider"`     // PositionManager contract
+	PoolManager common.Address `json:"pool_manager"` // Singleton PoolManager
+	StateView   common.Address `json:"state_view"`   // StateView contract for reading pool state
+	ChainId     int            `json:"chain_id"`
+	URL         string         `json:"url"`          // Web UI URL
+	SubgraphURL string         `json:"subgraph_url"` // Subgraph API URL for discovery
+}
+
+type LP_V4_Position struct {
+	Owner       common.Address `json:"owner"`
+	ChainId     int            `json:"chain_id"`
+	Provider    common.Address `json:"provider"`
+	PoolManager common.Address `json:"pool_manager"`
+	NFT_Token   *big.Int       `json:"nft_token"`
+	PoolId      [32]byte       `json:"pool_id"`
+	Currency0   common.Address `json:"currency0"`
+	Currency1   common.Address `json:"currency1"`
+	Fee         int64          `json:"fee"`
+	TickSpacing int64          `json:"tick_spacing"`
+	TickLower   int64          `json:"tick_lower"`
+	TickUpper   int64          `json:"tick_upper"`
+	Liquidity   *big.Int       `json:"liquidity"`
+	HookAddress common.Address `json:"hook_address"`
 }

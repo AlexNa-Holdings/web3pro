@@ -170,9 +170,9 @@ func (p *LP_V3Pane) updateList() {
 	}
 
 	if LP_V3.View != nil {
-		LP_V3.View.Subtitle = fmt.Sprintf("NPos:%d $%s \uf0d8$%s", len(list),
-			cmn.FormatFloatWithCommas(total_liq),
-			cmn.FormatFloatWithCommas(total_gain))
+		LP_V3.View.Subtitle = fmt.Sprintf("NPos:%d %s \uf0d8%s", len(list),
+			cmn.FmtFloat64D(total_liq, true),
+			cmn.FmtFloat64D(total_gain, true))
 	}
 
 	for _, pos := range to_delete {
@@ -195,7 +195,7 @@ func (p *LP_V3Pane) rebuidTemplate() string {
 		return "loading..."
 	}
 
-	temp := "Xch@Chain      Pair   On Liq0     Liq1     Gain0    Gain1     Gain$    Fee%%   Address\n"
+	temp := "Xch@Chain        Pair   On Liq0     Liq1     Gain0    Gain1     Gain$  Address\n"
 
 	for i, p := range lp_info_list {
 
@@ -223,7 +223,7 @@ func (p *LP_V3Pane) rebuidTemplate() string {
 		t1 := w.GetTokenByAddress(p.ChainId, p.Token1)
 
 		if t0 != nil && t1 != nil {
-			temp += fmt.Sprintf("%9s", t0.Symbol+"/"+t1.Symbol)
+			temp += fmt.Sprintf("%11s", t0.Symbol+"/"+t1.Symbol)
 		} else {
 			if t0 != nil {
 				temp += fmt.Sprintf("%-5s", t0.Symbol)
@@ -272,7 +272,6 @@ func (p *LP_V3Pane) rebuidTemplate() string {
 
 		temp += cmn.TagDollarLink(p.Gain0Dollars + p.Gain1Dollars)
 
-		temp += fmt.Sprintf("%2.1f/%2.1f ", p.FeeProtocol0, p.FeeProtocol1)
 		temp += fmt.Sprintf(" %s", owner.Name)
 
 		if i < len(lp_info_list)-1 {

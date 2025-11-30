@@ -367,3 +367,59 @@ type B_LP_V3_GetPositionStatus_Response struct { // get-position-status_response
 	FeeProtocol0      float32 // percentage
 	FeeProtocol1      float32 // percentage
 }
+
+// ---------- lp_v4 ----------
+type B_LP_V4_Discover struct { // discover
+	ChainId int
+	Name    string
+}
+
+type B_LP_V4_GetPositionStatus struct { // get-position-status
+	ChainId   int
+	Provider  common.Address
+	NFT_Token *big.Int
+}
+
+type B_LP_V4_GetPositionStatus_Response struct { // get-position-status_response
+	Owner             common.Address
+	ChainId           int
+	Currency0         common.Address
+	Currency1         common.Address
+	Provider          common.Address
+	PoolManager       common.Address
+	PoolId            [32]byte
+	TickLower         int64
+	TickUpper         int64
+	On                bool
+	Fee               int64
+	Liquidity         *big.Int
+	Liquidity0        *big.Int
+	Liquidity1        *big.Int
+	Liquidity0Dollars float64
+	Liquidity1Dollars float64
+	Gain0             *big.Int
+	Gain1             *big.Int
+	Gain0Dollars      float64
+	Gain1Dollars      float64
+	ProviderName      string
+	HookAddress       common.Address
+}
+
+type B_LP_V4_GetNftPosition struct { // get-nft-position
+	ChainId   int
+	Provider  common.Address
+	From      common.Address
+	NFT_Token *big.Int
+}
+
+type B_LP_V4_GetNftPosition_Response struct { // get-nft-position_response
+	PoolId      [32]byte
+	TickLower   int64
+	TickUpper   int64
+	Liquidity   *big.Int
+	Currency0   common.Address
+	Currency1   common.Address
+	Fee         int64
+	TickSpacing int64
+	HookAddress common.Address
+}

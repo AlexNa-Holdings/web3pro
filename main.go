@@ -15,6 +15,7 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/AlexNa-Holdings/web3pro/hw"
 	"github.com/AlexNa-Holdings/web3pro/lp_v3"
+	"github.com/AlexNa-Holdings/web3pro/lp_v4"
 	"github.com/AlexNa-Holdings/web3pro/price"
 	"github.com/AlexNa-Holdings/web3pro/sound"
 	"github.com/AlexNa-Holdings/web3pro/sw"
@@ -50,6 +51,7 @@ func main() {
 	explorer.Init()
 	price.Init()
 	lp_v3.Init()
+	lp_v4.Init()
 
 	defer ui.Gui.Close()
 

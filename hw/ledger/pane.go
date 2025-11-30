@@ -96,14 +96,19 @@ func (p *LedgerPane) SetView(x0, y0, x1, y1 int, overlap byte) {
 					switch param[1] {
 					case "get_name":
 						if p.Ledger != nil {
-							n, err := getName(nil, p.USB_ID)
-							if err != nil {
-								log.Error().Err(err).Msg("Error initializing ledger")
-								return
-							}
+							go func() {
+								n, err := getName(nil, p.USB_ID)
+								if err != nil {
+									log.Error().Err(err).Msg("Error initializing ledger")
+									bus.Send("ui", "notify", fmt.Sprintf("Error: %v", err))
+									return
+								}
 
-							p.Ledger.Name = n
-							p.rebuidTemplate()
+								p.Ledger.Name = n
+								p.rebuidTemplate()
+								bus.Send("signer", "connected", &bus.B_SignerConnected{Type: LDG, Name: n})
+								bus.Send("ui", "notify", fmt.Sprintf("Ledger connected: %s", n))
+							}()
 						}
 					}
 				}

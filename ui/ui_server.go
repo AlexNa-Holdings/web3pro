@@ -28,6 +28,7 @@ func Init() {
 	go StatusLoop()
 	go AppsLoop()
 	go LP_V3Loop()
+	go LP_V4Loop()
 
 	Gui, err = gocui.NewGui(gocui.OutputTrue, true)
 	if err != nil {
@@ -133,6 +134,12 @@ func process(msg *bus.Message) {
 				ShowPane(&LP_V3)
 			} else {
 				HidePane(&LP_V3)
+			}
+
+			if cmn.CurrentWallet.LP_V4PaneOn {
+				ShowPane(&LP_V4)
+			} else {
+				HidePane(&LP_V4)
 			}
 		}
 	case "saved": // save wallet
