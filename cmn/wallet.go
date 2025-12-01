@@ -29,11 +29,14 @@ var CurrentWallet *Wallet
 func Open(name string, pass string) error {
 
 	w, err := openFromFile(DataFolder+"/wallets/"+name, pass)
+	if err != nil {
+		return err
+	}
 
 	w.writeMutex.Lock()
 	defer w.writeMutex.Unlock()
 
-	if err == nil {
+	if w != nil {
 		w._locked_AuditNativeTokens()
 		if w.CurrentChainId == 0 || w.GetBlockchain(w.CurrentChainId) == nil {
 			if len(w.Blockchains) > 0 {
@@ -62,7 +65,7 @@ func Open(name string, pass string) error {
 
 		bus.Send("wallet", "open", nil)
 	}
-	return err
+	return nil
 }
 
 func (w *Wallet) DeleteBlockchain(name string) error {
@@ -592,6 +595,14 @@ func openFromFile(file string, pass string) (*Wallet, error) {
 
 	if w.LP_V4_Positions == nil {
 		w.LP_V4_Positions = []*LP_V4_Position{}
+	}
+
+	if w.Stakings == nil {
+		w.Stakings = []*Staking{}
+	}
+
+	if w.StakingPositions == nil {
+		w.StakingPositions = []*StakingPosition{}
 	}
 
 	if w.ParamInt == nil {
@@ -1182,4 +1193,125 @@ func (w *Wallet) SetParamStr(name string, val string) error {
 
 	w.ParamStr[name] = val
 	return w._locked_Save()
+}
+
+// Staking methods
+
+func (w *Wallet) AddStaking(s *Staking) error {
+	w.writeMutex.Lock()
+	defer w.writeMutex.Unlock()
+
+	if w.GetStaking(s.ChainId, s.Contract) != nil {
+		return errors.New("staking already exists")
+	}
+
+	if w.GetStakingByName(s.ChainId, s.Name) != nil {
+		return errors.New("staking with the same name already exists")
+	}
+
+	w.Stakings = append(w.Stakings, s)
+	return w._locked_Save()
+}
+
+func (w *Wallet) GetStaking(chainId int, contract common.Address) *Staking {
+	for _, s := range w.Stakings {
+		if s.ChainId == chainId && s.Contract == contract {
+			return s
+		}
+	}
+	return nil
+}
+
+func (w *Wallet) GetStakingByName(chainId int, name string) *Staking {
+	for _, s := range w.Stakings {
+		if s.ChainId == chainId && s.Name == name {
+			return s
+		}
+	}
+	return nil
+}
+
+func (w *Wallet) RemoveStaking(chainId int, contract common.Address) error {
+	w.writeMutex.Lock()
+	defer w.writeMutex.Unlock()
+
+	for i, s := range w.Stakings {
+		if s.ChainId == chainId && s.Contract == contract {
+			w.Stakings = append(w.Stakings[:i], w.Stakings[i+1:]...)
+
+			// remove all positions for this staking contract
+			for j := len(w.StakingPositions) - 1; j >= 0; j-- {
+				if w.StakingPositions[j].ChainId == chainId && w.StakingPositions[j].Contract == contract {
+					w.StakingPositions = append(w.StakingPositions[:j], w.StakingPositions[j+1:]...)
+				}
+			}
+
+			return w._locked_Save()
+		}
+	}
+
+	return errors.New("staking not found")
+}
+
+func (w *Wallet) AddStakingPosition(pos *StakingPosition) error {
+	w.writeMutex.Lock()
+	defer w.writeMutex.Unlock()
+
+	// For validator-based staking, check with ValidatorId
+	if pos.ValidatorId > 0 {
+		if existing := w.GetStakingPositionWithValidator(pos.ChainId, pos.Contract, pos.Owner, pos.ValidatorId); existing != nil {
+			return nil
+		}
+	} else {
+		if existing := w.GetStakingPosition(pos.ChainId, pos.Contract, pos.Owner); existing != nil {
+			return nil
+		}
+	}
+
+	w.StakingPositions = append(w.StakingPositions, pos)
+	return w._locked_Save()
+}
+
+func (w *Wallet) GetStakingPosition(chainId int, contract common.Address, owner common.Address) *StakingPosition {
+	for _, p := range w.StakingPositions {
+		if p.ChainId == chainId && p.Contract == contract && p.Owner == owner {
+			return p
+		}
+	}
+	return nil
+}
+
+func (w *Wallet) GetStakingPositionWithValidator(chainId int, contract common.Address, owner common.Address, validatorId uint64) *StakingPosition {
+	for _, p := range w.StakingPositions {
+		if p.ChainId == chainId && p.Contract == contract && p.Owner == owner && p.ValidatorId == validatorId {
+			return p
+		}
+	}
+	return nil
+}
+
+func (w *Wallet) RemoveStakingPosition(chainId int, contract common.Address, owner common.Address) error {
+	w.writeMutex.Lock()
+	defer w.writeMutex.Unlock()
+
+	for i, p := range w.StakingPositions {
+		if p.ChainId == chainId && p.Contract == contract && p.Owner == owner {
+			w.StakingPositions = append(w.StakingPositions[:i], w.StakingPositions[i+1:]...)
+			return w._locked_Save()
+		}
+	}
+	return errors.New("staking position not found")
+}
+
+func (w *Wallet) RemoveStakingPositionWithValidator(chainId int, contract common.Address, owner common.Address, validatorId uint64) error {
+	w.writeMutex.Lock()
+	defer w.writeMutex.Unlock()
+
+	for i, p := range w.StakingPositions {
+		if p.ChainId == chainId && p.Contract == contract && p.Owner == owner && p.ValidatorId == validatorId {
+			w.StakingPositions = append(w.StakingPositions[:i], w.StakingPositions[i+1:]...)
+			return w._locked_Save()
+		}
+	}
+	return errors.New("staking position not found")
 }

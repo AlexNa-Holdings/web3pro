@@ -18,6 +18,7 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/lp_v3"
 	"github.com/AlexNa-Holdings/web3pro/lp_v4"
 	"github.com/AlexNa-Holdings/web3pro/price"
+	"github.com/AlexNa-Holdings/web3pro/staking"
 	"github.com/AlexNa-Holdings/web3pro/sound"
 	"github.com/AlexNa-Holdings/web3pro/sw"
 	"github.com/AlexNa-Holdings/web3pro/ui"
@@ -54,6 +55,7 @@ func main() {
 	lp_v2.Init()
 	lp_v3.Init()
 	lp_v4.Init()
+	staking.Init()
 
 	defer ui.Gui.Close()
 

@@ -27,6 +27,7 @@ var panes = []Pane{
 	&LP_V2,
 	&LP_V3,
 	&LP_V4,
+	&Staking,
 	&Token,
 	&Terminal,
 }

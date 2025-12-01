@@ -277,17 +277,17 @@ func Token_Process(c *Command, input string) {
 			ui.Printf("%-8s ", t.Symbol)
 
 			if t.Price != 0. {
-				cmn.AddDollarLink(ui.Terminal.Screen, t.Price)
+				cmn.AddFixedDollarLink(ui.Terminal.Screen, t.Price, 10)
 			} else {
-				ui.Printf("          ")
+				ui.Printf("%10s", "")
 			}
 
 			if t.PriceChange24 > 0 {
-				ui.Printf(ui.F(gocui.ColorGreen)+"\uf0d8%2.2f%% "+ui.F(ui.Terminal.Screen.FgColor), t.PriceChange24)
+				ui.Printf(ui.F(gocui.ColorGreen)+"\uf0d8%6.2f%% "+ui.F(ui.Terminal.Screen.FgColor), t.PriceChange24)
 			} else if t.PriceChange24 < 0 {
-				ui.Printf(ui.F(gocui.ColorRed)+"\uf0d7%2.2f%% "+ui.F(ui.Terminal.Screen.FgColor), -t.PriceChange24)
+				ui.Printf(ui.F(gocui.ColorRed)+"\uf0d7%6.2f%% "+ui.F(ui.Terminal.Screen.FgColor), -t.PriceChange24)
 			} else {
-				ui.Printf("       ")
+				ui.Printf("%9s", "")
 			}
 
 			ui.Terminal.Screen.AddLink(cmn.ICON_EDIT, "command token edit "+strconv.Itoa(t.ChainId)+" "+t.Address.String()+" ", "Edit token", "")
@@ -299,19 +299,15 @@ func Token_Process(c *Command, input string) {
 				ui.Printf("    ")
 			}
 
-			if t.PriceFeeder == "" || t.PriceFeedParam == "" {
-				ui.Terminal.Screen.AddLink(cmn.ICON_FEED, "command p discover '"+b.Name+"' '"+t.Address.String()+"'", "Discover price", "")
-			} else {
-				ui.Printf("  ")
-			}
+			ui.Terminal.Screen.AddLink(cmn.ICON_FEED, "command p discover '"+b.Name+"' '"+t.Address.String()+"'", "Discover price", "")
 
 			if t.Native {
-				ui.Printf("Native     ")
+				ui.Printf("%-15s", "Native")
 			} else {
-				cmn.AddAddressShortLink(ui.Terminal.Screen, t.Address)
+				cmn.AddFixedAddressShortLink(ui.Terminal.Screen, t.Address, 15)
 			}
 
-			ui.Printf(" %-12s %-s\n", b.Name, t.Name)
+			ui.Printf(" %-25s %s\n", b.Name, t.Name)
 		}
 
 		ui.Printf("\n")

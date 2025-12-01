@@ -471,3 +471,37 @@ type B_LP_V4_GetNftPosition_Response struct { // get-nft-position_response
 	TickSpacing int64
 	HookAddress common.Address
 }
+
+// ---------- staking ----------
+type B_Staking_GetBalance struct { // get-balance
+	ChainId     int
+	Contract    common.Address
+	Owner       common.Address
+	ValidatorId uint64 // Optional: for validator-based staking (e.g., Monad)
+}
+
+type B_Staking_GetBalance_Response struct { // get-balance_response
+	Balance *big.Int
+}
+
+type B_Staking_GetPending struct { // get-pending
+	ChainId     int
+	Contract    common.Address
+	Owner       common.Address
+	RewardToken common.Address
+	ValidatorId uint64 // Optional: for validator-based staking (e.g., Monad)
+}
+
+type B_Staking_GetPending_Response struct { // get-pending_response
+	Pending *big.Int
+}
+
+type B_Staking_GetDelegations struct { // get-delegations
+	ChainId  int
+	Contract common.Address // Staking precompile address
+	Owner    common.Address
+}
+
+type B_Staking_GetDelegations_Response struct { // get-delegations_response
+	ValidatorIds []uint64
+}

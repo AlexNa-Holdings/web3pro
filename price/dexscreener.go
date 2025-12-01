@@ -19,6 +19,7 @@ var chain_names = map[int]string{
 	1:    "ethereum",
 	56:   "bsc",
 	137:  "polygon",
+	143:  "monad",
 	369:  "pulsechain",
 	8453: "base",
 }

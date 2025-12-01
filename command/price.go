@@ -310,11 +310,7 @@ func list_price_feeders(w *cmn.Wallet) {
 
 		ui.Terminal.Screen.AddLink(cmn.ICON_EDIT, "command token edit "+strconv.Itoa(t.ChainId)+" "+t.Address.String()+" ", "Edit token", "")
 
-		if t.PriceFeeder == "" {
-			ui.Terminal.Screen.AddLink(cmn.ICON_FEED, "command p discover '"+b.Name+"' '"+t.Address.String()+"'", "Discover price", "")
-		} else {
-			ui.Printf("  ")
-		}
+		ui.Terminal.Screen.AddLink(cmn.ICON_FEED, "command p discover '"+b.Name+"' '"+t.Address.String()+"'", "Discover price", "")
 
 		if t.Native {
 			ui.Printf("Native     ")

@@ -42,6 +42,15 @@ var PredefinedBlockchains []Blockchain = []Blockchain{
 		Currency:       "BNB",
 		WTokenAddress:  common.HexToAddress("0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c"),
 	},
+	{
+		Name:          "Monad",
+		Url:           "https://rpc.monad.xyz",
+		ChainId:       143,
+		ExplorerUrl:   "https://monadscan.com",
+		Currency:      "MON",
+		WTokenAddress: common.HexToAddress("0x3bd359C1119dA7Da1D913D1C4D2B7c461115433A"),
+		Multicall:     common.HexToAddress("0xcA11bde05977b3631167028862bE2a173976CA11"),
+	},
 
 	////------------------------------------------------------------------------------
 	////  The rest of the blockchains are not yet confirmed. If you have the bettter

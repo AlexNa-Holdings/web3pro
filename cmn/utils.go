@@ -65,6 +65,28 @@ func IsInArray(slice []string, item string) bool {
 	return false
 }
 
+// Truncate truncates a string to maxLen characters, adding ellipsis if truncated
+func Truncate(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	if maxLen <= 3 {
+		return s[:maxLen]
+	}
+	return s[:maxLen-3] + "..."
+}
+
+// FixedWidth returns a string padded/truncated to exactly width characters
+func FixedWidth(s string, width int) string {
+	if len(s) > width {
+		if width <= 3 {
+			return s[:width]
+		}
+		return s[:width-3] + "..."
+	}
+	return fmt.Sprintf("%-*s", width, s)
+}
+
 func Amount2Str(amount *big.Int, decimals int) string {
 	str := amount.String()
 
@@ -269,6 +291,13 @@ func AddAddressShortLink(v *gocui.View, a common.Address) {
 	v.AddLink(s[:6]+ICON_3DOTS+s[len(s)-4:], "copy "+a.String(), a.String(), "")
 }
 
+func AddFixedAddressShortLink(v *gocui.View, a common.Address, width int) {
+	s := a.String()
+	shortAddr := s[:6] + ICON_3DOTS + s[len(s)-4:]
+	text := fmt.Sprintf("%-*s", width, shortAddr)
+	v.AddLink(text, "copy "+a.String(), a.String(), "")
+}
+
 func TagLink(text, action, tip string) string {
 	return fmt.Sprintf("<l text:\"%s\" action:\"%s\" tip:\"%s\">", text, action, tip)
 }
@@ -310,8 +339,34 @@ func AddDollarValueLink(v *gocui.View, val *big.Int, t *Token) {
 	v.AddLink(text, "copy "+n, n, "")
 }
 
+func AddFixedDollarValueLink(v *gocui.View, val *big.Int, t *Token, width int) {
+	if v == nil {
+		return
+	}
+
+	if t == nil {
+		return
+	}
+
+	xf := NewXF(val, t.Decimals)
+
+	f := t.Price * xf.Float64()
+
+	text := fmt.Sprintf("%*s", width, FmtFloat64D(f, true))
+	n := fmt.Sprintf("%.15f", f)
+
+	v.AddLink(text, "copy "+n, n, "")
+}
+
 func AddDollarLink(v *gocui.View, val float64) {
 	text := FmtFloat64D(val, true)
+	n := fmt.Sprintf("%.15f", val)
+
+	v.AddLink(text, "copy "+n, n, "")
+}
+
+func AddFixedDollarLink(v *gocui.View, val float64, width int) {
+	text := fmt.Sprintf("%*s", width, FmtFloat64D(val, true))
 	n := fmt.Sprintf("%.15f", val)
 
 	v.AddLink(text, "copy "+n, n, "")
@@ -347,6 +402,10 @@ func TagDollarLink(val float64) string {
 	return fmt.Sprintf("<l text:'%s' action:'copy %.15f' tip:'%.15f'>", FmtFloat64D(val, true), val, val)
 }
 
+func TagFixedDollarLink(val float64, width int) string {
+	return fmt.Sprintf("<l text:'%*s' action:'copy %.15f' tip:'%.15f'>", width, FmtFloat64D(val, true), val, val)
+}
+
 func TagValueLink(val *big.Int, t *Token) string {
 	if t == nil {
 		return ""
@@ -355,6 +414,16 @@ func TagValueLink(val *big.Int, t *Token) string {
 	xf := NewXF(val, t.Decimals)
 
 	return fmt.Sprintf("<l text:'%s' action:'copy %s' tip:'%s'>", FmtAmount(val, t.Decimals, true), xf.String(), xf.String())
+}
+
+func TagFixedValueLink(val *big.Int, t *Token, width int) string {
+	if t == nil {
+		return ""
+	}
+
+	xf := NewXF(val, t.Decimals)
+
+	return fmt.Sprintf("<l text:'%*s' action:'copy %s' tip:'%s'>", width, FmtAmount(val, t.Decimals, true), xf.String(), xf.String())
 }
 
 func AddValueLink(v *gocui.View, val *big.Int, t *Token) {
@@ -369,6 +438,21 @@ func AddValueLink(v *gocui.View, val *big.Int, t *Token) {
 	xf := NewXF(val, t.Decimals)
 
 	text := FmtAmount(val, t.Decimals, true)
+	v.AddLink(text, "copy "+xf.String(), xf.String(), "")
+}
+
+func AddFixedValueLink(v *gocui.View, val *big.Int, t *Token, width int) {
+	if v == nil {
+		return
+	}
+
+	if t == nil {
+		return
+	}
+
+	xf := NewXF(val, t.Decimals)
+
+	text := fmt.Sprintf("%*s", width, FmtAmount(val, t.Decimals, true))
 	v.AddLink(text, "copy "+xf.String(), xf.String(), "")
 }
 

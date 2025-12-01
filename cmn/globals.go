@@ -49,14 +49,17 @@ type Wallet struct {
 	LP_V2_Positions []*LP_V2_Position `json:"lp_v2_positions"`
 	LP_V3_Providers []*LP_V3          `json:"lp_v3_providers"`
 	LP_V3_Positions []*LP_V3_Position `json:"lp_v3_positions"`
-	LP_V4_Providers []*LP_V4          `json:"lp_v4_providers"`
-	LP_V4_Positions []*LP_V4_Position `json:"lp_v4_positions"`
-	Contracts       map[common.Address]*Contract
+	LP_V4_Providers   []*LP_V4            `json:"lp_v4_providers"`
+	LP_V4_Positions   []*LP_V4_Position   `json:"lp_v4_positions"`
+	Stakings          []*Staking          `json:"stakings"`
+	StakingPositions  []*StakingPosition  `json:"staking_positions"`
+	Contracts         map[common.Address]*Contract
 	AppsPaneOn      bool `json:"apps_pane_on"`
 	LP_V2PaneOn     bool `json:"lp_v2_pane_on"`
 	LP_V3PaneOn     bool `json:"lp_v3_pane_on"`
 	LP_V4PaneOn     bool `json:"lp_v4_pane_on"`
 	TokenPaneOn     bool `json:"token_pane_on"`
+	StakingPaneOn   bool `json:"staking_pane_on"`
 
 	CurrentChainId int            `json:"current_chain_id"`
 	CurrentAddress common.Address `json:"current_address"`
@@ -190,4 +193,27 @@ type LP_V4_Position struct {
 	TickUpper   int64          `json:"tick_upper"`
 	Liquidity   *big.Int       `json:"liquidity"`
 	HookAddress common.Address `json:"hook_address"`
+}
+
+// Staking represents a staking contract configuration
+type Staking struct {
+	Name            string         `json:"name"`
+	ChainId         int            `json:"chain_id"`
+	Contract        common.Address `json:"contract"`       // Staking contract address
+	URL             string         `json:"url"`            // Provider website URL
+	StakedToken     common.Address `json:"staked_token"`   // Token being staked
+	BalanceFunc     string         `json:"balance_func"`   // Function name to get staked balance (e.g., "balanceOf", "stakedAmount")
+	Reward1Token    common.Address `json:"reward1_token"`  // First reward token address
+	Reward1Func     string         `json:"reward1_func"`   // First reward pending function (e.g., "earned")
+	Reward2Token    common.Address `json:"reward2_token"`  // Second reward token address (optional)
+	Reward2Func     string         `json:"reward2_func"`   // Second reward pending function (optional)
+	ValidatorId     uint64         `json:"validator_id"`   // Validator ID for native staking (e.g., Monad)
+}
+
+// StakingPosition represents a user's position in a staking contract
+type StakingPosition struct {
+	Owner       common.Address `json:"owner"`
+	ChainId     int            `json:"chain_id"`
+	Contract    common.Address `json:"contract"`     // Reference to the staking contract
+	ValidatorId uint64         `json:"validator_id"` // Validator ID for native staking (e.g., Monad)
 }

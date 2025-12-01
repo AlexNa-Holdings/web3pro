@@ -31,6 +31,7 @@ func Init() {
 	go LP_V3Loop()
 	go LP_V4Loop()
 	go TokenLoop()
+	go StakingLoop()
 
 	Gui, err = gocui.NewGui(gocui.OutputTrue, true)
 	if err != nil {
@@ -155,6 +156,12 @@ func process(msg *bus.Message) {
 			} else {
 				HidePane(&Token)
 			}
+
+			if cmn.CurrentWallet.StakingPaneOn {
+				ShowPane(&Staking)
+			} else {
+				HidePane(&Staking)
+			}
 		}
 	case "saved": // save wallet
 		if cmn.CurrentWallet != nil {
@@ -168,6 +175,12 @@ func process(msg *bus.Message) {
 				ShowPane(&Token)
 			} else {
 				HidePane(&Token)
+			}
+
+			if cmn.CurrentWallet.StakingPaneOn {
+				ShowPane(&Staking)
+			} else {
+				HidePane(&Staking)
 			}
 		}
 	}
