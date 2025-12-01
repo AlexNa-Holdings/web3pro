@@ -122,4 +122,14 @@ var PrefedinedLP_V4 = map[int]([]PD_V4){
 			SubgraphURL:     "https://gateway.thegraph.com/api/{api-key}/subgraphs/id/28xHHc4JPBrWRFxAdx1vAAXivUBuPdnUisCb8YjLBmvK",
 		},
 	},
+	143: { // Monad
+		{
+			Name:            "Uniswap",
+			ProviderAddress: common.HexToAddress("0x5b7ec4a94ff9bedb700fb82ab09d5846972f4016"),
+			PoolManager:     common.HexToAddress("0x188d586ddcf52439676ca21a244753fa19f9ea8e"),
+			StateView:       common.HexToAddress("0x77395f3b2e73ae90843717371294fa97cc419d64"),
+			URL:             "https://app.uniswap.org/positions",
+			SubgraphURL:     "", // No subgraph available yet
+		},
+	},
 }

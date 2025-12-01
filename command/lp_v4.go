@@ -2,6 +2,7 @@ package command
 
 import (
 	"fmt"
+	"math/big"
 	"sort"
 	"strconv"
 	"strings"
@@ -33,7 +34,7 @@ Commands:
   add [CHAIN] [PROVIDER]    - Add v4 provider
   remove [CHAIN] [NAME]     - Remove v4 provider
   edit [CHAIN] [NAME]       - Edit v4 provider
-  discover [CHAIN] [NAME]   - Discover v4 positions
+  discover [CHAIN] [NAME] [TOKEN_ID] - Discover v4 positions (optional token ID)
   set_api_key [KEY]         - Set The Graph API key
   on                        - Open v4 window
   off                       - Close v4 window
@@ -103,11 +104,14 @@ func LP_V4_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 		}
 
 		if subcommand == "discover" || subcommand == "edit" {
-			for _, lp := range w.LP_V4_Providers {
-				if cmn.Contains(lp.Name, addr) {
-					options = append(options, ui.ACOption{
-						Name:   lp.Name,
-						Result: command + " " + subcommand + " " + strconv.Itoa(lp.ChainId) + " '" + lp.Name + "'"})
+			b := w.GetBlockchainByName(bchain)
+			if b != nil {
+				for _, lp := range w.LP_V4_Providers {
+					if lp.ChainId == b.ChainId && cmn.Contains(lp.Name, addr) {
+						options = append(options, ui.ACOption{
+							Name:   lp.Name,
+							Result: command + " " + subcommand + " '" + b.Name + "' '" + lp.Name + "'"})
+					}
 				}
 			}
 			return "name", &options, addr
@@ -248,9 +252,16 @@ func LP_V4_Process(c *Command, input string) {
 			chain_id = b.ChainId
 		}
 
+		// For discover, token ID is in position 4 (poolManager variable)
+		var tokenId *big.Int
+		if poolManager != "" {
+			tokenId, _ = new(big.Int).SetString(poolManager, 10)
+		}
+
 		resp := bus.Fetch("lp_v4", "discover", bus.B_LP_V4_Discover{
 			ChainId: chain_id,
 			Name:    provider,
+			TokenId: tokenId,
 		})
 		if resp.Error != nil {
 			err = resp.Error

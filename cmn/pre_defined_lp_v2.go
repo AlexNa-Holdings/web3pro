@@ -7,10 +7,13 @@ type PD_V2 struct {
 	Factory    common.Address
 	Router     common.Address
 	URL        string
-	SubgraphID string // The Graph subgraph ID (combined with TheGraphGateway at runtime)
+	SubgraphID string // The Graph subgraph ID or full URL (if starts with http)
 }
 
-// SubgraphID is just the ID portion - the full URL is built from Config.TheGraphGateway + SubgraphID
+// SubgraphID can be either:
+// - A subgraph ID (combined with Config.TheGraphGateway at runtime)
+// - A full URL starting with "http" (used as-is, e.g., for PulseChain's own Graph)
+//
 // Get your API key at https://thegraph.com/studio/apikeys/
 //
 // NOTE: Only subgraphs with "liquidityPositions" entity support discovery.
@@ -162,21 +165,21 @@ var PrefedinedLP_V2 = map[int]([]PD_V2){
 			Factory:    common.HexToAddress("0x1715a3E4A142d8b698131108995174F37aEBA10D"),
 			Router:     common.HexToAddress("0x98bf93ebf5c380C0e6Ae8e192A7e2AE08edAcc02"),
 			URL:        "https://app.pulsex.com/liquidity",
-			SubgraphID: "", // PulseChain uses its own Graph infrastructure
+			SubgraphID: "https://graph.pulsechain.com/subgraphs/name/pulsechain/pulsex",
 		},
 		{
 			Name:       "PulseX V2",
 			Factory:    common.HexToAddress("0x29eA7545DEf87022BAdc76323F373EA1e707C523"),
 			Router:     common.HexToAddress("0x165C3410fC91EF562C50559f7d2289fEbed552d9"),
 			URL:        "https://app.pulsex.com/liquidity",
-			SubgraphID: "", // PulseChain uses its own Graph infrastructure
+			SubgraphID: "https://graph.pulsechain.com/subgraphs/name/pulsechain/pulsexv2",
 		},
 		{
 			Name:       "9mm V2",
 			Factory:    common.HexToAddress("0x3a0Fa7884dD93f3cd234bBE2A0958Ef04b05E13b"),
 			Router:     common.HexToAddress("0xcC73b59F8D6e5b0DE5bBf5eA186e5F0C888b4208"),
 			URL:        "https://swap.9mm.pro",
-			SubgraphID: "", // PulseChain uses its own Graph infrastructure
+			SubgraphID: "https://info-api.9mm.pro/subgraphs/name/pulsechain/9mm",
 		},
 	},
 	250: { // Fantom

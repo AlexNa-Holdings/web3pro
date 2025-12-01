@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
@@ -173,7 +174,7 @@ func (p *LP_V2Pane) rebuidTemplate() string {
 		return "loading..."
 	}
 
-	temp := "Xch@Chain        Pair   Liq0     Liq1       Liq$  Address\n"
+	temp := "Xch@Chain        Pair              Liq0      Liq1     Liq$ Address\n"
 
 	for i, p := range lp_v2_info_list {
 
@@ -192,45 +193,59 @@ func (p *LP_V2Pane) rebuidTemplate() string {
 			continue
 		}
 
+		// ProviderName already includes @Chain from get_position_status
 		temp += cmn.TagLink(
-			fmt.Sprintf("%-12s", p.ProviderName),
+			fmt.Sprintf("%-16s", p.ProviderName),
 			"open "+provider.URL,
 			"open "+provider.URL)
 
 		t0 := w.GetTokenByAddress(p.ChainId, p.Token0)
 		t1 := w.GetTokenByAddress(p.ChainId, p.Token1)
 
+		var pairLen int
 		if t0 != nil && t1 != nil {
-			temp += fmt.Sprintf("%11s", t0.Symbol+"/"+t1.Symbol)
+			pairStr := t0.Symbol + "/" + t1.Symbol
+			pairLen = len(pairStr)
+			temp += fmt.Sprintf(" %s", pairStr)
 		} else {
+			temp += " "
 			if t0 != nil {
-				temp += fmt.Sprintf("%-5s", t0.Symbol)
+				temp += t0.Symbol
+				pairLen = len(t0.Symbol)
 			} else {
 				temp += cmn.TagLink("???", "command token add "+b.Name+" "+p.Token0.String(), "Add token")
+				pairLen = 3
 			}
 
 			temp += "/"
+			pairLen++
 
 			if t1 != nil {
-				temp += fmt.Sprintf("%-5s", t1.Symbol)
+				temp += t1.Symbol
+				pairLen += len(t1.Symbol)
 			} else {
 				temp += cmn.TagLink("???", "command token add "+b.Name+" "+p.Token1.String(), "Add token")
+				pairLen += 3
 			}
+		}
+		// Pad to 13 chars
+		if pairLen < 13 {
+			temp += strings.Repeat(" ", 13-pairLen)
 		}
 
 		if t0 != nil {
-			temp += cmn.TagValueLink(p.Liquidity0, t0)
+			temp += cmn.TagFixedValueLink(p.Liquidity0, t0, 10)
 		} else {
-			temp += "         "
+			temp += "          "
 		}
 
 		if t1 != nil {
-			temp += cmn.TagValueLink(p.Liquidity1, t1)
+			temp += cmn.TagFixedValueLink(p.Liquidity1, t1, 10)
 		} else {
-			temp += "         "
+			temp += "          "
 		}
 
-		temp += cmn.TagDollarLink(p.Liquidity0Dollars + p.Liquidity1Dollars)
+		temp += cmn.TagFixedDollarLink(p.Liquidity0Dollars+p.Liquidity1Dollars, 10)
 
 		temp += fmt.Sprintf(" %s", owner.Name)
 

@@ -257,6 +257,8 @@ type B_ExplorerDownloadContract struct { // download-contract
 type B_LP_V2_Discover struct { // discover
 	ChainId int
 	Name    string
+	Token0  common.Address // Optional: filter pairs by token0 address
+	Token1  common.Address // Optional: filter pairs by token1 address
 }
 
 type B_LP_V2_GetPair struct { // get-pair
@@ -420,6 +422,7 @@ type B_LP_V3_GetPositionStatus_Response struct { // get-position-status_response
 type B_LP_V4_Discover struct { // discover
 	ChainId int
 	Name    string
+	TokenId *big.Int // Optional: specific NFT token ID to add
 }
 
 type B_LP_V4_GetPositionStatus struct { // get-position-status

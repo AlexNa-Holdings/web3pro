@@ -28,18 +28,19 @@ type V2SubgraphError struct {
 
 type V2SubgraphData struct {
 	LiquidityPositions []V2LiquidityPosition `json:"liquidityPositions"`
+	Pairs              []V2Pair              `json:"pairs"`
 }
 
 type V2LiquidityPosition struct {
-	ID                  string  `json:"id"`
+	ID                    string `json:"id"`
 	LiquidityTokenBalance string `json:"liquidityTokenBalance"`
-	Pair                V2Pair  `json:"pair"`
+	Pair                  V2Pair `json:"pair"`
 }
 
 type V2Pair struct {
-	ID      string   `json:"id"`
-	Token0  V2Token  `json:"token0"`
-	Token1  V2Token  `json:"token1"`
+	ID      string  `json:"id"`
+	Token0  V2Token `json:"token0"`
+	Token1  V2Token `json:"token1"`
 }
 
 type V2Token struct {
@@ -97,10 +98,30 @@ func discover(msg *bus.Message) error {
 			continue
 		}
 
-		// Build full subgraph URL from gateway + ID
-		subgraphURL := cmn.Config.TheGraphGateway + pl.SubgraphID
+		// Build full subgraph URL - if SubgraphID starts with http, use it as-is
+		// Otherwise, combine with TheGraphGateway
+		var subgraphURL string
+		if strings.HasPrefix(pl.SubgraphID, "http") {
+			subgraphURL = pl.SubgraphID
+		} else {
+			subgraphURL = cmn.Config.TheGraphGateway + pl.SubgraphID
+		}
 
 		ui.Printf("Discovering LP v2: %s %s\n", b.Name, pl.Name)
+
+		// First try to query liquidityPositions (Uniswap-style subgraphs)
+		_, err := queryV2Subgraph(subgraphURL, common.Address{})
+		if err != nil && strings.Contains(err.Error(), "has no field") {
+			// Subgraph doesn't have liquidityPositions - use on-chain discovery via pairs
+			log.Debug().Msg("Subgraph doesn't have liquidityPositions, using on-chain discovery")
+			foundInProvider, err := discoverV2OnChain(w, pl, b, subgraphURL, req.Token0, req.Token1)
+			if err != nil {
+				ui.PrintErrorf("On-chain discovery failed: %v\n", err)
+				continue
+			}
+			found += foundInProvider
+			continue
+		}
 
 		for _, addr := range w.Addresses {
 			ui.Printf("  ")
@@ -242,4 +263,262 @@ func queryV2Subgraph(subgraphURL string, owner common.Address) ([]V2LiquidityPos
 
 	log.Debug().Msgf("Parsed %d positions from response", len(subgraphResp.Data.LiquidityPositions))
 	return subgraphResp.Data.LiquidityPositions, nil
+}
+
+// discoverV2OnChain discovers LP positions by querying pairs from subgraph
+// and checking LP token balances on-chain for each wallet address using multicall
+// token0 and token1 are optional filters - if specified, only pairs containing those tokens are checked
+func discoverV2OnChain(w *cmn.Wallet, pl *cmn.LP_V2, b *cmn.Blockchain, subgraphURL string, filterToken0, filterToken1 common.Address) (int, error) {
+	found := 0
+
+	// Query pairs from subgraph with optional token filters
+	pairs, err := queryV2Pairs(subgraphURL, filterToken0, filterToken1)
+	if err != nil {
+		return 0, fmt.Errorf("failed to query pairs: %w", err)
+	}
+
+	ui.Printf("  Found %d pairs, checking balances via multicall...\n", len(pairs))
+
+	for _, addr := range w.Addresses {
+		ui.Printf("  ")
+		cmn.AddAddressShortLink(ui.Terminal.Screen, addr.Address)
+		ui.Printf(" %s ", addr.Name)
+		ui.Flush()
+
+		// Build multicall for all pairs
+		balances, err := queryLPBalancesMulticall(pl.ChainId, pairs, addr.Address)
+		if err != nil {
+			log.Error().Err(err).Msg("queryLPBalancesMulticall failed")
+			ui.Printf("(multicall failed, skipping)\n")
+			continue
+		}
+
+		ui.Printf("\n")
+
+		for i, pair := range pairs {
+			if i >= len(balances) {
+				break
+			}
+
+			balance := balances[i]
+			if balance == nil || balance.Sign() == 0 {
+				continue // Skip zero balance
+			}
+
+			pairAddr := common.HexToAddress(pair.ID)
+			token0Addr := common.HexToAddress(pair.Token0.ID)
+			token1Addr := common.HexToAddress(pair.Token1.ID)
+
+			ui.Printf("%3d Pair: ", found+1)
+			cmn.AddAddressShortLink(ui.Terminal.Screen, pairAddr)
+			ui.Printf("\n")
+
+			t0 := w.GetTokenByAddress(b.ChainId, token0Addr)
+			if t0 != nil {
+				ui.Printf("    %s (%s)", t0.Symbol, t0.Name)
+			} else {
+				ui.Printf("    ")
+				cmn.AddAddressShortLink(ui.Terminal.Screen, token0Addr)
+				ui.Printf(" ")
+				ui.Terminal.Screen.AddLink(cmn.ICON_ADD, "command token add "+b.Name+" "+token0Addr.String(), "Add token", "")
+			}
+
+			ui.Printf(" / ")
+
+			t1 := w.GetTokenByAddress(b.ChainId, token1Addr)
+			if t1 != nil {
+				ui.Printf("%s (%s)", t1.Symbol, t1.Name)
+			} else {
+				cmn.AddAddressShortLink(ui.Terminal.Screen, token1Addr)
+				ui.Printf(" ")
+				ui.Terminal.Screen.AddLink(cmn.ICON_ADD, "command token add "+b.Name+" "+token1Addr.String(), "Add token", "")
+			}
+
+			ui.Printf("\n    LP Balance: %s\n", balance.String())
+			ui.Flush()
+
+			err = w.AddLP_V2Position(&cmn.LP_V2_Position{
+				Owner:   addr.Address,
+				ChainId: pl.ChainId,
+				Factory: pl.Factory,
+				Pair:    pairAddr,
+				Token0:  token0Addr,
+				Token1:  token1Addr,
+			})
+
+			if err != nil {
+				log.Error().Err(err).Msg("AddLP_V2Position")
+				return found, err
+			}
+
+			found++
+		}
+	}
+
+	return found, nil
+}
+
+// queryV2Pairs queries pairs from a V2 subgraph with pagination and optional token filters
+func queryV2Pairs(subgraphURL string, filterToken0, filterToken1 common.Address) ([]V2Pair, error) {
+	log.Debug().Msgf("queryV2Pairs URL: %s", subgraphURL)
+
+	emptyAddr := common.Address{}
+	var allPairs []V2Pair
+	const pageSize = 1000
+	skip := 0
+
+	// Build where clause based on token filters
+	// If both tokens specified, query for the exact pair (try both orderings)
+	// If one token specified, query for pairs containing that token
+	var whereClause string
+	if filterToken0 != emptyAddr && filterToken1 != emptyAddr {
+		// Both tokens specified - query exact pair (both orderings)
+		t0 := strings.ToLower(filterToken0.Hex())
+		t1 := strings.ToLower(filterToken1.Hex())
+		whereClause = fmt.Sprintf(`where: {or: [{token0: "%s", token1: "%s"}, {token0: "%s", token1: "%s"}]}`, t0, t1, t1, t0)
+	} else if filterToken0 != emptyAddr {
+		// Only one token - query pairs containing it in either position
+		t0 := strings.ToLower(filterToken0.Hex())
+		whereClause = fmt.Sprintf(`where: {or: [{token0: "%s"}, {token1: "%s"}]}`, t0, t0)
+	} else if filterToken1 != emptyAddr {
+		// Only one token - query pairs containing it in either position
+		t1 := strings.ToLower(filterToken1.Hex())
+		whereClause = fmt.Sprintf(`where: {or: [{token0: "%s"}, {token1: "%s"}]}`, t1, t1)
+	}
+
+	for {
+		// Query pairs with pagination using skip
+		var query string
+		if whereClause != "" {
+			query = fmt.Sprintf(`{
+				pairs(first: %d, skip: %d, %s, orderBy: id, orderDirection: asc) {
+					id
+					token0 { id symbol }
+					token1 { id symbol }
+				}
+			}`, pageSize, skip, whereClause)
+		} else {
+			query = fmt.Sprintf(`{
+				pairs(first: %d, skip: %d, orderBy: id, orderDirection: asc) {
+					id
+					token0 { id symbol }
+					token1 { id symbol }
+				}
+			}`, pageSize, skip)
+		}
+
+		requestBody, err := json.Marshal(map[string]string{
+			"query": query,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal query: %w", err)
+		}
+
+		resp, err := http.Post(subgraphURL, "application/json", bytes.NewBuffer(requestBody))
+		if err != nil {
+			return nil, fmt.Errorf("subgraph request failed: %w", err)
+		}
+
+		body, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			return nil, fmt.Errorf("failed to read response: %w", err)
+		}
+
+		log.Debug().Msgf("Subgraph pairs response status: %d, skip: %d", resp.StatusCode, skip)
+
+		if resp.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("subgraph returned status %d: %s", resp.StatusCode, string(body))
+		}
+
+		var subgraphResp V2SubgraphResponse
+		if err := json.Unmarshal(body, &subgraphResp); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal response: %w", err)
+		}
+
+		if len(subgraphResp.Errors) > 0 {
+			return nil, fmt.Errorf("subgraph error: %s", subgraphResp.Errors[0].Message)
+		}
+
+		pairs := subgraphResp.Data.Pairs
+		log.Debug().Msgf("Fetched %d pairs (total so far: %d)", len(pairs), len(allPairs)+len(pairs))
+
+		if len(pairs) == 0 {
+			break // No more pairs
+		}
+
+		allPairs = append(allPairs, pairs...)
+
+		if len(pairs) < pageSize {
+			break // Last page
+		}
+
+		skip += pageSize
+
+		// Safety limit to prevent infinite loops
+		if skip > 50000 {
+			log.Warn().Msg("Reached 50k pairs limit, stopping pagination")
+			break
+		}
+	}
+
+	log.Debug().Msgf("Total pairs fetched: %d", len(allPairs))
+	return allPairs, nil
+}
+
+// queryLPBalancesMulticall queries LP token balances for multiple pairs using multicall
+func queryLPBalancesMulticall(chainId int, pairs []V2Pair, owner common.Address) ([]*big.Int, error) {
+	// Pack balanceOf call data (same for all pairs)
+	balanceOfData, err := V2_PAIR.Pack("balanceOf", owner)
+	if err != nil {
+		return nil, fmt.Errorf("failed to pack balanceOf: %w", err)
+	}
+
+	// Build multicall calls
+	calls := make([]bus.B_EthMultiCall_Call, len(pairs))
+	for i, pair := range pairs {
+		calls[i] = bus.B_EthMultiCall_Call{
+			To:   common.HexToAddress(pair.ID),
+			Data: balanceOfData,
+		}
+	}
+
+	// Execute multicall in batches (some RPCs have limits)
+	const batchSize = 500
+	balances := make([]*big.Int, len(pairs))
+
+	for batchStart := 0; batchStart < len(calls); batchStart += batchSize {
+		batchEnd := batchStart + batchSize
+		if batchEnd > len(calls) {
+			batchEnd = len(calls)
+		}
+
+		batchCalls := calls[batchStart:batchEnd]
+
+		resp := bus.Fetch("eth", "multi-call", &bus.B_EthMultiCall{
+			ChainId: chainId,
+			From:    owner,
+			Calls:   batchCalls,
+		})
+
+		if resp.Error != nil {
+			return nil, fmt.Errorf("multicall failed: %w", resp.Error)
+		}
+
+		results, ok := resp.Data.([][]byte)
+		if !ok {
+			return nil, fmt.Errorf("invalid multicall response type")
+		}
+
+		// Parse results
+		for i, result := range results {
+			if len(result) >= 32 {
+				balances[batchStart+i] = new(big.Int).SetBytes(result)
+			} else {
+				balances[batchStart+i] = big.NewInt(0)
+			}
+		}
+	}
+
+	return balances, nil
 }

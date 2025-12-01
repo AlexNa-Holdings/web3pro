@@ -13,6 +13,7 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/ui"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/rs/zerolog/log"
 )
 
@@ -84,6 +85,12 @@ func discover(msg *bus.Message) error {
 
 	name := req.Name
 
+	// If a specific token ID is provided, add it directly
+	if req.TokenId != nil {
+		ui.Printf("Adding LP v4 position with token ID: %s\n\n", req.TokenId.String())
+		return discoverSingleToken(w, req.ChainId, name, req.TokenId)
+	}
+
 	ui.Printf("Discovering LP v4\n\n")
 
 	log.Debug().Msgf("LP_V4 Providers count: %d", len(w.LP_V4_Providers))
@@ -108,11 +115,6 @@ func discover(msg *bus.Message) error {
 			continue
 		}
 
-		if pl.SubgraphURL == "" {
-			ui.Printf("Skipping %s %s: no subgraph URL configured\n", b.Name, pl.Name)
-			continue
-		}
-
 		ui.Printf("Discovering LP v4: %s %s\n", b.Name, pl.Name)
 
 		for _, addr := range w.Addresses {
@@ -121,12 +123,27 @@ func discover(msg *bus.Message) error {
 			ui.Printf(" %s \n", addr.Name)
 			ui.Flush()
 
-			log.Debug().Msgf("Querying subgraph for address: %s", addr.Address.Hex())
-			positions, err := querySubgraph(pl.SubgraphURL, addr.Address)
-			if err != nil {
-				log.Error().Err(err).Msg("querySubgraph")
-				ui.PrintErrorf("Subgraph query failed: %v\n", err)
-				continue
+			var positions []SubgraphPosition
+
+			if pl.SubgraphURL == "" {
+				// No subgraph available - query on-chain via ERC721 enumeration
+				log.Debug().Msgf("No subgraph, querying on-chain for address: %s", addr.Address.Hex())
+				onChainPositions, err := queryOnChain(pl.ChainId, pl.Provider, addr.Address)
+				if err != nil {
+					log.Error().Err(err).Msg("queryOnChain")
+					ui.PrintErrorf("On-chain query failed: %v\n", err)
+					continue
+				}
+				positions = onChainPositions
+			} else {
+				log.Debug().Msgf("Querying subgraph for address: %s", addr.Address.Hex())
+				subgraphPositions, err := querySubgraph(pl.SubgraphURL, addr.Address)
+				if err != nil {
+					log.Error().Err(err).Msg("querySubgraph")
+					ui.PrintErrorf("Subgraph query failed: %v\n", err)
+					continue
+				}
+				positions = subgraphPositions
 			}
 			log.Debug().Msgf("Found %d positions for address %s", len(positions), addr.Address.Hex())
 
@@ -203,7 +220,7 @@ func discover(msg *bus.Message) error {
 
 				ui.Flush()
 
-				err = w.AddLP_V4Position(&cmn.LP_V4_Position{
+				err := w.AddLP_V4Position(&cmn.LP_V4_Position{
 					Owner:       addr.Address,
 					ChainId:     pl.ChainId,
 					Provider:    pl.Provider,
@@ -296,6 +313,93 @@ func querySubgraph(subgraphURL string, owner common.Address) ([]SubgraphPosition
 	return subgraphResp.Data.Positions, nil
 }
 
+// queryOnChain queries the NFT contract directly via ERC721 enumeration
+// Uses balanceOf(address) and tokenOfOwnerByIndex(address, index) to enumerate positions
+func queryOnChain(chainId int, provider common.Address, owner common.Address) ([]SubgraphPosition, error) {
+	log.Debug().Msgf("queryOnChain: chainId=%d, provider=%s, owner=%s", chainId, provider.Hex(), owner.Hex())
+
+	// First get the balance (number of NFTs owned)
+	balanceData, err := V4_POSITION_MANAGER.Pack("balanceOf", owner)
+	if err != nil {
+		return nil, fmt.Errorf("failed to pack balanceOf: %w", err)
+	}
+
+	resp := bus.Fetch("eth", "call", &bus.B_EthCall{
+		ChainId: chainId,
+		To:      provider,
+		From:    owner,
+		Data:    balanceData,
+	})
+
+	if resp.Error != nil {
+		return nil, fmt.Errorf("balanceOf call failed: %w", resp.Error)
+	}
+
+	balanceHex, ok := resp.Data.(string)
+	if !ok {
+		return nil, fmt.Errorf("invalid balanceOf response type")
+	}
+
+	balanceBytes, err := hexutil.Decode(balanceHex)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode balanceOf: %w", err)
+	}
+
+	balance := new(big.Int).SetBytes(balanceBytes)
+	log.Debug().Msgf("Owner %s has %s NFT positions", owner.Hex(), balance.String())
+
+	if balance.Sign() == 0 {
+		return []SubgraphPosition{}, nil
+	}
+
+	// Now enumerate each position using tokenOfOwnerByIndex
+	positions := make([]SubgraphPosition, 0, balance.Int64())
+
+	for i := int64(0); i < balance.Int64(); i++ {
+		index := big.NewInt(i)
+
+		tokenData, err := V4_POSITION_MANAGER.Pack("tokenOfOwnerByIndex", owner, index)
+		if err != nil {
+			log.Error().Err(err).Msgf("failed to pack tokenOfOwnerByIndex for index %d", i)
+			continue
+		}
+
+		resp := bus.Fetch("eth", "call", &bus.B_EthCall{
+			ChainId: chainId,
+			To:      provider,
+			From:    owner,
+			Data:    tokenData,
+		})
+
+		if resp.Error != nil {
+			log.Error().Err(resp.Error).Msgf("tokenOfOwnerByIndex call failed for index %d", i)
+			continue
+		}
+
+		tokenHex, ok := resp.Data.(string)
+		if !ok {
+			log.Error().Msgf("invalid tokenOfOwnerByIndex response type for index %d", i)
+			continue
+		}
+
+		tokenBytes, err := hexutil.Decode(tokenHex)
+		if err != nil {
+			log.Error().Err(err).Msgf("failed to decode tokenOfOwnerByIndex for index %d", i)
+			continue
+		}
+
+		tokenId := new(big.Int).SetBytes(tokenBytes)
+		log.Debug().Msgf("Found token ID: %s at index %d", tokenId.String(), i)
+
+		positions = append(positions, SubgraphPosition{
+			TokenId: tokenId.String(),
+			Owner:   owner.Hex(),
+		})
+	}
+
+	return positions, nil
+}
+
 func queryPoolInfo(subgraphURL string, poolId string) (*SubgraphPool, error) {
 	// Substitute API key placeholder if present
 	if strings.Contains(subgraphURL, "{api-key}") {
@@ -347,4 +451,152 @@ func queryPoolInfo(subgraphURL string, poolId string) (*SubgraphPool, error) {
 	}
 
 	return poolResp.Data.Pool, nil
+}
+
+// discoverSingleToken adds a specific NFT position by token ID
+func discoverSingleToken(w *cmn.Wallet, chainId int, providerName string, tokenId *big.Int) error {
+	// Find the provider
+	var pl *cmn.LP_V4
+	for _, p := range w.LP_V4_Providers {
+		if chainId != 0 && p.ChainId != chainId {
+			continue
+		}
+		if providerName != "" && p.Name != providerName {
+			continue
+		}
+		pl = p
+		break
+	}
+
+	if pl == nil {
+		return fmt.Errorf("provider not found")
+	}
+
+	b := w.GetBlockchain(pl.ChainId)
+	if b == nil {
+		return fmt.Errorf("blockchain not found: %d", pl.ChainId)
+	}
+
+	ui.Printf("Querying position %s on %s %s\n", tokenId.String(), b.Name, pl.Name)
+
+	// Query the NFT owner first
+	ownerData, err := V4_POSITION_MANAGER.Pack("ownerOf", tokenId)
+	if err != nil {
+		return fmt.Errorf("failed to pack ownerOf: %w", err)
+	}
+
+	resp := bus.Fetch("eth", "call", &bus.B_EthCall{
+		ChainId: pl.ChainId,
+		To:      pl.Provider,
+		Data:    ownerData,
+	})
+
+	if resp.Error != nil {
+		return fmt.Errorf("ownerOf call failed: %w", resp.Error)
+	}
+
+	ownerHex, ok := resp.Data.(string)
+	if !ok {
+		return fmt.Errorf("invalid ownerOf response type")
+	}
+
+	ownerBytes, err := hexutil.Decode(ownerHex)
+	if err != nil {
+		return fmt.Errorf("failed to decode ownerOf: %w", err)
+	}
+
+	// Extract address from the 32-byte response (last 20 bytes)
+	if len(ownerBytes) < 20 {
+		return fmt.Errorf("invalid owner address length")
+	}
+	owner := common.BytesToAddress(ownerBytes[len(ownerBytes)-20:])
+
+	// Check if this owner is in our wallet
+	addr := w.GetAddress(owner)
+	if addr == nil {
+		ui.Printf("Warning: Owner %s is not in your wallet\n", owner.Hex())
+	}
+
+	// Fetch on-chain position details
+	posResp := bus.Fetch("lp_v4", "get-nft-position", &bus.B_LP_V4_GetNftPosition{
+		ChainId:   pl.ChainId,
+		Provider:  pl.Provider,
+		From:      owner,
+		NFT_Token: tokenId,
+	})
+
+	if posResp.Error != nil {
+		return fmt.Errorf("get-nft-position failed: %w", posResp.Error)
+	}
+
+	posInfo, ok := posResp.Data.(*bus.B_LP_V4_GetNftPosition_Response)
+	if !ok {
+		return fmt.Errorf("invalid get-nft-position response")
+	}
+
+	// Get token info
+	currency0 := posInfo.Currency0
+	currency1 := posInfo.Currency1
+	fee := posInfo.Fee
+	hookAddress := posInfo.HookAddress
+
+	ui.Printf("NFT Token: %v\n", tokenId)
+
+	t0 := w.GetTokenByAddress(b.ChainId, currency0)
+	if t0 != nil {
+		ui.Printf("    %s (%s)", t0.Symbol, t0.Name)
+	} else {
+		ui.Printf("    ")
+		cmn.AddAddressShortLink(ui.Terminal.Screen, currency0)
+		ui.Printf(" ")
+		ui.Terminal.Screen.AddLink(cmn.ICON_ADD, "command token add "+b.Name+" "+currency0.String(), "Add token", "")
+	}
+
+	ui.Printf(" / ")
+
+	t1 := w.GetTokenByAddress(b.ChainId, currency1)
+	if t1 != nil {
+		ui.Printf("%s (%s)", t1.Symbol, t1.Name)
+	} else {
+		cmn.AddAddressShortLink(ui.Terminal.Screen, currency1)
+		ui.Printf(" ")
+		ui.Terminal.Screen.AddLink(cmn.ICON_ADD, "command token add "+b.Name+" "+currency1.String(), "Add token", "")
+	}
+
+	ui.Printf(" Fee: %.4f%%\n", float64(fee)/10000.)
+	ui.Printf("    Ticks: %d / %d\n", posInfo.TickLower, posInfo.TickUpper)
+	ui.Printf("    Liquidity: %s\n", posInfo.Liquidity.String())
+	ui.Printf("    Owner: %s\n", owner.Hex())
+
+	if hookAddress != (common.Address{}) {
+		ui.Printf("    Hook: ")
+		cmn.AddAddressShortLink(ui.Terminal.Screen, hookAddress)
+		ui.Printf("\n")
+	}
+
+	ui.Flush()
+
+	err = w.AddLP_V4Position(&cmn.LP_V4_Position{
+		Owner:       owner,
+		ChainId:     pl.ChainId,
+		Provider:    pl.Provider,
+		PoolManager: pl.PoolManager,
+		NFT_Token:   tokenId,
+		PoolId:      posInfo.PoolId,
+		Currency0:   currency0,
+		Currency1:   currency1,
+		Fee:         fee,
+		TickSpacing: posInfo.TickSpacing,
+		TickLower:   posInfo.TickLower,
+		TickUpper:   posInfo.TickUpper,
+		Liquidity:   posInfo.Liquidity,
+		HookAddress: hookAddress,
+	})
+
+	if err != nil {
+		return fmt.Errorf("AddLP_V4Position failed: %w", err)
+	}
+
+	ui.Printf("\nPosition added successfully\n")
+	return nil
 }

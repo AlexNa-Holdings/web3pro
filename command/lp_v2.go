@@ -32,7 +32,7 @@ Commands:
   add [CHAIN] [PROVIDER]    - Add v2 provider
   remove [CHAIN] [NAME]     - Remove v2 provider
   edit [CHAIN] [NAME]       - Edit v2 provider
-  discover [CHAIN] [NAME]   - Discover v2 positions
+  discover [CHAIN] [NAME] [TOKEN0] [TOKEN1] - Discover v2 positions (optional token filters)
   set_api_key [KEY]         - Set The Graph API key
   on                        - Open v2 window
   off                       - Close v2 window
@@ -52,8 +52,8 @@ func LP_V2_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 	w := cmn.CurrentWallet
 
 	options := []ui.ACOption{}
-	p := cmn.SplitN(input, 5)
-	command, subcommand, bchain, addr, _ := p[0], p[1], p[2], p[3], p[4]
+	p := cmn.SplitN(input, 6)
+	command, subcommand, bchain, addr, token0, token1 := p[0], p[1], p[2], p[3], p[4], p[5]
 
 	last_param := len(p) - 1
 	for last_param > 0 && p[last_param] == "" {
@@ -125,7 +125,48 @@ func LP_V2_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 			}
 			return "address", &options, addr
 		}
-
+	case 4:
+		// Token0 filter for discover command
+		if subcommand == "discover" {
+			b := w.GetBlockchainByName(bchain)
+			if b == nil {
+				// Try parsing as chain ID
+				if chainId, err := strconv.Atoi(bchain); err == nil {
+					b = w.GetBlockchain(chainId)
+				}
+			}
+			if b != nil {
+				for _, t := range w.Tokens {
+					if t.ChainId == b.ChainId && cmn.Contains(t.Symbol, token0) {
+						options = append(options, ui.ACOption{
+							Name:   t.Symbol,
+							Result: command + " " + subcommand + " '" + bchain + "' '" + addr + "' '" + t.Address.Hex() + "' "})
+					}
+				}
+				return "token0", &options, token0
+			}
+		}
+	case 5:
+		// Token1 filter for discover command
+		if subcommand == "discover" {
+			b := w.GetBlockchainByName(bchain)
+			if b == nil {
+				// Try parsing as chain ID
+				if chainId, err := strconv.Atoi(bchain); err == nil {
+					b = w.GetBlockchain(chainId)
+				}
+			}
+			if b != nil {
+				for _, t := range w.Tokens {
+					if t.ChainId == b.ChainId && cmn.Contains(t.Symbol, token1) {
+						options = append(options, ui.ACOption{
+							Name:   t.Symbol,
+							Result: command + " " + subcommand + " '" + bchain + "' '" + addr + "' '" + token0 + "' '" + t.Address.Hex() + "'"})
+					}
+				}
+				return "token1", &options, token1
+			}
+		}
 	}
 	return "", &options, ""
 }
@@ -143,8 +184,9 @@ func LP_V2_Process(c *Command, input string) {
 		return
 	}
 
-	p := cmn.SplitN(input, 8)
+	p := cmn.SplitN(input, 10)
 	_, subcommand, chain, factory, router, name, url, subgraphID := p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]
+	// For discover: p[4] = token0, p[5] = token1 (reusing router/name positions)
 
 	switch subcommand {
 	case "list", "":
@@ -247,9 +289,20 @@ func LP_V2_Process(c *Command, input string) {
 			chain_id = b.ChainId
 		}
 
+		// For discover, token addresses are in positions 4 and 5 (router and name variables)
+		var token0, token1 common.Address
+		if router != "" {
+			token0 = common.HexToAddress(router)
+		}
+		if name != "" {
+			token1 = common.HexToAddress(name)
+		}
+
 		resp := bus.Fetch("lp_v2", "discover", bus.B_LP_V2_Discover{
 			ChainId: chain_id,
 			Name:    factory,
+			Token0:  token0,
+			Token1:  token1,
 		})
 		if resp.Error != nil {
 			err = resp.Error
@@ -328,7 +381,7 @@ func listV2(w *cmn.Wallet) {
 		return list[i].Liquidity0Dollars+list[i].Liquidity1Dollars > list[j].Liquidity0Dollars+list[j].Liquidity1Dollars
 	})
 
-	ui.Printf("Xch@Chain        Pair   Liq0     Liq1       Liq$  Address\n")
+	ui.Printf("Xch@Chain        Pair              Liq0      Liq1     Liq$ Address\n")
 
 	for _, p := range list {
 		provider := w.GetLP_V2(p.ChainId, p.Factory)
@@ -346,45 +399,60 @@ func listV2(w *cmn.Wallet) {
 			continue
 		}
 
+		// ProviderName already includes @Chain from get_position_status
 		ui.Terminal.Screen.AddLink(
-			fmt.Sprintf("%-12s", p.ProviderName),
+			fmt.Sprintf("%-16s", p.ProviderName),
 			"open "+provider.URL,
 			"open "+provider.URL, "")
 
 		t0 := w.GetTokenByAddress(p.ChainId, p.Token0)
 		t1 := w.GetTokenByAddress(p.ChainId, p.Token1)
 
+		var pairStr string
+		var pairLen int
 		if t0 != nil && t1 != nil {
-			ui.Printf("%11s", t0.Symbol+"/"+t1.Symbol)
+			pairStr = t0.Symbol + "/" + t1.Symbol
+			pairLen = len(pairStr)
+			ui.Printf(" %s", pairStr)
 		} else {
+			ui.Printf(" ")
 			if t0 != nil {
-				ui.Printf("%-5s", t0.Symbol)
+				ui.Printf("%s", t0.Symbol)
+				pairLen = len(t0.Symbol)
 			} else {
 				ui.Terminal.Screen.AddLink("???", "command token add "+b.Name+" "+p.Token0.String(), "Add token", "")
+				pairLen = 3
 			}
 
 			ui.Printf("/")
+			pairLen++
 
 			if t1 != nil {
-				ui.Printf("%-5s", t1.Symbol)
+				ui.Printf("%s", t1.Symbol)
+				pairLen += len(t1.Symbol)
 			} else {
 				ui.Terminal.Screen.AddLink("???", "command token add "+b.Name+" "+p.Token1.String(), "Add token", "")
+				pairLen += 3
 			}
+		}
+		// Pad to 13 chars
+		if pairLen < 13 {
+			ui.Printf("%s", strings.Repeat(" ", 13-pairLen))
 		}
 
 		if t0 != nil {
-			cmn.AddValueLink(ui.Terminal.Screen, p.Liquidity0, t0)
+			cmn.AddFixedValueLink(ui.Terminal.Screen, p.Liquidity0, t0, 10)
 		} else {
-			ui.Printf("         ")
+			ui.Printf("          ")
 		}
 
 		if t1 != nil {
-			cmn.AddValueLink(ui.Terminal.Screen, p.Liquidity1, t1)
+			cmn.AddFixedValueLink(ui.Terminal.Screen, p.Liquidity1, t1, 10)
 		} else {
-			ui.Printf("         ")
+			ui.Printf("          ")
 		}
 
-		cmn.AddDollarLink(ui.Terminal.Screen, p.Liquidity0Dollars+p.Liquidity1Dollars)
+		cmn.AddFixedDollarLink(ui.Terminal.Screen, p.Liquidity0Dollars+p.Liquidity1Dollars, 10)
 
 		ui.Printf(" %s\n", owner.Name)
 		ui.Flush()
