@@ -878,6 +878,102 @@ func (w *Wallet) EditBlockchain(ub *Blockchain) error {
 
 }
 
+// LP V2 methods
+
+func (w *Wallet) AddLP_V2(lp *LP_V2) error {
+	if w.GetLP_V2(lp.ChainId, lp.Factory) != nil {
+		return errors.New("provider already exists")
+	}
+
+	if w.GetLP_V2_by_name(lp.ChainId, lp.Name) != nil {
+		return errors.New("provider with the same name already exists")
+	}
+
+	w.LP_V2_Providers = append(w.LP_V2_Providers, lp)
+	return w.Save()
+}
+
+func (w *Wallet) GetLP_V2(chainId int, factory common.Address) *LP_V2 {
+	for _, lp := range w.LP_V2_Providers {
+		if lp.ChainId == chainId && lp.Factory == factory {
+			return lp
+		}
+	}
+	return nil
+}
+
+func (w *Wallet) GetLP_V2_by_name(chainId int, name string) *LP_V2 {
+	for _, lp := range w.LP_V2_Providers {
+		if lp.ChainId == chainId && lp.Name == name {
+			return lp
+		}
+	}
+	return nil
+}
+
+func (w *Wallet) RemoveLP_V2(chainId int, factory common.Address) error {
+	w.writeMutex.Lock()
+	defer w.writeMutex.Unlock()
+
+	for i, lp := range w.LP_V2_Providers {
+		if lp.ChainId == chainId && lp.Factory == factory {
+			w.LP_V2_Providers = append(w.LP_V2_Providers[:i], w.LP_V2_Providers[i+1:]...)
+
+			// remove all positions
+			for j := len(w.LP_V2_Positions) - 1; j >= 0; j-- {
+				if w.LP_V2_Positions[j].ChainId == chainId && w.LP_V2_Positions[j].Factory == factory {
+					w.LP_V2_Positions = append(w.LP_V2_Positions[:j], w.LP_V2_Positions[j+1:]...)
+				}
+			}
+
+			return w._locked_Save()
+		}
+	}
+
+	return errors.New("provider not found")
+}
+
+func (w *Wallet) AddLP_V2Position(lp *LP_V2_Position) error {
+	w.writeMutex.Lock()
+	defer w.writeMutex.Unlock()
+
+	if pos := w.GetLP_V2Position(lp.ChainId, lp.Factory, lp.Pair); pos != nil {
+		// update
+		pos.Owner = lp.Owner
+		pos.Token0 = lp.Token0
+		pos.Token1 = lp.Token1
+	} else {
+		w.LP_V2_Positions = append(w.LP_V2_Positions, lp)
+	}
+	return w._locked_Save()
+}
+
+func (w *Wallet) GetLP_V2Position(chainId int, factory common.Address, pair common.Address) *LP_V2_Position {
+	for _, lp := range w.LP_V2_Positions {
+		if lp.ChainId == chainId &&
+			lp.Factory == factory &&
+			lp.Pair == pair {
+			return lp
+		}
+	}
+	return nil
+}
+
+func (w *Wallet) RemoveLP_V2Position(addr common.Address, chainId int, factory common.Address, pair common.Address) error {
+	w.writeMutex.Lock()
+	defer w.writeMutex.Unlock()
+
+	for i, lp := range w.LP_V2_Positions {
+		if lp.Owner == addr && lp.ChainId == chainId && lp.Factory == factory && lp.Pair == pair {
+			w.LP_V2_Positions = append(w.LP_V2_Positions[:i], w.LP_V2_Positions[i+1:]...)
+			return w._locked_Save()
+		}
+	}
+	return errors.New("position not found")
+}
+
+// LP V3 methods
+
 func (w *Wallet) AddLP_V3(lp *LP_V3) error {
 	if w.GetLP_V3(lp.ChainId, lp.Provider) != nil {
 		return errors.New("provider already exists")

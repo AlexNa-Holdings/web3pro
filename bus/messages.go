@@ -253,6 +253,54 @@ type B_ExplorerDownloadContract struct { // download-contract
 	Address    common.Address
 }
 
+// ---------- lp_v2 ----------
+type B_LP_V2_Discover struct { // discover
+	ChainId int
+	Name    string
+}
+
+type B_LP_V2_GetPair struct { // get-pair
+	ChainId int
+	Factory common.Address
+	Token0  common.Address
+	Token1  common.Address
+}
+
+type B_LP_V2_GetReserves struct { // get-reserves
+	ChainId int
+	Pair    common.Address
+}
+
+type B_LP_V2_GetReserves_Response struct { // get-reserves_response
+	Reserve0           *big.Int
+	Reserve1           *big.Int
+	BlockTimestampLast uint32
+}
+
+type B_LP_V2_GetPositionStatus struct { // get-position-status
+	ChainId int
+	Factory common.Address
+	Pair    common.Address
+}
+
+type B_LP_V2_GetPositionStatus_Response struct { // get-position-status_response
+	Owner             common.Address
+	ChainId           int
+	Token0            common.Address
+	Token1            common.Address
+	Factory           common.Address
+	Pair              common.Address
+	LPBalance         *big.Int
+	TotalSupply       *big.Int
+	Reserve0          *big.Int
+	Reserve1          *big.Int
+	Liquidity0        *big.Int
+	Liquidity1        *big.Int
+	Liquidity0Dollars float64
+	Liquidity1Dollars float64
+	ProviderName      string
+}
+
 // ---------- lp_v3 ----------
 type B_LP_V3_Discover struct { // discover
 	ChainId int

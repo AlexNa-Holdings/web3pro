@@ -36,6 +36,7 @@ type SConfig struct {
 	Editor                 string        `yaml:"editor"`                   // editor
 	CMC_API_KEY            string        `yaml:"cmc_api_key"`              // CoinMarketCap API key
 	TheGraphAPIKey         string        `yaml:"thegraph_api_key"`         // The Graph API key for subgraph queries
+	TheGraphGateway        string        `yaml:"thegraph_gateway"`         // The Graph gateway URL (default: https://gateway.thegraph.com/api/{api-key}/subgraphs/id/)
 }
 
 var Config *SConfig = &SConfig{ //Default config
@@ -48,6 +49,7 @@ var Config *SConfig = &SConfig{ //Default config
 	USBBackgroundEnumerate: true,
 	PriceUpdatePeriod:      "15m",
 	Editor:                 "code",
+	TheGraphGateway:        "https://gateway.thegraph.com/api/{api-key}/subgraphs/id/",
 }
 
 func InitConfig() {

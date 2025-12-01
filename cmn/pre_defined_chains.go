@@ -16,7 +16,7 @@ var PredefinedBlockchains []Blockchain = []Blockchain{
 	},
 	{
 		Name:            "PulseChain",
-		Url:             "wss://rpc.pulsechain.com",
+		Url:             "https://rpc.pulsechain.com",
 		ChainId:         369,
 		ExplorerUrl:     "https://scan.9inch.io/#/",
 		ExplorerAPIUrl:  "https://api.scan.pulsechain.com/api/v2",
@@ -91,7 +91,7 @@ var PredefinedBlockchains []Blockchain = []Blockchain{
 	},
 	{
 		Name:        "Arbitrum One",
-		Url:         "wss://arbitrum-one.publicnode.com",
+		Url:         "https://arbitrum-one.publicnode.com",
 		ChainId:     42161,
 		ExplorerUrl: "https://arbiscan.io,https://explorer.arbitrum.io",
 		Currency:    "ETH",

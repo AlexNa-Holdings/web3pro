@@ -16,7 +16,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-var token_subcommands = []string{"remove", "edit", "add", "balance", "list"}
+var token_subcommands = []string{"on", "off", "remove", "edit", "add", "balance", "list"}
 
 func NewTokenCommand() *Command {
 	return &Command{
@@ -28,9 +28,11 @@ Usage: token [COMMAND]
 Manage tokens
 
 Commands:
+  on                            - Show tokens panel
+  off                           - Hide tokens panel
   add [BLOCKCHAIN] [ADDRESS]    - Add new token
   list [BLOCKCHAIN]             - List tokens
-  remove [BLOCKCHAIN] [ADDRESS] - Remove token  
+  remove [BLOCKCHAIN] [ADDRESS] - Remove token
   balance [BLOCKCHAIN] [TOKEN/ADDRESS] [ADDRESS] - Get token balance
 		`,
 		Help:             `Manage tokens`,
@@ -142,6 +144,12 @@ func Token_Process(c *Command, input string) {
 	subcommand := p[1]
 
 	switch subcommand {
+	case "on":
+		w.TokenPaneOn = true
+		w.Save()
+	case "off":
+		w.TokenPaneOn = false
+		w.Save()
 	case "add":
 
 		chain := p[2]

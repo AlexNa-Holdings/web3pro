@@ -40,6 +40,7 @@ func Init() {
 		NewAppCommand(),
 		NewSoundCommand(),
 		NewExplorerCommand(),
+		NewLP_V2Command(),
 		NewLP_V3Command(),
 		NewLP_V4Command(),
 	}

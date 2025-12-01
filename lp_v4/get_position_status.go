@@ -44,33 +44,27 @@ func getPositionStatus(msg *bus.Message) (*bus.B_LP_V4_GetPositionStatus_Respons
 		return nil, fmt.Errorf("blockchain not found")
 	}
 
-	// If TickSpacing is 0, we need to fetch fresh pool key data (legacy positions)
-	tickSpacing := pos.TickSpacing
-	currency0 := pos.Currency0
-	currency1 := pos.Currency1
-	fee := pos.Fee
-	hookAddress := pos.HookAddress
-
-	if tickSpacing == 0 {
-		log.Warn().Msg("V4 getPositionStatus: TickSpacing is 0, fetching fresh poolKeys")
-		// Fetch fresh pool key data using the truncated poolId
-		freshData, err := _getNftPosition(pos.ChainId, pos.Provider, pos.Owner, pos.NFT_Token)
-		if err == nil {
-			tickSpacing = freshData.TickSpacing
-			currency0 = freshData.Currency0
-			currency1 = freshData.Currency1
-			fee = freshData.Fee
-			hookAddress = freshData.HookAddress
-			log.Info().Msgf("V4 getPositionStatus: fetched fresh data - TickSpacing=%d, Fee=%d", tickSpacing, fee)
-		} else {
-			log.Error().Err(err).Msg("V4 getPositionStatus: failed to fetch fresh poolKeys")
-		}
+	// Always fetch fresh position data from chain
+	freshData, err := _getNftPosition(pos.ChainId, pos.Provider, pos.Owner, pos.NFT_Token)
+	if err != nil {
+		log.Error().Err(err).Msg("V4 getPositionStatus: failed to fetch fresh position data")
+		return nil, fmt.Errorf("failed to fetch position data: %w", err)
 	}
+
+	// Use fresh data
+	tickSpacing := freshData.TickSpacing
+	currency0 := freshData.Currency0
+	currency1 := freshData.Currency1
+	fee := freshData.Fee
+	hookAddress := freshData.HookAddress
+	liquidity := freshData.Liquidity
+	tickLower := freshData.TickLower
+	tickUpper := freshData.TickUpper
 
 	log.Info().Msgf("V4 getPositionStatus: NFT=%s, Currency0=%s, Currency1=%s, Fee=%d, TickSpacing=%d, Hook=%s",
 		req.NFT_Token.String(), currency0.Hex(), currency1.Hex(), fee, tickSpacing, hookAddress.Hex())
 	log.Info().Msgf("V4 getPositionStatus: TickLower=%d, TickUpper=%d, Liquidity=%s, StateView=%s",
-		pos.TickLower, pos.TickUpper, pos.Liquidity.String(), lp.StateView.Hex())
+		tickLower, tickUpper, liquidity.String(), lp.StateView.Hex())
 
 	// Compute the actual poolId (keccak256 hash of PoolKey) for StateView
 	// The pos.PoolId is the truncated 25-byte version used by PositionManager
@@ -87,31 +81,31 @@ func getPositionStatus(msg *bus.Message) (*bus.B_LP_V4_GetPositionStatus_Respons
 	log.Info().Msgf("V4 getPositionStatus: sqrtPriceX96=%s, currentTick=%d", sqrtPriceX96.String(), currentTick)
 
 	// Calculate whether position is in range
-	on := currentTick >= pos.TickLower && currentTick < pos.TickUpper
+	on := currentTick >= tickLower && currentTick < tickUpper
 
 	// Calculate liquidity amounts for each token
 	liquidity0 := big.NewInt(0)
 	liquidity1 := big.NewInt(0)
-	if pos.Liquidity != nil && pos.Liquidity.Cmp(big.NewInt(0)) > 0 && sqrtPriceX96.Cmp(big.NewInt(0)) > 0 {
+	if liquidity != nil && liquidity.Cmp(big.NewInt(0)) > 0 && sqrtPriceX96.Cmp(big.NewInt(0)) > 0 {
 		liquidity0, liquidity1, _ = calculateAmounts(
-			pos.Liquidity,
+			liquidity,
 			sqrtPriceX96,
-			getSqrtPriceX96FromTick(pos.TickLower),
-			getSqrtPriceX96FromTick(pos.TickUpper),
+			getSqrtPriceX96FromTick(tickLower),
+			getSqrtPriceX96FromTick(tickUpper),
 		)
 		log.Info().Msgf("V4 getPositionStatus: liquidity0=%s, liquidity1=%s", liquidity0.String(), liquidity1.String())
 	} else {
 		log.Warn().Msgf("V4 getPositionStatus: skipping calculateAmounts - Liquidity=%v, sqrtPriceX96=%s",
-			pos.Liquidity, sqrtPriceX96.String())
+			liquidity, sqrtPriceX96.String())
 	}
 
 	// Calculate uncollected fees
 	gain0 := big.NewInt(0)
 	gain1 := big.NewInt(0)
 
-	if lp.StateView != (common.Address{}) && pos.Liquidity != nil && pos.Liquidity.Cmp(big.NewInt(0)) > 0 {
+	if lp.StateView != (common.Address{}) && liquidity != nil && liquidity.Cmp(big.NewInt(0)) > 0 {
 		gain0, gain1 = calculateV4Fees(pos.ChainId, lp.StateView, actualPoolId, lp.Provider,
-			pos.NFT_Token, pos.TickLower, pos.TickUpper, currentTick, pos.Liquidity)
+			pos.NFT_Token, tickLower, tickUpper, currentTick, liquidity)
 	}
 
 	// Calculate dollar values
@@ -141,11 +135,11 @@ func getPositionStatus(msg *bus.Message) (*bus.B_LP_V4_GetPositionStatus_Respons
 		Provider:          pos.Provider,
 		PoolManager:       pos.PoolManager,
 		PoolId:            pos.PoolId,
-		TickLower:         pos.TickLower,
-		TickUpper:         pos.TickUpper,
+		TickLower:         tickLower,
+		TickUpper:         tickUpper,
 		On:                on,
 		Fee:               fee,
-		Liquidity:         pos.Liquidity,
+		Liquidity:         liquidity,
 		Liquidity0:        liquidity0,
 		Liquidity1:        liquidity1,
 		Liquidity0Dollars: liquidity0Dollars,

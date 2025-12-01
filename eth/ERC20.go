@@ -205,6 +205,105 @@ func BuildTxERC20Transfer(b *cmn.Blockchain, t *cmn.Token, s *cmn.Signer, from *
 
 }
 
+// BalanceQuery represents a single balance query (token + holder address)
+type BalanceQuery struct {
+	Token   *cmn.Token
+	Holder  common.Address
+	Balance *big.Int // Result will be stored here
+}
+
+// GetERC20BalancesBatch fetches multiple ERC20 balances in a single multicall
+// All tokens must be on the same chain
+func GetERC20BalancesBatch(b *cmn.Blockchain, queries []*BalanceQuery) error {
+	if len(queries) == 0 {
+		return nil
+	}
+
+	// Prepare multicall data
+	calls := make([]bus.B_EthMultiCall_Call, len(queries))
+	for i, q := range queries {
+		if q.Token.ChainId != b.ChainId {
+			log.Error().Msgf("GetERC20BalancesBatch: Token %s chainId %d != blockchain chainId %d",
+				q.Token.Symbol, q.Token.ChainId, b.ChainId)
+			continue
+		}
+
+		data, err := ERC20_ABI.Pack("balanceOf", q.Holder)
+		if err != nil {
+			log.Error().Err(err).Msgf("GetERC20BalancesBatch: Cannot pack balanceOf for %s", q.Token.Symbol)
+			continue
+		}
+
+		calls[i] = bus.B_EthMultiCall_Call{
+			To:   q.Token.Address,
+			Data: data,
+		}
+	}
+
+	// Execute multicall
+	resp := bus.Fetch("eth", "multi-call", &bus.B_EthMultiCall{
+		ChainId: b.ChainId,
+		Calls:   calls,
+	})
+
+	if resp.Error != nil {
+		log.Debug().Err(resp.Error).Msgf("GetERC20BalancesBatch: multicall failed for chain %d, falling back to individual calls", b.ChainId)
+		// Fallback to individual calls
+		for _, q := range queries {
+			if q.Token.Native {
+				balance, err := GetBalance(b, q.Holder)
+				if err != nil {
+					log.Debug().Err(err).Msgf("GetERC20BalancesBatch: fallback GetBalance failed for %s", q.Token.Symbol)
+					q.Balance = big.NewInt(0)
+				} else {
+					q.Balance = balance
+				}
+			} else {
+				balance, err := GetERC20Balance(b, q.Token, q.Holder)
+				if err != nil {
+					log.Debug().Err(err).Msgf("GetERC20BalancesBatch: fallback GetERC20Balance failed for %s", q.Token.Symbol)
+					q.Balance = big.NewInt(0)
+				} else {
+					q.Balance = balance
+				}
+			}
+		}
+		return nil
+	}
+
+	results, ok := resp.Data.([][]byte)
+	if !ok {
+		log.Error().Msg("GetERC20BalancesBatch: Cannot convert multicall result")
+		return errors.New("cannot convert multicall result")
+	}
+
+	if len(results) != len(queries) {
+		log.Error().Msgf("GetERC20BalancesBatch: result count mismatch: got %d, expected %d", len(results), len(queries))
+		return errors.New("multicall result count mismatch")
+	}
+
+	// Unpack results
+	for i, result := range results {
+		if len(result) == 0 {
+			queries[i].Balance = big.NewInt(0)
+			continue
+		}
+
+		var decodedResult struct {
+			Balance *big.Int
+		}
+		err := ERC20_ABI.UnpackIntoInterface(&decodedResult, "balanceOf", result)
+		if err != nil {
+			log.Debug().Err(err).Msgf("GetERC20BalancesBatch: Cannot unpack balance for %s", queries[i].Token.Symbol)
+			queries[i].Balance = big.NewInt(0)
+			continue
+		}
+		queries[i].Balance = decodedResult.Balance
+	}
+
+	return nil
+}
+
 func ERC20Transfer(msg *bus.Message, b *cmn.Blockchain, t *cmn.Token, s *cmn.Signer, from *cmn.Address, to common.Address, amount *big.Int) error {
 	log.Trace().Msgf("ERC20Transfer: Token:(%s) Blockchain:(%s) From:(%s) To:(%s) Amount:(%s)", t.Name, b.Name, from.Address.String(), to.String(), amount.String())
 

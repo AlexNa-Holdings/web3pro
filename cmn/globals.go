@@ -45,14 +45,18 @@ type Wallet struct {
 	Addresses       []*Address        `json:"addresses"`
 	Tokens          []*Token          `json:"tokens"`
 	Origins         []*Origin         `json:"origins"`
+	LP_V2_Providers []*LP_V2          `json:"lp_v2_providers"`
+	LP_V2_Positions []*LP_V2_Position `json:"lp_v2_positions"`
 	LP_V3_Providers []*LP_V3          `json:"lp_v3_providers"`
 	LP_V3_Positions []*LP_V3_Position `json:"lp_v3_positions"`
 	LP_V4_Providers []*LP_V4          `json:"lp_v4_providers"`
 	LP_V4_Positions []*LP_V4_Position `json:"lp_v4_positions"`
 	Contracts       map[common.Address]*Contract
 	AppsPaneOn      bool `json:"apps_pane_on"`
+	LP_V2PaneOn     bool `json:"lp_v2_pane_on"`
 	LP_V3PaneOn     bool `json:"lp_v3_pane_on"`
 	LP_V4PaneOn     bool `json:"lp_v4_pane_on"`
+	TokenPaneOn     bool `json:"token_pane_on"`
 
 	CurrentChainId int            `json:"current_chain_id"`
 	CurrentAddress common.Address `json:"current_address"`
@@ -122,6 +126,24 @@ type Token struct {
 }
 
 var KNOWN_FEEDERS = []string{"dexscreener", "coinmarketcap"}
+
+type LP_V2 struct { // LP v2 Provider (e.g., Uniswap V2, SushiSwap)
+	Name       string         `json:"name"`
+	Factory    common.Address `json:"factory"`     // Factory contract address
+	Router     common.Address `json:"router"`      // Router contract address
+	ChainId    int            `json:"chain_id"`
+	URL        string         `json:"url"`         // Web UI URL
+	SubgraphID string         `json:"subgraph_id"` // The Graph subgraph ID for discovery
+}
+
+type LP_V2_Position struct {
+	Owner     common.Address `json:"owner"`
+	ChainId   int            `json:"chain_id"`
+	Factory   common.Address `json:"factory"`
+	Pair      common.Address `json:"pair"`   // LP token / pair contract address
+	Token0    common.Address `json:"token0"`
+	Token1    common.Address `json:"token1"`
+}
 
 type LP_V3 struct { // LP v3 Position Manager
 	Name     string         `json:"name"`

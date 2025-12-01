@@ -24,8 +24,10 @@ var panes = []Pane{
 	TopLeftFlow,
 	&HailPane,
 	&App,
+	&LP_V2,
 	&LP_V3,
 	&LP_V4,
+	&Token,
 	&Terminal,
 }
 
