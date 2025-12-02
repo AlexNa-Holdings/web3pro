@@ -30,6 +30,14 @@ func getPending(msg *bus.Message) (*bus.B_Staking_GetPending_Response, error) {
 		return nil, fmt.Errorf("get_pending: staking not found for chain %d contract %s", req.ChainId, req.Contract.Hex())
 	}
 
+	// Check if this is a hardcoded liquid staking provider
+	// Liquid staking has no explicit claimable rewards - gains are in the exchange rate
+	if staking.Hardcoded {
+		return &bus.B_Staking_GetPending_Response{
+			Pending: big.NewInt(0),
+		}, nil
+	}
+
 	// Find the pending function for this reward token
 	var funcName string
 	if req.RewardToken == staking.Reward1Token {

@@ -30,6 +30,11 @@ func getBalance(msg *bus.Message) (*bus.B_Staking_GetBalance_Response, error) {
 		return nil, fmt.Errorf("get_balance: staking not found for chain %d contract %s", req.ChainId, req.Contract.Hex())
 	}
 
+	// Hardcoded staking providers use custom logic - placeholder for future implementations
+	if staking.Hardcoded {
+		return nil, fmt.Errorf("get_balance: hardcoded staking provider %s not implemented", staking.Name)
+	}
+
 	// Build the function call based on the balance function name
 	funcName := staking.BalanceFunc
 	if funcName == "" {

@@ -168,6 +168,13 @@ func (p *StakingPane) updateList() {
 
 		// Get staked balance
 		stakedToken := w.GetTokenByAddress(s.ChainId, s.StakedToken)
+		// For native token staking or liquid staking, get the native token
+		if stakedToken == nil && s.StakedToken == ([20]byte{}) {
+			b := w.GetBlockchain(s.ChainId)
+			if b != nil {
+				stakedToken, _ = w.GetNativeToken(b)
+			}
+		}
 		log.Trace().Str("contract", s.Contract.Hex()).Str("owner", pos.Owner.Hex()).Uint64("validatorId", pos.ValidatorId).Msg("Staking: fetching balance")
 		balResp := bus.Fetch("staking", "get-balance", &bus.B_Staking_GetBalance{
 			ChainId:     s.ChainId,

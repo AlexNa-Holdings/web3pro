@@ -209,6 +209,7 @@ type Staking struct {
 	Reward2Token    common.Address `json:"reward2_token"`  // Second reward token address (optional)
 	Reward2Func     string         `json:"reward2_func"`   // Second reward pending function (optional)
 	ValidatorId     uint64         `json:"validator_id"`   // Validator ID for native staking (e.g., Monad)
+	Hardcoded       bool           `json:"hardcoded"`      // If true, uses custom logic (cannot be configured, only deleted)
 }
 
 // StakingPosition represents a user's position in a staking contract

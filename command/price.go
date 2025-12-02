@@ -10,6 +10,7 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/price"
 	"github.com/AlexNa-Holdings/web3pro/ui"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog/log"
 )
 
@@ -228,21 +229,25 @@ func Price_Process(c *Command, input string) {
 		t.PriceFeeder = feeder
 		t.PriceFeedParam = param
 
+		// Sync native and wrapped token price feeders (they should share the same price)
 		if t.Native {
-			wt := w.GetToken(b.ChainId, b.WTokenAddress.Hex())
-			if wt != nil {
-				wt.PriceFeeder = feeder
-				wt.PriceFeedParam = param
-			}
-		} else {
-			if t.Address.Cmp(b.WTokenAddress) != 0 {
-				nt, _ := w.GetNativeToken(b)
-				if nt != nil {
-					nt.PriceFeeder = feeder
-					nt.PriceFeedParam = param
+			// If setting native token's price, also set wrapped token's price
+			if b.WTokenAddress != (common.Address{}) {
+				wt := w.GetToken(b.ChainId, b.WTokenAddress.Hex())
+				if wt != nil {
+					wt.PriceFeeder = feeder
+					wt.PriceFeedParam = param
 				}
 			}
+		} else if t.Address.Cmp(b.WTokenAddress) == 0 {
+			// If setting wrapped token's price, also set native token's price
+			nt, _ := w.GetNativeToken(b)
+			if nt != nil {
+				nt.PriceFeeder = feeder
+				nt.PriceFeedParam = param
+			}
 		}
+		// For all other tokens, only set the price for that specific token
 
 		err := w.Save()
 		if err != nil {

@@ -174,12 +174,6 @@ func Staking_Process(c *Command, input string) {
 					continue
 				}
 
-				stakedToken := w.GetTokenByAddress(s.ChainId, s.StakedToken)
-				stakedSymbol := "???"
-				if stakedToken != nil {
-					stakedSymbol = stakedToken.Symbol
-				}
-
 				ui.Printf("%d %-12s ", i+1, b.Name)
 
 				// Name as link if URL is set
@@ -189,6 +183,11 @@ func Staking_Process(c *Command, input string) {
 					ui.Printf("%-20s ", s.Name)
 				}
 
+				stakedToken := w.GetTokenByAddress(s.ChainId, s.StakedToken)
+				stakedSymbol := "???"
+				if stakedToken != nil {
+					stakedSymbol = stakedToken.Symbol
+				}
 				ui.Printf("Staked: %-8s ", stakedSymbol)
 				ui.Printf("Rewards: ")
 
@@ -234,6 +233,7 @@ func Staking_Process(c *Command, input string) {
 
 		// Check if it's a predefined staking
 		if chain != "custom" {
+			// Check regular predefined staking providers
 			for _, s := range cmn.PredefinedStakings {
 				if s.Name == chain {
 					b := w.GetBlockchain(s.ChainId)
