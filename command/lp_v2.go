@@ -367,6 +367,13 @@ func listV2(w *cmn.Wallet) {
 			continue
 		}
 
+		// Skip positions with ignored tokens
+		t0 := w.GetTokenByAddress(resp.ChainId, resp.Token0)
+		t1 := w.GetTokenByAddress(resp.ChainId, resp.Token1)
+		if (t0 != nil && t0.Ignored) || (t1 != nil && t1.Ignored) {
+			continue
+		}
+
 		list = append(list, resp)
 	}
 

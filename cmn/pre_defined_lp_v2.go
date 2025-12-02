@@ -126,7 +126,7 @@ var PrefedinedLP_V2 = map[int]([]PD_V2){
 			Factory:    common.HexToAddress("0x02a84c1b3BBD7401a5f7fa98a384EBC70bB5749E"),
 			Router:     common.HexToAddress("0x8cFe327CEc66d1C090Dd72bd0FF11d690C33a2Eb"),
 			URL:        "https://pancakeswap.finance/liquidity",
-			SubgraphID: "", // PancakeSwap subgraph doesn't have liquidityPositions entity
+			SubgraphID: "2NjL7L4CmQaGJSacM43ofmH6ARf6gJoBeBaJtz9eWAQ9",
 		},
 		{
 			Name:       "Aerodrome",

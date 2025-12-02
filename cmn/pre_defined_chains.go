@@ -65,11 +65,13 @@ var PredefinedBlockchains []Blockchain = []Blockchain{
 		Currency:    "AVAX",
 	},
 	{
-		Name:        "Base",
-		Url:         "https://mainnet.base.org",
-		ChainId:     8453,
-		ExplorerUrl: "",
-		Currency:    "ETH",
+		Name:          "Base",
+		Url:           "https://mainnet.base.org",
+		ChainId:       8453,
+		ExplorerUrl:   "https://basescan.org",
+		Currency:      "ETH",
+		WTokenAddress: common.HexToAddress("0x4200000000000000000000000000000000000006"),
+		Multicall:     common.HexToAddress("0xcA11bde05977b3631167028862bE2a173976CA11"),
 	}, {
 		Name:        "Fantom Opera",
 		Url:         "https://rpc.ftm.tools",

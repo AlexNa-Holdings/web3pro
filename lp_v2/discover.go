@@ -112,12 +112,24 @@ func discover(msg *bus.Message) error {
 		// First try to query liquidityPositions (Uniswap-style subgraphs)
 		_, err := queryV2Subgraph(subgraphURL, common.Address{})
 		if err != nil && strings.Contains(err.Error(), "has no field") {
-			// Subgraph doesn't have liquidityPositions - use on-chain discovery via pairs
-			log.Debug().Msg("Subgraph doesn't have liquidityPositions, using on-chain discovery")
-			foundInProvider, err := discoverV2OnChain(w, pl, b, subgraphURL, req.Token0, req.Token1)
-			if err != nil {
-				ui.PrintErrorf("On-chain discovery failed: %v\n", err)
-				continue
+			// Subgraph doesn't have liquidityPositions - try mint/burn events first
+			log.Debug().Msg("Subgraph doesn't have liquidityPositions, trying mint/burn events")
+
+			// Try to discover via mint/burn events (much more efficient)
+			foundInProvider, mintBurnErr := discoverV2ViaMintBurn(w, pl, b, subgraphURL)
+			if mintBurnErr != nil {
+				log.Debug().Err(mintBurnErr).Msg("Mint/burn discovery failed, falling back to on-chain")
+				// Fall back to on-chain discovery via pairs (only if token filters provided)
+				if req.Token0 != (common.Address{}) || req.Token1 != (common.Address{}) {
+					foundInProvider, err = discoverV2OnChain(w, pl, b, subgraphURL, req.Token0, req.Token1)
+					if err != nil {
+						ui.PrintErrorf("On-chain discovery failed: %v\n", err)
+						continue
+					}
+				} else {
+					ui.PrintErrorf("Discovery failed. Use token filters: lp_v2 discover '%s' '%s' <token_address>\n", b.Name, pl.Name)
+					continue
+				}
 			}
 			found += foundInProvider
 			continue
@@ -360,6 +372,14 @@ func discoverV2OnChain(w *cmn.Wallet, pl *cmn.LP_V2, b *cmn.Blockchain, subgraph
 
 // queryV2Pairs queries pairs from a V2 subgraph with pagination and optional token filters
 func queryV2Pairs(subgraphURL string, filterToken0, filterToken1 common.Address) ([]V2Pair, error) {
+	// Replace {api-key} placeholder with actual API key
+	if strings.Contains(subgraphURL, "{api-key}") {
+		if cmn.Config.TheGraphAPIKey == "" {
+			return nil, fmt.Errorf("subgraph URL contains {api-key} placeholder but TheGraphAPIKey is not configured. Set it via 'config set thegraph_api_key <your-key>'")
+		}
+		subgraphURL = strings.Replace(subgraphURL, "{api-key}", cmn.Config.TheGraphAPIKey, 1)
+	}
+
 	log.Debug().Msgf("queryV2Pairs URL: %s", subgraphURL)
 
 	emptyAddr := common.Address{}
@@ -521,4 +541,213 @@ func queryLPBalancesMulticall(chainId int, pairs []V2Pair, owner common.Address)
 	}
 
 	return balances, nil
+}
+
+// V2Mint represents a mint event from the subgraph
+type V2Mint struct {
+	ID   string `json:"id"`
+	To   string `json:"to"`
+	Pair V2Pair `json:"pair"`
+}
+
+// V2MintResponse represents the GraphQL response for mints query
+type V2MintResponse struct {
+	Data struct {
+		Mints []V2Mint `json:"mints"`
+	} `json:"data"`
+	Errors []V2SubgraphError `json:"errors,omitempty"`
+}
+
+// discoverV2ViaMintBurn discovers LP positions by querying mint events for each wallet address
+// This is much more efficient than checking all pairs because we only query pairs
+// where the user has actually added liquidity
+func discoverV2ViaMintBurn(w *cmn.Wallet, pl *cmn.LP_V2, b *cmn.Blockchain, subgraphURL string) (int, error) {
+	found := 0
+
+	// Substitute API key placeholder if present
+	if strings.Contains(subgraphURL, "{api-key}") {
+		if cmn.Config.TheGraphAPIKey == "" {
+			return 0, fmt.Errorf("subgraph URL contains {api-key} placeholder but TheGraphAPIKey is not configured")
+		}
+		subgraphURL = strings.Replace(subgraphURL, "{api-key}", cmn.Config.TheGraphAPIKey, 1)
+	}
+
+	for _, addr := range w.Addresses {
+		ui.Printf("  ")
+		cmn.AddAddressShortLink(ui.Terminal.Screen, addr.Address)
+		ui.Printf(" %s ", addr.Name)
+		ui.Flush()
+
+		// Query mint events for this address
+		pairs, err := queryMintsForAddress(subgraphURL, addr.Address)
+		if err != nil {
+			log.Error().Err(err).Msg("queryMintsForAddress failed")
+			return found, fmt.Errorf("mint query failed: %w", err)
+		}
+
+		if len(pairs) == 0 {
+			ui.Printf("(no mints found)\n")
+			continue
+		}
+
+		ui.Printf("found %d pairs with mints\n", len(pairs))
+
+		// Check balances for these specific pairs only
+		balances, err := queryLPBalancesMulticall(pl.ChainId, pairs, addr.Address)
+		if err != nil {
+			log.Error().Err(err).Msg("queryLPBalancesMulticall failed")
+			ui.Printf("  (multicall failed, skipping)\n")
+			continue
+		}
+
+		for i, pair := range pairs {
+			if i >= len(balances) {
+				break
+			}
+
+			balance := balances[i]
+			if balance == nil || balance.Sign() == 0 {
+				continue // Skip zero balance
+			}
+
+			pairAddr := common.HexToAddress(pair.ID)
+			token0Addr := common.HexToAddress(pair.Token0.ID)
+			token1Addr := common.HexToAddress(pair.Token1.ID)
+
+			ui.Printf("%3d Pair: ", found+1)
+			cmn.AddAddressShortLink(ui.Terminal.Screen, pairAddr)
+			ui.Printf("\n")
+
+			t0 := w.GetTokenByAddress(b.ChainId, token0Addr)
+			if t0 != nil {
+				ui.Printf("    %s (%s)", t0.Symbol, t0.Name)
+			} else {
+				ui.Printf("    ")
+				cmn.AddAddressShortLink(ui.Terminal.Screen, token0Addr)
+				ui.Printf(" ")
+				ui.Terminal.Screen.AddLink(cmn.ICON_ADD, "command token add "+b.Name+" "+token0Addr.String(), "Add token", "")
+			}
+
+			ui.Printf(" / ")
+
+			t1 := w.GetTokenByAddress(b.ChainId, token1Addr)
+			if t1 != nil {
+				ui.Printf("%s (%s)", t1.Symbol, t1.Name)
+			} else {
+				cmn.AddAddressShortLink(ui.Terminal.Screen, token1Addr)
+				ui.Printf(" ")
+				ui.Terminal.Screen.AddLink(cmn.ICON_ADD, "command token add "+b.Name+" "+token1Addr.String(), "Add token", "")
+			}
+
+			ui.Printf("\n    LP Balance: %s\n", balance.String())
+			ui.Flush()
+
+			err = w.AddLP_V2Position(&cmn.LP_V2_Position{
+				Owner:   addr.Address,
+				ChainId: pl.ChainId,
+				Factory: pl.Factory,
+				Pair:    pairAddr,
+				Token0:  token0Addr,
+				Token1:  token1Addr,
+			})
+
+			if err != nil {
+				log.Error().Err(err).Msg("AddLP_V2Position")
+				return found, err
+			}
+
+			found++
+		}
+	}
+
+	return found, nil
+}
+
+// queryMintsForAddress queries mint events for a specific address and returns unique pairs
+func queryMintsForAddress(subgraphURL string, owner common.Address) ([]V2Pair, error) {
+	log.Debug().Msgf("queryMintsForAddress URL: %s, owner: %s", subgraphURL, owner.Hex())
+
+	// Use a map to deduplicate pairs
+	pairMap := make(map[string]V2Pair)
+	const pageSize = 1000
+	skip := 0
+
+	for {
+		query := fmt.Sprintf(`{
+			mints(first: %d, skip: %d, where: {to: "%s"}, orderBy: timestamp, orderDirection: desc) {
+				id
+				to
+				pair {
+					id
+					token0 { id symbol }
+					token1 { id symbol }
+				}
+			}
+		}`, pageSize, skip, strings.ToLower(owner.Hex()))
+
+		requestBody, err := json.Marshal(map[string]string{
+			"query": query,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal query: %w", err)
+		}
+
+		resp, err := http.Post(subgraphURL, "application/json", bytes.NewBuffer(requestBody))
+		if err != nil {
+			return nil, fmt.Errorf("subgraph request failed: %w", err)
+		}
+
+		body, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			return nil, fmt.Errorf("failed to read response: %w", err)
+		}
+
+		log.Debug().Msgf("Mints response status: %d, skip: %d", resp.StatusCode, skip)
+
+		if resp.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("subgraph returned status %d: %s", resp.StatusCode, string(body))
+		}
+
+		var mintResp V2MintResponse
+		if err := json.Unmarshal(body, &mintResp); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal response: %w", err)
+		}
+
+		if len(mintResp.Errors) > 0 {
+			return nil, fmt.Errorf("subgraph error: %s", mintResp.Errors[0].Message)
+		}
+
+		mints := mintResp.Data.Mints
+		log.Debug().Msgf("Fetched %d mints (unique pairs so far: %d)", len(mints), len(pairMap))
+
+		if len(mints) == 0 {
+			break // No more mints
+		}
+
+		for _, mint := range mints {
+			pairMap[mint.Pair.ID] = mint.Pair
+		}
+
+		if len(mints) < pageSize {
+			break // Last page
+		}
+
+		skip += pageSize
+
+		// Safety limit
+		if skip > 10000 {
+			log.Warn().Msg("Reached 10k mints limit, stopping pagination")
+			break
+		}
+	}
+
+	// Convert map to slice
+	pairs := make([]V2Pair, 0, len(pairMap))
+	for _, pair := range pairMap {
+		pairs = append(pairs, pair)
+	}
+
+	log.Debug().Msgf("Total unique pairs from mints: %d", len(pairs))
+	return pairs, nil
 }

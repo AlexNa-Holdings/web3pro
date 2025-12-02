@@ -16,7 +16,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-var token_subcommands = []string{"on", "off", "remove", "edit", "add", "balance", "list"}
+var token_subcommands = []string{"on", "off", "remove", "edit", "add", "balance", "list", "ignore", "unignore", "ignored"}
 
 func NewTokenCommand() *Command {
 	return &Command{
@@ -34,6 +34,9 @@ Commands:
   list [BLOCKCHAIN]             - List tokens
   remove [BLOCKCHAIN] [ADDRESS] - Remove token
   balance [BLOCKCHAIN] [TOKEN/ADDRESS] [ADDRESS] - Get token balance
+  ignore [BLOCKCHAIN] [TOKEN]   - Ignore token (hide from LP positions)
+  unignore [BLOCKCHAIN] [TOKEN] - Unignore token
+  ignored                       - List ignored tokens
 		`,
 		Help:             `Manage tokens`,
 		Process:          Token_Process,
@@ -75,7 +78,7 @@ func Token_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 		}
 
 	case 2:
-		if subcommand == "list" || subcommand == "add" || subcommand == "remove" || subcommand == "balance" || subcommand == "edit" {
+		if subcommand == "list" || subcommand == "add" || subcommand == "remove" || subcommand == "balance" || subcommand == "edit" || subcommand == "ignore" || subcommand == "unignore" {
 			if param == "" || !strings.HasSuffix(input, " ") {
 				for _, chain := range w.Blockchains {
 					if cmn.Contains(chain.Name, param) {
@@ -107,6 +110,34 @@ func Token_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 					options = append(options, ui.ACOption{
 						Name:   fmt.Sprintf("%-6s %s", t.Symbol, t.GetPrintName()),
 						Result: fmt.Sprintf("%s balance %d %s", command, b.ChainId, id)})
+				}
+			}
+			return "token", &options, token
+		}
+
+		if subcommand == "ignore" && b != nil {
+			for _, t := range w.Tokens {
+				if t.ChainId != b.ChainId || t.Ignored {
+					continue
+				}
+				if cmn.Contains(t.Symbol, token) || cmn.Contains(t.Address.String(), token) || cmn.Contains(t.Name, token) {
+					options = append(options, ui.ACOption{
+						Name:   fmt.Sprintf("%-6s %s", t.Symbol, t.GetPrintName()),
+						Result: fmt.Sprintf("%s ignore %d '%s'", command, b.ChainId, t.Address.String())})
+				}
+			}
+			return "token", &options, token
+		}
+
+		if subcommand == "unignore" && b != nil {
+			for _, t := range w.Tokens {
+				if t.ChainId != b.ChainId || !t.Ignored {
+					continue
+				}
+				if cmn.Contains(t.Symbol, token) || cmn.Contains(t.Address.String(), token) || cmn.Contains(t.Name, token) {
+					options = append(options, ui.ACOption{
+						Name:   fmt.Sprintf("%-6s %s", t.Symbol, t.GetPrintName()),
+						Result: fmt.Sprintf("%s unignore %d '%s'", command, b.ChainId, t.Address.String())})
 				}
 			}
 			return "token", &options, token
@@ -188,6 +219,11 @@ func Token_Process(c *Command, input string) {
 			return
 		}
 
+		if symbol == "" {
+			ui.PrintErrorf("Token has empty symbol - contract may not be a valid ERC20 token")
+			return
+		}
+
 		err = w.AddToken(bchain.ChainId, addr, name, symbol, decimals)
 		if err != nil {
 			ui.PrintErrorf("Error adding token: %v", err)
@@ -265,6 +301,11 @@ func Token_Process(c *Command, input string) {
 
 		for _, t := range w.Tokens {
 			if chain != "" && lb != nil && t.ChainId != lb.ChainId {
+				continue
+			}
+
+			// Skip ignored tokens (use 'token ignored' to see them)
+			if t.Ignored {
 				continue
 			}
 
@@ -455,6 +496,118 @@ func Token_Process(c *Command, input string) {
 		}
 
 		bus.Send("ui", "popup", ui.DlgTokenEdit(t))
+
+	case "ignore":
+		chain := p[2]
+		token := p[3]
+
+		b := w.GetBlockchainByName(chain)
+		if b == nil {
+			chain_id, err := strconv.Atoi(chain)
+			if err != nil {
+				ui.PrintErrorf("Invalid blockchain: %s", chain)
+				return
+			}
+			b = w.GetBlockchain(chain_id)
+			if b == nil {
+				ui.PrintErrorf("Blockchain not found: %s", chain)
+				return
+			}
+		}
+
+		if token == "" {
+			ui.PrintErrorf("Usage: token ignore [BLOCKCHAIN] [TOKEN/ADDRESS]")
+			return
+		}
+
+		t := w.GetTokenBySymbol(b.ChainId, token)
+		if t == nil {
+			t = w.GetTokenByAddress(b.ChainId, common.HexToAddress(token))
+		}
+
+		if t == nil {
+			ui.PrintErrorf("Token not found: %s", token)
+			return
+		}
+
+		t.Ignored = true
+		if err := w.Save(); err != nil {
+			ui.PrintErrorf("Error saving wallet: %v", err)
+			return
+		}
+		ui.Printf("Token %s ignored\n", t.Symbol)
+
+	case "unignore":
+		chain := p[2]
+		token := p[3]
+
+		b := w.GetBlockchainByName(chain)
+		if b == nil {
+			chain_id, err := strconv.Atoi(chain)
+			if err != nil {
+				ui.PrintErrorf("Invalid blockchain: %s", chain)
+				return
+			}
+			b = w.GetBlockchain(chain_id)
+			if b == nil {
+				ui.PrintErrorf("Blockchain not found: %s", chain)
+				return
+			}
+		}
+
+		if token == "" {
+			ui.PrintErrorf("Usage: token unignore [BLOCKCHAIN] [TOKEN/ADDRESS]")
+			return
+		}
+
+		t := w.GetTokenBySymbol(b.ChainId, token)
+		if t == nil {
+			t = w.GetTokenByAddress(b.ChainId, common.HexToAddress(token))
+		}
+
+		if t == nil {
+			ui.PrintErrorf("Token not found: %s", token)
+			return
+		}
+
+		t.Ignored = false
+		if err := w.Save(); err != nil {
+			ui.PrintErrorf("Error saving wallet: %v", err)
+			return
+		}
+		ui.Printf("Token %s unignored\n", t.Symbol)
+
+	case "ignored":
+		ui.Printf("\nIgnored Tokens:\n\n")
+
+		hasIgnored := false
+		for _, t := range w.Tokens {
+			if !t.Ignored {
+				continue
+			}
+			hasIgnored = true
+
+			b := w.GetBlockchain(t.ChainId)
+			if b == nil {
+				continue
+			}
+
+			ui.Printf("%-8s ", t.Symbol)
+			ui.Terminal.Screen.AddLink(cmn.ICON_CHECK, fmt.Sprintf("command token unignore %d '%s'", t.ChainId, t.Address.String()), "Unignore token", "")
+
+			if !t.Native {
+				cmn.AddFixedAddressShortLink(ui.Terminal.Screen, t.Address, 15)
+			} else {
+				ui.Printf("%-15s", "Native")
+			}
+
+			ui.Printf(" %s\n", b.Name)
+		}
+
+		if !hasIgnored {
+			ui.Printf("(no ignored tokens)\n")
+		}
+		ui.Printf("\n")
 
 	default:
 		ui.PrintErrorf("Invalid subcommand: %s", subcommand)

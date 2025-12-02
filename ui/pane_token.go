@@ -120,6 +120,10 @@ func (p *TokenPane) updateList() {
 	// Group tokens by chain for batch processing
 	tokensByChain := make(map[int][]*cmn.Token)
 	for _, t := range w.Tokens {
+		// Skip ignored tokens
+		if t.Ignored {
+			continue
+		}
 		tokensByChain[t.ChainId] = append(tokensByChain[t.ChainId], t)
 	}
 

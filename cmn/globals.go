@@ -121,6 +121,7 @@ type Token struct {
 	Decimals       int            `json:"decimals"`
 	Native         bool           `json:"native"`
 	Unique         bool           `json:"-"` // Unique name in the blockchain
+	Ignored        bool           `json:"ignored,omitempty"`
 	PriceFeeder    string         `json:"price_feeder"`
 	PriceFeedParam string         `json:"price_feed_id"`
 	Price          float64        `json:"price"`

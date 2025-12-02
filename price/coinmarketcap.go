@@ -256,7 +256,6 @@ func CMC_Update(w *cmn.Wallet) (int, error) { // number of pairs updated
 	}
 
 	for _, pi := range pi_list {
-
 		for _, t := range w.Tokens {
 			if t.PriceFeeder != "coinmarketcap" || t.PriceFeedParam != pi.PairID {
 				continue
@@ -267,41 +266,32 @@ func CMC_Update(w *cmn.Wallet) (int, error) { // number of pairs updated
 				continue
 			}
 
+			// Update this token's price
 			t.Price = pi.PriceUsd
 			t.PriceChange24 = pi.PriceChange24
 			t.PriceTimestamp = time.Now()
 			n_updated++
 
-			for _, t1 := range w.Tokens {
-				if t1.PriceFeeder == "coinmarketcap" && t1.PriceFeedParam == pi.PairID {
-					t1.Price = pi.PriceUsd
-					t1.PriceChange24 = pi.PriceChange24
-					t1.PriceTimestamp = time.Now()
-					n_updated++
+			// Sync wrapped/native token price if they don't have their own feeder
+			if t.Native {
+				// This is native token - update wrapped token price if needed
+				if b.WTokenAddress != (common.Address{}) {
+					wrapped_t := w.GetTokenByAddress(t.ChainId, b.WTokenAddress)
+					if wrapped_t != nil && wrapped_t.PriceFeedParam == "" {
+						wrapped_t.Price = pi.PriceUsd
+						wrapped_t.PriceChange24 = pi.PriceChange24
+						wrapped_t.PriceTimestamp = time.Now()
+						n_updated++
+					}
 				}
-
-				if t1.Native {
-					// update wrapped token price if needed
-					if b.WTokenAddress != (common.Address{}) {
-						wrapped_t := w.GetTokenByAddress(b.ChainId, b.WTokenAddress)
-						if wrapped_t != nil && wrapped_t.PriceFeedParam == "" {
-							wrapped_t.Price = pi.PriceUsd
-							wrapped_t.PriceChange24 = pi.PriceChange24
-							wrapped_t.PriceTimestamp = time.Now()
-							n_updated++
-						}
-					}
-				} else {
-					// update native token price if needed
-					if t1.Address.Cmp(b.WTokenAddress) == 0 {
-						native_t, err := w.GetNativeToken(b)
-						if err != nil && native_t != nil && native_t.PriceFeedParam == "" {
-							native_t.Price = pi.PriceUsd
-							native_t.PriceChange24 = pi.PriceChange24
-							native_t.PriceTimestamp = time.Now()
-							n_updated++
-						}
-					}
+			} else if t.Address.Cmp(b.WTokenAddress) == 0 {
+				// This is wrapped token - update native token price if needed
+				native_t, _ := w.GetNativeToken(b)
+				if native_t != nil && native_t.PriceFeedParam == "" {
+					native_t.Price = pi.PriceUsd
+					native_t.PriceChange24 = pi.PriceChange24
+					native_t.PriceTimestamp = time.Now()
+					n_updated++
 				}
 			}
 		}

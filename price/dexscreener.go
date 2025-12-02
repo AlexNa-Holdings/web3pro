@@ -282,16 +282,14 @@ func DS_Update(w *cmn.Wallet) (int, error) { // number of pairs updated
 									n_updated++
 								}
 							}
-						} else {
+						} else if b.WTokenAddress.Cmp(t.Address) == 0 {
 							// update native token price if needed
-							if b.WTokenAddress.Cmp(t.Address) == 0 {
-								native_t, err := w.GetNativeToken(b)
-								if err != nil && native_t != nil && native_t.PriceFeedParam == "" {
-									native_t.Price = p.PriceUsd
-									native_t.PriceChange24 = p.PriceChange24
-									native_t.PriceTimestamp = time.Now()
-									n_updated++
-								}
+							native_t, _ := w.GetNativeToken(b)
+							if native_t != nil && native_t.PriceFeedParam == "" {
+								native_t.Price = p.PriceUsd
+								native_t.PriceChange24 = p.PriceChange24
+								native_t.PriceTimestamp = time.Now()
+								n_updated++
 							}
 						}
 

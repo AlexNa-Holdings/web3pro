@@ -127,6 +127,13 @@ func (p *LP_V4Pane) updateList() {
 			continue
 		}
 
+		// Skip positions with ignored tokens
+		t0 := w.GetTokenByAddress(resp.ChainId, resp.Currency0)
+		t1 := w.GetTokenByAddress(resp.ChainId, resp.Currency1)
+		if (t0 != nil && t0.Ignored) || (t1 != nil && t1.Ignored) {
+			continue
+		}
+
 		total_gain += resp.Gain0Dollars + resp.Gain1Dollars
 		total_liq += resp.Liquidity0Dollars + resp.Liquidity1Dollars
 		list = append(list, resp)

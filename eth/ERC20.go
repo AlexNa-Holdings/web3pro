@@ -25,51 +25,63 @@ func GetERC20TokenInfo(b *cmn.Blockchain, address common.Address) (string, strin
 		To: &address,
 	}
 
+	// Get name
 	msg.Data, err = ERC20_ABI.Pack("name")
 	if err != nil {
-		log.Error().Msgf("ConfigGetAddr: Cannot pack data. Error:(%v)", err)
+		log.Error().Msgf("GetERC20TokenInfo: Cannot pack name. Error:(%v)", err)
+		return "", "", 0, err
 	}
 	output, err := client.CallContract(context.Background(), msg, nil)
 	if err != nil {
-		log.Error().Msgf("ConfigGetAddr: Cannot call contract. Error:(%v)", err)
+		log.Error().Msgf("GetERC20TokenInfo: Cannot call name. Error:(%v)", err)
+		return "", "", 0, err
 	}
 	var decodedResult struct {
 		Result string
 	}
 	err = ERC20_ABI.UnpackIntoInterface(&decodedResult, "name", output)
 	if err != nil {
-		log.Error().Msgf("ConfigGetAddr:Cannot unpack data. Error:(%v)", err)
+		log.Error().Msgf("GetERC20TokenInfo: Cannot unpack name. Error:(%v)", err)
+		return "", "", 0, err
 	}
 	name := decodedResult.Result
 
+	// Get symbol
 	msg.Data, err = ERC20_ABI.Pack("symbol")
 	if err != nil {
-		log.Error().Msgf("ConfigGetAddr: Cannot pack data. Error:(%v)", err)
+		log.Error().Msgf("GetERC20TokenInfo: Cannot pack symbol. Error:(%v)", err)
+		return "", "", 0, err
 	}
 	output, err = client.CallContract(context.Background(), msg, nil)
 	if err != nil {
-		log.Error().Msgf("ConfigGetAddr: Cannot call contract. Error:(%v)", err)
+		log.Error().Msgf("GetERC20TokenInfo: Cannot call symbol. Error:(%v)", err)
+		return "", "", 0, err
 	}
 	err = ERC20_ABI.UnpackIntoInterface(&decodedResult, "symbol", output)
 	if err != nil {
-		log.Error().Msgf("ConfigGetAddr:Cannot unpack data. Error:(%v)", err)
+		log.Error().Msgf("GetERC20TokenInfo: Cannot unpack symbol. Error:(%v)", err)
+		return "", "", 0, err
 	}
 	symbol := decodedResult.Result
 
+	// Get decimals
 	msg.Data, err = ERC20_ABI.Pack("decimals")
 	if err != nil {
-		log.Error().Msgf("ConfigGetAddr: Cannot pack data. Error:(%v)", err)
+		log.Error().Msgf("GetERC20TokenInfo: Cannot pack decimals. Error:(%v)", err)
+		return "", "", 0, err
 	}
 	output, err = client.CallContract(context.Background(), msg, nil)
 	if err != nil {
-		log.Error().Msgf("ConfigGetAddr: Cannot call contract. Error:(%v)", err)
+		log.Error().Msgf("GetERC20TokenInfo: Cannot call decimals. Error:(%v)", err)
+		return "", "", 0, err
 	}
 	var decodedResultD struct {
 		Result uint8
 	}
 	err = ERC20_ABI.UnpackIntoInterface(&decodedResultD, "decimals", output)
 	if err != nil {
-		log.Error().Msgf("ConfigGetAddr:Cannot unpack data. Error:(%v)", err)
+		log.Error().Msgf("GetERC20TokenInfo: Cannot unpack decimals. Error:(%v)", err)
+		return "", "", 0, err
 	}
 	decimals := int(decodedResultD.Result)
 
