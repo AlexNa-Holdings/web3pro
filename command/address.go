@@ -16,6 +16,7 @@ func NewAddressCommand() *Command {
 	return &Command{
 		Command:      "address",
 		ShortCommand: "a",
+		Subcommands:  address_subcommands,
 		Usage: `
 Usage: address [COMMAND]
 
@@ -25,7 +26,7 @@ Commands:
   add [ADDRESS] [SIGNER] [PATH] - Add new address
   set [ADDRESS]                 - set the address
   list                          - List addresses
-  remove [ADDRESS]              - Remove address  
+  remove [ADDRESS]              - Remove address
 		`,
 		Help:             `Manage addresses`,
 		Process:          Address_Process,

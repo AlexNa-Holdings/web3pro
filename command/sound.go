@@ -14,8 +14,9 @@ func NewSoundCommand() *Command {
 	return &Command{
 		Command:      "sound",
 		ShortCommand: "",
+		Subcommands:  sound_subcommands,
 		Usage: `
-Usage: 
+Usage:
 
   sound  - List of sound alerts
   set    - Set sound alert

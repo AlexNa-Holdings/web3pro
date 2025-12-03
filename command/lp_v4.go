@@ -23,6 +23,7 @@ func NewLP_V4Command() *Command {
 	return &Command{
 		Command:      "lp_v4",
 		ShortCommand: "v4",
+		Subcommands:  lp_v4_subcommands,
 		Usage: `
 Usage: lp_v4 [COMMAND]
 

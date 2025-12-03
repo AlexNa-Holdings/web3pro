@@ -30,26 +30,15 @@ EXAMPLES:
 func Help_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 	options := []ui.ACOption{}
 	p := cmn.Split3(input)
-	command, subcommand, _ := p[0], p[1], p[2]
+	command, subcommand := p[0], p[1]
 
-	is_command := false
-	for _, cmd := range Commands {
-		if cmd.Command == subcommand || cmd.ShortCommand == subcommand {
-			is_command = true
-			break
+	// Suggest all commands (for "help <cmd>" completion)
+	for _, sc := range Commands {
+		if cmn.Contains(sc.Command, subcommand) || (sc.ShortCommand != "" && cmn.Contains(sc.ShortCommand, subcommand)) {
+			options = append(options, ui.ACOption{Name: sc.Command, Result: command + " " + sc.Command})
 		}
 	}
-
-	if !is_command {
-		for _, sc := range Commands {
-			if cmn.Contains(sc.Command, subcommand) || cmn.Contains(sc.ShortCommand, subcommand) {
-				options = append(options, ui.ACOption{Name: sc.Command, Result: command + " " + sc.Command})
-			}
-		}
-		return "command", &options, subcommand
-	}
-
-	return "", &[]ui.ACOption{}, ""
+	return "command", &options, subcommand
 }
 
 func Help_Process(cmd *Command, input string) {

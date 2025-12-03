@@ -45,6 +45,7 @@ var PredefinedBlockchains []Blockchain = []Blockchain{
 		ExplorerAPIUrl: "https://api.bscscan.com/api",
 		Currency:       "BNB",
 		WTokenAddress:  common.HexToAddress("0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c"),
+		Multicall:      common.HexToAddress("0xcA11bde05977b3631167028862bE2a173976CA11"),
 	},
 	{
 		Name:          "Monad",
@@ -69,6 +70,7 @@ var PredefinedBlockchains []Blockchain = []Blockchain{
 		ChainId:     43114,
 		ExplorerUrl: "https://snowtrace.io",
 		Currency:    "AVAX",
+		Multicall:   common.HexToAddress("0xcA11bde05977b3631167028862bE2a173976CA11"),
 	},
 	{
 		Name:          "Base",
@@ -86,6 +88,7 @@ var PredefinedBlockchains []Blockchain = []Blockchain{
 		ChainId:     250,
 		ExplorerUrl: "https://ftmscan.com",
 		Currency:    "FTM",
+		Multicall:   common.HexToAddress("0xcA11bde05977b3631167028862bE2a173976CA11"),
 	},
 	{
 		Name:        "Polygon Mainnet",
@@ -94,6 +97,7 @@ var PredefinedBlockchains []Blockchain = []Blockchain{
 		ChainId:     137,
 		ExplorerUrl: "https://polygonscan.com",
 		Currency:    "MATIC",
+		Multicall:   common.HexToAddress("0xcA11bde05977b3631167028862bE2a173976CA11"),
 	},
 	{
 		Name:        "Polygon zkEVM",
@@ -102,6 +106,7 @@ var PredefinedBlockchains []Blockchain = []Blockchain{
 		ChainId:     1101,
 		ExplorerUrl: "https://zkevm.polygonscan.com/",
 		Currency:    "ETH",
+		Multicall:   common.HexToAddress("0xcA11bde05977b3631167028862bE2a173976CA11"),
 	},
 	{
 		Name:        "Cronos Mainnet Beta",
@@ -110,6 +115,7 @@ var PredefinedBlockchains []Blockchain = []Blockchain{
 		ChainId:     25,
 		ExplorerUrl: "https://cronos.org/explorer",
 		Currency:    "CRO",
+		Multicall:   common.HexToAddress("0xcA11bde05977b3631167028862bE2a173976CA11"),
 	},
 	{
 		Name:        "Arbitrum One",
@@ -118,6 +124,7 @@ var PredefinedBlockchains []Blockchain = []Blockchain{
 		ChainId:     42161,
 		ExplorerUrl: "https://arbiscan.io,https://explorer.arbitrum.io",
 		Currency:    "ETH",
+		Multicall:   common.HexToAddress("0xcA11bde05977b3631167028862bE2a173976CA11"),
 	},
 	{
 		Name:        "Klaytn Mainnet Cypress",
@@ -149,10 +156,12 @@ var PredefinedBlockchains []Blockchain = []Blockchain{
 	},
 	{
 		Name:        "Celo Mainnet",
+		ShortName:   "CELO",
 		Url:         "https://forno.celo.org",
 		ChainId:     42220,
 		ExplorerUrl: "https://explorer.celo.org",
 		Currency:    "CELO",
+		Multicall:   common.HexToAddress("0xcA11bde05977b3631167028862bE2a173976CA11"),
 	},
 	{
 		Name:        "Metis Andromeda Mainnet",
@@ -163,24 +172,30 @@ var PredefinedBlockchains []Blockchain = []Blockchain{
 	},
 	{
 		Name:        "Optimism",
+		ShortName:   "OP",
 		Url:         "https://mainnet.optimism.io/",
 		ChainId:     10,
 		ExplorerUrl: "https://optimistic.etherscan.io",
 		Currency:    "ETH",
+		Multicall:   common.HexToAddress("0xcA11bde05977b3631167028862bE2a173976CA11"),
 	},
 	{
 		Name:        "Gnosis Chain formerly xDai",
+		ShortName:   "GNO",
 		Url:         "https://rpc.gnosischain.com",
 		ChainId:     100,
 		ExplorerUrl: "https://gnosisscan.io,https://gnosis.blockscout.com,https://gnosis.dex.guru",
 		Currency:    "xDAI",
+		Multicall:   common.HexToAddress("0xcA11bde05977b3631167028862bE2a173976CA11"),
 	},
 	{
 		Name:        "Moonriver",
+		ShortName:   "MOVR",
 		Url:         "https://rpc.api.moonriver.moonbeam.network",
 		ChainId:     1285,
 		ExplorerUrl: "https://moonriver.moonscan.io",
 		Currency:    "MOVR",
+		Multicall:   common.HexToAddress("0xcA11bde05977b3631167028862bE2a173976CA11"),
 	},
 	{
 		Name:        "Theta Mainnet",
@@ -212,10 +227,12 @@ var PredefinedBlockchains []Blockchain = []Blockchain{
 	},
 	{
 		Name:        "Moonbeam",
+		ShortName:   "GLMR",
 		Url:         "https://rpc.api.moonbeam.network",
 		ChainId:     1284,
 		ExplorerUrl: "https://moonbeam.moonscan.io",
 		Currency:    "GLMR",
+		Multicall:   common.HexToAddress("0xcA11bde05977b3631167028862bE2a173976CA11"),
 	},
 	{
 		Name:        "RSK Mainnet",
@@ -282,10 +299,12 @@ var PredefinedBlockchains []Blockchain = []Blockchain{
 	},
 	{
 		Name:        "zkSync Era Mainnet",
+		ShortName:   "zkS",
 		Url:         "https://zksync2-mainnet.zksync.io",
 		ChainId:     324,
 		ExplorerUrl: "https://explorer.zksync.io",
 		Currency:    "ETH",
+		Multicall:   common.HexToAddress("0xF9cda624FBC7e059355ce98a31693d299FACd963"),
 	},
 	{
 		Name:        "Fuse Mainnet",
@@ -611,10 +630,12 @@ var PredefinedBlockchains []Blockchain = []Blockchain{
 	},
 	{
 		Name:        "Arbitrum Nova",
+		ShortName:   "NOVA",
 		Url:         "https://nova.arbitrum.io/rpc",
 		ChainId:     42170,
 		ExplorerUrl: "https://nova-explorer.arbitrum.io",
 		Currency:    "ETH",
+		Multicall:   common.HexToAddress("0xcA11bde05977b3631167028862bE2a173976CA11"),
 	},
 	{
 		Name:        "ZKFair Mainnet",
@@ -681,10 +702,12 @@ var PredefinedBlockchains []Blockchain = []Blockchain{
 	},
 	{
 		Name:        "Scroll",
+		ShortName:   "SCR",
 		Url:         "https://rpc.scroll.io",
 		ChainId:     534352,
 		ExplorerUrl: "https://scrollscan.com/",
 		Currency:    "ETH",
+		Multicall:   common.HexToAddress("0xcA11bde05977b3631167028862bE2a173976CA11"),
 	},
 	{
 		Name:        "POA Network Core",
@@ -1129,10 +1152,12 @@ var PredefinedBlockchains []Blockchain = []Blockchain{
 	},
 	{
 		Name:        "Linea",
+		ShortName:   "LNA",
 		Url:         "https://linea.blockpi.network/v1/rpc/public",
 		ChainId:     59144,
 		ExplorerUrl: "https://lineascan.build/",
 		Currency:    "ETH",
+		Multicall:   common.HexToAddress("0xcA11bde05977b3631167028862bE2a173976CA11"),
 	},
 	{
 		Name:        "Electroneum Mainnet",
@@ -1150,10 +1175,12 @@ var PredefinedBlockchains []Blockchain = []Blockchain{
 	},
 	{
 		Name:        "Mantle",
+		ShortName:   "MNT",
 		Url:         "https://mantle-mainnet.public.blastapi.io",
 		ChainId:     5000,
 		ExplorerUrl: "https://explorer.mantle.xyz/",
 		Currency:    "MNT",
+		Multicall:   common.HexToAddress("0xcA11bde05977b3631167028862bE2a173976CA11"),
 	},
 	{
 		Name:        "bloxberg",

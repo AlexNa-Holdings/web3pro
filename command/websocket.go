@@ -14,8 +14,9 @@ func NewWebSocketCommand() *Command {
 	return &Command{
 		Command:      "websocket",
 		ShortCommand: "ws",
+		Subcommands:  websocket_subcommands,
 		Usage: `
-Usage: 
+Usage:
 
   websocket(ws)  - List of active browser connections
 

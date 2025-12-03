@@ -104,6 +104,23 @@ func (w *Wallet) _locked_AuditNativeTokens() {
 
 	eddited := false
 
+	// Migrate missing ShortNames and Multicall addresses from predefined chains
+	for _, b := range w.Blockchains {
+		for _, predefined := range PredefinedBlockchains {
+			if predefined.ChainId == b.ChainId {
+				if b.ShortName == "" && predefined.ShortName != "" {
+					b.ShortName = predefined.ShortName
+					eddited = true
+				}
+				if b.Multicall == (common.Address{}) && predefined.Multicall != (common.Address{}) {
+					b.Multicall = predefined.Multicall
+					eddited = true
+				}
+				break
+			}
+		}
+	}
+
 	// remove doubles
 	for i, t := range w.Tokens {
 		for j, tt := range w.Tokens {

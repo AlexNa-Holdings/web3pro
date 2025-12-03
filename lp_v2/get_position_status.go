@@ -322,12 +322,14 @@ func getPositionStatusViaMulticall(
 
 	if resp.Error != nil {
 		log.Warn().Err(resp.Error).Msg("Multicall failed for LP V2 position status")
+		bus.Send("ui", "notify-error", fmt.Sprintf("LP V2 multicall failed: %v", resp.Error))
 		return
 	}
 
 	results, ok := resp.Data.([][]byte)
 	if !ok || len(results) < 5 {
 		log.Warn().Msg("Invalid multicall response for LP V2 position status")
+		bus.Send("ui", "notify-error", "LP V2: Invalid multicall response")
 		return
 	}
 

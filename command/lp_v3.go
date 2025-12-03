@@ -27,14 +27,15 @@ func NewLP_V3Command() *Command {
 	return &Command{
 		Command:      "lp_v3",
 		ShortCommand: "v3",
+		Subcommands:  lp_v3_subcommands,
 		Usage: `
 Usage: liquidity v3 [COMMAND]
 
-Manage v3 liquidity 
+Manage v3 liquidity
 
 Commands:
   list                      - List v3 positions
-  providers				    - List v3 providers
+  providers                 - List v3 providers
   add [CHAIN] [ADDR] [NAME] - Add v3 provider
   remove [CHAIN] [ADDR]     - Remove v3 provider
   edit [CHAIN] [ADDR]       - Edit v3 provider

@@ -21,6 +21,7 @@ func NewStakingCommand() *Command {
 	return &Command{
 		Command:      "staking",
 		ShortCommand: "st",
+		Subcommands:  staking_subcommands,
 		Usage: `
 Usage: staking [COMMAND]
 

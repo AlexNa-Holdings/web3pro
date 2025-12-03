@@ -15,6 +15,7 @@ func NewThemeCommand() *Command {
 	return &Command{
 		Command:      "theme",
 		ShortCommand: "",
+		Subcommands:  theme_subcommands,
 		Usage: `
 Usage: theme [COMMAND]
 

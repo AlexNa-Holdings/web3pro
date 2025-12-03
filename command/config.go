@@ -9,6 +9,8 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/ui"
 )
 
+var config_subcommands = []string{"set"}
+
 var config_params = []string{
 	"verbosity",
 	"theme",
@@ -26,6 +28,7 @@ func NewConfigCommand() *Command {
 	return &Command{
 		Command:      "config",
 		ShortCommand: "cfg",
+		Subcommands:  config_subcommands,
 		Usage: `
 Usage: config [COMMAND]
 

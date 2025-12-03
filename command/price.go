@@ -20,8 +20,9 @@ func NewPriceCommand() *Command {
 	return &Command{
 		Command:      "price",
 		ShortCommand: "p",
+		Subcommands:  price_subcommands,
 		Usage: `
-Usage: 
+Usage:
 
   discover [BLOCKCHAIN] [TOKEN_ADDR]                   - Discover trading pairs for token
   set_feeder [BLOCKCHAIN] [PAIR_ADDR] [FEEDER] [PARAM} - Set price feeder for trading pair

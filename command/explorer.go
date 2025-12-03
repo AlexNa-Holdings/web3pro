@@ -16,6 +16,7 @@ func NewExplorerCommand() *Command {
 	return &Command{
 		Command:      "explorer",
 		ShortCommand: "x",
+		Subcommands:  explorer_subcommands,
 		Usage: `
 Usage: explorer [command] [params]
 

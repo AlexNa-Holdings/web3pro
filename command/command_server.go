@@ -14,6 +14,7 @@ type AutoCompleteFunc func(string) (string, *[]ui.ACOption, string)
 type Command struct {
 	Command          string
 	ShortCommand     string
+	Subcommands      []string
 	Usage            string
 	Help             string
 	Process          CommandProcessFunc

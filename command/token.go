@@ -22,6 +22,7 @@ func NewTokenCommand() *Command {
 	return &Command{
 		Command:      "token",
 		ShortCommand: "t",
+		Subcommands:  token_subcommands,
 		Usage: `
 Usage: token [COMMAND]
 

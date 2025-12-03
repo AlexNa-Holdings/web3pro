@@ -14,8 +14,9 @@ func NewUsbCommand() *Command {
 	return &Command{
 		Command:      "usb",
 		ShortCommand: "",
+		Subcommands:  usb_subcommands,
 		Usage: `
-Usage: 
+Usage:
 
   usb  - List usb devices
 

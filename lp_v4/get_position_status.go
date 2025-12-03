@@ -44,7 +44,7 @@ func getPositionStatus(msg *bus.Message) (*bus.B_LP_V4_GetPositionStatus_Respons
 		return nil, fmt.Errorf("blockchain not found")
 	}
 
-	// Always fetch fresh position data from chain
+	// Always fetch fresh position data from chain (uses multicall internally if available)
 	freshData, err := _getNftPosition(pos.ChainId, pos.Provider, pos.Owner, pos.NFT_Token)
 	if err != nil {
 		log.Error().Err(err).Msg("V4 getPositionStatus: failed to fetch fresh position data")
@@ -61,24 +61,44 @@ func getPositionStatus(msg *bus.Message) (*bus.B_LP_V4_GetPositionStatus_Respons
 	tickLower := freshData.TickLower
 	tickUpper := freshData.TickUpper
 
-	log.Info().Msgf("V4 getPositionStatus: NFT=%s, Currency0=%s, Currency1=%s, Fee=%d, TickSpacing=%d, Hook=%s",
+	log.Debug().Msgf("V4 getPositionStatus: NFT=%s, Currency0=%s, Currency1=%s, Fee=%d, TickSpacing=%d, Hook=%s",
 		req.NFT_Token.String(), currency0.Hex(), currency1.Hex(), fee, tickSpacing, hookAddress.Hex())
-	log.Info().Msgf("V4 getPositionStatus: TickLower=%d, TickUpper=%d, Liquidity=%s, StateView=%s",
+	log.Debug().Msgf("V4 getPositionStatus: TickLower=%d, TickUpper=%d, Liquidity=%s, StateView=%s",
 		tickLower, tickUpper, liquidity.String(), lp.StateView.Hex())
 
 	// Compute the actual poolId (keccak256 hash of PoolKey) for StateView
 	// The pos.PoolId is the truncated 25-byte version used by PositionManager
 	actualPoolId := computePoolId(currency0, currency1, fee, tickSpacing, hookAddress)
 
-	// Get slot0 from StateView to get current sqrtPriceX96 and tick
-	sqrtPriceX96, currentTick, err := getSlot0(pos.ChainId, lp.StateView, actualPoolId)
-	if err != nil {
-		log.Warn().Err(err).Msg("Failed to get slot0, using zero values")
-		sqrtPriceX96 = big.NewInt(0)
-		currentTick = 0
+	// Initialize variables
+	sqrtPriceX96 := big.NewInt(0)
+	currentTick := int64(0)
+	gain0 := big.NewInt(0)
+	gain1 := big.NewInt(0)
+
+	// Try to use multicall to batch all StateView RPC calls into one
+	if b.Multicall != (common.Address{}) && lp.StateView != (common.Address{}) {
+		sqrtPriceX96, currentTick, gain0, gain1 = getPositionStatusViaMulticall(
+			pos.ChainId, lp.StateView, actualPoolId, lp.Provider,
+			pos.NFT_Token, tickLower, tickUpper, liquidity,
+		)
+	} else {
+		// Fallback to individual calls if multicall not available
+		var err error
+		sqrtPriceX96, currentTick, err = getSlot0(pos.ChainId, lp.StateView, actualPoolId)
+		if err != nil {
+			log.Warn().Err(err).Msg("Failed to get slot0, using zero values")
+			sqrtPriceX96 = big.NewInt(0)
+			currentTick = 0
+		}
+
+		if lp.StateView != (common.Address{}) && liquidity != nil && liquidity.Cmp(big.NewInt(0)) > 0 {
+			gain0, gain1 = calculateV4Fees(pos.ChainId, lp.StateView, actualPoolId, lp.Provider,
+				pos.NFT_Token, tickLower, tickUpper, currentTick, liquidity)
+		}
 	}
 
-	log.Info().Msgf("V4 getPositionStatus: sqrtPriceX96=%s, currentTick=%d", sqrtPriceX96.String(), currentTick)
+	log.Debug().Msgf("V4 getPositionStatus: sqrtPriceX96=%s, currentTick=%d", sqrtPriceX96.String(), currentTick)
 
 	// Calculate whether position is in range
 	on := currentTick >= tickLower && currentTick < tickUpper
@@ -93,19 +113,10 @@ func getPositionStatus(msg *bus.Message) (*bus.B_LP_V4_GetPositionStatus_Respons
 			getSqrtPriceX96FromTick(tickLower),
 			getSqrtPriceX96FromTick(tickUpper),
 		)
-		log.Info().Msgf("V4 getPositionStatus: liquidity0=%s, liquidity1=%s", liquidity0.String(), liquidity1.String())
+		log.Debug().Msgf("V4 getPositionStatus: liquidity0=%s, liquidity1=%s", liquidity0.String(), liquidity1.String())
 	} else {
 		log.Warn().Msgf("V4 getPositionStatus: skipping calculateAmounts - Liquidity=%v, sqrtPriceX96=%s",
 			liquidity, sqrtPriceX96.String())
-	}
-
-	// Calculate uncollected fees
-	gain0 := big.NewInt(0)
-	gain1 := big.NewInt(0)
-
-	if lp.StateView != (common.Address{}) && liquidity != nil && liquidity.Cmp(big.NewInt(0)) > 0 {
-		gain0, gain1 = calculateV4Fees(pos.ChainId, lp.StateView, actualPoolId, lp.Provider,
-			pos.NFT_Token, tickLower, tickUpper, currentTick, liquidity)
 	}
 
 	// Calculate dollar values
@@ -548,4 +559,186 @@ func subIn256(x, y *big.Int) *big.Int {
 		return new(big.Int).Add(Q256, difference)
 	}
 	return difference
+}
+
+// getPositionStatusViaMulticall batches all StateView RPC calls into a single multicall
+// to reduce RPC calls from 5 to 1, avoiding rate limiting issues
+// Calls batched: getSlot0, getFeeGrowthGlobals, getTickInfo (lower), getTickInfo (upper), getPositionInfo
+func getPositionStatusViaMulticall(
+	chainId int,
+	stateView common.Address,
+	poolId [32]byte,
+	provider common.Address,
+	nftToken *big.Int,
+	tickLower, tickUpper int64,
+	liquidity *big.Int,
+) (sqrtPriceX96 *big.Int, currentTick int64, gain0, gain1 *big.Int) {
+	// Initialize with zero values
+	sqrtPriceX96 = big.NewInt(0)
+	currentTick = 0
+	gain0 = big.NewInt(0)
+	gain1 = big.NewInt(0)
+
+	// Pack all call data
+	slot0Data, err := V4_STATE_VIEW.Pack("getSlot0", poolId)
+	if err != nil {
+		log.Warn().Err(err).Msg("Failed to pack getSlot0 for multicall")
+		return
+	}
+
+	feeGrowthGlobalsData, err := V4_STATE_VIEW.Pack("getFeeGrowthGlobals", poolId)
+	if err != nil {
+		log.Warn().Err(err).Msg("Failed to pack getFeeGrowthGlobals for multicall")
+		return
+	}
+
+	tickLowerData, err := V4_STATE_VIEW.Pack("getTickInfo", poolId, big.NewInt(tickLower))
+	if err != nil {
+		log.Warn().Err(err).Msg("Failed to pack getTickInfo (lower) for multicall")
+		return
+	}
+
+	tickUpperData, err := V4_STATE_VIEW.Pack("getTickInfo", poolId, big.NewInt(tickUpper))
+	if err != nil {
+		log.Warn().Err(err).Msg("Failed to pack getTickInfo (upper) for multicall")
+		return
+	}
+
+	// Build salt for getPositionInfo
+	var salt [32]byte
+	tokenBytes := nftToken.Bytes()
+	copy(salt[32-len(tokenBytes):], tokenBytes)
+
+	positionInfoData, err := V4_STATE_VIEW.Pack("getPositionInfo", poolId, provider, big.NewInt(tickLower), big.NewInt(tickUpper), salt)
+	if err != nil {
+		log.Warn().Err(err).Msg("Failed to pack getPositionInfo for multicall")
+		return
+	}
+
+	// Build multicall request
+	calls := []bus.B_EthMultiCall_Call{
+		{To: stateView, Data: slot0Data},           // 0: getSlot0
+		{To: stateView, Data: feeGrowthGlobalsData}, // 1: getFeeGrowthGlobals
+		{To: stateView, Data: tickLowerData},        // 2: getTickInfo (lower)
+		{To: stateView, Data: tickUpperData},        // 3: getTickInfo (upper)
+		{To: stateView, Data: positionInfoData},     // 4: getPositionInfo
+	}
+
+	resp := bus.Fetch("eth", "multi-call", &bus.B_EthMultiCall{
+		ChainId: chainId,
+		Calls:   calls,
+	})
+
+	if resp.Error != nil {
+		log.Warn().Err(resp.Error).Msg("Multicall failed for LP V4 position status")
+		bus.Send("ui", "notify-error", fmt.Sprintf("LP V4 multicall failed: %v", resp.Error))
+		return
+	}
+
+	results, ok := resp.Data.([][]byte)
+	if !ok || len(results) < 5 {
+		log.Warn().Msg("Invalid multicall response for LP V4 position status")
+		bus.Send("ui", "notify-error", "LP V4: Invalid multicall response")
+		return
+	}
+
+	// Unpack getSlot0 (result 0)
+	if len(results[0]) >= 64 {
+		result, err := V4_STATE_VIEW.Unpack("getSlot0", results[0])
+		if err == nil && len(result) >= 2 {
+			if sqrtPrice, ok := result[0].(*big.Int); ok && sqrtPrice != nil {
+				sqrtPriceX96 = sqrtPrice
+			}
+			if tick, ok := result[1].(*big.Int); ok && tick != nil {
+				currentTick = tick.Int64()
+			}
+		}
+	}
+
+	// If no liquidity, no need to calculate fees
+	if liquidity == nil || liquidity.Cmp(big.NewInt(0)) <= 0 {
+		return
+	}
+
+	// Unpack getFeeGrowthGlobals (result 1)
+	feeGrowthGlobal0 := big.NewInt(0)
+	feeGrowthGlobal1 := big.NewInt(0)
+	if len(results[1]) >= 64 {
+		result, err := V4_STATE_VIEW.Unpack("getFeeGrowthGlobals", results[1])
+		if err == nil && len(result) >= 2 {
+			if fg0, ok := result[0].(*big.Int); ok && fg0 != nil {
+				feeGrowthGlobal0 = fg0
+			}
+			if fg1, ok := result[1].(*big.Int); ok && fg1 != nil {
+				feeGrowthGlobal1 = fg1
+			}
+		}
+	}
+
+	// Unpack getTickInfo (lower) (result 2)
+	tickLowerFeeGrowthOutside0 := big.NewInt(0)
+	tickLowerFeeGrowthOutside1 := big.NewInt(0)
+	if len(results[2]) >= 64 {
+		result, err := V4_STATE_VIEW.Unpack("getTickInfo", results[2])
+		if err == nil && len(result) >= 4 {
+			if fg0, ok := result[2].(*big.Int); ok && fg0 != nil {
+				tickLowerFeeGrowthOutside0 = fg0
+			}
+			if fg1, ok := result[3].(*big.Int); ok && fg1 != nil {
+				tickLowerFeeGrowthOutside1 = fg1
+			}
+		}
+	}
+
+	// Unpack getTickInfo (upper) (result 3)
+	tickUpperFeeGrowthOutside0 := big.NewInt(0)
+	tickUpperFeeGrowthOutside1 := big.NewInt(0)
+	if len(results[3]) >= 64 {
+		result, err := V4_STATE_VIEW.Unpack("getTickInfo", results[3])
+		if err == nil && len(result) >= 4 {
+			if fg0, ok := result[2].(*big.Int); ok && fg0 != nil {
+				tickUpperFeeGrowthOutside0 = fg0
+			}
+			if fg1, ok := result[3].(*big.Int); ok && fg1 != nil {
+				tickUpperFeeGrowthOutside1 = fg1
+			}
+		}
+	}
+
+	// Unpack getPositionInfo (result 4)
+	feeGrowthInside0Last := big.NewInt(0)
+	feeGrowthInside1Last := big.NewInt(0)
+	if len(results[4]) >= 64 {
+		result, err := V4_STATE_VIEW.Unpack("getPositionInfo", results[4])
+		if err == nil && len(result) >= 3 {
+			if fg0, ok := result[1].(*big.Int); ok && fg0 != nil {
+				feeGrowthInside0Last = fg0
+			}
+			if fg1, ok := result[2].(*big.Int); ok && fg1 != nil {
+				feeGrowthInside1Last = fg1
+			}
+		}
+	}
+
+	// Calculate fee growth inside
+	feeGrowthInside0, feeGrowthInside1 := getFeeGrowthInsideV4(
+		currentTick, tickLower, tickUpper,
+		feeGrowthGlobal0, feeGrowthGlobal1,
+		tickLowerFeeGrowthOutside0, tickLowerFeeGrowthOutside1,
+		tickUpperFeeGrowthOutside0, tickUpperFeeGrowthOutside1,
+	)
+
+	// Calculate uncollected fees
+	gain0 = subIn256(feeGrowthInside0, feeGrowthInside0Last)
+	gain1 = subIn256(feeGrowthInside1, feeGrowthInside1Last)
+
+	gain0.Mul(gain0, liquidity)
+	gain1.Mul(gain1, liquidity)
+
+	gain0.Div(gain0, Q128)
+	gain1.Div(gain1, Q128)
+
+	log.Debug().Msgf("V4 multicall fees: gain0=%s, gain1=%s", gain0.String(), gain1.String())
+
+	return
 }

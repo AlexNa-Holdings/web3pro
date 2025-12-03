@@ -19,6 +19,7 @@ func NewAppCommand() *Command {
 	return &Command{
 		Command:      "application",
 		ShortCommand: "app",
+		Subcommands:  app_subcommands,
 		Usage: `
 Usage: application [COMMAND]
 
@@ -26,14 +27,14 @@ Manage web applications (origins)
 
 Commands:
   list [URL]                - List web applications
-  remove [URL]              - Remove address  
-  remove_addr [URL] [ADDR] 	- Remove address access
+  remove [URL]              - Remove address
+  remove_addr [URL] [ADDR]  - Remove address access
   add_addr [URL] [ADDR]     - Add address access
   promote_addr [URL] [ADDR] - Promote address
   on                        - Open application window
   off                       - Close application window
   chain [URL] [CHAIN]       - Set blockchain
-  set [URL]  			    - Set web application
+  set [URL]                 - Set web application
 
 		`,
 		Help:             `Manage connected web applications`,

@@ -15,6 +15,7 @@ func NewBlockchainCommand() *Command {
 	return &Command{
 		Command:      "blockchain",
 		ShortCommand: "b",
+		Subcommands:  blockchain_subcommands,
 		Usage: `
 Usage: blockchain [COMMAND]
 
@@ -24,7 +25,7 @@ Commands:
   add [BLOCKCHAIN]    - Add new blockchain
   set [BLOCKCHAIN]    - Set blockchain
   list                - List blockchains
-  remove [BLOCKCHAIN] - Remove blockchain  
+  remove [BLOCKCHAIN] - Remove blockchain
 		`,
 		Help:             `Manage blockchains`,
 		Process:          Blockchain_Process,

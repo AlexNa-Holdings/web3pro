@@ -19,6 +19,7 @@ func NewSignerCommand() *Command {
 	return &Command{
 		Command:      "signer",
 		ShortCommand: "s",
+		Subcommands:  signer_subcommands,
 		Usage: `
 Usage: signer [COMMAND]
 

@@ -14,6 +14,7 @@ func NewWalletCommand() *Command {
 	return &Command{
 		Command:      "wallet",
 		ShortCommand: "w",
+		Subcommands:  wallet_subcommands,
 		Usage: `
 Usage: wallet [COMMAND]
 

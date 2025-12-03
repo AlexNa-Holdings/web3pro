@@ -21,6 +21,7 @@ func NewLP_V2Command() *Command {
 	return &Command{
 		Command:      "lp_v2",
 		ShortCommand: "v2",
+		Subcommands:  lp_v2_subcommands,
 		Usage: `
 Usage: lp_v2 [COMMAND]
 
