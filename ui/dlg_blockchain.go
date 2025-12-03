@@ -43,6 +43,7 @@ func DlgBlockchain(chain_id int) *gocui.Popup {
 			v.SetSelectList("explorer_api_type", cmn.EXPLORER_API_TYPES)
 			if b != nil {
 				v.SetInput("name", b.Name)
+				v.SetInput("short_name", b.ShortName)
 				v.SetInput("rpc", b.Url)
 				v.SetInput("chainid", strconv.Itoa(chain_id))
 				v.SetInput("explorer", b.ExplorerUrl)
@@ -97,6 +98,8 @@ func DlgBlockchain(chain_id int) *gocui.Popup {
 						break
 					}
 
+					shortName := v.GetInput("short_name")
+
 					wtoken_address := v.GetInput("wtoken_address")
 					if wtoken_address != "" {
 						if !common.IsHexAddress(wtoken_address) {
@@ -116,6 +119,7 @@ func DlgBlockchain(chain_id int) *gocui.Popup {
 					if chain_id != 0 {
 						err = w.EditBlockchain(&cmn.Blockchain{
 							Name:             name,
+							ShortName:        shortName,
 							Url:              rpc,
 							ChainId:          chain_id,
 							ExplorerUrl:      explorer,
@@ -141,6 +145,7 @@ func DlgBlockchain(chain_id int) *gocui.Popup {
 
 						err = w.AddBlockchain(&cmn.Blockchain{
 							Name:             name,
+							ShortName:        shortName,
 							Url:              rpc,
 							ChainId:          chainid,
 							ExplorerUrl:      explorer,
@@ -167,7 +172,8 @@ func DlgBlockchain(chain_id int) *gocui.Popup {
 			}
 		},
 		Template: `
-              Name: <input id:name size:32 value:""> 
+              Name: <input id:name size:32 value:"">
+        Short Name: <input id:short_name size:8 value:"">
                RPC: <input id:rpc size:43 value:""> 
 ` + chain_line + `
           Currency: <input id:currency size:16 value:""> 

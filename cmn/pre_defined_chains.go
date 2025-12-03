@@ -5,6 +5,7 @@ import "github.com/ethereum/go-ethereum/common"
 var PredefinedBlockchains []Blockchain = []Blockchain{
 	{
 		Name:            "Ethereum",
+		ShortName:       "ETH",
 		Url:             "https://eth-protect.rpc.blxrbdn.com",
 		ChainId:         1,
 		ExplorerUrl:     "https://etherscan.io",
@@ -16,6 +17,7 @@ var PredefinedBlockchains []Blockchain = []Blockchain{
 	},
 	{
 		Name:            "PulseChain",
+		ShortName:       "PLS",
 		Url:             "https://rpc.pulsechain.com",
 		ChainId:         369,
 		ExplorerUrl:     "https://scan.9inch.io/#/",
@@ -27,6 +29,7 @@ var PredefinedBlockchains []Blockchain = []Blockchain{
 	},
 	{
 		Name:        "PulseChain Testnet v4",
+		ShortName:   "tPLS",
 		Url:         "https://rpc.v4.testnet.pulsechain.com",
 		ChainId:     943,
 		ExplorerUrl: "https://scan.v4.testnet.pulsechain.com/#/",
@@ -35,6 +38,7 @@ var PredefinedBlockchains []Blockchain = []Blockchain{
 	},
 	{
 		Name:           "Binance Smart Chain Mainnet",
+		ShortName:      "BSC",
 		Url:            "https://bsc-dataseed1.binance.org",
 		ChainId:        56,
 		ExplorerUrl:    "https://bscscan.com",
@@ -44,6 +48,7 @@ var PredefinedBlockchains []Blockchain = []Blockchain{
 	},
 	{
 		Name:          "Monad",
+		ShortName:     "MON",
 		Url:           "https://rpc.monad.xyz",
 		ChainId:       143,
 		ExplorerUrl:   "https://monadscan.com",
@@ -59,6 +64,7 @@ var PredefinedBlockchains []Blockchain = []Blockchain{
 
 	{
 		Name:        "Avalanche C-Chain",
+		ShortName:   "AVAX",
 		Url:         "https://api.avax.network/ext/bc/C/rpc",
 		ChainId:     43114,
 		ExplorerUrl: "https://snowtrace.io",
@@ -66,6 +72,7 @@ var PredefinedBlockchains []Blockchain = []Blockchain{
 	},
 	{
 		Name:          "Base",
+		ShortName:     "BASE",
 		Url:           "https://mainnet.base.org",
 		ChainId:       8453,
 		ExplorerUrl:   "https://basescan.org",
@@ -74,6 +81,7 @@ var PredefinedBlockchains []Blockchain = []Blockchain{
 		Multicall:     common.HexToAddress("0xcA11bde05977b3631167028862bE2a173976CA11"),
 	}, {
 		Name:        "Fantom Opera",
+		ShortName:   "FTM",
 		Url:         "https://rpc.ftm.tools",
 		ChainId:     250,
 		ExplorerUrl: "https://ftmscan.com",
@@ -81,6 +89,7 @@ var PredefinedBlockchains []Blockchain = []Blockchain{
 	},
 	{
 		Name:        "Polygon Mainnet",
+		ShortName:   "POLY",
 		Url:         "https://polygon-rpc.com/",
 		ChainId:     137,
 		ExplorerUrl: "https://polygonscan.com",
@@ -88,6 +97,7 @@ var PredefinedBlockchains []Blockchain = []Blockchain{
 	},
 	{
 		Name:        "Polygon zkEVM",
+		ShortName:   "zkEV",
 		Url:         "https://polygon-zkevm.blockpi.network/v1/rpc/public",
 		ChainId:     1101,
 		ExplorerUrl: "https://zkevm.polygonscan.com/",
@@ -95,6 +105,7 @@ var PredefinedBlockchains []Blockchain = []Blockchain{
 	},
 	{
 		Name:        "Cronos Mainnet Beta",
+		ShortName:   "CRO",
 		Url:         "https://evm.cronos.org",
 		ChainId:     25,
 		ExplorerUrl: "https://cronos.org/explorer",
@@ -102,6 +113,7 @@ var PredefinedBlockchains []Blockchain = []Blockchain{
 	},
 	{
 		Name:        "Arbitrum One",
+		ShortName:   "ARB",
 		Url:         "https://arbitrum-one.publicnode.com",
 		ChainId:     42161,
 		ExplorerUrl: "https://arbiscan.io,https://explorer.arbitrum.io",

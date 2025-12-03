@@ -208,6 +208,12 @@ func (p *TokenPane) updateList() {
 		}
 
 		usdValue := t.Price * t.Float64(totalBalance)
+
+		// Skip tokens below minimum value threshold
+		if usdValue < cmn.Config.MinTokenValue {
+			continue
+		}
+
 		totalUSD += usdValue
 
 		list = append(list, &tokenInfo{
@@ -255,7 +261,7 @@ func (p *TokenPane) rebuildTemplate() string {
 		return "loading..."
 	}
 
-	temp := "Symbol   Chain        Price   Change   Balance       Value\n"
+	temp := "Symbol   Chain Price   Change   Balance       Value\n"
 
 	for i, ti := range token_info_list {
 		t := ti.Token
@@ -267,12 +273,7 @@ func (p *TokenPane) rebuildTemplate() string {
 
 		temp += fmt.Sprintf("%-8s ", t.Symbol)
 
-		// Truncate chain name with ellipsis if too long
-		chainName := b.Name
-		if len(chainName) > 12 {
-			chainName = chainName[:9] + "..."
-		}
-		temp += fmt.Sprintf("%-12s ", chainName)
+		temp += fmt.Sprintf("%-5s ", b.GetShortName())
 
 		if t.Price > 0 {
 			temp += cmn.TagDollarLink(t.Price)

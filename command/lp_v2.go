@@ -14,7 +14,7 @@ import (
 
 var lp_v2_subcommands = []string{
 	"on", "off", "add", "edit", "remove", "discover", "providers",
-	"list", "set_api_key",
+	"list", "set_api_key", "delete-position",
 }
 
 func NewLP_V2Command() *Command {
@@ -331,6 +331,69 @@ func LP_V2_Process(c *Command, input string) {
 				ui.Printf("The Graph API key set successfully\n")
 			}
 		}
+	case "delete-position":
+		// chain = chainId, factory = factory address, router = pair address, name = owner address
+		chainId, parseErr := strconv.Atoi(chain)
+		if parseErr != nil {
+			err = fmt.Errorf("invalid chain ID: %s", chain)
+			break
+		}
+		factoryAddr := common.HexToAddress(factory)
+		pairAddr := common.HexToAddress(router)
+		owner := common.HexToAddress(name)
+
+		// Find the position to get details for confirmation
+		pos := w.GetLP_V2Position(chainId, factoryAddr, pairAddr)
+		if pos == nil {
+			err = fmt.Errorf("position not found")
+			break
+		}
+
+		b := w.GetBlockchain(chainId)
+		bName := "Unknown"
+		if b != nil {
+			bName = b.Name
+		}
+
+		provider := w.GetLP_V2(chainId, factoryAddr)
+		providerName := "Unknown"
+		if provider != nil {
+			providerName = provider.Name
+		}
+
+		t0 := w.GetTokenByAddress(chainId, pos.Token0)
+		t1 := w.GetTokenByAddress(chainId, pos.Token1)
+		pairName := "???"
+		if t0 != nil && t1 != nil {
+			pairName = t0.Symbol + "/" + t1.Symbol
+		}
+
+		ownerAddr := w.GetAddress(owner)
+		ownerName := owner.Hex()[:10] + "..."
+		if ownerAddr != nil {
+			ownerName = ownerAddr.Name
+		}
+
+		bus.Send("ui", "popup", ui.DlgConfirm(
+			"Delete Position",
+			fmt.Sprintf(`
+<c>Are you sure you want to delete this position?</c>
+
+      Chain: %s
+   Provider: %s
+       Pair: %s
+      Owner: %s
+`, bName, providerName, pairName, ownerName),
+			func() bool {
+				err := w.RemoveLP_V2Position(owner, chainId, factoryAddr, pairAddr)
+				if err != nil {
+					ui.PrintErrorf("Error removing position: %v", err)
+					return false
+				}
+				ui.Notification.Show("Position removed")
+				bus.Send("lp_v2", "updated", nil)
+				return true
+			}))
 	default:
 		err = fmt.Errorf("unknown command: %s", subcommand)
 	}
@@ -461,6 +524,11 @@ func listV2(w *cmn.Wallet) {
 
 		cmn.AddFixedDollarLink(ui.Terminal.Screen, p.Liquidity0Dollars+p.Liquidity1Dollars, 10)
 
+		ui.Printf(" ")
+		ui.Terminal.Screen.AddLink(cmn.ICON_DELETE,
+			fmt.Sprintf("command lp_v2 delete-position %d '%s' '%s' '%s'",
+				p.ChainId, p.Factory.Hex(), p.Pair.Hex(), p.Owner.Hex()),
+			"Delete position", "")
 		ui.Printf(" %s\n", owner.Name)
 		ui.Flush()
 	}

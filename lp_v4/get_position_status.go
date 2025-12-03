@@ -125,7 +125,7 @@ func getPositionStatus(msg *bus.Message) (*bus.B_LP_V4_GetPositionStatus_Respons
 		gain1Dollars = t1.Float64(gain1) * t1.Price
 	}
 
-	pn := fmt.Sprintf("%s@%s", lp.Name, b.Currency)
+	pn := fmt.Sprintf("%s@%s", lp.Name, b.GetShortName())
 
 	return &bus.B_LP_V4_GetPositionStatus_Response{
 		Owner:             pos.Owner,

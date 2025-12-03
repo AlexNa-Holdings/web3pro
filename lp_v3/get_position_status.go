@@ -76,7 +76,7 @@ func get_position_status(msg *bus.Message) (*bus.B_LP_V3_GetPositionStatus_Respo
 		Liquidity1Dollars = t1.Float64(amount1) * t1.Price
 	}
 
-	pn := fmt.Sprintf("%s@%s", p.Name, b.Currency)
+	pn := fmt.Sprintf("%s@%s", p.Name, b.GetShortName())
 
 	return &bus.B_LP_V3_GetPositionStatus_Response{
 		On:                in_range,

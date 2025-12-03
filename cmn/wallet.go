@@ -875,11 +875,13 @@ func (w *Wallet) EditBlockchain(ub *Blockchain) error {
 	}
 
 	b.Name = ub.Name
+	b.ShortName = ub.ShortName
 	b.Url = ub.Url
 	b.Currency = ub.Currency
 	b.ExplorerUrl = ub.ExplorerUrl
 	b.ExplorerAPIToken = ub.ExplorerAPIToken
 	b.ExplorerAPIUrl = ub.ExplorerAPIUrl
+	b.ExplorerApiType = ub.ExplorerApiType
 	b.WTokenAddress = ub.WTokenAddress
 	b.Multicall = ub.Multicall
 

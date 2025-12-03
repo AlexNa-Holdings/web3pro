@@ -293,11 +293,15 @@ func (v *View) setRune(x, y int, ch rune, fgColor, bgColor Attribute) error {
 	} else if hs := v.findHotspot(x+v.ox, y+v.oy); hs != nil {
 		hsx := x + v.ox - hs.X
 
-		if (v.ControlInFocus != -1 && v.Controls[v.ControlInFocus].Hotspot == hs) ||
-			(y == v.cy-v.oy &&
-				hsx >= 0 && hsx < hs.L &&
-				v.cx+v.ox >= hs.X &&
-				v.cx+v.ox < hs.X+hs.L) {
+		// Only highlight if this hotspot is the activeHotspot AND either:
+		// - A control is in focus with this hotspot, OR
+		// - The cursor is on this hotspot
+		if v.activeHotspot == hs &&
+			((v.ControlInFocus != -1 && v.Controls[v.ControlInFocus].Hotspot == hs) ||
+				(y == v.cy-v.oy &&
+					hsx >= 0 && hsx < hs.L &&
+					v.cx+v.ox >= hs.X &&
+					v.cx+v.ox < hs.X+hs.L)) {
 			fgColor = hs.CellsHighligted[hsx].fgColor
 			bgColor = hs.CellsHighligted[hsx].bgColor
 			ch = hs.CellsHighligted[hsx].chr
@@ -379,6 +383,17 @@ func (v *View) SetCursor(x, y int) error {
 // Cursor returns the cursor position of the view.
 func (v *View) Cursor() (x, y int) {
 	return v.cx, v.cy
+}
+
+// ClearActiveHotspot clears the currently active hotspot and calls OnOverHotspot with nil
+func (v *View) ClearActiveHotspot() {
+	if v.activeHotspot != nil {
+		v.activeHotspot = nil
+		v.tainted = true // Mark view for redraw to remove highlight
+		if v.OnOverHotspot != nil {
+			v.OnOverHotspot(v, nil)
+		}
+	}
 }
 
 // SetOrigin sets the origin position of the view's internal buffer,

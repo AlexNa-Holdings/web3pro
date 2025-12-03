@@ -217,6 +217,16 @@ func (g *Gui) MousePosition() (x, y int) {
 	return g.mouseX, g.mouseY
 }
 
+// ClearAllActiveHotspots clears the active hotspot from all views
+func (g *Gui) ClearAllActiveHotspots() {
+	for _, v := range g.views {
+		v.ClearActiveHotspot()
+	}
+	if g.popup != nil && g.popup.View != nil {
+		g.popup.View.ClearActiveHotspot()
+	}
+}
+
 // SetRune writes a rune at the given point, relative to the top-left
 // corner of the terminal. It checks if the position is valid and applies
 // the given colors.
@@ -1137,7 +1147,19 @@ func (g *Gui) onKey(ev *gocuiEvent) error {
 
 		v, err := g.ViewByPosition(mx, my)
 		if err != nil {
+			// Mouse is outside all views - clear any active hotspots
+			g.ClearAllActiveHotspots()
 			break
+		}
+
+		// Clear hotspots from all other views - only one view should have active hotspot
+		for _, ov := range g.views {
+			if ov != v {
+				ov.ClearActiveHotspot()
+			}
+		}
+		if g.popup != nil && g.popup.View != nil && g.popup.View != v {
+			g.popup.View.ClearActiveHotspot()
 		}
 
 		if g.popup == nil ||

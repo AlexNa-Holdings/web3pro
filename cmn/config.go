@@ -24,32 +24,27 @@ var ConfPath = CONFIG_NAME
 var ConfigChanged = false
 
 type SConfig struct {
-	WalletName             string        `yaml:"wallet_name"`              // last wallet used
-	Verbosity              string        `yaml:"verbosity"`                // log verbosity
-	Theme                  string        `yaml:"theme"`                    // UI theme
-	BusTimeout             time.Duration `yaml:"bus_timeout"`              // timeout for bus requests
-	BusHardTimeout         time.Duration `yaml:"bus_hard_timeout"`         // hard timeout for bus requests
-	USBLog                 bool          `yaml:"usb_log"`                  // log USB events
-	USBBackgroundEnumerate bool          `yaml:"usb_background_enumerate"` // enumerate USB devices in background
-	PriceFeed              string        `yaml:"price_feed"`               // price feed
-	PriceUpdatePeriod      string        `yaml:"price_update_period"`      // price update period
-	Editor                 string        `yaml:"editor"`                   // editor
-	CMC_API_KEY            string        `yaml:"cmc_api_key"`              // CoinMarketCap API key
-	TheGraphAPIKey         string        `yaml:"thegraph_api_key"`         // The Graph API key for subgraph queries
-	TheGraphGateway        string        `yaml:"thegraph_gateway"`         // The Graph gateway URL (default: https://gateway.thegraph.com/api/{api-key}/subgraphs/id/)
+	Verbosity         string        `yaml:"verbosity"`           // log verbosity
+	Theme             string        `yaml:"theme"`               // UI theme
+	BusTimeout        time.Duration `yaml:"bus_timeout"`         // timeout for bus requests
+	BusHardTimeout    time.Duration `yaml:"bus_hard_timeout"`    // hard timeout for bus requests
+	PriceUpdatePeriod string        `yaml:"price_update_period"` // price update period
+	Editor            string        `yaml:"editor"`              // editor
+	CMC_API_KEY       string        `yaml:"cmc_api_key"`         // CoinMarketCap API key
+	TheGraphAPIKey    string        `yaml:"thegraph_api_key"`    // The Graph API key for subgraph queries
+	TheGraphGateway   string        `yaml:"thegraph_gateway"`    // The Graph gateway URL (default: https://gateway.thegraph.com/api/{api-key}/subgraphs/id/)
+	MinTokenValue     float64       `yaml:"min_token_value"`     // minimum USD value to show token in tokens pane
 }
 
 var Config *SConfig = &SConfig{ //Default config
-	WalletName:             "default",
-	Verbosity:              "debug",
-	Theme:                  "dark",
-	BusTimeout:             3 * time.Minute,
-	BusHardTimeout:         5 * time.Minute,
-	USBLog:                 false,
-	USBBackgroundEnumerate: true,
-	PriceUpdatePeriod:      "15m",
-	Editor:                 "code",
-	TheGraphGateway:        "https://gateway.thegraph.com/api/{api-key}/subgraphs/id/",
+	Verbosity:         "debug",
+	Theme:             "dark",
+	BusTimeout:        3 * time.Minute,
+	BusHardTimeout:    5 * time.Minute,
+	PriceUpdatePeriod: "15m",
+	Editor:            "code",
+	TheGraphGateway:   "https://gateway.thegraph.com/api/{api-key}/subgraphs/id/",
+	MinTokenValue:     1,
 }
 
 func InitConfig() {

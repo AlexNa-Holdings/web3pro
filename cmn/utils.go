@@ -265,6 +265,14 @@ func (b *Blockchain) ExplorerLink(address common.Address) string {
 
 }
 
+// GetShortName returns ShortName if set, otherwise falls back to Currency
+func (b *Blockchain) GetShortName() string {
+	if b.ShortName != "" {
+		return b.ShortName
+	}
+	return b.Currency
+}
+
 func (t *Token) Float64(value *big.Int) float64 {
 	return Float64(value, t.Decimals)
 }

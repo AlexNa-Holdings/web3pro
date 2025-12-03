@@ -98,6 +98,7 @@ type Address struct {
 
 type Blockchain struct {
 	Name             string         `json:"name"`
+	ShortName        string         `json:"short_name"` // 4 chars max, for display in LP listings
 	Url              string         `json:"url"`
 	ChainId          int            `json:"chain_id"`
 	ExplorerUrl      string         `json:"explorer_url"`
