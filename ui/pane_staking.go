@@ -85,7 +85,7 @@ func (p *StakingPane) SetView(x0, y0, x1, y1 int, overlap byte) {
 }
 
 func StakingLoop() {
-	ch := bus.Subscribe("wallet", "price", "staking")
+	ch := bus.Subscribe("wallet", "price", "staking", "eth")
 	defer bus.Unsubscribe(ch)
 
 	for msg := range ch {
@@ -97,7 +97,7 @@ func (p *StakingPane) processStaking(msg *bus.Message) {
 	switch msg.Topic {
 	case "wallet":
 		switch msg.Type {
-		case "open", "saved":
+		case "saved":
 			p.updateList()
 		}
 	case "price":
@@ -108,6 +108,11 @@ func (p *StakingPane) processStaking(msg *bus.Message) {
 	case "staking":
 		switch msg.Type {
 		case "updated":
+			p.updateList()
+		}
+	case "eth":
+		switch msg.Type {
+		case "connected":
 			p.updateList()
 		}
 	}
@@ -187,6 +192,16 @@ func (p *StakingPane) updateList() {
 			log.Trace().Err(balResp.Error).Msg("Staking: get-balance failed")
 		} else {
 			if balance, ok := balResp.Data.(*bus.B_Staking_GetBalance_Response); ok && balance.Balance != nil {
+				// If balance is 0, remove the position
+				if balance.Balance.Sign() == 0 {
+					log.Debug().Str("contract", s.Contract.Hex()).Str("owner", pos.Owner.Hex()).Uint64("validatorId", pos.ValidatorId).Msg("Staking: removing position with zero balance")
+					if pos.ValidatorId > 0 {
+						w.RemoveStakingPositionWithValidator(s.ChainId, s.Contract, pos.Owner, pos.ValidatorId)
+					} else {
+						w.RemoveStakingPosition(s.ChainId, s.Contract, pos.Owner)
+					}
+					continue
+				}
 				info.StakedAmount = balance.Balance
 				if stakedToken != nil {
 					info.StakedUSD = stakedToken.Price * stakedToken.Float64(balance.Balance)

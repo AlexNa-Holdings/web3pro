@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"math/big"
 	"sort"
+	"sync"
+	"time"
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
@@ -79,8 +81,12 @@ func (p *TokenPane) SetView(x0, y0, x1, y1 int, overlap byte) {
 	}
 }
 
+var tokenUpdateMu sync.Mutex
+var tokenUpdatePending bool
+var tokenLastUpdate time.Time
+
 func TokenLoop() {
-	ch := bus.Subscribe("wallet", "price")
+	ch := bus.Subscribe("wallet", "price", "eth")
 	defer bus.Unsubscribe(ch)
 
 	for msg := range ch {
@@ -92,15 +98,51 @@ func (p *TokenPane) processToken(msg *bus.Message) {
 	switch msg.Topic {
 	case "wallet":
 		switch msg.Type {
-		case "open", "saved":
-			p.updateList()
+		case "saved":
+			p.scheduleUpdate()
+		// Note: "open" is not handled here - we wait for eth "connected" events
 		}
 	case "price":
 		switch msg.Type {
 		case "updated":
-			p.updateList()
+			p.scheduleUpdate()
+		}
+	case "eth":
+		switch msg.Type {
+		case "connected":
+			// A blockchain connection was established, schedule update with debounce
+			p.scheduleUpdate()
 		}
 	}
+}
+
+// scheduleUpdate debounces updateList calls to avoid flooding RPC on startup
+func (p *TokenPane) scheduleUpdate() {
+	tokenUpdateMu.Lock()
+	defer tokenUpdateMu.Unlock()
+
+	// If update is already pending, skip
+	if tokenUpdatePending {
+		return
+	}
+
+	// Debounce: wait at least 2 seconds between updates
+	timeSinceLastUpdate := time.Since(tokenLastUpdate)
+	if timeSinceLastUpdate < 2*time.Second {
+		tokenUpdatePending = true
+		go func() {
+			time.Sleep(2*time.Second - timeSinceLastUpdate)
+			tokenUpdateMu.Lock()
+			tokenUpdatePending = false
+			tokenLastUpdate = time.Now()
+			tokenUpdateMu.Unlock()
+			p.updateList()
+		}()
+		return
+	}
+
+	tokenLastUpdate = time.Now()
+	go p.updateList()
 }
 
 func (p *TokenPane) updateList() {
@@ -148,18 +190,34 @@ func (p *TokenPane) updateList() {
 			}
 		}
 
-		// Handle native tokens (need individual balance calls)
-		for _, t := range nativeTokens {
-			totalBalance := big.NewInt(0)
+		// Handle native tokens with multicall batch
+		if len(nativeTokens) > 0 && len(w.Addresses) > 0 {
+			// Build batch queries for all addresses
+			queries := make([]*eth.NativeBalanceQuery, 0, len(w.Addresses))
 			for _, addr := range w.Addresses {
-				balance, err := eth.GetBalance(b, addr.Address)
-				if err != nil {
-					log.Debug().Err(err).Msgf("Error getting native balance for %s", t.Symbol)
-					continue
-				}
-				totalBalance.Add(totalBalance, balance)
+				queries = append(queries, &eth.NativeBalanceQuery{
+					Holder: addr.Address,
+				})
 			}
-			tokenBalances[t] = totalBalance
+
+			// Execute batch query
+			err := eth.GetNativeBalancesBatch(b, queries)
+			if err != nil {
+				log.Debug().Err(err).Msgf("Batch native balance query failed for chain %d", chainId)
+			}
+
+			// Sum up balances for all addresses
+			totalBalance := big.NewInt(0)
+			for _, q := range queries {
+				if q.Balance != nil {
+					totalBalance.Add(totalBalance, q.Balance)
+				}
+			}
+
+			// Assign the same total to all native tokens on this chain (there's typically just one)
+			for _, t := range nativeTokens {
+				tokenBalances[t] = new(big.Int).Set(totalBalance)
+			}
 		}
 
 		// Handle ERC20 tokens with multicall

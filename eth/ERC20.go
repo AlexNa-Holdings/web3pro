@@ -17,7 +17,7 @@ func GetERC20TokenInfo(b *cmn.Blockchain, address common.Address) (string, strin
 
 	client, err := getEthClient(b)
 	if err != nil {
-		log.Error().Msgf("GetERC20TokenInfo: Failed to open client: %v", err)
+		log.Error().Err(err).Str("chain", b.GetShortName()).Msg("GetERC20TokenInfo: Failed to open client")
 		return "", "", 0, err
 	}
 
@@ -91,13 +91,16 @@ func GetERC20TokenInfo(b *cmn.Blockchain, address common.Address) (string, strin
 func GetERC20Balance(b *cmn.Blockchain, t *cmn.Token, address common.Address) (*big.Int, error) {
 
 	if t.ChainId != b.ChainId {
-		log.Error().Msgf("GetERC20Balance: Token blockchain mismatch. Token:(%d) Blockchain:(%d)", t.ChainId, b.ChainId)
+		log.Error().Str("chain", b.GetShortName()).Msgf("GetERC20Balance: Token blockchain mismatch. Token:(%d) Blockchain:(%d)", t.ChainId, b.ChainId)
 		return nil, nil
 	}
 
+	// Apply rate limiting for direct RPC call
+	acquireRateLimit(b.ChainId)
+
 	client, err := getEthClient(b)
 	if err != nil {
-		log.Error().Msgf("GetERC20Balance: Failed to open client: %v", err)
+		log.Error().Err(err).Str("chain", b.GetShortName()).Msg("GetERC20Balance: Failed to open client")
 		return nil, err
 	}
 
@@ -112,8 +115,9 @@ func GetERC20Balance(b *cmn.Blockchain, t *cmn.Token, address common.Address) (*
 	}
 
 	output, err := client.CallContract(context.Background(), msg, nil)
+	handleRPCResult(b.ChainId, err)
 	if err != nil {
-		log.Error().Msgf("GetERC20Balance: Cannot call contract. Error:(%v)", err)
+		log.Error().Err(err).Str("chain", b.GetShortName()).Str("token", t.Symbol).Msg("GetERC20Balance: Cannot call contract")
 		return nil, err
 	}
 
@@ -151,13 +155,13 @@ func BuildTxERC20Transfer(b *cmn.Blockchain, t *cmn.Token, s *cmn.Signer, from *
 
 	client, err := getEthClient(b)
 	if err != nil {
-		log.Error().Msgf("BuildTxTransfer: Failed to open client: %v", err)
+		log.Error().Err(err).Str("chain", b.GetShortName()).Msg("BuildTxERC20Transfer: Failed to open client")
 		return nil, err
 	}
 
 	nonce, err := client.PendingNonceAt(context.Background(), from.Address)
 	if err != nil {
-		log.Error().Msgf("BuildTxTransfer: Cannot get nonce. Error:(%v)", err)
+		log.Error().Err(err).Str("chain", b.GetShortName()).Msg("BuildTxERC20Transfer: Cannot get nonce")
 		return nil, err
 	}
 
@@ -168,7 +172,7 @@ func BuildTxERC20Transfer(b *cmn.Blockchain, t *cmn.Token, s *cmn.Signer, from *
 		Gas:  0,
 	})
 	if err != nil {
-		log.Error().Msgf("BuildTxERC20Transfer: Cannot estimate gas. Error:(%v)", err)
+		log.Error().Err(err).Str("chain", b.GetShortName()).Msg("BuildTxERC20Transfer: Cannot estimate gas")
 		return nil, err
 	}
 
@@ -183,14 +187,14 @@ func BuildTxERC20Transfer(b *cmn.Blockchain, t *cmn.Token, s *cmn.Signer, from *
 
 	priorityFee, err := client.SuggestGasTipCap(context.Background())
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to suggest gas tip cap")
+		log.Error().Err(err).Str("chain", b.GetShortName()).Msg("BuildTxERC20Transfer: Failed to suggest gas tip cap")
 		return nil, err
 	}
 
 	// Get the latest block to determine the base fee
 	block, err := client.BlockByNumber(context.Background(), nil) // Get the latest block
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to get the latest block")
+		log.Error().Err(err).Str("chain", b.GetShortName()).Msg("BuildTxERC20Transfer: Failed to get the latest block")
 		return nil, err
 	}
 
@@ -259,7 +263,7 @@ func GetERC20BalancesBatch(b *cmn.Blockchain, queries []*BalanceQuery) error {
 	})
 
 	if resp.Error != nil {
-		log.Debug().Err(resp.Error).Msgf("GetERC20BalancesBatch: multicall failed for chain %d, falling back to individual calls", b.ChainId)
+		log.Debug().Err(resp.Error).Str("chain", b.GetShortName()).Msg("GetERC20BalancesBatch: multicall failed, falling back to individual calls")
 		// Fallback to individual calls
 		for _, q := range queries {
 			if q.Token.Native {
@@ -307,6 +311,103 @@ func GetERC20BalancesBatch(b *cmn.Blockchain, queries []*BalanceQuery) error {
 		err := ERC20_ABI.UnpackIntoInterface(&decodedResult, "balanceOf", result)
 		if err != nil {
 			log.Debug().Err(err).Msgf("GetERC20BalancesBatch: Cannot unpack balance for %s", queries[i].Token.Symbol)
+			queries[i].Balance = big.NewInt(0)
+			continue
+		}
+		queries[i].Balance = decodedResult.Balance
+	}
+
+	return nil
+}
+
+// NativeBalanceQuery represents a single native balance query
+type NativeBalanceQuery struct {
+	Holder  common.Address
+	Balance *big.Int // Result will be stored here
+}
+
+// GetNativeBalancesBatch fetches multiple native balances in a single multicall
+// Uses multicall's getEthBalance function
+func GetNativeBalancesBatch(b *cmn.Blockchain, queries []*NativeBalanceQuery) error {
+	if len(queries) == 0 {
+		return nil
+	}
+
+	// Check if multicall is available
+	if b.Multicall == (common.Address{}) {
+		// Fallback to individual calls
+		for _, q := range queries {
+			balance, err := GetBalance(b, q.Holder)
+			if err != nil {
+				log.Debug().Err(err).Str("chain", b.GetShortName()).Str("holder", q.Holder.Hex()).Msg("GetNativeBalancesBatch: fallback GetBalance failed")
+				q.Balance = big.NewInt(0)
+			} else {
+				q.Balance = balance
+			}
+		}
+		return nil
+	}
+
+	// Prepare multicall data - call getEthBalance on the multicall contract itself
+	calls := make([]bus.B_EthMultiCall_Call, len(queries))
+	for i, q := range queries {
+		data, err := MULTICALL2_ABI.Pack("getEthBalance", q.Holder)
+		if err != nil {
+			log.Error().Err(err).Str("chain", b.GetShortName()).Msg("GetNativeBalancesBatch: Cannot pack getEthBalance")
+			continue
+		}
+
+		calls[i] = bus.B_EthMultiCall_Call{
+			To:   b.Multicall, // Call the multicall contract itself
+			Data: data,
+		}
+	}
+
+	// Execute multicall
+	resp := bus.Fetch("eth", "multi-call", &bus.B_EthMultiCall{
+		ChainId: b.ChainId,
+		Calls:   calls,
+	})
+
+	if resp.Error != nil {
+		log.Debug().Err(resp.Error).Str("chain", b.GetShortName()).Msg("GetNativeBalancesBatch: multicall failed, falling back to individual calls")
+		// Fallback to individual calls
+		for _, q := range queries {
+			balance, err := GetBalance(b, q.Holder)
+			if err != nil {
+				log.Debug().Err(err).Str("chain", b.GetShortName()).Str("holder", q.Holder.Hex()).Msg("GetNativeBalancesBatch: fallback GetBalance failed")
+				q.Balance = big.NewInt(0)
+			} else {
+				q.Balance = balance
+			}
+		}
+		return nil
+	}
+
+	results, ok := resp.Data.([][]byte)
+	if !ok {
+		log.Error().Str("chain", b.GetShortName()).Msg("GetNativeBalancesBatch: Cannot convert multicall result")
+		return errors.New("cannot convert multicall result")
+	}
+
+	if len(results) != len(queries) {
+		log.Error().Str("chain", b.GetShortName()).Msgf("GetNativeBalancesBatch: result count mismatch: got %d, expected %d", len(results), len(queries))
+		return errors.New("multicall result count mismatch")
+	}
+
+	// Unpack results
+	for i, result := range results {
+		if len(result) == 0 {
+			queries[i].Balance = big.NewInt(0)
+			continue
+		}
+
+		var decodedResult struct {
+			Balance *big.Int
+		}
+		err := MULTICALL2_ABI.UnpackIntoInterface(&decodedResult, "getEthBalance", result)
+		if err != nil {
+			log.Debug().Err(err).Str("chain", b.GetShortName()).Str("holder", queries[i].Holder.Hex()).Msg("GetNativeBalancesBatch: Cannot unpack balance")
 			queries[i].Balance = big.NewInt(0)
 			continue
 		}

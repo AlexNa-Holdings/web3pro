@@ -108,6 +108,7 @@ type Blockchain struct {
 	Currency         string         `json:"currency"`
 	WTokenAddress    common.Address `json:"wrapped_native_token_address"`
 	Multicall        common.Address `json:"multicall"`
+	RPCRateLimit     int            `json:"rpc_rate_limit,omitempty"` // auto-tuned RPC calls per second
 }
 
 var EXPLORER_API_TYPES = []string{"etherscan", "blockscout"}

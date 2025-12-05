@@ -375,3 +375,12 @@ func Flush() {
 		return nil
 	})
 }
+
+// GetTerminalWidth returns the width of the terminal screen in characters
+func GetTerminalWidth() int {
+	if Terminal.Screen == nil {
+		return 80 // default fallback
+	}
+	w, _ := Terminal.Screen.Size()
+	return w
+}

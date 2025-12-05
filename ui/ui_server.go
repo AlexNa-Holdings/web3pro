@@ -122,6 +122,7 @@ func process(msg *bus.Message) {
 		}
 	case "notify-error":
 		if text, ok := msg.Data.(string); ok {
+			log.Warn().Msg(text) // Log for later retrieval via 'errors' command
 			Notification.ShowEx(text, true)
 		}
 	case "open": // open wallet

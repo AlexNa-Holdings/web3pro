@@ -29,7 +29,7 @@ func call(msg *bus.Message) (string, error) {
 
 	c, ok := cons[b.ChainId]
 	if !ok {
-		log.Error().Msgf("SendSignedTx: Client not found for chainId: %d", b.ChainId)
+		log.Error().Str("chain", b.GetShortName()).Msg("call: Client not found")
 		return "", fmt.Errorf("client not found for chainId: %d", b.ChainId)
 	}
 
@@ -42,7 +42,7 @@ func call(msg *bus.Message) (string, error) {
 
 	output, err := c.CallContract(context.Background(), call_msg, nil)
 	if err != nil {
-		log.Error().Msgf("call: Cannot call contract. Error:(%v)", err)
+		log.Error().Err(err).Str("chain", b.GetShortName()).Msg("call: Cannot call contract")
 		return "", err
 	}
 

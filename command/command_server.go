@@ -46,6 +46,7 @@ func Init() {
 		NewLP_V4Command(),
 		NewStakingCommand(),
 		NewConfigCommand(),
+		NewErrorsCommand(),
 	}
 
 	go func() {

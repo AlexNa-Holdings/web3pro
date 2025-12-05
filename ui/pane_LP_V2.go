@@ -68,7 +68,7 @@ func (p *LP_V2Pane) SetView(x0, y0, x1, y1 int, overlap byte) {
 }
 
 func LP_V2Loop() {
-	ch := bus.Subscribe("wallet", "price")
+	ch := bus.Subscribe("wallet", "price", "eth")
 	defer bus.Unsubscribe(ch)
 
 	for msg := range ch {
@@ -80,12 +80,17 @@ func (p *LP_V2Pane) processV2(msg *bus.Message) {
 	switch msg.Topic {
 	case "wallet":
 		switch msg.Type {
-		case "open", "saved":
+		case "saved":
 			p.updateList()
 		}
 	case "price":
 		switch msg.Type {
 		case "updated":
+			p.updateList()
+		}
+	case "eth":
+		switch msg.Type {
+		case "connected":
 			p.updateList()
 		}
 	}

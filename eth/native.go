@@ -15,6 +15,9 @@ import (
 
 func GetBalance(b *cmn.Blockchain, address common.Address) (*big.Int, error) {
 
+	// Apply rate limiting for direct RPC call
+	acquireRateLimit(b.ChainId)
+
 	client, err := getEthClient(b)
 	if err != nil {
 		log.Error().Msgf("GetBalance: Failed to open client: %v", err)
@@ -22,6 +25,7 @@ func GetBalance(b *cmn.Blockchain, address common.Address) (*big.Int, error) {
 	}
 
 	balance, err := client.BalanceAt(context.Background(), address, nil)
+	handleRPCResult(b.ChainId, err)
 	if err != nil {
 		log.Error().Msgf("GetBalance: Cannot get balance. Error:(%v)", err)
 		return nil, err

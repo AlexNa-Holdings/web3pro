@@ -34,7 +34,7 @@ func multiCall(msg *bus.Message) ([][]byte, error) {
 
 	c, ok := cons[b.ChainId]
 	if !ok {
-		log.Error().Msgf("multiCall: Client not found for chainId: %d", b.ChainId)
+		log.Error().Str("chain", b.GetShortName()).Msg("multiCall: Client not found")
 		return nil, fmt.Errorf("client not found for chainId: %d", b.ChainId)
 	}
 
@@ -54,7 +54,7 @@ func multiCall(msg *bus.Message) ([][]byte, error) {
 
 	data, err := MULTICALL2_ABI.Pack("aggregate", callArgs)
 	if err != nil {
-		log.Error().Msgf("multicall: Cannot pack multicall data. Error:(%v)", err)
+		log.Error().Err(err).Str("chain", b.GetShortName()).Msg("multicall: Cannot pack multicall data")
 		return nil, err
 	}
 
@@ -67,19 +67,19 @@ func multiCall(msg *bus.Message) ([][]byte, error) {
 
 	output, err := c.CallContract(context.Background(), call_msg, nil)
 	if err != nil {
-		log.Error().Msgf("multicall: Cannot call contract. Error:(%v)", err)
+		log.Error().Err(err).Str("chain", b.GetShortName()).Msg("multicall: Cannot call contract")
 		return nil, err
 	}
 
 	values, err := MULTICALL2_ABI.Unpack("aggregate", output)
 	if err != nil {
-		log.Error().Msgf("multicall: Cannot unpack aggregate data. Error: (%v)", err)
+		log.Error().Err(err).Str("chain", b.GetShortName()).Msg("multicall: Cannot unpack aggregate data")
 		return nil, err
 	}
 
 	returnData, ok := values[1].([][]byte)
 	if !ok {
-		log.Error().Msgf("multicall: Cannot convert return data to [][]byte")
+		log.Error().Str("chain", b.GetShortName()).Msg("multicall: Cannot convert return data to [][]byte")
 		return nil, errors.New("cannot convert return data to [][]byte")
 	}
 
