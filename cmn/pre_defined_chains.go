@@ -75,7 +75,7 @@ var PredefinedBlockchains []Blockchain = []Blockchain{
 	{
 		Name:          "Base",
 		ShortName:     "BASE",
-		Url:           "https://mainnet.base.org",
+		Url:           "https://base.publicnode.com",
 		ChainId:       8453,
 		ExplorerUrl:   "https://basescan.org",
 		Currency:      "ETH",

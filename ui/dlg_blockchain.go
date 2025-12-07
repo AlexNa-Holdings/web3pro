@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/AlexNa-Holdings/web3pro/cmn"
+	"github.com/AlexNa-Holdings/web3pro/eth"
 	"github.com/AlexNa-Holdings/web3pro/gocui"
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -41,6 +42,7 @@ func DlgBlockchain(chain_id int) *gocui.Popup {
 		OnOverHotspot: cmn.StandardOnOverHotspot,
 		OnOpen: func(v *gocui.View) {
 			v.SetSelectList("explorer_api_type", cmn.EXPLORER_API_TYPES)
+			v.SetSelectList("rpc_rate_mode", []string{"auto", "fixed"})
 			if b != nil {
 				v.SetInput("name", b.Name)
 				v.SetInput("short_name", b.ShortName)
@@ -57,6 +59,23 @@ func DlgBlockchain(chain_id int) *gocui.Popup {
 				}
 				v.SetInput("explorer_api_url", b.ExplorerAPIUrl)
 				v.SetInput("explorer_api_type", b.ExplorerApiType)
+				// Rate limit: default to auto mode
+				rpcRateAuto := b.RPCRateAuto || b.RPCRateLimit == 0
+				if rpcRateAuto {
+					v.SetInput("rpc_rate_mode", "auto")
+				} else {
+					v.SetInput("rpc_rate_mode", "fixed")
+				}
+				// Show current rate (either persisted or live from rate limiter)
+				currentRate := eth.GetCurrentRateLimit(chain_id)
+				if b.RPCRateLimit > 0 {
+					currentRate = b.RPCRateLimit
+				}
+				v.SetInput("rpc_rate_limit", strconv.Itoa(currentRate))
+			} else {
+				// New blockchain: default to auto mode with rate 5
+				v.SetInput("rpc_rate_mode", "auto")
+				v.SetInput("rpc_rate_limit", "5")
 			}
 		},
 		OnClickHotspot: func(v *gocui.View, hs *gocui.Hotspot) {
@@ -113,6 +132,17 @@ func DlgBlockchain(chain_id int) *gocui.Popup {
 
 					multicall := v.GetInput("multicall")
 
+					rpcRateMode := v.GetInput("rpc_rate_mode")
+					rpcRateAuto := rpcRateMode == "auto"
+					rpcRateLimitStr := v.GetInput("rpc_rate_limit")
+					rpcRateLimit := 5 // default
+					if rpcRateLimitStr != "" {
+						rpcRateLimit, _ = strconv.Atoi(rpcRateLimitStr)
+						if rpcRateLimit < 1 {
+							rpcRateLimit = 1
+						}
+					}
+
 					wta := common.HexToAddress(wtoken_address)
 
 					var err error
@@ -129,6 +159,8 @@ func DlgBlockchain(chain_id int) *gocui.Popup {
 							Currency:         currency,
 							WTokenAddress:    wta,
 							Multicall:        common.HexToAddress(multicall),
+							RPCRateLimit:     rpcRateLimit,
+							RPCRateAuto:      rpcRateAuto,
 						})
 					} else {
 						var chainid int
@@ -155,6 +187,8 @@ func DlgBlockchain(chain_id int) *gocui.Popup {
 							Currency:         currency,
 							WTokenAddress:    wta,
 							Multicall:        common.HexToAddress(multicall),
+							RPCRateLimit:     rpcRateLimit,
+							RPCRateAuto:      rpcRateAuto,
 						})
 					}
 
@@ -176,7 +210,8 @@ func DlgBlockchain(chain_id int) *gocui.Popup {
         Short Name: <input id:short_name size:8 value:"">
                RPC: <input id:rpc size:43 value:""> 
 ` + chain_line + `
-          Currency: <input id:currency size:16 value:""> 
+          Currency: <input id:currency size:16 value:"">
+    RPC Rate Limit: <select id:rpc_rate_mode size:6> <input id:rpc_rate_limit size:4 value:""> calls/sec
 Wrapped Token Addr: <input id:wtoken_address size:43 value:""> 
 Multicall Contract: <input id:multicall size:43 value:"">
 <line text:Explorer> 

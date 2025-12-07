@@ -26,14 +26,19 @@ func BalanceOf(b *cmn.Blockchain, t *cmn.Token, address common.Address) (*big.In
 
 func SendSignedTx(signedTx *types.Transaction) (string, error) {
 
-	c, ok := cons[int(signedTx.ChainId().Int64())]
+	chainId := int(signedTx.ChainId().Int64())
+	c, ok := cons[chainId]
 	if !ok {
 		log.Error().Msgf("SendSignedTx: Client not found for chainId: %v", signedTx.ChainId())
 		return "", fmt.Errorf("client not found for chainId: %v", signedTx.ChainId())
 	}
 
+	// Apply rate limiting
+	acquireRateLimit(chainId)
+
 	// Send the transaction
 	err := c.SendTransaction(context.Background(), signedTx)
+	handleRPCResult(chainId, err)
 	if err != nil {
 		log.Error().Err(err).Msgf("SendSignedTx: Cannot send transaction")
 		return "", err

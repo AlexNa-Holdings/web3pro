@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
@@ -18,6 +20,10 @@ type LP_V2Pane struct {
 }
 
 var lp_v2_info_list []*bus.B_LP_V2_GetPositionStatus_Response = make([]*bus.B_LP_V2_GetPositionStatus_Response, 0)
+
+var lpV2UpdateMu sync.Mutex
+var lpV2UpdatePending bool
+var lpV2LastUpdate time.Time
 
 var LP_V2 LP_V2Pane = LP_V2Pane{
 	PaneDescriptor: PaneDescriptor{
@@ -81,19 +87,48 @@ func (p *LP_V2Pane) processV2(msg *bus.Message) {
 	case "wallet":
 		switch msg.Type {
 		case "saved":
-			p.updateList()
+			p.scheduleUpdate()
 		}
 	case "price":
 		switch msg.Type {
 		case "updated":
-			p.updateList()
+			p.scheduleUpdate()
 		}
 	case "eth":
 		switch msg.Type {
 		case "connected":
-			p.updateList()
+			p.scheduleUpdate()
 		}
 	}
+}
+
+// scheduleUpdate debounces updateList calls to avoid flooding RPC on startup
+func (p *LP_V2Pane) scheduleUpdate() {
+	lpV2UpdateMu.Lock()
+	defer lpV2UpdateMu.Unlock()
+
+	// If update is already pending, skip
+	if lpV2UpdatePending {
+		return
+	}
+
+	// Debounce: wait at least 2 seconds between updates
+	timeSinceLastUpdate := time.Since(lpV2LastUpdate)
+	if timeSinceLastUpdate < 2*time.Second {
+		lpV2UpdatePending = true
+		go func() {
+			time.Sleep(2*time.Second - timeSinceLastUpdate)
+			lpV2UpdateMu.Lock()
+			lpV2UpdatePending = false
+			lpV2LastUpdate = time.Now()
+			lpV2UpdateMu.Unlock()
+			p.updateList()
+		}()
+		return
+	}
+
+	lpV2LastUpdate = time.Now()
+	go p.updateList()
 }
 
 func (p *LP_V2Pane) updateList() {

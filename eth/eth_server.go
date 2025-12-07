@@ -31,6 +31,9 @@ type rateLimiter struct {
 	maxTokens     int
 	lastFill      time.Time
 	lastSuccess   time.Time // last successful call without 429
+	backoffUntil  time.Time // don't make any calls until this time
+	autoMode      bool      // true = auto-tune rate, false = fixed rate
+	lastCallTime  time.Time // when last RPC call was made
 	mu            sync.Mutex
 }
 
@@ -55,87 +58,123 @@ func getRateLimiter(chainId int) *rateLimiter {
 		return rl
 	}
 
-	// Try to get persisted rate from blockchain settings
+	// Get settings from blockchain - default is auto mode with initialRateLimit
 	startRate := initialRateLimit
+	autoMode := true // default to auto mode
 	w := cmn.CurrentWallet
 	if w != nil {
 		b := w.GetBlockchain(chainId)
-		if b != nil && b.RPCRateLimit > 0 {
-			startRate = b.RPCRateLimit
-			log.Debug().Int("chainId", chainId).Int("rate", startRate).Msg("Using persisted RPC rate limit")
+		if b != nil {
+			autoMode = b.RPCRateAuto || b.RPCRateLimit == 0 // auto if explicitly set or if rate is 0/not set
+			if b.RPCRateLimit > 0 {
+				startRate = b.RPCRateLimit
+			}
+			log.Debug().Int("chainId", chainId).Int("rate", startRate).Bool("auto", autoMode).Msg("RPC rate limiter initialized")
 		}
 	}
 
 	rl := &rateLimiter{
-		chainId:     chainId,
-		tokens:      startRate,
-		maxTokens:   startRate,
-		lastFill:    time.Now(),
-		lastSuccess: time.Now(),
+		chainId:      chainId,
+		tokens:       startRate,
+		maxTokens:    startRate,
+		lastFill:     time.Now(),
+		lastSuccess:  time.Now(),
+		lastCallTime: time.Now(), // Initialize to now so first call goes through, then rate limiting kicks in
+		autoMode:     autoMode,
 	}
 	rateLimiters[chainId] = rl
 	return rl
 }
 
 // waitForToken blocks until a token is available (rate limiting)
+// This ensures strict rate limiting: at N calls/sec, there is at least 1/N seconds between calls
 func (rl *rateLimiter) waitForToken() {
-	rl.mu.Lock()
-	defer rl.mu.Unlock()
-
-	// Check if we should increase rate (no errors for a while)
-	if time.Since(rl.lastSuccess) > increaseInterval && rl.maxTokens < maxRateLimit {
-		newMax := rl.maxTokens + (rl.maxTokens * increasePercent / 100)
-		if newMax > maxRateLimit {
-			newMax = maxRateLimit
-		}
-		if newMax > rl.maxTokens {
-			oldMax := rl.maxTokens
-			rl.maxTokens = newMax
-			log.Debug().Int("chainId", rl.chainId).Int("oldRate", oldMax).Int("newRate", newMax).Msg("Rate limit increased")
-			go persistRateLimit(rl.chainId, newMax) // persist in background
-		}
-		rl.lastSuccess = time.Now()
-	}
-
-	// Refill tokens based on elapsed time
-	now := time.Now()
-	elapsed := now.Sub(rl.lastFill)
-	tokensToAdd := int(elapsed.Seconds() * float64(rl.maxTokens))
-	if tokensToAdd > 0 {
-		rl.tokens += tokensToAdd
-		if rl.tokens > rl.maxTokens {
-			rl.tokens = rl.maxTokens
-		}
-		rl.lastFill = now
-	}
-
-	// If no tokens available, wait
-	if rl.tokens <= 0 {
-		waitTime := time.Second / time.Duration(rl.maxTokens)
-		rl.mu.Unlock()
-		time.Sleep(waitTime)
+	for {
 		rl.mu.Lock()
-		rl.tokens = 1 // Got one token after waiting
-		rl.lastFill = time.Now()
-	}
 
-	rl.tokens--
+		now := time.Now()
+
+		// If in backoff period, wait until it's over
+		if now.Before(rl.backoffUntil) {
+			waitTime := time.Until(rl.backoffUntil)
+			rl.mu.Unlock()
+			time.Sleep(waitTime)
+			continue // Re-check everything after backoff
+		}
+
+		// Calculate minimum time between calls based on rate
+		minInterval := time.Second / time.Duration(rl.maxTokens)
+		timeSinceLastCall := now.Sub(rl.lastCallTime)
+
+		// If not enough time has passed since last call, wait
+		if timeSinceLastCall < minInterval {
+			waitTime := minInterval - timeSinceLastCall
+			rl.mu.Unlock()
+			time.Sleep(waitTime)
+			continue // Re-check everything after waiting
+		}
+
+		// Check if we should increase rate (no errors for a while) - only in auto mode
+		if rl.autoMode && time.Since(rl.lastSuccess) > increaseInterval && rl.maxTokens < maxRateLimit {
+			newMax := rl.maxTokens + (rl.maxTokens * increasePercent / 100)
+			if newMax > maxRateLimit {
+				newMax = maxRateLimit
+			}
+			if newMax > rl.maxTokens {
+				oldMax := rl.maxTokens
+				rl.maxTokens = newMax
+				log.Debug().Int("chainId", rl.chainId).Int("oldRate", oldMax).Int("newRate", newMax).Msg("Rate limit increased (auto)")
+				go persistRateLimit(rl.chainId, newMax) // persist in background
+			}
+			rl.lastSuccess = time.Now()
+		}
+
+		// Mark this call time and release lock
+		prevCallTime := rl.lastCallTime
+		callTime := time.Now()
+		rl.lastCallTime = callTime
+		actualInterval := callTime.Sub(prevCallTime)
+		rl.mu.Unlock()
+
+		// Log exact RPC call time for debugging
+		log.Trace().Int("chainId", rl.chainId).Int("rate", rl.maxTokens).
+			Str("time", callTime.Format("15:04:05.000")).
+			Str("interval", actualInterval.String()).
+			Msg("RPC call acquired")
+		return
+	}
 }
 
-// onRateLimitError is called when a 429 error is received - reduces rate
+// onRateLimitError is called when a 429 error is received - reduces rate and sets backoff
 func (rl *rateLimiter) onRateLimitError() {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
 
-	newMax := rl.maxTokens - (rl.maxTokens * decreasePercent / 100)
-	if newMax < minRateLimit {
-		newMax = minRateLimit
-	}
-	if newMax < rl.maxTokens {
-		log.Debug().Int("chainId", rl.chainId).Int("oldRate", rl.maxTokens).Int("newRate", newMax).Msg("Rate limit decreased due to 429 error")
-		rl.maxTokens = newMax
-		rl.tokens = 0 // Reset tokens to enforce immediate slowdown
-		go persistRateLimit(rl.chainId, newMax) // persist in background
+	errorTime := time.Now()
+	timeSinceLastCall := errorTime.Sub(rl.lastCallTime)
+
+	// Log the 429 error with exact timing
+	log.Warn().Int("chainId", rl.chainId).Int("rate", rl.maxTokens).
+		Str("time", errorTime.Format("15:04:05.000")).
+		Str("sinceLast", timeSinceLastCall.String()).
+		Msg("429 rate limit error")
+
+	// Set backoff period - wait 5 seconds before making any more calls
+	// This gives the RPC provider time to reset their rate limit counters
+	rl.backoffUntil = time.Now().Add(5 * time.Second)
+	rl.tokens = 0 // Reset tokens to enforce immediate slowdown
+
+	// Only auto-decrease rate in auto mode
+	if rl.autoMode {
+		newMax := rl.maxTokens - (rl.maxTokens * decreasePercent / 100)
+		if newMax < minRateLimit {
+			newMax = minRateLimit
+		}
+		if newMax < rl.maxTokens {
+			log.Debug().Int("chainId", rl.chainId).Int("oldRate", rl.maxTokens).Int("newRate", newMax).Msg("Rate limit decreased due to 429 error (auto)")
+			rl.maxTokens = newMax
+			go persistRateLimit(rl.chainId, newMax) // persist in background
+		}
 	}
 }
 
@@ -146,7 +185,7 @@ func (rl *rateLimiter) onSuccess() {
 	rl.lastSuccess = time.Now()
 }
 
-// persistRateLimit saves the rate limit to the blockchain settings
+// persistRateLimit saves the rate limit to the blockchain settings (only in auto mode)
 func persistRateLimit(chainId int, rate int) {
 	w := cmn.CurrentWallet
 	if w == nil {
@@ -156,9 +195,67 @@ func persistRateLimit(chainId int, rate int) {
 	if b == nil {
 		return
 	}
-	if b.RPCRateLimit != rate {
-		b.RPCRateLimit = rate
-		w.Save()
+	// Only persist if in auto mode
+	if b.RPCRateAuto || b.RPCRateLimit == 0 {
+		if b.RPCRateLimit != rate {
+			b.RPCRateLimit = rate
+			w.Save()
+		}
+	}
+}
+
+// GetCurrentRateLimit returns the current rate limit for a chain (for display purposes)
+func GetCurrentRateLimit(chainId int) int {
+	rateLimitersMu.Lock()
+	defer rateLimitersMu.Unlock()
+
+	if rl, ok := rateLimiters[chainId]; ok {
+		rl.mu.Lock()
+		defer rl.mu.Unlock()
+		return rl.maxTokens
+	}
+	return initialRateLimit
+}
+
+// UpdateRateLimiterSettings updates an existing rate limiter with new settings from blockchain config
+// This preserves timing state (lastCallTime, backoffUntil) to avoid race conditions
+func UpdateRateLimiterSettings(chainId int) {
+	rateLimitersMu.Lock()
+	defer rateLimitersMu.Unlock()
+
+	w := cmn.CurrentWallet
+	if w == nil {
+		return
+	}
+	b := w.GetBlockchain(chainId)
+	if b == nil {
+		return
+	}
+
+	newAutoMode := b.RPCRateAuto || b.RPCRateLimit == 0
+	newRate := initialRateLimit
+	if b.RPCRateLimit > 0 {
+		newRate = b.RPCRateLimit
+	}
+
+	rl, exists := rateLimiters[chainId]
+	if !exists {
+		// No existing rate limiter, will be created on next use
+		return
+	}
+
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+
+	// Only update if settings actually changed
+	if rl.autoMode != newAutoMode || rl.maxTokens != newRate {
+		log.Debug().Int("chainId", chainId).
+			Int("oldRate", rl.maxTokens).Int("newRate", newRate).
+			Bool("oldAuto", rl.autoMode).Bool("newAuto", newAutoMode).
+			Msg("Rate limiter settings updated")
+		rl.autoMode = newAutoMode
+		rl.maxTokens = newRate
+		rl.tokens = newRate
 	}
 }
 
@@ -353,6 +450,9 @@ func updateConnections() {
 				openClient_locked(b)
 			}
 		}
+
+		// Update rate limiter settings (preserves timing state to avoid race conditions)
+		UpdateRateLimiterSettings(b.ChainId)
 	}
 
 	to_delete := []int{}

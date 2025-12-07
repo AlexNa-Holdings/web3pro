@@ -31,7 +31,9 @@ func GetERC20TokenInfo(b *cmn.Blockchain, address common.Address) (string, strin
 		log.Error().Msgf("GetERC20TokenInfo: Cannot pack name. Error:(%v)", err)
 		return "", "", 0, err
 	}
+	acquireRateLimit(b.ChainId)
 	output, err := client.CallContract(context.Background(), msg, nil)
+	handleRPCResult(b.ChainId, err)
 	if err != nil {
 		log.Error().Msgf("GetERC20TokenInfo: Cannot call name. Error:(%v)", err)
 		return "", "", 0, err
@@ -52,7 +54,9 @@ func GetERC20TokenInfo(b *cmn.Blockchain, address common.Address) (string, strin
 		log.Error().Msgf("GetERC20TokenInfo: Cannot pack symbol. Error:(%v)", err)
 		return "", "", 0, err
 	}
+	acquireRateLimit(b.ChainId)
 	output, err = client.CallContract(context.Background(), msg, nil)
+	handleRPCResult(b.ChainId, err)
 	if err != nil {
 		log.Error().Msgf("GetERC20TokenInfo: Cannot call symbol. Error:(%v)", err)
 		return "", "", 0, err
@@ -70,7 +74,9 @@ func GetERC20TokenInfo(b *cmn.Blockchain, address common.Address) (string, strin
 		log.Error().Msgf("GetERC20TokenInfo: Cannot pack decimals. Error:(%v)", err)
 		return "", "", 0, err
 	}
+	acquireRateLimit(b.ChainId)
 	output, err = client.CallContract(context.Background(), msg, nil)
+	handleRPCResult(b.ChainId, err)
 	if err != nil {
 		log.Error().Msgf("GetERC20TokenInfo: Cannot call decimals. Error:(%v)", err)
 		return "", "", 0, err

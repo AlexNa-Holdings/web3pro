@@ -901,6 +901,8 @@ func (w *Wallet) EditBlockchain(ub *Blockchain) error {
 	b.ExplorerApiType = ub.ExplorerApiType
 	b.WTokenAddress = ub.WTokenAddress
 	b.Multicall = ub.Multicall
+	b.RPCRateLimit = ub.RPCRateLimit
+	b.RPCRateAuto = ub.RPCRateAuto
 
 	w._locked_AuditNativeTokens()
 

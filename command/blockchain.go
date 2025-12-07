@@ -6,6 +6,7 @@ import (
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
+	"github.com/AlexNa-Holdings/web3pro/eth"
 	"github.com/AlexNa-Holdings/web3pro/ui"
 )
 
@@ -172,11 +173,19 @@ func Blockchain_Process(c *Command, input string) {
 		})
 
 		for _, b := range w.Blockchains {
-			ui.Printf("%4d ", b.ChainId)
+			// Get current rate limit from rate limiter
+			currentRate := eth.GetCurrentRateLimit(b.ChainId)
+			rateMode := "auto"
+			if !b.RPCRateAuto && b.RPCRateLimit > 0 {
+				rateMode = "fixed"
+			}
+
+			ui.Printf("%5d %-4s ", b.ChainId, b.ShortName)
 			ui.Terminal.Screen.AddLink(b.Name, "command b use '"+b.Name+"'", "Use blockchain '"+b.Name+"'", "")
 			ui.Printf(" ")
 			ui.Terminal.Screen.AddLink(cmn.ICON_EDIT, "command b edit '"+b.Name+"'", "Edit blockchain '"+b.Name+"'", "")
 			ui.Terminal.Screen.AddLink(cmn.ICON_DELETE, "command b remove '"+b.Name+"'", "Remove blockchain '"+b.Name+"'", "")
+			ui.Printf(" %d/s(%s)", currentRate, rateMode)
 			ui.Printf("\n")
 		}
 
