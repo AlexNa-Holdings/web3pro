@@ -30,12 +30,27 @@ func getPending(msg *bus.Message) (*bus.B_Staking_GetPending_Response, error) {
 		return nil, fmt.Errorf("get_pending: staking not found for chain %d contract %s", req.ChainId, req.Contract.Hex())
 	}
 
-	// Check if this is a hardcoded liquid staking provider
-	// Liquid staking has no explicit claimable rewards - gains are in the exchange rate
+	// Hardcoded staking providers use custom logic
 	if staking.Hardcoded {
-		return &bus.B_Staking_GetPending_Response{
-			Pending: big.NewInt(0),
-		}, nil
+		switch staking.Name {
+		case "Aztec Staking":
+			// For Aztec, use VaultAddress from request
+			if req.VaultAddress == (common.Address{}) {
+				return nil, fmt.Errorf("get_pending: Aztec staking requires VaultAddress")
+			}
+			// Create a modified request with vault as contract for the aztec handler
+			aztecReq := &bus.B_Staking_GetPending{
+				ChainId:  req.ChainId,
+				Contract: req.VaultAddress, // Pass vault as contract to aztec handler
+				Owner:    req.Owner,
+			}
+			return getAztecPending(aztecReq, staking)
+		default:
+			// Liquid staking or other hardcoded providers - no explicit claimable rewards
+			return &bus.B_Staking_GetPending_Response{
+				Pending: big.NewInt(0),
+			}, nil
+		}
 	}
 
 	// Find the pending function for this reward token

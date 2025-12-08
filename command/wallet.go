@@ -1,14 +1,19 @@
 package command
 
 import (
+	"fmt"
+	"io"
+	"os"
+	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/ui"
 )
 
-var wallet_subcommands = []string{"close", "create", "list", "open"}
+var wallet_subcommands = []string{"backup", "close", "create", "list", "restore", "open"}
 
 func NewWalletCommand() *Command {
 	return &Command{
@@ -21,10 +26,12 @@ Usage: wallet [COMMAND]
 Manage wallets
 
 Commands:
-  open <wallet>  Open wallet
-  create         Create new wallet
-  close          Close current wallet
-  list           List wallets
+  open <wallet>    Open wallet
+  create           Create new wallet
+  close            Close current wallet
+  list             List wallets
+  backup           Backup current wallet
+  restore <backup> Restore wallet from backup
 
 		`,
 		Help:             `Manage wallets`,
@@ -40,6 +47,10 @@ func Wallet_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 
 	if !cmn.IsInArray(wallet_subcommands, subcommand) {
 		for _, sc := range wallet_subcommands {
+			// Only show restore when no wallet is open
+			if sc == "restore" && cmn.CurrentWallet != nil {
+				continue
+			}
 			if input == "" || strings.Contains(sc, subcommand) {
 				options = append(options, ui.ACOption{Name: sc, Result: command + " " + sc + " "})
 			}
@@ -62,6 +73,23 @@ func Wallet_AutoComplete(input string) (string, *[]ui.ACOption, string) {
 		}
 
 		return "file", &options, param
+	}
+
+	if subcommand == "restore" {
+
+		if param != "" && !strings.HasSuffix(param, " ") {
+			return "", nil, param
+		}
+
+		files := cmn.BackupList()
+
+		for _, file := range files {
+			if param == "" || strings.Contains(file, param) {
+				options = append(options, ui.ACOption{Name: file, Result: command + " restore " + file + " "})
+			}
+		}
+
+		return "backup", &options, param
 	}
 
 	return "", &options, ""
@@ -106,6 +134,64 @@ func Wallet_Process(c *Command, input string) {
 		}
 
 		ui.Printf("\n")
+
+	case "backup":
+		if cmn.CurrentWallet == nil {
+			ui.PrintErrorf("No wallet open")
+			return
+		}
+
+		walletPath := cmn.CurrentWallet.GetFilePath()
+		walletName := filepath.Base(walletPath)
+		backupDir := cmn.DataFolder + "/wallets/backups"
+
+		// Create backup directory if it doesn't exist
+		if err := os.MkdirAll(backupDir, 0755); err != nil {
+			ui.PrintErrorf("Failed to create backup directory: %s", err)
+			return
+		}
+
+		// Generate backup filename with timestamp
+		timestamp := time.Now().Format("2006-01-02_15-04-05")
+		backupPath := fmt.Sprintf("%s/%s_%s", backupDir, walletName, timestamp)
+
+		// Copy the wallet file
+		srcFile, err := os.Open(walletPath)
+		if err != nil {
+			ui.PrintErrorf("Failed to open wallet file: %s", err)
+			return
+		}
+		defer srcFile.Close()
+
+		dstFile, err := os.Create(backupPath)
+		if err != nil {
+			ui.PrintErrorf("Failed to create backup file: %s", err)
+			return
+		}
+		defer dstFile.Close()
+
+		_, err = io.Copy(dstFile, srcFile)
+		if err != nil {
+			ui.PrintErrorf("Failed to copy wallet file: %s", err)
+			return
+		}
+
+		ui.Printf("Wallet backed up to: %s\n", backupPath)
+
+	case "restore":
+		if cmn.CurrentWallet != nil {
+			ui.PrintErrorf("Please close the current wallet first")
+			return
+		}
+
+		if len(tokens) != 3 || tokens[2] == "" {
+			ui.PrintErrorf("Please specify backup file name")
+			return
+		}
+
+		backupFile := tokens[2]
+		bus.Send("ui", "popup", ui.DlgWalletRestore(backupFile))
+
 	default:
 		ui.PrintErrorf("Invalid subcommand: %s", subcommand)
 	}

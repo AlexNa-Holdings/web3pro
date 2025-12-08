@@ -286,10 +286,36 @@ func isRateLimitError(err error) bool {
 	return strings.Contains(errStr, "429") || strings.Contains(errStr, "Too Many Requests") || strings.Contains(errStr, "rate limit")
 }
 
+// isGatewayError checks if an error is a 502/503/504 gateway error
+func isGatewayError(err error) bool {
+	if err == nil {
+		return false
+	}
+	errStr := err.Error()
+	return strings.Contains(errStr, "502") || strings.Contains(errStr, "503") || strings.Contains(errStr, "504") ||
+		strings.Contains(errStr, "Gateway") || strings.Contains(errStr, "Bad Gateway") ||
+		strings.Contains(errStr, "Service Unavailable")
+}
+
+// getChainShortName returns the short name for a chain ID
+func getChainShortName(chainId int) string {
+	w := cmn.CurrentWallet
+	if w != nil {
+		b := w.GetBlockchain(chainId)
+		if b != nil {
+			return b.GetShortName()
+		}
+	}
+	return fmt.Sprintf("Chain %d", chainId)
+}
+
 // handleRPCResult checks for rate limit errors and reports success/failure
 func handleRPCResult(chainId int, err error) {
 	if err != nil && isRateLimitError(err) {
 		ReportRateLimitError(chainId)
+		bus.Send("ui", "notify-error", fmt.Sprintf("%s: RPC rate limit (429)", getChainShortName(chainId)))
+	} else if err != nil && isGatewayError(err) {
+		bus.Send("ui", "notify-error", fmt.Sprintf("%s: RPC gateway error (504)", getChainShortName(chainId)))
 	} else if err == nil {
 		ReportSuccess(chainId)
 	}

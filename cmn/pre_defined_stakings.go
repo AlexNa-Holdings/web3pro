@@ -70,4 +70,16 @@ var PredefinedStakings []Staking = []Staking{
 		Reward1Func:  "getDelegator",
 		ValidatorId:  0, // Set your validator ID after adding
 	},
+	// Aztec Staking - Hardcoded provider with vault-based positions
+	// User must add their Token Vault address to create a position
+	// Staked = getAllocation() - token.balanceOf(vault), Rewards = getClaimable()
+	{
+		Name:         "Aztec Staking",
+		ChainId:      1, // Ethereum Mainnet
+		Contract:     common.HexToAddress("0xa92ecFD0E70c9cd5E5cd76c50Af0F7Da93567a4f"), // GSE contract (for reference)
+		URL:          "https://stake.aztec.network",
+		StakedToken:  common.HexToAddress("0xA27EC0006e59f245217Ff08CD52A7E8b169E62D2"), // AZTEC token
+		Reward1Token: common.HexToAddress("0xA27EC0006e59f245217Ff08CD52A7E8b169E62D2"), // AZTEC token (rewards)
+		Hardcoded:    true,
+	},
 }

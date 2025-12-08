@@ -477,22 +477,25 @@ type B_LP_V4_GetNftPosition_Response struct { // get-nft-position_response
 
 // ---------- staking ----------
 type B_Staking_GetBalance struct { // get-balance
-	ChainId     int
-	Contract    common.Address
-	Owner       common.Address
-	ValidatorId uint64 // Optional: for validator-based staking (e.g., Monad)
+	ChainId      int
+	Contract     common.Address
+	Owner        common.Address
+	ValidatorId  uint64         // Optional: for validator-based staking (e.g., Monad)
+	VaultAddress common.Address // Optional: for vault-based staking (e.g., Aztec)
 }
 
 type B_Staking_GetBalance_Response struct { // get-balance_response
-	Balance *big.Int
+	Balance       *big.Int
+	StakedPercent float64 // Optional: for vault-based staking, percentage of balance that is staked (0-100)
 }
 
 type B_Staking_GetPending struct { // get-pending
-	ChainId     int
-	Contract    common.Address
-	Owner       common.Address
-	RewardToken common.Address
-	ValidatorId uint64 // Optional: for validator-based staking (e.g., Monad)
+	ChainId      int
+	Contract     common.Address
+	Owner        common.Address
+	RewardToken  common.Address
+	ValidatorId  uint64         // Optional: for validator-based staking (e.g., Monad)
+	VaultAddress common.Address // Optional: for vault-based staking (e.g., Aztec)
 }
 
 type B_Staking_GetPending_Response struct { // get-pending_response

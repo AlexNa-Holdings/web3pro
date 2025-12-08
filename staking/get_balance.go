@@ -30,9 +30,24 @@ func getBalance(msg *bus.Message) (*bus.B_Staking_GetBalance_Response, error) {
 		return nil, fmt.Errorf("get_balance: staking not found for chain %d contract %s", req.ChainId, req.Contract.Hex())
 	}
 
-	// Hardcoded staking providers use custom logic - placeholder for future implementations
+	// Hardcoded staking providers use custom logic
 	if staking.Hardcoded {
-		return nil, fmt.Errorf("get_balance: hardcoded staking provider %s not implemented", staking.Name)
+		switch staking.Name {
+		case "Aztec Staking":
+			// For Aztec, use VaultAddress from request
+			if req.VaultAddress == (common.Address{}) {
+				return nil, fmt.Errorf("get_balance: Aztec staking requires VaultAddress")
+			}
+			// Create a modified request with vault as contract for the aztec handler
+			aztecReq := &bus.B_Staking_GetBalance{
+				ChainId:  req.ChainId,
+				Contract: req.VaultAddress, // Pass vault as contract to aztec handler
+				Owner:    req.Owner,
+			}
+			return getAztecBalance(aztecReq, staking)
+		default:
+			return nil, fmt.Errorf("get_balance: hardcoded staking provider %s not implemented", staking.Name)
+		}
 	}
 
 	// Build the function call based on the balance function name
@@ -46,6 +61,8 @@ func getBalance(msg *bus.Message) (*bus.B_Staking_GetBalance_Response, error) {
 	if validatorId == 0 {
 		validatorId = staking.ValidatorId
 	}
+
+	log.Trace().Str("provider", staking.Name).Uint64("reqValidatorId", req.ValidatorId).Uint64("validatorId", validatorId).Str("funcName", funcName).Str("owner", req.Owner.Hex()).Msg("get_balance: preparing call")
 
 	var data []byte
 	var err error
@@ -82,15 +99,36 @@ func getBalance(msg *bus.Message) (*bus.B_Staking_GetBalance_Response, error) {
 		return nil, err
 	}
 
+	log.Trace().Str("provider", staking.Name).Uint64("validatorId", validatorId).Int("outputLen", len(output)).Str("rawOutput", hexutil.Encode(output)).Msg("get_balance: raw response")
+
 	var balance *big.Int
 
-	// For validator staking, getDelegator returns a struct - extract the staked amount (first field)
+	// For validator staking, getDelegator returns a struct:
+	// - Field 0 (bytes 0-32): stake - current staked amount
+	// - Field 1 (bytes 32-64): accRewardPerToken
+	// - Field 2 (bytes 64-96): unclaimedRewards
+	// - Field 3 (bytes 96-128): deltaStake - pending unstake amount
+	// We include both stake and deltaStake in balance to not remove positions with pending unstakes
 	if validatorId > 0 && len(output) >= 32 {
-		balance = new(big.Int).SetBytes(output[:32])
+		stake := new(big.Int).SetBytes(output[:32])
+		balance = stake
+
+		// Include deltaStake (pending unstake) if present
+		if len(output) >= 128 {
+			deltaStake := new(big.Int).SetBytes(output[96:128])
+			if deltaStake.Sign() > 0 {
+				balance = new(big.Int).Add(stake, deltaStake)
+				log.Trace().Str("provider", staking.Name).Uint64("validatorId", validatorId).
+					Str("stake", stake.String()).Str("deltaStake", deltaStake.String()).
+					Msg("get_balance: has pending unstake")
+			}
+		}
 	} else {
 		// Decode the uint256 result
 		balance = new(big.Int).SetBytes(output)
 	}
+
+	log.Trace().Str("provider", staking.Name).Uint64("validatorId", validatorId).Str("balance", balance.String()).Msg("get_balance: decoded balance")
 
 	return &bus.B_Staking_GetBalance_Response{
 		Balance: balance,

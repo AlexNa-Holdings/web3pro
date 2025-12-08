@@ -18,16 +18,17 @@ type StakingPane struct {
 }
 
 type stakingPositionInfo struct {
-	Position     *cmn.StakingPosition
-	Staking      *cmn.Staking
-	Owner        *cmn.Address
-	StakedAmount *big.Int
-	StakedUSD    float64
-	Reward1      *big.Int
-	Reward1USD   float64
-	Reward2      *big.Int
-	Reward2USD   float64
-	TotalUSD     float64
+	Position      *cmn.StakingPosition
+	Staking       *cmn.Staking
+	Owner         *cmn.Address
+	StakedAmount  *big.Int
+	StakedUSD     float64
+	StakedPercent float64 // For vault-based staking, percentage of balance that is staked (0-100)
+	Reward1       *big.Int
+	Reward1USD    float64
+	Reward2       *big.Int
+	Reward2USD    float64
+	TotalUSD      float64
 }
 
 var staking_info_list []*stakingPositionInfo = make([]*stakingPositionInfo, 0)
@@ -180,12 +181,13 @@ func (p *StakingPane) updateList() {
 				stakedToken, _ = w.GetNativeToken(b)
 			}
 		}
-		log.Trace().Str("contract", s.Contract.Hex()).Str("owner", pos.Owner.Hex()).Uint64("validatorId", pos.ValidatorId).Msg("Staking: fetching balance")
+		log.Trace().Str("contract", s.Contract.Hex()).Str("vault", pos.VaultAddress.Hex()).Str("owner", pos.Owner.Hex()).Uint64("validatorId", pos.ValidatorId).Msg("Staking: fetching balance")
 		balResp := bus.Fetch("staking", "get-balance", &bus.B_Staking_GetBalance{
-			ChainId:     s.ChainId,
-			Contract:    s.Contract,
-			Owner:       pos.Owner,
-			ValidatorId: pos.ValidatorId,
+			ChainId:      s.ChainId,
+			Contract:     s.Contract,
+			Owner:        pos.Owner,
+			ValidatorId:  pos.ValidatorId,
+			VaultAddress: pos.VaultAddress,
 		})
 
 		if balResp.Error != nil {
@@ -203,6 +205,7 @@ func (p *StakingPane) updateList() {
 					continue
 				}
 				info.StakedAmount = balance.Balance
+				info.StakedPercent = balance.StakedPercent
 				if stakedToken != nil {
 					info.StakedUSD = stakedToken.Price * stakedToken.Float64(balance.Balance)
 				}
@@ -211,8 +214,9 @@ func (p *StakingPane) updateList() {
 
 		// Get reward 1
 		// Note: For native token rewards (e.g., Monad), Reward1Token may be zero address
-		log.Trace().Str("provider", s.Name).Str("Reward1Func", s.Reward1Func).Str("Reward1Token", s.Reward1Token.Hex()).Msg("Staking: checking rewards")
-		if s.Reward1Func != "" {
+		// For hardcoded providers (e.g., Aztec), rewards are fetched via custom logic
+		log.Trace().Str("provider", s.Name).Str("Reward1Func", s.Reward1Func).Str("Reward1Token", s.Reward1Token.Hex()).Bool("hardcoded", s.Hardcoded).Msg("Staking: checking rewards")
+		if s.Reward1Func != "" || s.Hardcoded {
 			rewardToken := w.GetTokenByAddress(s.ChainId, s.Reward1Token)
 			// For native token rewards, get the native token
 			if rewardToken == nil && s.Reward1Token == ([20]byte{}) {
@@ -223,11 +227,12 @@ func (p *StakingPane) updateList() {
 			}
 			log.Trace().Str("provider", s.Name).Uint64("validatorId", pos.ValidatorId).Msg("Staking: fetching pending rewards")
 			pendingResp := bus.Fetch("staking", "get-pending", &bus.B_Staking_GetPending{
-				ChainId:     s.ChainId,
-				Contract:    s.Contract,
-				Owner:       pos.Owner,
-				RewardToken: s.Reward1Token,
-				ValidatorId: pos.ValidatorId,
+				ChainId:      s.ChainId,
+				Contract:     s.Contract,
+				Owner:        pos.Owner,
+				RewardToken:  s.Reward1Token,
+				ValidatorId:  pos.ValidatorId,
+				VaultAddress: pos.VaultAddress,
 			})
 
 			if pendingResp.Error != nil {
@@ -247,11 +252,12 @@ func (p *StakingPane) updateList() {
 		if s.Reward2Token != ([20]byte{}) && s.Reward2Func != "" {
 			rewardToken := w.GetTokenByAddress(s.ChainId, s.Reward2Token)
 			pendingResp := bus.Fetch("staking", "get-pending", &bus.B_Staking_GetPending{
-				ChainId:     s.ChainId,
-				Contract:    s.Contract,
-				Owner:       pos.Owner,
-				RewardToken: s.Reward2Token,
-				ValidatorId: pos.ValidatorId,
+				ChainId:      s.ChainId,
+				Contract:     s.Contract,
+				Owner:        pos.Owner,
+				RewardToken:  s.Reward2Token,
+				ValidatorId:  pos.ValidatorId,
+				VaultAddress: pos.VaultAddress,
 			})
 
 			if pendingResp.Error == nil {
@@ -358,8 +364,8 @@ func (p *StakingPane) rebuildTemplate() string {
 			}
 		}
 
-		// Reward 1
-		if s.Reward1Func != "" {
+		// Reward 1 (show for regular providers with Reward1Func or hardcoded providers)
+		if s.Reward1Func != "" || s.Hardcoded {
 			rewardToken := w.GetTokenByAddress(s.ChainId, s.Reward1Token)
 			// For native token rewards, get the native token
 			if rewardToken == nil && s.Reward1Token == ([20]byte{}) && b != nil {
@@ -413,6 +419,11 @@ func (p *StakingPane) rebuildTemplate() string {
 		}
 
 		temp += " " + info.Owner.Name
+
+		// Show staked percentage for vault-based staking (e.g., Aztec)
+		if info.StakedPercent > 0 && info.StakedPercent < 100 {
+			temp += fmt.Sprintf(" (%.0f%% staked)", info.StakedPercent)
+		}
 
 		if i < len(staking_info_list)-1 {
 			temp += "\n"

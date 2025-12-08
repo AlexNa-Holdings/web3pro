@@ -217,8 +217,9 @@ type Staking struct {
 
 // StakingPosition represents a user's position in a staking contract
 type StakingPosition struct {
-	Owner       common.Address `json:"owner"`
-	ChainId     int            `json:"chain_id"`
-	Contract    common.Address `json:"contract"`     // Reference to the staking contract
-	ValidatorId uint64         `json:"validator_id"` // Validator ID for native staking (e.g., Monad)
+	Owner        common.Address `json:"owner"`
+	ChainId      int            `json:"chain_id"`
+	Contract     common.Address `json:"contract"`      // Reference to the staking contract
+	ValidatorId  uint64         `json:"validator_id"`  // Validator ID for native staking (e.g., Monad)
+	VaultAddress common.Address `json:"vault_address"` // User's vault address for vault-based staking (e.g., Aztec)
 }

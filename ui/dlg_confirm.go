@@ -29,6 +29,7 @@ func DlgConfirm(title string, text string, action func() bool) *gocui.Popup {
 
 				case "button cancel":
 					Gui.HidePopup()
+					Flush()
 				}
 			}
 		},

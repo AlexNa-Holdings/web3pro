@@ -8,6 +8,7 @@ import (
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
+	"github.com/AlexNa-Holdings/web3pro/staking"
 	"github.com/AlexNa-Holdings/web3pro/ui"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog/log"
@@ -246,6 +247,12 @@ func Staking_Process(c *Command, input string) {
 					// Check if already exists
 					existing := w.GetStaking(s.ChainId, s.Contract)
 					if existing != nil {
+						// For hardcoded providers like Aztec, tell user to use discover
+						if s.Hardcoded {
+							ui.Printf("Staking %s already added. Use 'st discover' to add positions:\n", s.Name)
+							ui.Printf("  st discover '%s' '%s' <vault_address>\n", b.Name, s.Name)
+							break
+						}
 						ui.PrintErrorf("Staking %s already added", s.Name)
 						break
 					}
@@ -256,7 +263,13 @@ func Staking_Process(c *Command, input string) {
 						ui.PrintErrorf("Failed to add staking: %s", err)
 						break
 					}
+
 					ui.Printf("Staking %s added\n", s.Name)
+					// For hardcoded providers like Aztec, tell user to use discover
+					if s.Hardcoded {
+						ui.Printf("Use 'st discover' to add positions:\n")
+						ui.Printf("  st discover '%s' '%s' <vault_address>\n", b.Name, s.Name)
+					}
 					break
 				}
 			}
@@ -375,7 +388,58 @@ func Staking_Process(c *Command, input string) {
 				continue
 			}
 
-			log.Trace().Str("provider", s.Name).Int("chain", s.ChainId).Uint64("validatorId", s.ValidatorId).Msg("Discover: checking provider")
+			log.Trace().Str("provider", s.Name).Int("chain", s.ChainId).Uint64("validatorId", s.ValidatorId).Bool("hardcoded", s.Hardcoded).Msg("Discover: checking provider")
+
+			// Handle hardcoded/vault-based staking (e.g., Aztec) specially
+			// For these, the filterAddress is the vault address, not wallet address
+			if s.Hardcoded {
+				if filterAddress == (common.Address{}) {
+					ui.PrintErrorf("%s requires vault address. Usage: st discover 'Ethereum' '%s' <vault_address>\n", s.Name, s.Name)
+					continue
+				}
+
+				vaultAddress := filterAddress
+				checked++
+				log.Trace().Str("provider", s.Name).Str("vault", vaultAddress.Hex()).Msg("Discover: checking vault")
+
+				// Validate vault and get beneficiary
+				beneficiary, err := staking.ValidateAztecVault(s.ChainId, vaultAddress)
+				if err != nil {
+					ui.PrintErrorf("Invalid vault %s: %s\n", cmn.ShortAddress(vaultAddress), err)
+					continue
+				}
+
+				// Check if beneficiary is one of our addresses
+				ownerAddr := w.GetAddress(beneficiary)
+				if ownerAddr == nil {
+					ui.PrintErrorf("Vault beneficiary %s is not in your wallet\n", cmn.ShortAddress(beneficiary))
+					continue
+				}
+
+				// Check if position already exists (by vault address)
+				positionExists := false
+				for _, pos := range w.StakingPositions {
+					if pos.ChainId == s.ChainId && pos.Contract == s.Contract && pos.VaultAddress == vaultAddress {
+						positionExists = true
+						break
+					}
+				}
+
+				if !positionExists {
+					// Add the position
+					err := w.AddStakingPosition(&cmn.StakingPosition{
+						Owner:        beneficiary,
+						ChainId:      s.ChainId,
+						Contract:     s.Contract,
+						VaultAddress: vaultAddress,
+					})
+					if err == nil {
+						added++
+						log.Trace().Str("vault", vaultAddress.Hex()).Str("beneficiary", beneficiary.Hex()).Msg("Discover: added vault position")
+					}
+				}
+				continue
+			}
 
 			// Handle validator-based staking (e.g., Monad native staking) specially
 			if s.BalanceFunc == "getDelegator" && s.ValidatorId == 0 {
@@ -533,10 +597,11 @@ func listStakingPositions(w *cmn.Wallet) {
 
 		// Get staked balance
 		balResp := bus.Fetch("staking", "get-balance", &bus.B_Staking_GetBalance{
-			ChainId:     s.ChainId,
-			Contract:    s.Contract,
-			Owner:       pos.Owner,
-			ValidatorId: pos.ValidatorId,
+			ChainId:      s.ChainId,
+			Contract:     s.Contract,
+			Owner:        pos.Owner,
+			ValidatorId:  pos.ValidatorId,
+			VaultAddress: pos.VaultAddress,
 		})
 
 		// Provider name as link if URL is set (fixed width)
@@ -553,12 +618,14 @@ func listStakingPositions(w *cmn.Wallet) {
 		ui.Printf(" ")
 
 		// Staked token symbol and balance
+		var stakedPercent float64
 		if stakedToken != nil {
 			ui.Printf("%s ", cmn.FixedWidth(stakedToken.Symbol, tokenWidth))
 			if balResp.Error == nil {
 				if balance, ok := balResp.Data.(*bus.B_Staking_GetBalance_Response); ok && balance.Balance != nil {
 					cmn.AddFixedValueLink(ui.Terminal.Screen, balance.Balance, stakedToken, valueWidth)
 					cmn.AddFixedDollarValueLink(ui.Terminal.Screen, balance.Balance, stakedToken, dollarWidth)
+					stakedPercent = balance.StakedPercent
 				}
 			}
 		} else {
@@ -569,12 +636,13 @@ func listStakingPositions(w *cmn.Wallet) {
 					xf := cmn.NewXF(balance.Balance, 18)
 					ui.Terminal.Screen.AddLink(fmt.Sprintf("%*s", valueWidth, cmn.FmtAmount(balance.Balance, 18, true)), "copy "+xf.String(), xf.String(), "")
 					ui.Printf("%*s", dollarWidth, cmn.FmtFloat64D(0, true))
+					stakedPercent = balance.StakedPercent
 				}
 			}
 		}
 
-		// Reward 1
-		if s.Reward1Func != "" {
+		// Reward 1 (show for regular providers with Reward1Func or hardcoded providers)
+		if s.Reward1Func != "" || s.Hardcoded {
 			rewardToken := w.GetTokenByAddress(s.ChainId, s.Reward1Token)
 			// For native token rewards, get the native token
 			if rewardToken == nil && s.Reward1Token == (common.Address{}) {
@@ -583,10 +651,11 @@ func listStakingPositions(w *cmn.Wallet) {
 
 			pendingResp := bus.Fetch("staking", "get-pending", &bus.B_Staking_GetPending{
 				ChainId:     s.ChainId,
-				Contract:    s.Contract,
-				Owner:       pos.Owner,
-				RewardToken: s.Reward1Token,
-				ValidatorId: pos.ValidatorId,
+				Contract:     s.Contract,
+				Owner:        pos.Owner,
+				RewardToken:  s.Reward1Token,
+				ValidatorId:  pos.ValidatorId,
+				VaultAddress: pos.VaultAddress,
 			})
 
 			if pendingResp.Error == nil {
@@ -616,10 +685,11 @@ func listStakingPositions(w *cmn.Wallet) {
 
 			pendingResp := bus.Fetch("staking", "get-pending", &bus.B_Staking_GetPending{
 				ChainId:     s.ChainId,
-				Contract:    s.Contract,
-				Owner:       pos.Owner,
-				RewardToken: s.Reward2Token,
-				ValidatorId: pos.ValidatorId,
+				Contract:     s.Contract,
+				Owner:        pos.Owner,
+				RewardToken:  s.Reward2Token,
+				ValidatorId:  pos.ValidatorId,
+				VaultAddress: pos.VaultAddress,
 			})
 
 			if pendingResp.Error == nil {
@@ -639,7 +709,12 @@ func listStakingPositions(w *cmn.Wallet) {
 			}
 		}
 
-		ui.Printf(" %s\n", owner.Name)
+		ui.Printf(" %s", owner.Name)
+		// Show staked percentage for vault-based staking (e.g., Aztec)
+		if stakedPercent > 0 && stakedPercent < 100 {
+			ui.Printf(" (%.0f%% staked)", stakedPercent)
+		}
+		ui.Printf("\n")
 		ui.Flush()
 	}
 

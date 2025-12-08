@@ -170,7 +170,9 @@ func (p *LP_V3Pane) updateList() {
 		}
 
 		big0 := big.NewInt(0)
-		if resp.Liquidity0.Cmp(big0) == 0 && resp.Liquidity1.Cmp(big0) == 0 {
+		// Remove positions with 0 liquidity and 0 gain (fully closed positions)
+		if resp.Liquidity0.Cmp(big0) == 0 && resp.Liquidity1.Cmp(big0) == 0 &&
+			resp.Gain0.Cmp(big0) == 0 && resp.Gain1.Cmp(big0) == 0 {
 			to_delete = append(to_delete, pos)
 			continue
 		}

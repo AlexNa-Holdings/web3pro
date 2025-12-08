@@ -3,6 +3,7 @@ package ui
 import (
 	"errors"
 	"fmt"
+	"math/big"
 	"sort"
 	"sync"
 	"time"
@@ -148,6 +149,7 @@ func (p *LP_V4Pane) updateList() {
 	total_liq := 0.0
 
 	list := make([]*bus.B_LP_V4_GetPositionStatus_Response, 0)
+	to_delete := make([]*cmn.LP_V4_Position, 0)
 
 	for _, pos := range w.LP_V4_Positions {
 		sr := bus.Fetch("lp_v4", "get-position-status", &bus.B_LP_V4_GetPositionStatus{
@@ -164,6 +166,14 @@ func (p *LP_V4Pane) updateList() {
 		resp, ok := sr.Data.(*bus.B_LP_V4_GetPositionStatus_Response)
 		if !ok {
 			log.Error().Msg("get_position_status")
+			continue
+		}
+
+		big0 := big.NewInt(0)
+		// Remove positions with 0 liquidity and 0 gain (fully closed positions)
+		if resp.Liquidity0.Cmp(big0) == 0 && resp.Liquidity1.Cmp(big0) == 0 &&
+			resp.Gain0.Cmp(big0) == 0 && resp.Gain1.Cmp(big0) == 0 {
+			to_delete = append(to_delete, pos)
 			continue
 		}
 
@@ -206,6 +216,11 @@ func (p *LP_V4Pane) updateList() {
 		LP_V4.View.Subtitle = fmt.Sprintf("NPos:%d %s \uf0d8%s", len(list),
 			cmn.FmtFloat64D(total_liq, true),
 			cmn.FmtFloat64D(total_gain, true))
+	}
+
+	// Remove closed positions from wallet
+	for _, pos := range to_delete {
+		w.RemoveLP_V4Position(pos.Owner, pos.ChainId, pos.Provider, pos.NFT_Token)
 	}
 }
 

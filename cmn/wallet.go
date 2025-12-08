@@ -231,6 +231,10 @@ func (w *Wallet) _locked_Save() error {
 	return _locked_SaveToFile(w, w.filePath, w.password)
 }
 
+func (w *Wallet) GetFilePath() string {
+	return w.filePath
+}
+
 func Exists(name string) bool {
 	_, err := os.Stat(DataFolder + "/wallets/" + name)
 	return !os.IsNotExist(err)
@@ -447,10 +451,36 @@ func WalletList() []string {
 
 	names := []string{}
 	for _, file := range files {
+		if file.IsDir() {
+			continue
+		}
 		names = append(names, file.Name())
 	}
 
 	return names
+}
+
+func BackupList() []string {
+	backupDir := DataFolder + "/wallets/backups"
+	files, err := os.ReadDir(backupDir)
+	if err != nil {
+		return nil
+	}
+
+	names := []string{}
+	for _, file := range files {
+		if file.IsDir() {
+			continue
+		}
+		names = append(names, file.Name())
+	}
+
+	return names
+}
+
+// OpenFromFile opens a wallet from a specific file path (used for restore)
+func OpenFromFile(filePath string, pass string) (*Wallet, error) {
+	return openFromFile(filePath, pass)
 }
 
 func encrypt(data []byte, passphrase []byte) ([]byte, error) {
