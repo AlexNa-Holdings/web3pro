@@ -37,6 +37,11 @@ Commands:
   discover [CHAIN] [PROVIDER] [ADDRESS] - Discover staking positions (optional filters)
   on                          - Show staking pane
   off                         - Hide staking pane
+
+Notes:
+  For Aztec Staking, the ADDRESS in discover command should be your Token Vault
+  address (not your wallet address). You can find your vault address at
+  https://stake.aztec.network
 		`,
 		Help:             `Manage staking contracts`,
 		Process:          Staking_Process,
