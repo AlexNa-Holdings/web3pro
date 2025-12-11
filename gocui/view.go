@@ -355,10 +355,15 @@ func (v *View) SetCursor(x, y int) error {
 			}
 		}
 	} else {
-		if v.activeHotspot != nil {
-			v.activeHotspot = nil
+		// No hotspot under cursor - fall back to focused control's hotspot if any
+		var fallbackHotspot *Hotspot
+		if v.ControlInFocus >= 0 && v.ControlInFocus < len(v.Controls) {
+			fallbackHotspot = v.Controls[v.ControlInFocus].Hotspot
+		}
+		if v.activeHotspot != fallbackHotspot {
+			v.activeHotspot = fallbackHotspot
 			if v.OnOverHotspot != nil {
-				v.OnOverHotspot(v, nil)
+				v.OnOverHotspot(v, fallbackHotspot)
 			}
 		}
 	}
@@ -385,13 +390,18 @@ func (v *View) Cursor() (x, y int) {
 	return v.cx, v.cy
 }
 
-// ClearActiveHotspot clears the currently active hotspot and calls OnOverHotspot with nil
+// ClearActiveHotspot clears the mouse-over hotspot and falls back to focused control's hotspot
 func (v *View) ClearActiveHotspot() {
-	if v.activeHotspot != nil {
-		v.activeHotspot = nil
-		v.tainted = true // Mark view for redraw to remove highlight
+	// Fall back to focused control's hotspot if any
+	var fallbackHotspot *Hotspot
+	if v.ControlInFocus >= 0 && v.ControlInFocus < len(v.Controls) {
+		fallbackHotspot = v.Controls[v.ControlInFocus].Hotspot
+	}
+	if v.activeHotspot != fallbackHotspot {
+		v.activeHotspot = fallbackHotspot
+		v.tainted = true // Mark view for redraw
 		if v.OnOverHotspot != nil {
-			v.OnOverHotspot(v, nil)
+			v.OnOverHotspot(v, fallbackHotspot)
 		}
 	}
 }
@@ -1598,6 +1608,11 @@ func (v *View) SetFocus(i int) {
 	i = ((i % L) + L) % L
 
 	v.ControlInFocus = i % len(v.Controls)
+
+	// Update activeHotspot so the button shows as highlighted
+	if v.Controls[v.ControlInFocus].Hotspot != nil {
+		v.activeHotspot = v.Controls[v.ControlInFocus].Hotspot
+	}
 
 	switch v.Controls[v.ControlInFocus].Type {
 	case C_INPUT, C_TEXT_INPUT:
