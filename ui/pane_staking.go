@@ -277,9 +277,9 @@ func (p *StakingPane) updateList() {
 		list = append(list, info)
 	}
 
-	// Sort by total USD value descending
+	// Sort by rewards USD value descending (gain)
 	sort.Slice(list, func(i, j int) bool {
-		return list[i].TotalUSD > list[j].TotalUSD
+		return (list[i].Reward1USD + list[i].Reward2USD) > (list[j].Reward1USD + list[j].Reward2USD)
 	})
 
 	log.Trace().Int("list_size", len(list)).Msg("Staking: updateList completed")
