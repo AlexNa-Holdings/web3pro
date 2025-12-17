@@ -141,6 +141,7 @@ func getPositionStatus(msg *bus.Message) (*bus.B_LP_V4_GetPositionStatus_Respons
 	return &bus.B_LP_V4_GetPositionStatus_Response{
 		Owner:             pos.Owner,
 		ChainId:           pos.ChainId,
+		NFT_Token:         pos.NFT_Token,
 		Currency0:         currency0,
 		Currency1:         currency1,
 		Provider:          pos.Provider,

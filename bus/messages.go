@@ -434,6 +434,7 @@ type B_LP_V4_GetPositionStatus struct { // get-position-status
 type B_LP_V4_GetPositionStatus_Response struct { // get-position-status_response
 	Owner             common.Address
 	ChainId           int
+	NFT_Token         *big.Int
 	Currency0         common.Address
 	Currency1         common.Address
 	Provider          common.Address
