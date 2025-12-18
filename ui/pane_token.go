@@ -21,9 +21,12 @@ type TokenPane struct {
 }
 
 type tokenInfo struct {
-	Token        *cmn.Token
-	TotalBalance *big.Int
-	TotalUSD     float64
+	Token         *cmn.Token
+	LiquidBalance *big.Int // Balance in wallets
+	StakedBalance *big.Int // Balance in staking positions
+	LPBalance     *big.Int // Balance in LP positions (V2 + V3 + V4)
+	TotalBalance  *big.Int // Liquid + Staked + LP
+	TotalUSD      float64
 }
 
 var token_info_list []*tokenInfo = make([]*tokenInfo, 0)
@@ -256,12 +259,179 @@ func (p *TokenPane) updateList() {
 		}
 	}
 
+	// Calculate staked balances from staking positions
+	stakedBalances := make(map[*cmn.Token]*big.Int)
+	for _, pos := range w.StakingPositions {
+		s := w.GetStaking(pos.ChainId, pos.Contract)
+		if s == nil {
+			continue
+		}
+
+		// Get the staked token
+		stakedToken := w.GetTokenByAddress(s.ChainId, s.StakedToken)
+		if stakedToken == nil {
+			continue
+		}
+
+		// Fetch the staked balance
+		balResp := bus.Fetch("staking", "get-balance", &bus.B_Staking_GetBalance{
+			ChainId:      s.ChainId,
+			Contract:     s.Contract,
+			Owner:        pos.Owner,
+			ValidatorId:  pos.ValidatorId,
+			VaultAddress: pos.VaultAddress,
+		})
+
+		if balResp.Error == nil {
+			if balance, ok := balResp.Data.(*bus.B_Staking_GetBalance_Response); ok && balance.Balance != nil {
+				if stakedBalances[stakedToken] == nil {
+					stakedBalances[stakedToken] = big.NewInt(0)
+				}
+				stakedBalances[stakedToken].Add(stakedBalances[stakedToken], balance.Balance)
+			}
+		}
+	}
+
+	// Calculate LP balances from LP positions (V2, V3, V4)
+	lpBalances := make(map[*cmn.Token]*big.Int)
+
+	// LP V2 positions
+	for _, pos := range w.LP_V2_Positions {
+		sr := bus.Fetch("lp_v2", "get-position-status", &bus.B_LP_V2_GetPositionStatus{
+			ChainId: pos.ChainId,
+			Factory: pos.Factory,
+			Pair:    pos.Pair,
+		})
+		if sr.Error == nil {
+			if resp, ok := sr.Data.(*bus.B_LP_V2_GetPositionStatus_Response); ok {
+				// Add token0 liquidity
+				if t0 := w.GetTokenByAddress(resp.ChainId, resp.Token0); t0 != nil && resp.Liquidity0 != nil {
+					if lpBalances[t0] == nil {
+						lpBalances[t0] = big.NewInt(0)
+					}
+					lpBalances[t0].Add(lpBalances[t0], resp.Liquidity0)
+				}
+				// Add token1 liquidity
+				if t1 := w.GetTokenByAddress(resp.ChainId, resp.Token1); t1 != nil && resp.Liquidity1 != nil {
+					if lpBalances[t1] == nil {
+						lpBalances[t1] = big.NewInt(0)
+					}
+					lpBalances[t1].Add(lpBalances[t1], resp.Liquidity1)
+				}
+			}
+		}
+	}
+
+	// LP V3 positions
+	for _, pos := range w.LP_V3_Positions {
+		sr := bus.Fetch("lp_v3", "get-position-status", &bus.B_LP_V3_GetPositionStatus{
+			ChainId:   pos.ChainId,
+			Provider:  pos.Provider,
+			NFT_Token: pos.NFT_Token,
+		})
+		if sr.Error == nil {
+			if resp, ok := sr.Data.(*bus.B_LP_V3_GetPositionStatus_Response); ok {
+				// Add token0 liquidity + gain
+				if t0 := w.GetTokenByAddress(resp.ChainId, resp.Token0); t0 != nil {
+					if lpBalances[t0] == nil {
+						lpBalances[t0] = big.NewInt(0)
+					}
+					if resp.Liquidity0 != nil {
+						lpBalances[t0].Add(lpBalances[t0], resp.Liquidity0)
+					}
+					if resp.Gain0 != nil {
+						lpBalances[t0].Add(lpBalances[t0], resp.Gain0)
+					}
+				}
+				// Add token1 liquidity + gain
+				if t1 := w.GetTokenByAddress(resp.ChainId, resp.Token1); t1 != nil {
+					if lpBalances[t1] == nil {
+						lpBalances[t1] = big.NewInt(0)
+					}
+					if resp.Liquidity1 != nil {
+						lpBalances[t1].Add(lpBalances[t1], resp.Liquidity1)
+					}
+					if resp.Gain1 != nil {
+						lpBalances[t1].Add(lpBalances[t1], resp.Gain1)
+					}
+				}
+			}
+		}
+	}
+
+	// LP V4 positions
+	for _, pos := range w.LP_V4_Positions {
+		sr := bus.Fetch("lp_v4", "get-position-status", &bus.B_LP_V4_GetPositionStatus{
+			ChainId:   pos.ChainId,
+			Provider:  pos.Provider,
+			NFT_Token: pos.NFT_Token,
+		})
+		if sr.Error == nil {
+			if resp, ok := sr.Data.(*bus.B_LP_V4_GetPositionStatus_Response); ok {
+				// Add currency0 liquidity + gain
+				if t0 := w.GetTokenByAddress(resp.ChainId, resp.Currency0); t0 != nil {
+					if lpBalances[t0] == nil {
+						lpBalances[t0] = big.NewInt(0)
+					}
+					if resp.Liquidity0 != nil {
+						lpBalances[t0].Add(lpBalances[t0], resp.Liquidity0)
+					}
+					if resp.Gain0 != nil {
+						lpBalances[t0].Add(lpBalances[t0], resp.Gain0)
+					}
+				}
+				// Add currency1 liquidity + gain
+				if t1 := w.GetTokenByAddress(resp.ChainId, resp.Currency1); t1 != nil {
+					if lpBalances[t1] == nil {
+						lpBalances[t1] = big.NewInt(0)
+					}
+					if resp.Liquidity1 != nil {
+						lpBalances[t1].Add(lpBalances[t1], resp.Liquidity1)
+					}
+					if resp.Gain1 != nil {
+						lpBalances[t1].Add(lpBalances[t1], resp.Gain1)
+					}
+				}
+			}
+		}
+	}
+
 	// Build the list
 	totalUSD := 0.0
 	list := make([]*tokenInfo, 0)
 
-	for t, totalBalance := range tokenBalances {
-		if totalBalance == nil || totalBalance.Cmp(big.NewInt(0)) == 0 {
+	// Collect all tokens that have either liquid, staked, or LP balance
+	allTokens := make(map[*cmn.Token]bool)
+	for t := range tokenBalances {
+		allTokens[t] = true
+	}
+	for t := range stakedBalances {
+		allTokens[t] = true
+	}
+	for t := range lpBalances {
+		allTokens[t] = true
+	}
+
+	for t := range allTokens {
+		liquidBalance := tokenBalances[t]
+		if liquidBalance == nil {
+			liquidBalance = big.NewInt(0)
+		}
+
+		stakedBalance := stakedBalances[t]
+		if stakedBalance == nil {
+			stakedBalance = big.NewInt(0)
+		}
+
+		lpBalance := lpBalances[t]
+		if lpBalance == nil {
+			lpBalance = big.NewInt(0)
+		}
+
+		totalBalance := new(big.Int).Add(liquidBalance, stakedBalance)
+		totalBalance.Add(totalBalance, lpBalance)
+
+		if totalBalance.Cmp(big.NewInt(0)) == 0 {
 			continue
 		}
 
@@ -275,9 +445,12 @@ func (p *TokenPane) updateList() {
 		totalUSD += usdValue
 
 		list = append(list, &tokenInfo{
-			Token:        t,
-			TotalBalance: totalBalance,
-			TotalUSD:     usdValue,
+			Token:         t,
+			LiquidBalance: liquidBalance,
+			StakedBalance: stakedBalance,
+			LPBalance:     lpBalance,
+			TotalBalance:  totalBalance,
+			TotalUSD:      usdValue,
 		})
 	}
 
@@ -319,7 +492,7 @@ func (p *TokenPane) rebuildTemplate() string {
 		return "loading..."
 	}
 
-	temp := "Symbol   Chain Price   Change   Balance       Value\n"
+	temp := "Symbol   Chain Price   Change   Liquid    Staked    LP        Total         Value\n"
 
 	for i, ti := range token_info_list {
 		t := ti.Token
@@ -347,8 +520,31 @@ func (p *TokenPane) rebuildTemplate() string {
 			temp += "         "
 		}
 
+		// Liquid balance
+		if ti.LiquidBalance != nil && ti.LiquidBalance.Sign() > 0 {
+			temp += cmn.TagValueLink(ti.LiquidBalance, t)
+		} else {
+			temp += "         "
+		}
+
+		// Staked balance
+		if ti.StakedBalance != nil && ti.StakedBalance.Sign() > 0 {
+			temp += cmn.TagValueLink(ti.StakedBalance, t)
+		} else {
+			temp += "         "
+		}
+
+		// LP balance
+		if ti.LPBalance != nil && ti.LPBalance.Sign() > 0 {
+			temp += cmn.TagValueLink(ti.LPBalance, t)
+		} else {
+			temp += "         "
+		}
+
+		// Total balance
 		temp += cmn.TagValueLink(ti.TotalBalance, t)
 
+		// USD value of total
 		temp += cmn.TagDollarLink(ti.TotalUSD)
 
 		if i < len(token_info_list)-1 {
