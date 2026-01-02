@@ -291,7 +291,7 @@ func list(w *cmn.Wallet) {
 		return w.LP_V3_Positions[i].ChainId < w.LP_V3_Positions[j].ChainId
 	})
 
-	ui.Printf("Xch@Chain      Pair    On Liq0     Liq1     Gain0    Gain1     Gain$    Fee%%    Address\n")
+	ui.Printf("Xch@Chain      Pair         ID On Liq0     Liq1     Gain0    Gain1     Gain$    Fee%%    Address\n")
 
 	to_delete := make([]*cmn.LP_V3_Position, 0)
 
@@ -373,6 +373,14 @@ func list(w *cmn.Wallet) {
 			} else {
 				ui.Terminal.Screen.AddLink("???", "command token add "+b.Name+" "+lp.Token1.String(), "Add token", "")
 			}
+		}
+
+		// NFT position ID
+		if p.NFT_Token != nil {
+			idStr := p.NFT_Token.String()
+			ui.Terminal.Screen.AddLink(fmt.Sprintf(" %7s", idStr), "copy "+idStr, idStr, "")
+		} else {
+			ui.Printf("        ")
 		}
 
 		if p.On {

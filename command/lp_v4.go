@@ -348,7 +348,7 @@ func listV4(w *cmn.Wallet) {
 		return list[i].Gain0Dollars+list[i].Gain1Dollars > list[j].Gain0Dollars+list[j].Gain1Dollars
 	})
 
-	ui.Printf("Xch@Chain        Pair        ID On Liq0     Liq1     Gain0    Gain1     Gain$  Address\n")
+	ui.Printf("Xch@Chain        Pair         ID On Liq0     Liq1     Gain0    Gain1     Gain$  Address\n")
 
 	for _, p := range list {
 		provider := w.GetLP_V4(p.ChainId, p.Provider)
@@ -395,9 +395,9 @@ func listV4(w *cmn.Wallet) {
 		// NFT position ID
 		if p.NFT_Token != nil {
 			idStr := p.NFT_Token.String()
-			ui.Terminal.Screen.AddLink(fmt.Sprintf(" %6s", idStr), "copy "+idStr, idStr, "")
+			ui.Terminal.Screen.AddLink(fmt.Sprintf(" %7s", idStr), "copy "+idStr, idStr, "")
 		} else {
-			ui.Printf("       ")
+			ui.Printf("        ")
 		}
 
 		if p.On {

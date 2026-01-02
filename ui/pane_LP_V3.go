@@ -244,7 +244,7 @@ func (p *LP_V3Pane) rebuidTemplate() string {
 		return "loading..."
 	}
 
-	temp := "Xch@Chain        Pair   On Liq0     Liq1     Gain0    Gain1     Gain$  Address\n"
+	temp := "Xch@Chain        Pair         ID On Liq0     Liq1     Gain0    Gain1     Gain$  Address\n"
 
 	for i, p := range lp_info_list {
 
@@ -287,6 +287,14 @@ func (p *LP_V3Pane) rebuidTemplate() string {
 			} else {
 				temp += cmn.TagLink("???", "command token add "+b.Name+" "+p.Token1.String(), "Add token")
 			}
+		}
+
+		// NFT position ID
+		if p.NFT_Token != nil {
+			idStr := p.NFT_Token.String()
+			temp += fmt.Sprintf(" <l text:'%7s' action:'copy %s' tip:'%s'>", idStr, idStr, idStr)
+		} else {
+			temp += "        "
 		}
 
 		if p.On {

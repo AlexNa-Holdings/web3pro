@@ -80,6 +80,7 @@ func get_position_status(msg *bus.Message) (*bus.B_LP_V3_GetPositionStatus_Respo
 
 	return &bus.B_LP_V3_GetPositionStatus_Response{
 		On:                in_range,
+		NFT_Token:         req.NFT_Token,
 		Token0:            nft_pos.Token0,
 		Token1:            nft_pos.Token1,
 		Liquidity0:        amount0,
