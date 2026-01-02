@@ -13,7 +13,7 @@ import (
 	"github.com/AlexNa-Holdings/web3pro/ui"
 )
 
-var wallet_subcommands = []string{"backup", "close", "create", "list", "restore", "open"}
+var wallet_subcommands = []string{"backup", "close", "create", "list", "password", "restore", "open"}
 
 func NewWalletCommand() *Command {
 	return &Command{
@@ -32,6 +32,7 @@ Commands:
   list             List wallets
   backup           Backup current wallet
   restore <backup> Restore wallet from backup
+  password         Change wallet password
 
 		`,
 		Help:             `Manage wallets`,
@@ -191,6 +192,13 @@ func Wallet_Process(c *Command, input string) {
 
 		backupFile := tokens[2]
 		bus.Send("ui", "popup", ui.DlgWalletRestore(backupFile))
+
+	case "password":
+		if cmn.CurrentWallet == nil {
+			ui.PrintErrorf("No wallet open")
+			return
+		}
+		bus.Send("ui", "popup", ui.DlgWalletPassword())
 
 	default:
 		ui.PrintErrorf("Invalid subcommand: %s", subcommand)

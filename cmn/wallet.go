@@ -1366,3 +1366,17 @@ func (w *Wallet) RemoveStakingPositionWithValidator(chainId int, contract common
 	}
 	return errors.New("staking position not found")
 }
+
+// VerifyPassword checks if the provided password matches the current wallet password
+func (w *Wallet) VerifyPassword(pass string) bool {
+	return w.password == pass
+}
+
+// ChangePassword changes the wallet password and re-saves the wallet
+func (w *Wallet) ChangePassword(newPass string) error {
+	w.writeMutex.Lock()
+	defer w.writeMutex.Unlock()
+
+	w.password = newPass
+	return w._locked_Save()
+}
