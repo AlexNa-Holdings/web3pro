@@ -27,7 +27,7 @@ https://github.com/ryanoasis/nerd-fonts?tab=readme-ov-file
 
 On linux:
 
-downlowd fro here: https://www.nerdfonts.com/font-downloads
+download fro here: https://www.nerdfonts.com/font-downloads
 
 
 copy to: ~/.local/share/fonts 
@@ -45,6 +45,41 @@ Select the font for your terminal
 
 The code is using the modified version of the https://github.com/awesome-gocui/gocui
 
+# Building Prerequisites
 
+```
+sudo apt install pkg-config libasound2-dev libusb-1.0-0-dev
+```
 
+On WSL or systems without AVX-512, build with portable mode to avoid SIGILL:
 
+```
+CGO_CFLAGS="-O -D__BLST_PORTABLE__" go run .
+```
+
+# API Keys
+
+The wallet requires two API keys to function.
+
+## CoinMarketCap (CMC)
+
+Provides cryptocurrency price and market data.
+
+1. Sign up at https://pro.coinmarketcap.com/signup (free tier available)
+2. Get your API key from the dashboard
+3. In web3pro, run (no quotes around the key):
+   ```
+   cfg set cmc_api_key sk-1234567890abcdef
+   ```
+
+## The Graph
+
+Provides blockchain indexing for querying on-chain data (liquidity pools, etc.).
+
+1. Go to https://thegraph.com/studio/apikeys/
+2. Connect a wallet (MetaMask works via WalletConnect)
+3. Create an API key
+4. In web3pro, run (no quotes around the key):
+   ```
+   cfg set thegraph_api_key abc123def456
+   ```
