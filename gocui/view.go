@@ -1171,7 +1171,11 @@ func (v *View) AddTagEx(tagName string, tagParams map[string]string) error {
 		if tagParams["id"] == "" {
 			tagParams["id"] = tagParams["text"]
 		}
-		v.AddButton(tagParams["text"], "button "+tagParams["id"], tagParams["id"], tagParams["tip"], tagParams["color"], tagParams["bgcolor"])
+		action := tagParams["action"]
+		if action == "" {
+			action = "button " + tagParams["id"]
+		}
+		v.AddButton(tagParams["text"], action, tagParams["tip"], tagParams["id"], tagParams["color"], tagParams["bgcolor"])
 	case "input": // input
 		v.AddInput(tagParams)
 	case "text": // text input

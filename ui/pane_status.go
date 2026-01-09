@@ -110,7 +110,7 @@ func (p *StatusPane) rebuidTemplate() {
 				change = fmt.Sprintf(" <color fg:red>\uf0d7%.2f%%</color>", -t.PriceChange24)
 			}
 
-			temp += fmt.Sprintf("<b>  Chain:</b> %s | %s %s%s\n",
+			temp += fmt.Sprintf("<b>  Chain:</b> %s | %s %s%s <button text:Refresh action:'command p update' tip:'Update prices'>\n",
 				b.Name, t.Symbol,
 				cmn.TagShortDollarLink(t.Price),
 				change)

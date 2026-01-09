@@ -260,6 +260,20 @@ func Signer_Process(c *Command, input string) {
 		ui.Flush()
 
 	case "add":
+		// For hardware wallets, check if device is connected when no device name provided
+		if p1 != "mnemonics" && p2 == "" {
+			r := bus.Fetch("signer", "list", &bus.B_SignerList{Type: p1})
+			if r.Error != nil {
+				ui.PrintErrorf("Error listing %s devices: %v", p1, r.Error)
+				return
+			}
+			if res, ok := r.Data.(*bus.B_SignerList_Response); ok {
+				if len(res.Names) == 0 {
+					ui.PrintErrorf("No %s device is connected", p1)
+					return
+				}
+			}
+		}
 		bus.Send("ui", "popup", ui.DlgSignerAdd(p1, p2))
 
 	case "remove":
