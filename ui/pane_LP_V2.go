@@ -3,6 +3,7 @@ package ui
 import (
 	"errors"
 	"fmt"
+	"math/big"
 	"sort"
 	"strings"
 	"sync"
@@ -164,6 +165,12 @@ func (p *LP_V2Pane) updateList() {
 		resp, ok := sr.Data.(*bus.B_LP_V2_GetPositionStatus_Response)
 		if !ok {
 			log.Error().Msg("get_position_status")
+			continue
+		}
+
+		// Delete positions with 0 liquidity
+		if resp.LPBalance == nil || resp.LPBalance.Cmp(big.NewInt(0)) == 0 {
+			w.RemoveLP_V2Position(pos.Owner, pos.ChainId, pos.Factory, pos.Pair)
 			continue
 		}
 
