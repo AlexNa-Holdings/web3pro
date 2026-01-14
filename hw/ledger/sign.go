@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
-	"github.com/ava-labs/coreth/accounts"
+	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/rs/zerolog/log"
 )
 

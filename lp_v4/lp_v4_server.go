@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 
 	"github.com/AlexNa-Holdings/web3pro/bus"
-	"github.com/ava-labs/coreth/accounts/abi"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/rs/zerolog/log"
 )
 
