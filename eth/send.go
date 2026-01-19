@@ -40,6 +40,10 @@ func send(msg *bus.Message) error {
 		return fmt.Errorf("address from not found: %v", req.From)
 	}
 
+	if from.Signer == "" {
+		return fmt.Errorf("cannot send from watch-only address")
+	}
+
 	template, err := BuildHailToSendTemplate(b, t, from, req.To, req.Amount, nil, false)
 	if err != nil {
 		log.Error().Err(err).Msg("Error building hail template")

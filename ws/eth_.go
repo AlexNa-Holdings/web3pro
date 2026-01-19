@@ -140,6 +140,10 @@ func signTypedData_v4(o *cmn.Origin, req RPCRequest, ctx *ConContext, res *RPCRe
 		return fmt.Errorf("address not found in wallet")
 	}
 
+	if a.Signer == "" {
+		return fmt.Errorf("cannot sign with watch-only address")
+	}
+
 	signer := w.GetSigner(a.Signer)
 	if signer == nil {
 		return fmt.Errorf("signer not found")
@@ -221,6 +225,10 @@ func sign(o *cmn.Origin, req RPCRequest, ctx *ConContext, res *RPCResponse) erro
 	a := w.GetAddress(address)
 	if a == nil {
 		return fmt.Errorf("address not found in wallet")
+	}
+
+	if a.Signer == "" {
+		return fmt.Errorf("cannot sign with watch-only address")
 	}
 
 	signer := w.GetSigner(a.Signer)

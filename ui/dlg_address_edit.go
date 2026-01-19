@@ -18,14 +18,21 @@ func DlgAddressEdit(name string) *gocui.Popup {
 		return nil
 	}
 
+	signerInfo := currect_a.Signer
+	pathInfo := currect_a.Path
+	if signerInfo == "" {
+		signerInfo = "(watch-only)"
+		pathInfo = ""
+	}
+
 	template := fmt.Sprintf(`
-Address: %s	
-   Name: <input id:name size:32 value:""> 
+Address: %s
+   Name: <input id:name size:32 value:"">
     Tag: <input id:tag size:32 value:"">
  Signer: %s
    Path: %s
 
-<c><button text:Ok tip:"create wallet">  <button text:Cancel>`, currect_a.Address.String(), currect_a.Signer, currect_a.Path)
+<c><button text:Ok tip:"save changes">  <button text:Cancel>`, currect_a.Address.String(), signerInfo, pathInfo)
 
 	return &gocui.Popup{
 		Title: "Edit address",
@@ -64,10 +71,10 @@ Address: %s
 
 					err := cmn.CurrentWallet.Save()
 					if err != nil {
-						Notification.ShowErrorf("Error creating signer: %s", err)
+						Notification.ShowErrorf("Error saving address: %s", err)
 						break
 					}
-					Notification.Showf("Signer %s created", name)
+					Notification.Showf("Address %s updated", name)
 					Gui.HidePopup()
 
 				case "button Cancel":

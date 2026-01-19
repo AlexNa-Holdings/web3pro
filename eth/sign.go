@@ -26,6 +26,10 @@ func sign(msg *bus.Message) (string, error) {
 		return "", fmt.Errorf("address not found in wallet")
 	}
 
+	if a.Signer == "" {
+		return "", fmt.Errorf("cannot sign with watch-only address")
+	}
+
 	signer := w.GetSigner(a.Signer)
 	if signer == nil {
 		return "", fmt.Errorf("signer not found")
