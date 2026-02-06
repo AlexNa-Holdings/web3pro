@@ -15,18 +15,23 @@ func DlgWaletOpen(name string) *gocui.Popup {
 				case "button Ok":
 					pass := v.GetInput("pass")
 
-					err := cmn.Open(name, pass)
-
-					if err != nil {
-						Notification.ShowErrorf("Error opening wallet: %s", err)
-						v.SetInput("pass", "")
-						v.SetFocus(0)
-						break
-					}
-
-					Notification.Showf("Wallet %s open", name)
-					Terminal.SetCommandPrefix(name)
+					// Close dialog immediately and open wallet in background
 					Gui.HidePopup()
+					Printf("\nWallet is opening...\n")
+
+					go func() {
+						err := cmn.Open(name, pass)
+
+						if err != nil {
+							Notification.ShowErrorf("Error opening wallet: %s", err)
+							Printf("Error opening wallet: %s\n", err)
+							return
+						}
+
+						Notification.Showf("Wallet %s open", name)
+						Printf("Wallet %s opened\n", name)
+						Terminal.SetCommandPrefix(name)
+					}()
 
 				case "button Cancel":
 					Gui.HidePopup()
@@ -34,7 +39,7 @@ func DlgWaletOpen(name string) *gocui.Popup {
 			}
 		},
 		Template: `
- Password: <input id:pass masked:true size:24> 
+ Password: <input id:pass masked:true size:24>
  <c>
  <button text:Ok tip:"create wallet">  <button text:Cancel>`,
 	}

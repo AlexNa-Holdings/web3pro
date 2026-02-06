@@ -628,29 +628,92 @@ func showTokenBalanceTable(w *cmn.Wallet) {
 		TotalUSD      float64
 	}
 
-	// Collect liquid balances across all addresses
-	tokenBalances := make(map[*cmn.Token]*big.Int)
+	ui.Printf("\nLoading balances...\n")
 
+	// Group tokens by chain for batch processing
+	tokensByChain := make(map[int][]*cmn.Token)
 	for _, t := range w.Tokens {
 		if t.Ignored {
 			continue
 		}
+		tokensByChain[t.ChainId] = append(tokensByChain[t.ChainId], t)
+	}
 
-		b := w.GetBlockchain(t.ChainId)
+	// Collect liquid balances using batch queries
+	tokenBalances := make(map[*cmn.Token]*big.Int)
+
+	for chainId, tokens := range tokensByChain {
+		b := w.GetBlockchain(chainId)
 		if b == nil {
 			continue
 		}
 
-		for _, a := range w.Addresses {
-			balance, err := eth.BalanceOf(b, t, a.Address)
-			if err != nil {
-				continue
+		// Separate native and ERC20 tokens
+		var nativeTokens []*cmn.Token
+		var erc20Tokens []*cmn.Token
+		for _, t := range tokens {
+			if t.Native {
+				nativeTokens = append(nativeTokens, t)
+			} else {
+				erc20Tokens = append(erc20Tokens, t)
 			}
-			if balance != nil && balance.Sign() > 0 {
+		}
+
+		// Handle native tokens with batch query
+		if len(nativeTokens) > 0 && len(w.Addresses) > 0 {
+			queries := make([]*eth.NativeBalanceQuery, 0, len(w.Addresses))
+			for _, addr := range w.Addresses {
+				queries = append(queries, &eth.NativeBalanceQuery{
+					Holder: addr.Address,
+				})
+			}
+
+			err := eth.GetNativeBalancesBatch(b, queries)
+			if err != nil {
+				log.Debug().Err(err).Msgf("Batch native balance query failed for chain %d", chainId)
+			}
+
+			totalBalance := big.NewInt(0)
+			for _, q := range queries {
+				if q.Balance != nil {
+					totalBalance.Add(totalBalance, q.Balance)
+				}
+			}
+
+			for _, t := range nativeTokens {
+				tokenBalances[t] = new(big.Int).Set(totalBalance)
+			}
+		}
+
+		// Handle ERC20 tokens with batch query
+		if len(erc20Tokens) > 0 && len(w.Addresses) > 0 {
+			queries := make([]*eth.BalanceQuery, 0, len(erc20Tokens)*len(w.Addresses))
+			queryMap := make(map[*eth.BalanceQuery]*cmn.Token)
+
+			for _, t := range erc20Tokens {
+				for _, addr := range w.Addresses {
+					q := &eth.BalanceQuery{
+						Token:  t,
+						Holder: addr.Address,
+					}
+					queries = append(queries, q)
+					queryMap[q] = t
+				}
+			}
+
+			err := eth.GetERC20BalancesBatch(b, queries)
+			if err != nil {
+				log.Debug().Err(err).Msgf("Batch balance query failed for chain %d", chainId)
+			}
+
+			for _, q := range queries {
+				t := queryMap[q]
 				if tokenBalances[t] == nil {
 					tokenBalances[t] = big.NewInt(0)
 				}
-				tokenBalances[t].Add(tokenBalances[t], balance)
+				if q.Balance != nil {
+					tokenBalances[t].Add(tokenBalances[t], q.Balance)
+				}
 			}
 		}
 	}
@@ -845,8 +908,13 @@ func showTokenBalanceTable(w *cmn.Wallet) {
 		return list[i].TotalUSD > list[j].TotalUSD
 	})
 
-	// Print table
-	ui.Printf("\nSymbol   Chain Price      Change   Liquid    Staked    LP        Total         Value\n")
+	if len(list) == 0 {
+		ui.Printf("\n(no token balances found)\n")
+		return
+	}
+
+	// Print table header
+	ui.Printf("\nSymbol   Chain Price   Change   Liquid    Staked    LP        Total         Value\n")
 
 	for _, ti := range list {
 		t := ti.Token
@@ -859,49 +927,53 @@ func showTokenBalanceTable(w *cmn.Wallet) {
 		ui.Printf("%-8s ", t.Symbol)
 		ui.Printf("%-5s ", b.GetShortName())
 
+		// Price with clickable link
 		if t.Price > 0 {
-			ui.Printf("%10s ", cmn.FmtFloat64D(t.Price, true))
+			cmn.AddFixedDollarLink(ui.Terminal.Screen, t.Price, 10)
 		} else {
-			ui.Printf("%10s ", "")
+			ui.Printf("          ")
 		}
 
+		// Price change with color
 		if t.PriceChange24 > 0 {
-			ui.Printf(" +%5.2f%% ", t.PriceChange24)
+			ui.Printf(ui.F(gocui.ColorGreen)+"\uf0d8%5.2f%% "+ui.F(ui.Terminal.Screen.FgColor), t.PriceChange24)
 		} else if t.PriceChange24 < 0 {
-			ui.Printf(" %6.2f%% ", t.PriceChange24)
+			ui.Printf(ui.F(gocui.ColorRed)+"\uf0d7%5.2f%% "+ui.F(ui.Terminal.Screen.FgColor), -t.PriceChange24)
 		} else {
-			ui.Printf("%8s ", "")
+			ui.Printf("         ")
 		}
 
-		// Liquid balance
+		// Liquid balance with clickable link
 		if ti.LiquidBalance != nil && ti.LiquidBalance.Sign() > 0 {
-			ui.Printf("%9s ", cmn.FmtFloat64(t.Float64(ti.LiquidBalance), false))
+			cmn.AddValueLink(ui.Terminal.Screen, ti.LiquidBalance, t)
 		} else {
-			ui.Printf("%9s ", "")
+			ui.Printf("         ")
 		}
 
-		// Staked balance
+		// Staked balance with clickable link
 		if ti.StakedBalance != nil && ti.StakedBalance.Sign() > 0 {
-			ui.Printf("%9s ", cmn.FmtFloat64(t.Float64(ti.StakedBalance), false))
+			cmn.AddValueLink(ui.Terminal.Screen, ti.StakedBalance, t)
 		} else {
-			ui.Printf("%9s ", "")
+			ui.Printf("         ")
 		}
 
-		// LP balance
+		// LP balance with clickable link
 		if ti.LPBalance != nil && ti.LPBalance.Sign() > 0 {
-			ui.Printf("%9s ", cmn.FmtFloat64(t.Float64(ti.LPBalance), false))
+			cmn.AddValueLink(ui.Terminal.Screen, ti.LPBalance, t)
 		} else {
-			ui.Printf("%9s ", "")
+			ui.Printf("         ")
 		}
 
-		// Total balance
-		ui.Printf("%9s ", cmn.FmtFloat64(t.Float64(ti.TotalBalance), false))
+		// Total balance with clickable link
+		cmn.AddValueLink(ui.Terminal.Screen, ti.TotalBalance, t)
 
-		// USD value
-		ui.Printf("%12s", cmn.FmtFloat64D(ti.TotalUSD, true))
+		// USD value with clickable link
+		cmn.AddDollarLink(ui.Terminal.Screen, ti.TotalUSD)
 
 		ui.Printf("\n")
 	}
 
-	ui.Printf("\nTotal: %s\n", cmn.FmtFloat64D(totalUSD, true))
+	ui.Printf("\nTotal: ")
+	cmn.AddDollarLink(ui.Terminal.Screen, totalUSD)
+	ui.Printf("\n")
 }

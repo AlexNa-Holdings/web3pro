@@ -33,18 +33,20 @@ type SConfig struct {
 	CMC_API_KEY          string        `yaml:"cmc_api_key"`            // CoinMarketCap API key
 	TheGraphAPIKey       string        `yaml:"thegraph_api_key"`       // The Graph API key for subgraph queries
 	TheGraphGateway      string        `yaml:"thegraph_gateway"`       // The Graph gateway URL (default: https://gateway.thegraph.com/api/{api-key}/subgraphs/id/)
-	MinTokenValue float64 `yaml:"min_token_value"` // minimum USD value to show token in tokens pane
+	MinTokenValue        float64       `yaml:"min_token_value"`        // minimum USD value to show token in tokens pane
+	WSEnabled            bool          `yaml:"ws_enabled"`             // enable WebSocket server for browser communication
 }
 
 var Config *SConfig = &SConfig{ //Default config
-	Verbosity:            "debug",
-	Theme:                "dark",
-	BusTimeout:           3 * time.Minute,
-	BusHardTimeout:       5 * time.Minute,
-	PriceUpdatePeriod:    "15m",
-	Editor:               "code",
-	TheGraphGateway: "https://gateway.thegraph.com/api/{api-key}/subgraphs/id/",
-	MinTokenValue:   1,
+	Verbosity:         "debug",
+	Theme:             "dark",
+	BusTimeout:        3 * time.Minute,
+	BusHardTimeout:    5 * time.Minute,
+	PriceUpdatePeriod: "15m",
+	Editor:            "code",
+	TheGraphGateway:   "https://gateway.thegraph.com/api/{api-key}/subgraphs/id/",
+	MinTokenValue:     1,
+	WSEnabled:         true,
 }
 
 func InitConfig() {

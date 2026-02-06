@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AlexNa-Holdings/web3pro/bus"
 	"github.com/AlexNa-Holdings/web3pro/cmn"
 	"github.com/AlexNa-Holdings/web3pro/ui"
 )
@@ -22,6 +23,7 @@ var config_params = []string{
 	"thegraph_api_key",
 	"thegraph_gateway",
 	"min_token_value",
+	"ws_enabled",
 }
 
 func NewConfigCommand() *Command {
@@ -49,6 +51,7 @@ PARAMETERS:
   thegraph_api_key      - The Graph API key
   thegraph_gateway      - The Graph gateway URL
   min_token_value       - minimum USD value to show token in tokens pane
+  ws_enabled            - enable WebSocket server for browser (true/false)
 `,
 		Help:             `Application configuration management`,
 		Process:          Config_Process,
@@ -132,6 +135,7 @@ func showConfig() {
 
 	ui.Printf("  %-20s %s\n", "thegraph_gateway:", cmn.Config.TheGraphGateway)
 	ui.Printf("  %-20s %.2f\n", "min_token_value:", cmn.Config.MinTokenValue)
+	ui.Printf("  %-20s %t\n", "ws_enabled:", cmn.Config.WSEnabled)
 	ui.Printf("\n")
 }
 
@@ -204,6 +208,29 @@ func setConfigParam(param, value string) {
 			return
 		}
 		cmn.Config.MinTokenValue = val
+
+	case "ws_enabled":
+		var enabled bool
+		if value == "true" || value == "1" || value == "yes" {
+			enabled = true
+		} else if value == "false" || value == "0" || value == "no" {
+			enabled = false
+		} else {
+			ui.PrintErrorf("Invalid boolean value. Use: true/false, 1/0, yes/no\n")
+			return
+		}
+
+		oldValue := cmn.Config.WSEnabled
+		cmn.Config.WSEnabled = enabled
+
+		// Start or stop WS server based on the new value
+		if enabled && !oldValue {
+			// Starting WS server
+			bus.Send("ws", "start", nil)
+		} else if !enabled && oldValue {
+			// Stopping WS server
+			bus.Send("ws", "stop", nil)
+		}
 
 	default:
 		ui.PrintErrorf("Unknown parameter: %s\n", param)

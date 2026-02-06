@@ -1,6 +1,7 @@
 package ws
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -63,6 +64,9 @@ type RPCResponse struct {
 }
 
 var start_once sync.Once
+var wsServer *http.Server
+var wsServerMutex sync.Mutex
+var wsRunning bool
 
 func Init() {
 	go loop()
@@ -75,7 +79,10 @@ func loop() {
 		case "wallet":
 			switch msg.Type {
 			case "open":
-				start_once.Do(startWS)
+				// Only start WS if enabled in config
+				if cmn.Config.WSEnabled {
+					start_once.Do(startWS)
+				}
 			case "origin-chain-changed":
 				broadcastChainChanged(msg.Data)
 			case "origin-addresses-changed":
@@ -96,37 +103,85 @@ func loop() {
 				}
 				WSConnectionsMutex.Unlock()
 				msg.Respond(list, nil)
+			case "start":
+				startWS()
+			case "stop":
+				stopWS()
 			}
 		}
 	}
 }
 
 func startWS() {
+	wsServerMutex.Lock()
+	defer wsServerMutex.Unlock()
+
+	if wsRunning {
+		log.Debug().Msg("WS server already running")
+		return
+	}
+
+	wsServer = &http.Server{
+		Addr:              ":" + strconv.Itoa(WEB3PRO_PORT),
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       2 * time.Hour,
+		ReadHeaderTimeout: 5 * time.Second,
+	}
+
+	http.HandleFunc("/ws", web3Handler)
+
+	wsRunning = true
+
 	go func() {
-		server := &http.Server{
-			Addr:              ":" + strconv.Itoa(WEB3PRO_PORT),
-			ReadTimeout:       30 * time.Second,
-			WriteTimeout:      30 * time.Second,
-			IdleTimeout:       2 * time.Hour,
-			ReadHeaderTimeout: 5 * time.Second,
+		log.Trace().Msgf("Starting WS server on port %d", WEB3PRO_PORT)
+		err := wsServer.ListenAndServe()
+		if err != nil && err != http.ErrServerClosed {
+			log.Error().Err(err).Msgf("WS server failed on port %d", WEB3PRO_PORT)
+			bus.Send("ui", "notify-error", "WS server stopped unexpectedly")
+			wsServerMutex.Lock()
+			wsRunning = false
+			wsServerMutex.Unlock()
 		}
-
-		http.HandleFunc("/ws", web3Handler)
-
-		for {
-			err := server.ListenAndServe()
-			if err != nil {
-				log.Error().Err(err).Msgf("WS server failed to start on port %d", WEB3PRO_PORT)
-				bus.Send("ui", "notify-error", "Failed to start WS server")
-				time.Sleep(10 * time.Second) // Wait for 1 minute before retrying
-				continue
-			} else {
-				break
-			}
-		}
-		log.Trace().Msgf("ws server started on port %d", WEB3PRO_PORT)
-		bus.Send("ui", "notify", "WS server started")
 	}()
+
+	log.Info().Msgf("WS server started on port %d", WEB3PRO_PORT)
+	bus.Send("ui", "notify", "WS server started")
+}
+
+func stopWS() {
+	wsServerMutex.Lock()
+	defer wsServerMutex.Unlock()
+
+	if !wsRunning || wsServer == nil {
+		log.Debug().Msg("WS server not running")
+		return
+	}
+
+	log.Info().Msg("Stopping WS server...")
+
+	// Close all active connections
+	WSConnectionsMutex.Lock()
+	for _, conn := range WSConnections {
+		conn.Connection.Close()
+	}
+	WSConnections = make([]*ConContext, 0)
+	WSConnectionsMutex.Unlock()
+
+	// Shutdown server with 5 second timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	err := wsServer.Shutdown(ctx)
+	if err != nil {
+		log.Error().Err(err).Msg("Error shutting down WS server")
+	}
+
+	wsRunning = false
+	wsServer = nil
+
+	log.Info().Msg("WS server stopped")
+	bus.Send("ui", "notify", "WS server stopped")
 }
 
 func broadcastChainChanged(data any) {
