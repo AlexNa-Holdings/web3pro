@@ -517,7 +517,7 @@ func (p *TokenPane) rebuildTemplate() string {
 		} else if t.PriceChange24 < 0 {
 			temp += fmt.Sprintf("<color fg:red>\uf0d7%5.2f%%</color> ", -t.PriceChange24)
 		} else {
-			temp += "         "
+			temp += "        "
 		}
 
 		// Liquid balance
