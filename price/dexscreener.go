@@ -265,7 +265,11 @@ func DS_Update(w *cmn.Wallet) (int, error) { // number of pairs updated
 						continue
 					}
 
-					if t.PriceFeedParam == p.PairID {
+					if strings.EqualFold(t.PriceFeedParam, p.PairID) {
+						log.Debug().Str("token", t.Symbol).Int("chainId", t.ChainId).
+							Float64("price", pairs[i].PriceUsd).Float64("change24", pairs[i].PriceChange24).
+							Str("pairID", p.PairID).Str("baseToken", p.BaseToken).
+							Msg("DS_Update: setting price")
 						t.Price = pairs[i].PriceUsd
 						t.PriceChange24 = pairs[i].PriceChange24
 						t.PriceTimestamp = time.Now()

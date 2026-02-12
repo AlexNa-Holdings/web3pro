@@ -292,6 +292,66 @@ func (p *TokenPane) updateList() {
 		}
 	}
 
+	// Add pending staking rewards to staked balances
+	for _, pos := range w.StakingPositions {
+		s := w.GetStaking(pos.ChainId, pos.Contract)
+		if s == nil {
+			continue
+		}
+
+		// Reward 1
+		if s.Reward1Func != "" || s.Hardcoded {
+			rewardToken := w.GetTokenByAddress(s.ChainId, s.Reward1Token)
+			if rewardToken == nil && s.Reward1Token == ([20]byte{}) {
+				b := w.GetBlockchain(s.ChainId)
+				if b != nil {
+					rewardToken, _ = w.GetNativeToken(b)
+				}
+			}
+			if rewardToken != nil {
+				pendingResp := bus.Fetch("staking", "get-pending", &bus.B_Staking_GetPending{
+					ChainId:      s.ChainId,
+					Contract:     s.Contract,
+					Owner:        pos.Owner,
+					RewardToken:  s.Reward1Token,
+					ValidatorId:  pos.ValidatorId,
+					VaultAddress: pos.VaultAddress,
+				})
+				if pendingResp.Error == nil {
+					if pending, ok := pendingResp.Data.(*bus.B_Staking_GetPending_Response); ok && pending.Pending != nil && pending.Pending.Sign() > 0 {
+						if stakedBalances[rewardToken] == nil {
+							stakedBalances[rewardToken] = big.NewInt(0)
+						}
+						stakedBalances[rewardToken].Add(stakedBalances[rewardToken], pending.Pending)
+					}
+				}
+			}
+		}
+
+		// Reward 2
+		if s.Reward2Token != ([20]byte{}) && s.Reward2Func != "" {
+			rewardToken := w.GetTokenByAddress(s.ChainId, s.Reward2Token)
+			if rewardToken != nil {
+				pendingResp := bus.Fetch("staking", "get-pending", &bus.B_Staking_GetPending{
+					ChainId:      s.ChainId,
+					Contract:     s.Contract,
+					Owner:        pos.Owner,
+					RewardToken:  s.Reward2Token,
+					ValidatorId:  pos.ValidatorId,
+					VaultAddress: pos.VaultAddress,
+				})
+				if pendingResp.Error == nil {
+					if pending, ok := pendingResp.Data.(*bus.B_Staking_GetPending_Response); ok && pending.Pending != nil && pending.Pending.Sign() > 0 {
+						if stakedBalances[rewardToken] == nil {
+							stakedBalances[rewardToken] = big.NewInt(0)
+						}
+						stakedBalances[rewardToken].Add(stakedBalances[rewardToken], pending.Pending)
+					}
+				}
+			}
+		}
+	}
+
 	// Calculate LP balances from LP positions (V2, V3, V4)
 	lpBalances := make(map[*cmn.Token]*big.Int)
 
@@ -513,9 +573,25 @@ func (p *TokenPane) rebuildTemplate() string {
 		}
 
 		if t.PriceChange24 > 0 {
-			temp += fmt.Sprintf("<color fg:green>\uf0d8%5.2f%%</color> ", t.PriceChange24)
+			v := t.PriceChange24
+			if v > 99999 {
+				v = 99999
+			}
+			if v > 99.99 {
+				temp += fmt.Sprintf("<color fg:green>\uf0d8%5.0f%%</color> ", v)
+			} else {
+				temp += fmt.Sprintf("<color fg:green>\uf0d8%5.2f%%</color> ", v)
+			}
 		} else if t.PriceChange24 < 0 {
-			temp += fmt.Sprintf("<color fg:red>\uf0d7%5.2f%%</color> ", -t.PriceChange24)
+			v := -t.PriceChange24
+			if v > 99999 {
+				v = 99999
+			}
+			if v > 99.99 {
+				temp += fmt.Sprintf("<color fg:red>\uf0d7%5.0f%%</color> ", v)
+			} else {
+				temp += fmt.Sprintf("<color fg:red>\uf0d7%5.2f%%</color> ", v)
+			}
 		} else {
 			temp += "        "
 		}
